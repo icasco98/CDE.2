@@ -74,11 +74,11 @@ describe('carving one footprint out of another', () => {
     expect(result.footprint.rotation).toBe(90)
     const outline = outlineOf(result.footprint)
     expect(area(outline)).toBeCloseTo(12, 6)
-    const box = boundingBox(outline)
-    expect(box.left).toBeCloseTo(0, 6)
-    expect(box.top).toBeCloseTo(0, 6)
-    expect(box.width).toBeCloseTo(3, 6)
-    expect(box.depth).toBeCloseTo(4, 6)
+    const bounds = boundingBox(outline)
+    expect(bounds.left).toBeCloseTo(0, 6)
+    expect(bounds.top).toBeCloseTo(0, 6)
+    expect(bounds.width).toBeCloseTo(3, 6)
+    expect(bounds.depth).toBeCloseTo(4, 6)
   })
 
   it('leaves an empty polygon when the cutter covers the room outright', () => {

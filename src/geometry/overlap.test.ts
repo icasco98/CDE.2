@@ -75,11 +75,11 @@ describe('a room drawn round', () => {
 
 describe('the oriented bounding box', () => {
   it('carries the centre, the half extents and the turned axes', () => {
-    const box = obbOf(rectangle(0, 0, 4, 2, 90))
-    expect([box.cx, box.cy]).toEqual([2, 1])
-    expect([box.halfWidth, box.halfDepth]).toEqual([2, 1])
-    expect(box.ax[0]).toBeCloseTo(0, 12)
-    expect(box.ax[1]).toBeCloseTo(1, 12)
+    const obb = obbOf(rectangle(0, 0, 4, 2, 90))
+    expect([obb.cx, obb.cy]).toEqual([2, 1])
+    expect([obb.halfWidth, obb.halfDepth]).toEqual([2, 1])
+    expect(obb.ax[0]).toBeCloseTo(0, 12)
+    expect(obb.ax[1]).toBeCloseTo(1, 12)
   })
 
   it('reads two boxes a whole metre apart as separated', () => {

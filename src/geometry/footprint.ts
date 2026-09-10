@@ -14,11 +14,11 @@ export type Frame = {
 export type Handle = -1 | 0 | 1
 
 export function frameOf(footprint: Footprint): Frame {
-  const box = boundingBox(footprint.polygon)
+  const bounds = boundingBox(footprint.polygon)
   const radians = (footprint.rotation * Math.PI) / 180
   return {
-    cx: box.left + box.width / 2,
-    cy: box.top + box.depth / 2,
+    cx: bounds.left + bounds.width / 2,
+    cy: bounds.top + bounds.depth / 2,
     cos: Math.cos(radians),
     sin: Math.sin(radians),
     rotated: radians !== 0,
@@ -69,8 +69,8 @@ export function translateFootprint(footprint: Footprint, delta: Point): Footprin
 /** Where a corner (`±1, ±1`) or a wall midpoint (`0, ±1`, `±1, 0`) of the footprint sits on the sheet. */
 export function anchorPointOf(footprint: Footprint, sx: Handle, sy: Handle): Point {
   const frame = frameOf(footprint)
-  const box = boundingBox(footprint.polygon)
-  const local: Point = [frame.cx + (sx * box.width) / 2, frame.cy + (sy * box.depth) / 2]
+  const bounds = boundingBox(footprint.polygon)
+  const local: Point = [frame.cx + (sx * bounds.width) / 2, frame.cy + (sy * bounds.depth) / 2]
   return localToSheetPoint(local, frame)
 }
 
@@ -87,7 +87,7 @@ export function resizeFromAnchor(
   width: number,
   depth: number,
 ): Footprint {
-  const box = boundingBox(footprint.polygon)
+  const bounds = boundingBox(footprint.polygon)
   const radians = (footprint.rotation * Math.PI) / 180
   const cos = Math.cos(radians)
   const sin = Math.sin(radians)
@@ -96,8 +96,8 @@ export function resizeFromAnchor(
   const cx = anchor[0] - sx * halfWidth * cos + sy * halfDepth * sin
   const cy = anchor[1] - sx * halfWidth * sin - sy * halfDepth * cos
   const polygon = footprint.polygon.map((p): Point => {
-    const fx = box.width > 1e-12 ? (p[0] - box.left) / box.width : 0.5
-    const fy = box.depth > 1e-12 ? (p[1] - box.top) / box.depth : 0.5
+    const fx = bounds.width > 1e-12 ? (p[0] - bounds.left) / bounds.width : 0.5
+    const fy = bounds.depth > 1e-12 ? (p[1] - bounds.top) / bounds.depth : 0.5
     return [cx + (fx - 0.5) * width, cy + (fy - 0.5) * depth]
   })
   return { polygon, rotation: footprint.rotation }
@@ -109,9 +109,9 @@ export function resizeFromAnchor(
  * the old centre put it.
  */
 export function placeInFrame(polygon: Polygon, previous: Frame, rotation: number): Footprint {
-  const box = boundingBox(polygon)
-  const dx = previous.cx - (box.left + box.width / 2)
-  const dy = previous.cy - (box.top + box.depth / 2)
+  const bounds = boundingBox(polygon)
+  const dx = previous.cx - (bounds.left + bounds.width / 2)
+  const dy = previous.cy - (bounds.top + bounds.depth / 2)
   const shift: Point = [
     dx - (dx * previous.cos - dy * previous.sin),
     dy - (dx * previous.sin + dy * previous.cos),

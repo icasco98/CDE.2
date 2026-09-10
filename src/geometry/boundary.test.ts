@@ -91,8 +91,8 @@ describe('clamping a whole selection', () => {
     const db = boundingBox(out[1]?.polygon ?? []).top - 10
     expect(da).toBeCloseTo(db, 9)
     // The deeper of the two ends flush against the south boundary.
-    const box = boundingBox(out[1]?.polygon ?? [])
-    expect(box.top + box.depth).toBeCloseTo(12, 6)
+    const bounds = boundingBox(out[1]?.polygon ?? [])
+    expect(bounds.top + bounds.depth).toBeCloseTo(12, 6)
   })
 
   it('returns the footprints as they are when the selection is already inside', () => {
@@ -129,10 +129,10 @@ describe('limiting a resize', () => {
     const anchor = anchorPointOf(from, -1, -1)
     const to = resizeFromAnchor(from, anchor, -1, -1, 9, 3)
     const held = limitResize(from, to, plot)
-    const box = boundingBox(held.polygon)
-    expect(box.left).toBeCloseTo(16, 9)
+    const bounds = boundingBox(held.polygon)
+    expect(bounds.left).toBeCloseTo(16, 9)
     // 4 m to within the boundary's own millimetre.
-    expect(box.width).toBeCloseTo(4, 2)
+    expect(bounds.width).toBeCloseTo(4, 2)
     expect(isOutsideBoundary(held, plot)).toBe(false)
   })
 

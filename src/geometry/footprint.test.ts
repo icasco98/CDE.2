@@ -31,9 +31,9 @@ describe('the placed outline', () => {
   })
 
   it('needs 7.07 m of width for a 4 x 6 m room turned 45 degrees', () => {
-    const box = boundingBox(outlineOf(rectangle(0, 0, 4, 6, 45)))
-    expect(box.width).toBeCloseTo(10 / Math.SQRT2, 6)
-    expect(box.depth).toBeCloseTo(10 / Math.SQRT2, 6)
+    const bounds = boundingBox(outlineOf(rectangle(0, 0, 4, 6, 45)))
+    expect(bounds.width).toBeCloseTo(10 / Math.SQRT2, 6)
+    expect(bounds.depth).toBeCloseTo(10 / Math.SQRT2, 6)
   })
 
   it('turns about the centre of the bounding box, so the area and centre keep', () => {
@@ -44,11 +44,11 @@ describe('the placed outline', () => {
 
   it('turns clockwise on the sheet, where y runs down', () => {
     // A 4 x 2 room turned a quarter turn stands 2 wide and 4 deep about the same centre.
-    const box = boundingBox(outlineOf(rectangle(0, 0, 4, 2, 90)))
-    expect(box.left).toBeCloseTo(1, 9)
-    expect(box.top).toBeCloseTo(-1, 9)
-    expect(box.width).toBeCloseTo(2, 9)
-    expect(box.depth).toBeCloseTo(4, 9)
+    const bounds = boundingBox(outlineOf(rectangle(0, 0, 4, 2, 90)))
+    expect(bounds.left).toBeCloseTo(1, 9)
+    expect(bounds.top).toBeCloseTo(-1, 9)
+    expect(bounds.width).toBeCloseTo(2, 9)
+    expect(bounds.depth).toBeCloseTo(4, 9)
   })
 })
 

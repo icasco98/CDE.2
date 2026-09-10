@@ -41,20 +41,20 @@ function worstWall(walls: readonly Wall[], shift: Point): { wall: Wall | null; o
 
 /** Axis by axis against the boundary's extent, leaving an axis that cannot fit where it is. */
 function shiftInsideExtent(polygon: Polygon, boundary: Polygon): Point {
-  const box = boundingBox(polygon)
+  const extent = boundingBox(polygon)
   const bounds = boundingBox(boundary)
   let dx = 0
   let dy = 0
-  if (box.width <= bounds.width + TOLERANCE) {
-    if (box.left < bounds.left - TOLERANCE) dx = bounds.left - box.left
-    else if (box.left + box.width > bounds.left + bounds.width + TOLERANCE) {
-      dx = bounds.left + bounds.width - (box.left + box.width)
+  if (extent.width <= bounds.width + TOLERANCE) {
+    if (extent.left < bounds.left - TOLERANCE) dx = bounds.left - extent.left
+    else if (extent.left + extent.width > bounds.left + bounds.width + TOLERANCE) {
+      dx = bounds.left + bounds.width - (extent.left + extent.width)
     }
   }
-  if (box.depth <= bounds.depth + TOLERANCE) {
-    if (box.top < bounds.top - TOLERANCE) dy = bounds.top - box.top
-    else if (box.top + box.depth > bounds.top + bounds.depth + TOLERANCE) {
-      dy = bounds.top + bounds.depth - (box.top + box.depth)
+  if (extent.depth <= bounds.depth + TOLERANCE) {
+    if (extent.top < bounds.top - TOLERANCE) dy = bounds.top - extent.top
+    else if (extent.top + extent.depth > bounds.top + bounds.depth + TOLERANCE) {
+      dy = bounds.top + bounds.depth - (extent.top + extent.depth)
     }
   }
   return [dx, dy]

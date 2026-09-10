@@ -16,24 +16,24 @@ export type Obb = {
 }
 
 export function obbOf(footprint: Footprint): Obb {
-  const box = boundingBox(footprint.polygon)
+  const bounds = boundingBox(footprint.polygon)
   const radians = (footprint.rotation * Math.PI) / 180
   const cos = Math.cos(radians)
   const sin = Math.sin(radians)
   return {
-    cx: box.left + box.width / 2,
-    cy: box.top + box.depth / 2,
-    halfWidth: box.width / 2,
-    halfDepth: box.depth / 2,
+    cx: bounds.left + bounds.width / 2,
+    cy: bounds.top + bounds.depth / 2,
+    halfWidth: bounds.width / 2,
+    halfDepth: bounds.depth / 2,
     ax: [cos, sin],
     ay: [-sin, cos],
   }
 }
 
-function reach(box: Obb, axis: Point): number {
+function reach(obb: Obb, axis: Point): number {
   return (
-    box.halfWidth * Math.abs(box.ax[0] * axis[0] + box.ax[1] * axis[1]) +
-    box.halfDepth * Math.abs(box.ay[0] * axis[0] + box.ay[1] * axis[1])
+    obb.halfWidth * Math.abs(obb.ax[0] * axis[0] + obb.ax[1] * axis[1]) +
+    obb.halfDepth * Math.abs(obb.ay[0] * axis[0] + obb.ay[1] * axis[1])
   )
 }
 
