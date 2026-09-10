@@ -39,13 +39,7 @@ const fallback = 'room-other'
 
 const byId: ReadonlyMap<string, RoomType> = new Map(roomTypes.map((type) => [type.id, type]))
 
-export const categoryOrder: readonly RoomCategory[] = [
-  'reception',
-  'shared',
-  'private',
-  'service',
-  'open',
-]
+const categoryOrder: readonly RoomCategory[] = ['reception', 'shared', 'private', 'service', 'open']
 
 export const categoryLabels: Readonly<Record<RoomCategory, string>> = {
   reception: 'Reception',
@@ -57,10 +51,6 @@ export const categoryLabels: Readonly<Record<RoomCategory, string>> = {
 
 export function roomTypeById(id: string): RoomType | undefined {
   return byId.get(id)
-}
-
-export function labelOf(id: string): string {
-  return byId.get(id)?.label ?? id
 }
 
 export function plotBandFor(kindId: string, plotAreaM2: number): Band | undefined {
@@ -79,10 +69,6 @@ export function typicalArea(kindId: string, plotAreaM2: number): number {
   }
   if (typeof typical === 'number') return typical
   return typical.min * hallwayRun
-}
-
-export function legalFloorArea(kindId: string): number | undefined {
-  return byId.get(kindId)?.legalFloor?.area
 }
 
 export function typesByCategory(): readonly (readonly [RoomCategory, readonly RoomType[]])[] {
