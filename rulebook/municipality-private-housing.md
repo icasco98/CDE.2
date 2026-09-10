@@ -6,12 +6,11 @@ Resolution 451/2016. Retrieved from baladia.gov.kw (construction
 system, page 3) on 10 September 2026 by the owner.
 
 **Status.** Every rule below is a **wall** (hard constraint) and is
-`sourced`. Two things still to confirm with the Municipality before
-any of this is loaded into the tool: whether Resolution 288/2024 (or a
-later amendment) supersedes the ratios, setbacks and heights on this
-page, and whether the page's figures are the ones the permit office
-applies today. Until confirmed, the tool labels these "as published,
-451/2016" and shows the date.
+`sourced`. By the owner's decision these are the rules the tool
+follows until the Municipality's own website publishes a change; the
+owner supplies the new text when that happens, and the entry is
+updated with a new retrieval date. News reports of other figures are
+not a source.
 
 Numbers were transcribed from a printout. Each one must be checked
 against the page by the owner before it is marked verified.
