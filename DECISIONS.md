@@ -60,3 +60,10 @@ A reversal is a new entry, never an edit.
 13. **Kuwait first.** Compliance and comfort sell; energy savings do
     not, because electricity is subsidised. Verify the current MEW
     energy code and Kuwait Municipality editions before the rulebook.
+
+14. **The Municipality page is the regulation.** The tool follows the
+    private and model housing rules as published on baladia.gov.kw
+    (amended by Resolution 451/2016, retrieved 10 September 2026).
+    News reports of later resolutions are not a source. When the
+    website changes, the owner supplies the new text and the rulebook
+    entry is updated with a new retrieval date.
