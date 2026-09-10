@@ -1,0 +1,13 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
+
+.vscode/
+.idea/
+*.swp
+.DS_Store
