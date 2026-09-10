@@ -1,27 +1,10 @@
+import type { Household } from '../model'
 import { typicalArea } from './sizes'
-
-export type Household = {
-  readonly familySize: number
-  readonly bedrooms: number
-  readonly maid: boolean
-  readonly driver: boolean
-  readonly cars: number
-  readonly womensReception: boolean
-}
 
 export type ProgramRoom = {
   readonly type: string
   readonly name: string
   readonly targetArea: number
-}
-
-export const startingHousehold: Household = {
-  familySize: 4,
-  bedrooms: 3,
-  maid: false,
-  driver: false,
-  cars: 2,
-  womensReception: false,
 }
 
 /** The standard trio plus the rooms this household implies, each at its typical target area. */

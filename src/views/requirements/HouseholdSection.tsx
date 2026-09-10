@@ -1,35 +1,38 @@
 import { useState } from 'react'
 import { area } from '../../geometry'
-import type { Project } from '../../model'
-import { defaultProgram, type Household } from '../../rulebook'
+import type { Household, Project } from '../../model'
+import { defaultProgram } from '../../rulebook'
 import { session } from '../../app/session'
-import { useHousehold } from '../../app/useProject'
 import { CheckField, NumberField, Section } from './fields'
 import { refusalOf } from './refusals'
 
 export function HouseholdSection({ project }: { project: Project }) {
-  const household = useHousehold()
   const [changed, setChanged] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
+  const household = project.household
 
   const change = (patch: Partial<Household>): void => {
-    session.setHousehold({ ...household, ...patch })
+    setProblem(refusalOf(session.actions.setHousehold({ ...household, ...patch })))
     setChanged(true)
   }
 
   const rebuild = (): void => {
-    let refusal: string | null = null
-    for (const room of project.rooms) refusal ??= refusalOf(session.actions.removeRoom(room.id))
-    for (const room of defaultProgram(area(project.plot.polygon), household))
-      refusal ??= refusalOf(
-        session.actions.addRoom({
+    const refusal = session.transaction(() => {
+      for (const room of project.rooms) {
+        const removed = session.actions.removeRoom(room.id)
+        if (!removed.ok) return removed
+      }
+      for (const room of defaultProgram(area(project.plot.polygon), household)) {
+        const added = session.actions.addRoom({
           type: room.type,
           name: room.name,
           targetArea: room.targetArea,
           storey: 0,
-        }),
-      )
-    setProblem(refusal)
+        })
+        if (!added.ok) return added
+      }
+    })
+    setProblem(refusalOf(refusal))
     setChanged(false)
   }
 

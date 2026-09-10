@@ -3,28 +3,51 @@ import {
   PROJECT_VERSION,
   type Actor,
   type Edge,
+  type Household,
   type Plot,
   type Project,
   type Room,
   type Weights,
 } from './types'
 
-/** What undo restores: rooms, edges, plot and weights, and nothing else. */
+/** What undo restores: rooms, edges, plot, weights and household, and nothing else. */
 export type Snapshot = {
   readonly rooms: readonly Room[]
   readonly edges: readonly Edge[]
   readonly plot: Plot
   readonly weights: Weights
+  readonly household: Household
 }
 
-export const emptyPlot: Plot = { on: false, polygon: [], north: 0, street: [] }
+/** The plot a project opens on, wound as `rectangleToPolygon` winds one: side 0 north, side 2 south. */
+export const startingPlot: Plot = {
+  on: false,
+  polygon: [
+    [0, 0],
+    [20, 0],
+    [20, 25],
+    [0, 25],
+  ],
+  north: 0,
+  street: [2],
+}
+
+export const startingHousehold: Household = {
+  familySize: 4,
+  bedrooms: 3,
+  cars: 2,
+  maid: false,
+  driver: false,
+  womensReception: false,
+}
 
 export function emptyProject(newId: IdGenerator, name = 'Untitled'): Project {
   return {
     id: newId('project'),
     name,
     storeys: 1,
-    plot: emptyPlot,
+    plot: startingPlot,
+    household: startingHousehold,
     rooms: [],
     edges: [],
     weights: {},
@@ -34,8 +57,8 @@ export function emptyProject(newId: IdGenerator, name = 'Untitled'): Project {
 }
 
 export function snapshotOf(project: Project): Snapshot {
-  const { rooms, edges, plot, weights } = project
-  return { rooms, edges, plot, weights }
+  const { rooms, edges, plot, weights, household } = project
+  return { rooms, edges, plot, weights, household }
 }
 
 export function restore(project: Project, snapshot: Snapshot): Project {

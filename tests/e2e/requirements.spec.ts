@@ -113,12 +113,14 @@ test('undo, redo, opening a file and refusing one that cannot be read', async ({
   await page.getByRole('button', { name: 'Rebuild program from household' }).click()
   const before = await rowsOf(page).count()
 
+  expect(before).toBeGreaterThan(12)
+
   await page.getByRole('button', { name: 'Undo' }).click()
-  await expect(rowsOf(page)).toHaveCount(before - 1)
+  await expect(rowsOf(page)).toHaveCount(0)
   await page.keyboard.press('Control+Shift+z')
   await expect(rowsOf(page)).toHaveCount(before)
   await page.keyboard.press('Control+z')
-  await expect(rowsOf(page)).toHaveCount(before - 1)
+  await expect(rowsOf(page)).toHaveCount(0)
 
   await page.locator('.file-button input').setInputFiles({
     name: 'opened.json',

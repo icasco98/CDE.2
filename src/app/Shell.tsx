@@ -30,7 +30,7 @@ export function Shell() {
     if (!file) return
     void file.text().then((text) => {
       const read = deserialize(text)
-      if (read.ok) session.open(read.value)
+      if (read.ok) session.actions.load(read.value)
       else
         read.problems.forEach((problem) =>
           session.say(`${file.name} cannot be opened: ${problem.message}`),
@@ -70,7 +70,7 @@ export function Shell() {
           <input
             type="text"
             value={project.name}
-            onChange={(event) => session.setName(event.target.value)}
+            onChange={(event) => session.actions.setName(event.target.value)}
           />
         </label>
         <nav className="tabs">

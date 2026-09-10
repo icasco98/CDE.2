@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { checkProject } from './invariants'
+import { startingHousehold } from './project'
 import { EXTERIOR, PROJECT_VERSION, type Edge, type Project, type Room } from './types'
 
 const room = (id: string, extra: Partial<Room> = {}): Room => ({
@@ -27,6 +28,7 @@ const project = (rooms: readonly Room[], edges: readonly Edge[] = [], storeys = 
   name: 'test',
   storeys,
   plot: { on: false, polygon: [], north: 0, street: [] },
+  household: startingHousehold,
   rooms,
   edges,
   weights: {},

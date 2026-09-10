@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createIdGenerator } from './ids'
+import { startingHousehold } from './project'
 import { createStore, type Store } from './store'
-import { EXTERIOR, type Result } from './types'
+import { EXTERIOR, ok, type Result } from './types'
 
 let store: Store
 
@@ -121,20 +122,33 @@ describe('storeys', () => {
 })
 
 describe('undo', () => {
-  it('covers rooms, edges, plot and weights', () => {
+  it('covers rooms, edges, plot, weights and household', () => {
     const room = addRoom('bedroom')
     store.actions.setPlot({ on: true, polygon: [], north: 30, street: [0] })
     store.actions.setWeights({ privacy: 0.8 })
+    store.actions.setHousehold({ ...store.getState().household, bedrooms: 6 })
     store.actions.connect({ a: EXTERIOR, b: room, kind: 'main-door' })
 
     store.undo()
     expect(store.getState().edges).toEqual([])
+    store.undo()
+    expect(store.getState().household.bedrooms).toBe(startingHousehold.bedrooms)
     store.undo()
     expect(store.getState().weights).toEqual({})
     store.undo()
     expect(store.getState().plot.north).toBe(0)
     store.undo()
     expect(store.getState().rooms).toEqual([])
+    expect(store.canUndo()).toBe(false)
+  })
+
+  it('leaves the project name alone', () => {
+    addRoom('bedroom')
+    store.actions.setName('Al Bidaa House')
+    expect(store.getState().name).toBe('Al Bidaa House')
+    store.undo()
+    expect(store.getState().rooms).toEqual([])
+    expect(store.getState().name).toBe('Al Bidaa House')
     expect(store.canUndo()).toBe(false)
   })
 
@@ -205,5 +219,86 @@ describe('a gesture in flight', () => {
     store.undo()
     expect(store.getState().rooms).toEqual([])
     expect(store.canUndo()).toBe(false)
+  })
+})
+
+describe('a project opened from a file', () => {
+  it('replaces the one in hand and starts its history again', () => {
+    addRoom('bedroom')
+    const opened = createStore(undefined, { newId: createIdGenerator(21) }).getState()
+    expect(store.actions.load({ ...opened, name: 'Opened House' }).ok).toBe(true)
+    expect(store.getState().name).toBe('Opened House')
+    expect(store.getState().rooms).toEqual([])
+    expect(store.canUndo()).toBe(false)
+  })
+
+  it('refuses one that breaks an invariant', () => {
+    const opened = createStore(undefined, { newId: createIdGenerator(23) }).getState()
+    const broken = {
+      ...opened,
+      edges: [{ id: 'edge_1', a: 'ghost', b: EXTERIOR, kind: 'door' as const, storey: 0 }],
+    }
+    expect(codes(store.actions.load(broken))).toContain('edge-endpoint-missing')
+    expect(store.getState().rooms).toHaveLength(0)
+  })
+})
+
+describe('several actions as one step', () => {
+  it('records one undo step for the whole run', () => {
+    addRoom('bedroom')
+    const changes: string[] = []
+    store.subscribe((_project, change) => changes.push(change))
+
+    const done = store.transaction(() => {
+      store.actions.addRoom({ type: 'kitchen', targetArea: 20 })
+      store.actions.addRoom({ type: 'diwaniya', targetArea: 50 })
+    })
+
+    expect(done.ok).toBe(true)
+    expect(changes).toEqual(['committed'])
+    expect(store.getState().rooms).toHaveLength(3)
+    store.undo()
+    expect(store.getState().rooms).toHaveLength(1)
+    store.redo()
+    expect(store.getState().rooms).toHaveLength(3)
+  })
+
+  it('keeps none of it when one action is refused', () => {
+    const room = addRoom('bedroom')
+    const refused = store.transaction(() => {
+      store.actions.rename(room, 'Majlis')
+      return store.actions.setTargetArea(room, 0)
+    })
+
+    expect(codes(refused)).toEqual(['bad-area'])
+    expect(store.getState().rooms[0]?.name).toBe('bedroom')
+    store.undo()
+    expect(store.getState().rooms).toEqual([])
+    expect(store.canUndo()).toBe(false)
+  })
+
+  it('keeps none of it when an action inside is refused and the run ignores it', () => {
+    const room = addRoom('bedroom')
+    store.transaction(() => {
+      store.actions.rename(room, 'Majlis')
+      store.actions.setStorey(room, 4)
+      return ok(undefined)
+    })
+
+    expect(store.getState().rooms[0]?.name).toBe('bedroom')
+  })
+
+  it('refuses to run inside another one, and rolls back when the run throws', () => {
+    const room = addRoom('bedroom')
+    expect(codes(store.transaction(() => store.transaction(() => undefined)))).toEqual([
+      'inside-transaction',
+    ])
+    expect(() =>
+      store.transaction(() => {
+        store.actions.rename(room, 'Majlis')
+        throw new Error('the run gave up')
+      }),
+    ).toThrow('the run gave up')
+    expect(store.getState().rooms[0]?.name).toBe('bedroom')
   })
 })
