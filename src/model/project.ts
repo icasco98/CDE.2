@@ -78,8 +78,16 @@ export function dropRoom(project: Project, id: string): Project {
   }
 }
 
-/** A room's footprint is absent while it is unplaced, so it is deleted rather than set to nothing. */
+/** A room's footprint is absent while it is unplaced, so it is rebuilt without one. */
 export function withoutFootprint(room: Room): Room {
-  const { footprint: _footprint, ...rest } = room
-  return rest
+  return {
+    id: room.id,
+    name: room.name,
+    type: room.type,
+    storey: room.storey,
+    storeysSpanned: room.storeysSpanned,
+    targetArea: room.targetArea,
+    pinned: room.pinned,
+    ...(room.bubble === undefined ? {} : { bubble: room.bubble }),
+  }
 }
