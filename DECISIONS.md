@@ -67,3 +67,10 @@ A reversal is a new entry, never an edit.
     News reports of later resolutions are not a source. When the
     website changes, the owner supplies the new text and the rulebook
     entry is updated with a new retrieval date.
+
+15. **Models.** The cofounder (Claude, on Fable) writes briefs and
+    reviews every diff. Agents that implement tasks run on Opus for
+    work that needs judgement (geometry, solver, rule engine, any
+    screen a person uses) and on Sonnet for mechanical work fully
+    determined by the brief (tooling, scaffolding, formatting). Agents
+    never run on Fable, to conserve it for review.
