@@ -12,7 +12,7 @@ connection from where two walls happen to land.
 | Entity | Fields | Notes |
 |---|---|---|
 | **Project** | `id`, `name`, `storeys`, `plot`, `rooms[]`, `edges[]`, `weights`, `actors[]`, `version` | One JSON document. Metres and m². |
-| **Plot** | `on`, `polygon`, `north` (degrees from up), `street` (which edges face a street) | A rectangle today, any polygon later; same field either way. |
+| **Plot** | `on` (boolean: the boundary binds), `polygon`, `north` (degrees from up), `street` (which edges face a street) | `on` false: the plot is drawn for reference and constrains nothing. A rectangle today, any polygon later; same field either way. |
 | **Room** | `id`, `name`, `type`, `storey`, `storeysSpanned`, `targetArea`, `bubble?`, `footprint?`, `pinned` | `type` keys the room-type table. `bubble` is `{x, y}` in the bubble view. `footprint` is `{polygon, rotation}`: a rigid polygon in its own frame, turned about its centre, absent while unplaced. A stair is a room with `storeysSpanned > 1`. `pinned` means the solver may not move it. |
 | **Edge** | `id`, `a`, `b`, `kind`, `storey`, `hint?` | `a`/`b` are room ids, or the singleton `EXTERIOR`. `kind` is `door`, `open` (one space flows into the next) or `main-door` (exactly one per project, from `EXTERIOR`). `hint` is a wall position for drawing; losing it changes nothing. |
 | **Weights** | one number per force | The person's own priorities on this project. Always on screen. |

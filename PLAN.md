@@ -19,9 +19,9 @@ for help. No solver, no findings, no analysis.
 
 | # | Task | Depends on | Done when | Status |
 |---|---|---|---|---|
-| A1 | **Foundation.** Tooling (TypeScript, React, Vite, Vitest, Playwright, lint), CI, `npm run check`, the guard test, an empty app shell that opens. | – | CI green on an empty app; guard test fails on any forbidden name. | in review, PR #2 |
-| A2 | **Salvage the geometry core.** Polygon booleans and carving, oriented-box overlap, rigid-body plot clamp, grid and gap snapping, footprint union, shared-wall test. Comments stripped, names aligned to `MODEL.md`, their tests brought across. | A1 | Tests pass; no file mentions old concepts; each module exports only what another imports. | todo |
-| A3 | **Data model and store.** Project, rooms, edges, plot, weights as in `MODEL.md`; undo; autosave to browser storage; project file export and import. | A1 | Round-trip test: export, import, identical project. Undo covers rooms, edges, plot, weights and nothing else. | todo |
+| A1 | **Foundation.** Tooling (TypeScript, React, Vite, Vitest, Playwright, lint), CI, `npm run check`, the guard test, an empty app shell that opens. | – | CI green on an empty app; guard test fails on any forbidden name. | done, PR #2 |
+| A2 | **Salvage the geometry core.** Polygon booleans and carving, oriented-box overlap, rigid-body plot clamp, grid and gap snapping, footprint union, shared-wall test. Comments stripped, names aligned to `MODEL.md`, their tests brought across. | A1 | Tests pass; no file mentions old concepts; each module exports only what another imports. | in review |
+| A3 | **Data model and store.** Project, rooms, edges, plot, weights as in `MODEL.md`; undo; autosave to browser storage; project file export and import. | A1 | Round-trip test: export, import, identical project. Undo covers rooms, edges, plot, weights and nothing else. | in review, PR #5 |
 | A4 | **Requirements screen.** Program entry with target areas from the room-type table, plot with north and street sides, household, weights. | A3, O2 | The owner enters a twelve-room program and a plot without help. | todo |
 | A5 | **Bubbles.** Circles sized by area under springs, repulsion and storey pull; damped, deterministic for the same input; pin; connect and disconnect; storey layers; area-versus-plot warning. | A3 | Same input gives the same picture twice. A pinned bubble does not move. Layout settles under two seconds for thirty rooms. | todo |
 | A6 | **Zoning.** Salvaged canvas re-pointed at the graph: move, rotate, resize, carve; plot walls; unrealised edge drawn as tension; proposed edge on touch, accepted by a click; doors drawn from edges. | A2, A3, A5 | Every gesture has a Playwright test. Moving a room never changes an edge. | todo |
@@ -34,7 +34,7 @@ for help. No solver, no findings, no analysis.
 | # | Task | Needed by | Status |
 |---|---|---|---|
 | O1 | Obtain the current texts: the Municipality's private-housing page (done, PR #1) and the firm's working edition of MEW R-6 (open). | rulebook | in progress |
-| O2 | Room-type table for Kuwaiti villas: areas, aspect ranges, tiers. | A4 | in review, rulebook-room-types |
+| O2 | Room-type table for Kuwaiti villas: areas, aspect ranges, tiers. | A4 | done, PR #3 |
 | O3 | The known house: plot, north, program, the built plan. | A9 | todo |
 | O4 | Rulebook part 1, walls: setbacks, ratios, heights, basements, spans. Each with source and confidence. | Milestone 2 | todo |
 | O5 | A fresh brief for the usability run. | A9 | todo |
