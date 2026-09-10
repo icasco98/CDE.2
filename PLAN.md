@@ -1,67 +1,96 @@
 # Plan
 
-Updated at every weekly check-in. Dates are targets; a slip is
-recorded here with its reason, not hidden.
+An ordered list of tasks. No dates. A task starts when the owner
+approves it and runs until its definition of done is met. Owner tasks
+are done when the owner is available. A task is marked here as
+`todo`, `in progress` or `done`, with the pull request that closed it.
 
-Start: week of 14 September 2026. Owner available weekdays and
-weekends; agent work is continuous; every merge is reviewed by the
-cofounder (Claude) and approved by the owner with one click.
+Order matters where a task names what it depends on. Tasks with no
+dependency between them may run at the same time.
 
-## Milestone 1: the loop by hand (target: 13 November 2026)
+## Milestone 1: the loop by hand
 
-A person enters a twelve-room program with a real plot, draws the
-bubbles, places and rotates the rooms, sees the massing, and prints a
-scaled PDF and a DXF, in under thirty minutes without asking for help.
-No solver, no findings, no analysis.
+Done when: a person enters a twelve-room program with a real plot,
+draws the bubbles, places and rotates the rooms, sees the massing, and
+prints a scaled PDF and a DXF, in under thirty minutes without asking
+for help. No solver, no findings, no analysis.
 
-| Week | Ending | Agent track | Owner track |
+### Agent tasks
+
+| # | Task | Depends on | Done when | Status |
+|---|---|---|---|---|
+| A1 | **Foundation.** Tooling (TypeScript, React, Vite, Vitest, Playwright, lint), CI, `npm run check`, the guard test, an empty app shell that opens. | – | CI green on an empty app; guard test fails on any forbidden name. | todo |
+| A2 | **Salvage the geometry core.** Polygon booleans and carving, oriented-box overlap, rigid-body plot clamp, grid and gap snapping, footprint union, shared-wall test. Comments stripped, names aligned to `MODEL.md`, their tests brought across. | A1 | Tests pass; no file mentions old concepts; each module exports only what another imports. | todo |
+| A3 | **Data model and store.** Project, rooms, edges, plot, weights as in `MODEL.md`; undo; autosave to browser storage; project file export and import. | A1 | Round-trip test: export, import, identical project. Undo covers rooms, edges, plot, weights and nothing else. | todo |
+| A4 | **Requirements screen.** Program entry with target areas from the room-type table, plot with north and street sides, household, weights. | A3, O2 | The owner enters a twelve-room program and a plot without help. | todo |
+| A5 | **Bubbles.** Circles sized by area under springs, repulsion and storey pull; damped, deterministic for the same input; pin; connect and disconnect; storey layers; area-versus-plot warning. | A3 | Same input gives the same picture twice. A pinned bubble does not move. Layout settles under two seconds for thirty rooms. | todo |
+| A6 | **Zoning.** Salvaged canvas re-pointed at the graph: move, rotate, resize, carve; plot walls; unrealised edge drawn as tension; proposed edge on touch, accepted by a click; doors drawn from edges. | A2, A3, A5 | Every gesture has a Playwright test. Moving a room never changes an edge. | todo |
+| A7 | **Massing.** Salvaged 3D re-pointed at the graph: storeys, heights, envelope numbers, click to select. | A3, A6 | A room selected in any view is selected in all three. | todo |
+| A8 | **Export.** PDF to scale, DXF, produced in the browser. | A6, A7 | A printed sheet measures true at its stated scale. The DXF opens in AutoCAD with layers per storey. | todo |
+| A9 | **Sample project and usability run.** A sample project; the two owner projects run through the whole loop; fix list worked. | A4 to A8, O3, O5 | The milestone's done condition is met and timed. | todo |
+
+### Owner tasks
+
+| # | Task | Needed by | Status |
 |---|---|---|---|
-| 0 | 20 Sep | Foundation: tooling, CI, guard test, app shell, salvaged geometry with its tests, instructions and specs merged. | Verify current editions of the Municipality resolutions and the MEW energy code. Pick the known house for the accuracy test. |
-| 1 | 27 Sep | Data model and store: project, rooms, edges, plot, weights; undo; autosave; project file import and export with a round-trip test. | Room-type table: areas, aspects, tiers for Kuwaiti villas. |
-| 2 | 4 Oct | Requirements screen: program entry, plot with north and street sides, household. | Rulebook part 1: walls (setbacks, ratios, heights, structure). |
-| 3 | 11 Oct | Bubbles: force layout with damping, determinism, pinning, storey layers, connect and disconnect, area-versus-plot warning. | Rulebook part 2: forces, with sources and default strengths. |
-| 4 | 18 Oct | Bubbles finished and usability-tested. Zoning begins: salvaged canvas re-pointed at the graph. | Enter the known house as a project. |
-| 5 | 25 Oct | Zoning: move, rotate, resize, carve, plot walls, unrealised edges shown as tension, proposed edges on touch, door drawing from edges. | Review zoning on the known house. |
-| 6 | 1 Nov | Massing: salvaged 3D re-pointed at the graph, storeys, envelope numbers. | Rulebook review with a colleague. |
-| 7 | 8 Nov | Export: PDF to scale, DXF. Sample project. | Write the fresh brief for the usability run. |
-| 8 | 13 Nov | Usability run on both projects, fix list, milestone review. | Run the tool on both projects and time it. |
+| O1 | Obtain the current texts: Ministerial Resolution 206/2009 with its tables, 288/2024, any 2025 and 2026 amendments, and the firm's working edition of MEW R-6. | rulebook | todo |
+| O2 | Room-type table for Kuwaiti villas: areas, aspect ranges, tiers. | A4 | todo |
+| O3 | The known house: plot, north, program, the built plan. | A9 | todo |
+| O4 | Rulebook part 1, walls: setbacks, ratios, heights, basements, spans. Each with source and confidence. | Milestone 2 | todo |
+| O5 | A fresh brief for the usability run. | A9 | todo |
+| O6 | Rulebook part 2, forces: name, element, direction, default strength for Kuwait, source. | Milestone 2 | todo |
 
-Slack: one week held in reserve before milestone 2.
+## Milestone 2: the rule engine
 
-## Milestone 2: the rule engine (target: mid January 2027)
+Done when: findings from the graph and the geometry each show a
+one-sentence verdict with rule, number, source, assumption and
+confidence one click down; the known house scores as expected;
+circulation routes draw over edges.
 
-Findings from the graph and the geometry, each with rule, number,
-source, assumption and confidence, one click down from a one-sentence
-verdict. Circulation routes over edges. The known house scores as
-expected. Plain screens, no visual design yet.
+| # | Task | Depends on | Status |
+|---|---|---|---|
+| B1 | Rulebook as data: walls and forces loaded from one file, validated against `MODEL.md`. | O4, O6 | todo |
+| B2 | Graph findings: reachability, tier skips, stair landings, rule violations. Reference cases from the known house. | B1, A9 | todo |
+| B3 | Geometry findings: walls broken, forces unsatisfied, with numbers. Reference cases. | B1, A9 | todo |
+| B4 | Findings screen: verdict on the surface, detail one click down, assumptions editable in place. | B2, B3 | todo |
+| B5 | Circulation: actors, routes over edges, animated walk. | A6 | todo |
 
-## Milestone 3: forces and settling (target: spring 2027)
+## Milestone 3: forces and settling
 
-The solver over rigid rotatable rooms with collision; pinning; the
-settle animation as the solver's own steps; several typologies side
-by side. The hardest milestone. Budget accordingly.
+Done when: settle moves unpinned rooms to an equilibrium under the
+weights; grabbing a room pins it and the rest continue; several
+typologies settle side by side; the animation is the solver's own
+steps.
+
+| # | Task | Depends on | Status |
+|---|---|---|---|
+| C1 | Solver over rigid rotatable rooms with collision, forces from B1, walls from B1. Deterministic. | B3 | todo |
+| C2 | Settle, pin, interrupt in the zoning view; steps recorded for playback. | C1 | todo |
+| C3 | Typologies as starting points; compare view. | C2 | todo |
+| C4 | Settle animation across bubbles, zoning and massing. | C2 | todo |
 
 ## Milestone 4: visual design
 
-The two registers: hand-drawn and cut-paper for the story and the
-bubbles, quiet and precise for the plan and the numbers.
+Two registers: hand-drawn and cut-paper for the story and the bubbles;
+quiet and precise for the plan and the numbers. Starts from the
+owner's references and a written motion language.
 
 ## Milestone 5: environment and export
 
-Sun, shadow and radiation per facade, glazing against the energy
-code, passive strategies for hot-arid climate. Python service arrives
-here. IFC for Revit when the owner's own workflow needs it.
+Sun, shadow, radiation per facade, glazing against the energy code,
+passive strategies for a hot-arid climate, via a Python service. IFC
+for Revit when the owner's own workflow needs it.
 
 ## How a task runs
 
 1. The cofounder writes the brief: goal, files, definition of done,
    which standards apply and how they are checked.
-2. An agent works on a branch from the brief and this repository
-   only.
-3. The cofounder reviews the diff, runs the checks, and tests the
-   action in the running app.
-4. The owner approves the merge.
-5. The check-in note records what merged, what slipped, and why.
+2. The owner approves the start.
+3. An agent works on a branch from the brief and this repository only.
+4. The cofounder reviews the diff, runs the checks, tests the action
+   in the running app, and sends it back until it passes.
+5. The owner approves the merge.
+6. This file is updated.
 
 ## Standards checked on every task
 
