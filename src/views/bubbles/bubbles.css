@@ -1,0 +1,129 @@
+.bubbles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: 100%;
+  min-height: 0;
+}
+
+.bubbles-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.bubbles-bar button {
+  font: inherit;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid #b7b1a5;
+  border-radius: 999px;
+  background: #fffdf9;
+  color: inherit;
+  cursor: pointer;
+}
+
+.bubbles-bar button:disabled {
+  color: #9a958c;
+  cursor: default;
+}
+
+.bubbles-status {
+  margin: 0;
+  color: #6d6862;
+}
+
+.bubbles-warning {
+  margin: 0;
+  color: #8a3f2a;
+}
+
+.bubbles-sheet {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  background: #faf8f4;
+  border: 1px solid #e2ddd3;
+  border-radius: 4px;
+  touch-action: none;
+}
+
+.bubbles-sheet:focus-visible {
+  outline: 2px solid #6d6862;
+}
+
+.band-even {
+  fill: #f3efe6;
+}
+
+.band-odd {
+  fill: #ece7db;
+}
+
+.band-label {
+  fill: #8b857b;
+  pointer-events: none;
+}
+
+.link {
+  stroke: #8f887d;
+  stroke-width: 0.18;
+  pointer-events: none;
+}
+
+.link-selected {
+  stroke: #2f6f8f;
+  stroke-width: 0.4;
+}
+
+.link-drawn {
+  stroke: #2f6f8f;
+  stroke-width: 0.25;
+  stroke-dasharray: 0.6 0.5;
+}
+
+/* A line is too thin to aim at, so a wide invisible twin takes the click. */
+.link-grip {
+  stroke: transparent;
+  stroke-width: 1.2;
+  cursor: pointer;
+}
+
+.bubble circle {
+  stroke: #6f6a62;
+  stroke-width: 0.08;
+  cursor: grab;
+}
+
+.bubble-selected circle {
+  stroke: #2f6f8f;
+  stroke-width: 0.3;
+}
+
+.bubble text {
+  text-anchor: middle;
+  dominant-baseline: middle;
+  fill: #2b2822;
+  paint-order: stroke;
+  stroke: #faf8f4;
+  stroke-width: 0.35;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.bubble-area {
+  fill: #6d6862;
+}
+
+.pin-mark {
+  fill: #8a3f2a;
+  stroke: #fffdf9;
+  stroke-width: 0.1;
+  pointer-events: none;
+}
+
+.reach {
+  fill: #fffdf9;
+  stroke: #2f6f8f;
+  stroke-width: 0.12;
+  cursor: crosshair;
+}
