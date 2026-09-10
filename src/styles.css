@@ -6,6 +6,7 @@
     'Segoe UI',
     Roboto,
     sans-serif;
+  font-size: 15px;
   color: #1f1d1a;
   background: #faf8f4;
 }
@@ -14,12 +15,262 @@ body {
   margin: 0;
 }
 
-main {
-  padding: 2rem;
-}
-
 h1 {
   font-size: 1.5rem;
   font-weight: 500;
   margin: 0;
+}
+
+h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+}
+
+main,
+.shell,
+.messages {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.shell {
+  padding-top: 1.5rem;
+}
+
+.shell-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.shell-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0 0;
+  border-bottom: 1px solid #ddd8cf;
+  padding-bottom: 0.5rem;
+}
+
+.tabs button[aria-pressed='true'] {
+  background: #1f1d1a;
+  color: #faf8f4;
+  border-color: #1f1d1a;
+}
+
+button,
+.file-button {
+  min-height: 32px;
+  padding: 0 0.75rem;
+  font: inherit;
+  color: inherit;
+  background: #fff;
+  border: 1px solid #b9b2a6;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+button:disabled {
+  color: #8c857a;
+  cursor: default;
+}
+
+.file-button {
+  display: inline-flex;
+  align-items: center;
+}
+
+.file-button input {
+  display: none;
+}
+
+input,
+select {
+  min-height: 32px;
+  font: inherit;
+  color: inherit;
+  background: #fff;
+  border: 1px solid #b9b2a6;
+  border-radius: 3px;
+  padding: 0 0.4rem;
+  box-sizing: border-box;
+}
+
+input[type='checkbox'] {
+  min-height: 0;
+  width: 18px;
+  height: 18px;
+}
+
+input[type='range'] {
+  border: 0;
+  padding: 0;
+  background: none;
+  width: 180px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.field input,
+.field select {
+  font-size: 1rem;
+  width: 100%;
+}
+
+.project-name {
+  margin-top: 1rem;
+  max-width: 420px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 32px;
+}
+
+.row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.row > .field {
+  min-width: 140px;
+}
+
+fieldset {
+  border: 1px solid #ddd8cf;
+  border-radius: 3px;
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+legend {
+  font-size: 0.85rem;
+  padding: 0 0.25rem;
+}
+
+.panel {
+  border: 1px solid #ddd8cf;
+  border-radius: 3px;
+  background: #fff;
+  padding: 1rem;
+  margin: 1.5rem 0;
+}
+
+.requirements {
+  padding-bottom: 3rem;
+}
+
+table.program {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0.75rem;
+}
+
+table.program th {
+  text-align: left;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-bottom: 1px solid #ddd8cf;
+  padding: 0.35rem 0.5rem 0.35rem 0;
+}
+
+table.program td {
+  vertical-align: top;
+  padding: 0.35rem 0.5rem 0.35rem 0;
+}
+
+table.program td input[type='text'],
+table.program td select {
+  width: 100%;
+}
+
+table.program td input[type='number'] {
+  width: 90px;
+}
+
+.below-floor {
+  border-color: #a5442c;
+}
+
+.problem {
+  display: block;
+  color: #a5442c;
+  font-size: 0.85rem;
+  margin: 0.25rem 0 0;
+  max-width: 40ch;
+}
+
+.note {
+  color: #6b655c;
+  font-size: 0.85rem;
+  margin: 0 0 0.75rem;
+}
+
+.reading {
+  margin: 0;
+  align-self: center;
+}
+
+.totals {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.totals dt {
+  font-size: 0.8rem;
+  color: #6b655c;
+}
+
+.totals dd {
+  margin: 0;
+}
+
+.messages {
+  list-style: none;
+  margin-top: 1rem;
+}
+
+.messages li {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #a5442c;
+  border-radius: 3px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  background: #fdf3f0;
+}
+
+.hidden-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
 }
