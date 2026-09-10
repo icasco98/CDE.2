@@ -17,7 +17,7 @@ export type Snapshot = {
   readonly weights: Weights
 }
 
-export const emptyPlot: Plot = { on: '', polygon: [], north: 0, street: [] }
+export const emptyPlot: Plot = { on: false, polygon: [], north: 0, street: [] }
 
 export function emptyProject(newId: IdGenerator, name = 'Untitled'): Project {
   return {

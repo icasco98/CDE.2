@@ -126,7 +126,7 @@ export function parseProject(document: Document): Result<Project> {
   const plotOf = (value: unknown, at: string): Plot => {
     const raw = nested(value, at)
     return {
-      on: text(raw.on, `${at}.on`),
+      on: flag(raw.on, `${at}.on`),
       polygon: polygon(raw.polygon, `${at}.polygon`),
       north: count(raw.north, `${at}.north`),
       street: list(raw.street, `${at}.street`).map((side, i) => count(side, `${at}.street[${i}]`)),

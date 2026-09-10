@@ -57,7 +57,7 @@ function furnished(): Project {
   actions.connect({ a: hall, b: stair, kind: 'open' })
   actions.connect({ a: stair, b: bedroom, kind: 'door', storey: 1 })
   actions.setPlot({
-    on: 'Block 4, Plot 12',
+    on: true,
     polygon: [
       [0, 0],
       [20, 0],
@@ -92,6 +92,14 @@ describe('the project file', () => {
     const document = { ...furnished(), storeys: 'two' }
     const back = deserialize(JSON.stringify(document))
     expect(back.ok ? [] : back.problems.map((p) => p.message)).toContain('storeys is not a number')
+  })
+
+  it('refuses a plot boundary that is not a yes or a no', () => {
+    const document = { ...furnished(), plot: { ...furnished().plot, on: 'yes' } }
+    const back = deserialize(JSON.stringify(document))
+    expect(back.ok ? [] : back.problems.map((p) => p.message)).toContain(
+      'plot.on is not true or false',
+    )
   })
 
   it('refuses a document that breaks an invariant', () => {

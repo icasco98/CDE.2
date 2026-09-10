@@ -123,7 +123,7 @@ describe('storeys', () => {
 describe('undo', () => {
   it('covers rooms, edges, plot and weights', () => {
     const room = addRoom('bedroom')
-    store.actions.setPlot({ on: 'Block 4', polygon: [], north: 30, street: [0] })
+    store.actions.setPlot({ on: true, polygon: [], north: 30, street: [0] })
     store.actions.setWeights({ privacy: 0.8 })
     store.actions.connect({ a: EXTERIOR, b: room, kind: 'main-door' })
 

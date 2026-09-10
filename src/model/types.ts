@@ -16,8 +16,8 @@ export type Bubble = { readonly x: number; readonly y: number }
 export type WallHint = { readonly at: Point }
 
 export type Plot = {
-  /** Where the plot is, as the person writes it: a block and plot number, an address. */
-  readonly on: string
+  /** Whether the boundary binds: rooms are held inside it and setbacks apply, or it is drawn for reference only. */
+  readonly on: boolean
   readonly polygon: Polygon
   /** Degrees from up on the sheet, clockwise. */
   readonly north: number

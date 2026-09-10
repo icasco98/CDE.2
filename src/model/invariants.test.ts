@@ -26,7 +26,7 @@ const project = (rooms: readonly Room[], edges: readonly Edge[] = [], storeys = 
   id: 'project',
   name: 'test',
   storeys,
-  plot: { on: '', polygon: [], north: 0, street: [] },
+  plot: { on: false, polygon: [], north: 0, street: [] },
   rooms,
   edges,
   weights: {},
