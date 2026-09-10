@@ -59,6 +59,9 @@ Do not edit the guard to make a build pass.
 
 - One task, one branch, one pull request. The branch name is the
   task's name. Never push to `main` directly.
+- One task, one checkout. An agent works in its own git worktree
+  (`git worktree add ../<branch> <branch>`), never in a checkout
+  another task is using.
 - Every task brief states: goal, files, definition of done, the
   standard checks that apply. Work only from the brief and this
   repository. Do not look elsewhere for "how it was done before".
