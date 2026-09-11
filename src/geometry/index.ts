@@ -18,6 +18,7 @@ export {
   anchorPointOf,
   frameOf,
   outlineOf,
+  placeInFrame,
   resizeFromAnchor,
   sheetToLocalPoint,
   sheetToLocalPolygon,
@@ -45,4 +46,11 @@ export {
 } from './snap'
 export { buildingOutline, ringsToPath } from './outline'
 export type { OutwardWall, SharedWall } from './walls'
-export { outwardWalls, sharedWalls } from './walls'
+export {
+  outwardWalls,
+  sharedWalls,
+  wallDirection,
+  wallLength,
+  wallMidpoint,
+  WALL_TOLERANCE,
+} from './walls'

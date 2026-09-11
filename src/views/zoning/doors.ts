@@ -4,14 +4,15 @@ import {
   nearestPointOnSegment,
   outwardWalls,
   sharedWalls,
+  wallDirection,
+  wallLength,
+  wallMidpoint,
+  WALL_TOLERANCE,
   type Point,
   type Polygon,
   type SharedWall,
 } from '../../geometry'
 import { EXTERIOR, type Edge, type EdgeKind, type Plot } from '../../model'
-
-/** How far apart two walls may lie and still be read as the one wall, in metres. */
-const WALL_TOLERANCE = 0.05
 
 /** How near a stored hint must be to a shared wall for the door to be drawn where it says. */
 const HINT_TOLERANCE = 0.1
@@ -41,33 +42,28 @@ export type TensionMark = {
 /** A wall two rooms share with no edge across it. */
 export type ProposalMark = { readonly a: string; readonly b: string; readonly at: Point }
 
-type Segment = readonly [Point, Point]
-
-function lengthOf(wall: SharedWall): number {
-  return Math.hypot(wall.to[0] - wall.from[0], wall.to[1] - wall.from[1])
+/** Two rooms of the storey, the longest wall they hold in common, and the room of the two that
+ * reaches back the shorter way from it, so a handle on that wall is never wider than its rooms. */
+export type WallPair = {
+  readonly a: string
+  readonly b: string
+  readonly wall: SharedWall
+  readonly across: number
 }
+
+type Segment = readonly [Point, Point]
 
 function longest(walls: readonly SharedWall[]): SharedWall | undefined {
   let best: SharedWall | undefined
   let reach = 0
   for (const wall of walls) {
-    const run = lengthOf(wall)
+    const run = wallLength(wall)
     if (run > reach) {
       reach = run
       best = wall
     }
   }
   return best
-}
-
-function directionOf(wall: SharedWall): Point {
-  const run = lengthOf(wall)
-  if (run < 1e-9) return [1, 0]
-  return [(wall.to[0] - wall.from[0]) / run, (wall.to[1] - wall.from[1]) / run]
-}
-
-function midpointOf(wall: SharedWall): Point {
-  return [(wall.from[0] + wall.to[0]) / 2, (wall.from[1] + wall.to[1]) / 2]
 }
 
 /** The wall the hint sits on, where one is within reach, so a door stays where it was drawn. */
@@ -180,11 +176,45 @@ export function edgeMarks(
     doors.push({
       edgeId: edge.id,
       kind: edge.kind,
-      at: hint?.at ?? midpointOf(wall),
-      along: directionOf(wall),
+      at: hint?.at ?? wallMidpoint(wall),
+      along: wallDirection(wall),
     })
   }
   return { doors, tensions }
+}
+
+/** How far a room reaches from end to end across a wall, in metres. */
+function reachAcross(outline: Polygon, wall: SharedWall): number {
+  const along = wallDirection(wall)
+  const across: Point = [-along[1], along[0]]
+  let least = Infinity
+  let most = -Infinity
+  for (const corner of outline) {
+    const off = (corner[0] - wall.from[0]) * across[0] + (corner[1] - wall.from[1]) * across[1]
+    least = Math.min(least, off)
+    most = Math.max(most, off)
+  }
+  return most - least
+}
+
+/**
+ * Every pair of rooms on the storey that meet along a wall, with the longest run they share. The
+ * proposal marks and the wall handles are both drawn from this one pass over the pairs.
+ */
+export function wallPairs(standing: readonly Standing[]): readonly WallPair[] {
+  const pairs: WallPair[] = []
+  for (let i = 0; i < standing.length; i++) {
+    for (let j = i + 1; j < standing.length; j++) {
+      const a = standing[i]
+      const b = standing[j]
+      if (!a || !b) continue
+      const wall = longest(sharedWalls(a.outline, b.outline, WALL_TOLERANCE))
+      if (!wall) continue
+      const across = Math.min(reachAcross(a.outline, wall), reachAcross(b.outline, wall))
+      pairs.push({ a: a.id, b: b.id, wall, across })
+    }
+  }
+  return pairs
 }
 
 /**
@@ -192,7 +222,7 @@ export function edgeMarks(
  * else: the graph changes only when a person clicks one.
  */
 export function proposalsFrom(
-  standing: readonly Standing[],
+  pairs: readonly WallPair[],
   edges: readonly Edge[],
   storey: number,
 ): readonly ProposalMark[] {
@@ -202,17 +232,11 @@ export function proposalsFrom(
       .map((edge) => (edge.a <= edge.b ? `${edge.a}|${edge.b}` : `${edge.b}|${edge.a}`)),
   )
   const marks: ProposalMark[] = []
-  for (let i = 0; i < standing.length; i++) {
-    for (let j = i + 1; j < standing.length; j++) {
-      const a = standing[i]
-      const b = standing[j]
-      if (!a || !b) continue
-      const key = a.id <= b.id ? `${a.id}|${b.id}` : `${b.id}|${a.id}`
-      if (joined.has(key)) continue
-      const wall = longest(sharedWalls(a.outline, b.outline, WALL_TOLERANCE))
-      if (!wall || lengthOf(wall) < PROPOSAL_M) continue
-      marks.push({ a: a.id, b: b.id, at: midpointOf(wall) })
-    }
+  for (const pair of pairs) {
+    const key = pair.a <= pair.b ? `${pair.a}|${pair.b}` : `${pair.b}|${pair.a}`
+    if (joined.has(key)) continue
+    if (wallLength(pair.wall) < PROPOSAL_M) continue
+    marks.push({ a: pair.a, b: pair.b, at: wallMidpoint(pair.wall) })
   }
   return marks
 }

@@ -26,6 +26,7 @@ export function ZoningStage() {
 
   return (
     <ZoningView
+      projectId={project.id}
       rooms={project.rooms}
       edges={project.edges}
       storeys={project.storeys}
@@ -35,7 +36,7 @@ export function ZoningStage() {
       onPlace={(id: string, footprint: Footprint, commit: Commit) =>
         report(session.actions.place(id, footprint, commit))
       }
-      onCarve={(placements: readonly Placement[]) =>
+      onPlaceAll={(placements: readonly Placement[]) =>
         report(
           session.transaction(() => {
             for (const placement of placements) {

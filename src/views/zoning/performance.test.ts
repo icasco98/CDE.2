@@ -2,13 +2,19 @@ import { expect, it } from 'vitest'
 import {
   outlineOf,
   rectangleToPolygon,
+  sharedWalls,
+  WALL_TOLERANCE,
   type Footprint,
   type Point,
   type Polygon,
 } from '../../geometry'
 import { fitCamera, metresPerPixel, viewBoxOf, zoomAbout, ZOOM_STEP } from '../camera'
+import { wallPairs } from './doors'
 import { extentOf } from './frame'
-import { moveFootprint, sheetOf, type Neighbour, type Sheet } from './gestures'
+import { moveFootprint, moveSharedWall, sheetOf, type Neighbour, type Sheet } from './gestures'
+
+/** No kind's smallest size in the way, so the budget is the geometry and nothing else. */
+const anySize = { proportion: 1.25 }
 
 const plot: Polygon = rectangleToPolygon({ left: 0, top: 0, width: 34, depth: 30 })
 
@@ -25,6 +31,22 @@ function storeyOfThirty(): Neighbour[] {
         rotation: index % 2 ? 0 : 15,
       },
       pinned: false,
+      sizes: anySize,
+    }
+  })
+}
+
+/** The same storey laid out wall to wall, which is the storey a wall can be dragged on. */
+function storeyFlush(): Neighbour[] {
+  return Array.from({ length: 30 }, (_unused, index): Neighbour => {
+    const left = (index % 6) * 5 + 1
+    const top = Math.floor(index / 6) * 5 + 1
+    return {
+      id: `room-${index}`,
+      name: `Room ${index}`,
+      footprint: { polygon: rectangleToPolygon({ left, top, width: 5, depth: 5 }), rotation: 0 },
+      pinned: false,
+      sizes: anySize,
     }
   })
 }
@@ -95,4 +117,28 @@ it('answers a wheel notch over thirty placed rooms in under 4 ms', () => {
   })
   expect(closest).toBeGreaterThan(1)
   expect(took / 20).toBeLessThan(4)
+})
+
+/**
+ * What one pointer move of a wall drag runs: the strip taken off one room and given to the other,
+ * and the pass over the storey that puts every wall handle back where its wall now is.
+ */
+it('answers one pointer move of a wall drag over thirty placed rooms in under 2 ms', () => {
+  const rooms = storeyFlush()
+  const standing = rooms.map((room) => ({ id: room.id, outline: outlineOf(room.footprint) }))
+  const [a, b] = rooms
+  if (!a || !b) throw new Error('the storey is empty')
+  const wall = sharedWalls(outlineOf(a.footprint), outlineOf(b.footprint), WALL_TOLERANCE)[0]
+  if (!wall) throw new Error('these two rooms share no wall')
+  let moved = 0
+  const took = milliseconds(() => {
+    moved = 0
+    for (let step = 0; step < 20; step++) {
+      const attempt = moveSharedWall(a, b, wall, (step - 10) * 0.13)
+      if (attempt.ok && attempt.value.distance !== 0) moved++
+      wallPairs(standing)
+    }
+  })
+  expect(moved).toBeGreaterThan(15)
+  expect(took / 20).toBeLessThan(2)
 })

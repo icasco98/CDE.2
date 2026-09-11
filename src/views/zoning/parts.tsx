@@ -1,4 +1,10 @@
-import { memo, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
+import {
+  memo,
+  useEffect,
+  useRef,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import {
   GRID_M,
   anchorPointOf,
@@ -7,6 +13,8 @@ import {
   centroid,
   outlineOf,
   outwardWalls,
+  wallDirection,
+  wallMidpoint,
   type Footprint,
   type Handle,
   type Point,
@@ -14,7 +22,7 @@ import {
 import type { Plot, Room } from '../../model'
 import { metres2, storeyLabel } from '../requirements/format'
 import { belowMinimum, offTarget, type RoomSizes } from './defaults'
-import type { DoorMark, ProposalMark, TensionMark } from './doors'
+import type { DoorMark, ProposalMark, TensionMark, WallPair } from './doors'
 import { pointsOf } from './frame'
 
 /*
@@ -37,6 +45,17 @@ const RESIZE_HANDLE_PX = 10
 
 /** The reach of the "+" that offers a door, in pixels, so it is the same target at every zoom. */
 const PROPOSAL_PX = 8
+
+/**
+ * How far either side of a shared wall its handle reaches, and how wide each end of it is, in
+ * pixels. The middle of the wall is left clear on purpose: a door mark and the "+" that offers
+ * one both sit there, and the handle would otherwise stand over them.
+ */
+const WALL_REACH_PX = 14
+const WALL_GRIP_PX = 7
+
+/** A handle may take up no more of a room than this across the wall, however far off the sheet is. */
+const WALL_SHARE = 0.3
 
 /** The scale bar at its longest, in pixels: it shortens its run rather than run off the sheet. */
 const SCALE_BAR_PX = 160
@@ -225,6 +244,8 @@ type RoomShapeProps = {
   readonly sizes: RoomSizes | undefined
   readonly selected: boolean
   readonly onGrab: (event: ReactPointerEvent, id: string) => void
+  /** The room under the pointer, so the handles on its shared walls show themselves. */
+  readonly onHover: (id: string | null) => void
 }
 
 /**
@@ -254,6 +275,8 @@ export const RoomShape = memo(function RoomShape(props: RoomShapeProps) {
         points={pointsOf(outline)}
         className={room.pinned ? 'room-shape room-pinned' : 'room-shape'}
         onPointerDown={(event) => props.onGrab(event, room.id)}
+        onPointerEnter={() => props.onHover(room.id)}
+        onPointerLeave={() => props.onHover(null)}
       />
       <text x={middle[0]} y={middle[1]} dy="-0.6em" className="room-name">
         {room.name}
@@ -410,5 +433,150 @@ export function DropGhost({ at, size }: { at: Point; size: { width: number; dept
       width={size.width}
       height={size.depth}
     />
+  )
+}
+
+/**
+ * The grab handle on a wall two rooms share: a double arrow across the wall at its midpoint,
+ * turned so it points the way the wall can travel. Only its two ends take the pointer.
+ */
+export function WallHandle({
+  pair,
+  perPixel,
+  shown,
+  onGrab,
+  onHover,
+}: {
+  pair: WallPair
+  perPixel: number
+  shown: boolean
+  onGrab: (event: ReactPointerEvent) => void
+  onHover: (over: boolean) => void
+}) {
+  const at = wallMidpoint(pair.wall)
+  const along = wallDirection(pair.wall)
+  const turn = (Math.atan2(along[1], along[0]) * 180) / Math.PI
+  // Drawn in metres rather than in a counter-scaled group: it is a screen-sized handle until the
+  // rooms either side are smaller than that, and then it is theirs to fit, so a 3 m² WC can still
+  // be picked up by the middle.
+  const reach = Math.min(WALL_REACH_PX * perPixel, pair.across * WALL_SHARE)
+  const grip = Math.min(WALL_GRIP_PX * perPixel, reach * 0.45)
+  const head = (way: number): string =>
+    `0,${way * (reach + grip * 0.6)} ${grip * 0.5},${way * (reach - grip * 0.3)} ${-grip * 0.5},${way * (reach - grip * 0.3)}`
+  return (
+    <g
+      data-wall={`${pair.a}:${pair.b}`}
+      className={shown ? 'wall-handle wall-shown' : 'wall-handle'}
+      transform={`translate(${at[0]} ${at[1]}) rotate(${turn})`}
+      onPointerEnter={() => onHover(true)}
+      onPointerLeave={() => onHover(false)}
+    >
+      <line x1={0} y1={-reach} x2={0} y2={reach} className="wall-stem" />
+      <polygon points={head(-1)} className="wall-head" />
+      <polygon points={head(1)} className="wall-head" />
+      {[-1, 1].map((way) => (
+        <circle
+          key={way}
+          cx={0}
+          cy={way * reach}
+          r={grip}
+          className="wall-grip"
+          onPointerDown={onGrab}
+        />
+      ))}
+      <title>Drag to move the wall between these two rooms</title>
+    </g>
+  )
+}
+
+/** A room let go over its neighbours, drawn where it landed while the person is asked about it. */
+export function PendingRoom({
+  id,
+  name,
+  targetArea,
+  footprint,
+}: {
+  id: string
+  name: string
+  targetArea: number
+  footprint: Footprint
+}) {
+  const outline = outlineOf(footprint)
+  const measure = area(outline)
+  const middle = centroid(outline)
+  return (
+    <g
+      data-pending={id}
+      data-area={measure.toFixed(2)}
+      className="room room-pending"
+      style={{ '--label-m': String(labelSize(footprint, name)) } as CSSProperties}
+    >
+      <polygon points={pointsOf(outline)} className="pending-shape" />
+      <text x={middle[0]} y={middle[1]} dy="-0.6em" className="room-name">
+        {name}
+      </text>
+      <text x={middle[0]} y={middle[1]} dy="0.75em" className="room-area">
+        {`${metres2(measure)} of ${metres2(targetArea)} m²`}
+      </text>
+    </g>
+  )
+}
+
+/** What the prompt at the pointer has to say: whose room, over what, and why it may not carve. */
+type AskPrompt = {
+  readonly name: string
+  readonly over: readonly string[]
+  readonly reason: string | null
+  /** Where the hand let the room go, in pixels on the screen. */
+  readonly at: readonly [number, number]
+}
+
+/**
+ * The question a drop over another room asks. It is DOM rather than a mark on the sheet so that
+ * it is the size of the screen at any zoom and reachable by the keyboard.
+ */
+export function Ask({
+  prompt,
+  onCarve,
+  onPutBack,
+}: {
+  prompt: AskPrompt
+  onCarve: () => void
+  onPutBack: () => void
+}) {
+  const carve = useRef<HTMLButtonElement>(null)
+  const back = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    const first = carve.current?.disabled ? back.current : carve.current
+    first?.focus()
+  }, [])
+  const many = prompt.over.length > 1
+  const label = many ? `Carve ${prompt.over.length} rooms` : `Carve ${prompt.over[0] ?? 'the room'}`
+  return (
+    <div
+      data-ask=""
+      className="zoning-ask"
+      role="dialog"
+      aria-label={`${prompt.name} lies over ${prompt.over.join(' and ')}`}
+      style={{ left: `${prompt.at[0]}px`, top: `${prompt.at[1]}px` }}
+    >
+      <p className="ask-question">{`${prompt.name} lies over ${prompt.over.join(' and ')}.`}</p>
+      {prompt.reason && <p className="ask-note">{`${prompt.reason}.`}</p>}
+      <div className="ask-answers">
+        <button
+          type="button"
+          data-carve=""
+          ref={carve}
+          disabled={prompt.reason !== null}
+          title={prompt.reason ?? undefined}
+          onClick={onCarve}
+        >
+          {label}
+        </button>
+        <button type="button" data-put-back="" ref={back} onClick={onPutBack}>
+          Put back
+        </button>
+      </div>
+    </div>
   )
 }

@@ -30,14 +30,12 @@ async function centreOf(page: Page, selector: string): Promise<At> {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
 }
 
-async function drag(page: Page, from: At, to: At, modifier?: 'Alt'): Promise<void> {
+async function drag(page: Page, from: At, to: At): Promise<void> {
   await page.mouse.move(from.x, from.y)
   await page.mouse.down()
   await page.mouse.move((from.x + to.x) / 2, (from.y + to.y) / 2)
   await page.mouse.move(to.x, to.y)
-  if (modifier) await page.keyboard.down(modifier)
   await page.mouse.up()
-  if (modifier) await page.keyboard.up(modifier)
 }
 
 /** A room by the name on its label, as the store gave it. */
@@ -45,7 +43,7 @@ function roomNamed(page: Page, name: string) {
   return page.locator('[data-room]').filter({ has: page.getByText(name, { exact: true }) })
 }
 
-async function place(page: Page, name: string, x: number, y: number, modifier?: 'Alt') {
+async function place(page: Page, name: string, x: number, y: number) {
   const tray = page
     .locator('[data-tray]')
     .filter({ hasText: new RegExp(`^${name}`) })
@@ -56,7 +54,6 @@ async function place(page: Page, name: string, x: number, y: number, modifier?: 
     page,
     { x: from.x + from.width / 2, y: from.y + from.height / 2 },
     await onSheet(page, x, y),
-    modifier,
   )
 }
 
@@ -116,25 +113,159 @@ test('a room is resized by a corner handle and the label follows', async ({ page
   await expect(page.getByText('42 of 20 m²')).toBeVisible()
 })
 
-test('a drop with Alt held carves the room under it', async ({ page }) => {
+test('a room dropped on another asks, and Carve takes the bite out of the neighbour', async ({
+  page,
+}) => {
   await openZoning(page)
   await place(page, 'Dining Room', 8, 8)
   await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '24.00')
-  await place(page, 'Guest WC', 8, 5.75, 'Alt')
+  await place(page, 'Guest WC', 8, 5.75)
+  await expect(page.locator('[data-ask]')).toBeVisible()
+  await expect(page.locator('[data-carve]')).toHaveText('Carve Dining Room')
+  // Nothing is written until the question is answered: the room is drawn pending, not placed.
+  await expect(page.locator('[data-pending]')).toHaveCount(1)
+  await expect(page.locator('[data-room]')).toHaveCount(1)
+  await page.locator('[data-carve]').click()
+  await expect(page.locator('[data-ask]')).toHaveCount(0)
   await expect(page.locator('[data-room]')).toHaveCount(2)
   await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '23.00')
+  await page.getByRole('button', { name: 'Undo', exact: true }).click()
+  await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '24.00')
+  await expect(page.locator('[data-room]')).toHaveCount(1)
 })
 
-test('a drop on top of another room is refused and said out loud', async ({ page }) => {
+test('Put back sends a room dropped from the tray back to the tray', async ({ page }) => {
   await openZoning(page)
   await place(page, 'Dining Room', 8, 8)
-  await place(page, 'Guest WC', 8, 8)
+  await place(page, 'Guest WC', 8, 5.75)
+  await expect(page.locator('[data-ask]')).toBeVisible()
+  await expect(page.locator('[data-tray]').filter({ hasText: /^Guest WC/ })).toHaveCount(0)
+  await page.locator('[data-put-back]').click()
+  await expect(page.locator('[data-ask]')).toHaveCount(0)
   await expect(page.locator('[data-room]')).toHaveCount(1)
-  await expect(page.locator('.messages')).toContainText('Dining Room')
+  await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '24.00')
   await expect(page.locator('[data-tray]').filter({ hasText: /^Guest WC/ })).toHaveCount(1)
-  await place(page, 'Guest WC', 8, 8)
-  await place(page, 'Guest WC', 8, 8)
-  await expect(page.locator('.messages li')).toHaveCount(1)
+})
+
+test('a placed room let go over another goes back where the drag began', async ({ page }) => {
+  await openZoning(page)
+  await place(page, 'Dining Room', 12, 8)
+  await place(page, 'Kitchen', 4, 14)
+  const before = await pointsOf(page, 'Kitchen')
+  await drag(page, await onSheet(page, 4, 14), await onSheet(page, 12, 8))
+  await expect(page.locator('[data-ask]')).toBeVisible()
+  await page.locator('[data-put-back]').click()
+  expect(await pointsOf(page, 'Kitchen')).toBe(before)
+  await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '24.00')
+})
+
+test('Escape is the same answer as Put back', async ({ page }) => {
+  await openZoning(page)
+  await place(page, 'Dining Room', 8, 8)
+  await place(page, 'Guest WC', 8, 5.75)
+  await expect(page.locator('[data-ask]')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.locator('[data-ask]')).toHaveCount(0)
+  await expect(page.locator('[data-room]')).toHaveCount(1)
+  await expect(page.locator('[data-tray]').filter({ hasText: /^Guest WC/ })).toHaveCount(1)
+})
+
+test('a carve that would cut a room in two is offered with its reason and refused', async ({
+  page,
+}) => {
+  await openZoning(page)
+  await place(page, 'Dining Room', 8, 8)
+  await clickSheet(page, 8, 8)
+  // Drawn down to a strip, so a room dropped across it would leave two pieces of it.
+  await drag(page, await centreOf(page, '[data-resize-handle="1,1"]'), await onSheet(page, 11, 7))
+  await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '6.00')
+  await place(page, 'Guest WC', 8, 6.5)
+  await expect(page.locator('[data-ask]')).toBeVisible()
+  await expect(page.locator('[data-carve]')).toBeDisabled()
+  await expect(page.locator('[data-carve]')).toHaveAttribute('title', /cut in two/)
+  await expect(page.locator('[data-ask]')).toContainText('cut in two')
+  await page.locator('[data-put-back]').click()
+  await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '6.00')
+})
+
+test('a pinned room is not carved, and the prompt says why', async ({ page }) => {
+  await openZoning(page)
+  await place(page, 'Dining Room', 8, 8)
+  await clickSheet(page, 8, 8)
+  await page.getByRole('button', { name: 'Pin' }).click()
+  await place(page, 'Guest WC', 8, 5.75)
+  await expect(page.locator('[data-ask]')).toBeVisible()
+  await expect(page.locator('[data-carve]')).toBeDisabled()
+  await expect(page.locator('[data-carve]')).toHaveAttribute('title', /pinned/)
+  await page.locator('[data-put-back]').click()
+  await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '24.00')
+  await expect(page.locator('[data-room]')).toHaveCount(1)
+})
+
+/** The grab handle on the wall two rooms share, which shows itself when a room is hovered. */
+async function wallGrip(page: Page, room: string): Promise<At> {
+  await roomNamed(page, room).locator('polygon').hover()
+  await expect(page.locator('[data-wall]')).toHaveCount(1)
+  return centreOf(page, '[data-wall] .wall-grip')
+}
+
+test('dragging a shared wall grows one room and shrinks the other by the same area', async ({
+  page,
+}) => {
+  await openZoning(page)
+  await place(page, 'Kitchen', 5, 5.125)
+  await place(page, 'Dining Room', 10.75, 5)
+  await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-area', '20.63')
+  await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '24.00')
+  const grip = await wallGrip(page, 'Kitchen')
+  const metre = (await onSheet(page, 8.75, 5)).x - (await onSheet(page, 7.75, 5)).x
+  await drag(page, grip, { x: grip.x + metre, y: grip.y })
+  await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-area', '24.38')
+  await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '20.25')
+  await page.getByRole('button', { name: 'Undo', exact: true }).click()
+  await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-area', '20.63')
+  await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '24.00')
+})
+
+/** A carve, with the room that did the carving moved away out of the road afterwards. */
+async function carveTheDiningRoom(page: Page): Promise<void> {
+  await place(page, 'Dining Room', 8, 8)
+  await place(page, 'Guest WC', 8, 5.75)
+  await page.locator('[data-carve]').click()
+  await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '23.00')
+  // Out of the road, so what the Dining Room is given back is not given back over it.
+  await drag(page, await onSheet(page, 8, 5.75), await onSheet(page, 16, 20))
+  await expect(roomNamed(page, 'Guest WC')).toHaveAttribute('data-area', '3.00')
+  await expect(page.locator('[data-ask]')).toHaveCount(0)
+}
+
+function cornerCount(points: string | null): number {
+  return (points ?? '').trim().split(/\s+/).length
+}
+
+test('Restore shape returns a carved room to the rectangle its kind opens at', async ({ page }) => {
+  await openZoning(page)
+  await carveTheDiningRoom(page)
+  expect(cornerCount(await pointsOf(page, 'Dining Room'))).toBe(8)
+  await clickSheet(page, 8, 9)
+  await page.getByRole('button', { name: 'Restore shape' }).click()
+  await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '24.00')
+  expect(cornerCount(await pointsOf(page, 'Dining Room'))).toBe(4)
+})
+
+test('Undo carve gives a room back the outline it had before it was cut', async ({ page }) => {
+  await openZoning(page)
+  await place(page, 'Kitchen', 5, 14)
+  await clickSheet(page, 5, 14)
+  await expect(page.getByRole('button', { name: 'Undo carve' })).toHaveCount(0)
+  await carveTheDiningRoom(page)
+  const carved = await pointsOf(page, 'Dining Room')
+  await clickSheet(page, 8, 9)
+  await page.getByRole('button', { name: 'Undo carve' }).click()
+  await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '24.00')
+  expect(await pointsOf(page, 'Dining Room')).not.toBe(carved)
+  expect(cornerCount(await pointsOf(page, 'Dining Room'))).toBe(4)
+  await expect(page.getByRole('button', { name: 'Undo carve' })).toHaveCount(0)
 })
 
 test('a pinned room refuses to be moved', async ({ page }) => {
