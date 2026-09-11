@@ -11,6 +11,7 @@ import {
 import {
   capacityMessage,
   createState,
+  layoutFor,
   storeyCapacity,
   storeyLabel,
   type Body,
@@ -29,9 +30,11 @@ import {
   type Camera,
 } from '../camera'
 import { bandDrop, insideBands } from './bands'
-import { asPoint, bodyAt, extentOf, pointerAt } from './frame'
+import { asPoint, bodyAt, extentOf, holds, pointerAt } from './frame'
 import { Bands, Bubble, Legend, LEGEND_PX, Link, Proposed } from './parts'
+import type { Landing } from './run'
 import { useSettling } from './useSettling'
+import { WeightsPanel, weightOf } from './WeightsPanel'
 import type { BubbleProposal, BubblesViewProps } from './types'
 import './bubbles.css'
 
@@ -58,9 +61,9 @@ function notchesOf(event: WheelEvent): number {
 }
 
 export function BubblesView(props: BubblesViewProps) {
-  const { rooms, edges, proposals, storeys, plot, selected } = props
+  const { rooms, edges, proposals, storeys, plot, weights, selected } = props
   const { onMoveBubble, onDropBubble, onPin, onConnect, onDisconnect, onSetEdgeKind } = props
-  const { onRemoveRoom, onAccept, onAcceptAll, onSelect, onRefuse } = props
+  const { onRemoveRoom, onAccept, onAcceptAll, onSetWeight, onSelect, onRefuse } = props
   const svgRef = useRef<SVGSVGElement>(null)
   /** Whether the hand has moved at all, so a press that stays put is a click and not a pan or a drag. */
   const movedRef = useRef(false)
@@ -77,7 +80,15 @@ export function BubblesView(props: BubblesViewProps) {
   const [box, setBox] = useState({ width: 0, height: 0 })
   /** The storey being worked on, or nothing for all of them: the others are dimmed, never hidden. */
   const [only, setOnly] = useState<number | null>(null)
-  const { settling, start, stop, interrupt } = useSettling(rooms, edges, storeys, onMoveBubble)
+  /** The user-requirements weight is a force, so a slider moved is a new layout for the simulation. */
+  const layout = useMemo(() => layoutFor(weightOf(weights, 'userRequirements')), [weights])
+  const { moving, settleNow, spread, hold, release } = useSettling(
+    rooms,
+    edges,
+    storeys,
+    onMoveBubble,
+    layout,
+  )
 
   const state = useMemo(() => createState(rooms, edges, storeys), [rooms, edges, storeys])
   const bodies = state.bodies
@@ -86,7 +97,11 @@ export function BubblesView(props: BubblesViewProps) {
   /** Drawn widest first, so a small room is never buried under a large one before the cloud is settled. */
   const drawn = useMemo(() => [...bodies].sort((a, b) => b.radius - a.radius), [bodies])
   const aspect = box.height > 0 ? box.width / box.height : 0
-  const extent = extentOf(bodies, state.storeys, state.bandHeight, aspect)
+  const wanted = extentOf(bodies, state.storeys, state.bandHeight, aspect)
+  /** Held still while the forces run, so a drop lands on the metre it was aimed at. */
+  const framed = useRef(wanted)
+  if (!moving || !holds(framed.current, wanted)) framed.current = wanted
+  const extent = framed.current
   const shown = visibleExtent(extent, camera)
   const perPixel = metresPerPixel(extent, camera, box)
   const crowded = storeyCapacity(rooms, plot.polygon, storeys).filter((entry) => entry.over)
@@ -126,14 +141,12 @@ export function BubblesView(props: BubblesViewProps) {
 
   function grab(event: ReactPointerEvent, body: Body): void {
     event.stopPropagation()
-    interrupt()
     focus()
     if (linking) {
       pick(body.id)
       return
     }
     onSelect(body.id)
-    if (!body.pinned) onPin(body.id, true)
     const pointer = at(event)
     movedRef.current = false
     begin({
@@ -145,7 +158,6 @@ export function BubblesView(props: BubblesViewProps) {
 
   function reach(event: ReactPointerEvent, body: Body): void {
     event.stopPropagation()
-    interrupt()
     focus()
     begin({ kind: 'link', from: body.id, at: at(event) })
   }
@@ -181,31 +193,30 @@ export function BubblesView(props: BubblesViewProps) {
     const pointer = at(event)
     if (gesture.kind === 'move') {
       movedRef.current = true
-      onMoveBubble(
-        gesture.id,
-        { x: pointer.x + gesture.grabbed.x, y: pointer.y + gesture.grabbed.y },
-        'preview',
-      )
+      hold(gesture.id, { x: pointer.x + gesture.grabbed.x, y: pointer.y + gesture.grabbed.y })
       return
     }
     begin({ ...gesture, at: pointer })
   }
 
-  /** Where a dragged bubble comes to rest, and the storey of the band it was let go in. */
-  function land(id: string, rest: Position): void {
+  /**
+   * What a drag leaves behind. A storey is a change to the program and is recorded the moment the
+   * hand lets go, so the bubble is pulled towards its new band and not the one it is leaving. A
+   * move is nothing but a move: the bubble is let go and recorded where the forces bring it to
+   * rest, and the previews since the drag began fold into that one step.
+   */
+  function land(id: string, rest: Position): Landing | null {
     const room = named.get(id)
-    if (!room) return
+    if (!room) return null
     const drop = bandDrop(rest, room, state.storeys, state.bandHeight)
     if (drop.refused === 'stair')
       onRefuse(`${room.name} spans storeys, so it is not moved between them by hand.`)
     const settled = { x: rest.x, y: drop.y }
-    if (drop.storey === room.storey) {
-      onDropBubble(id, settled)
-      return
-    }
-    if (onDropBubble(id, settled, drop.storey)) return
-    // The model would not have the storey, so the bubble goes back inside the band it still belongs to.
-    onDropBubble(id, { x: rest.x, y: insideBands(rest, room, state.storeys, state.bandHeight) })
+    if (drop.storey === room.storey) return (at: Position) => void onDropBubble(id, at)
+    if (!onDropBubble(id, settled, drop.storey))
+      // The model would not have the storey, so the bubble goes back inside the band it belongs to.
+      onDropBubble(id, { x: rest.x, y: insideBands(rest, room, state.storeys, state.bandHeight) })
+    return null
   }
 
   function releasePointer(event: PointerEvent): void {
@@ -224,8 +235,11 @@ export function BubblesView(props: BubblesViewProps) {
     }
     const pointer = at(event)
     if (gesture.kind === 'move') {
-      if (movedRef.current)
-        land(gesture.id, { x: pointer.x + gesture.grabbed.x, y: pointer.y + gesture.grabbed.y })
+      release(
+        movedRef.current
+          ? land(gesture.id, { x: pointer.x + gesture.grabbed.x, y: pointer.y + gesture.grabbed.y })
+          : null,
+      )
       return
     }
     const target = bodyAt(bodies, pointer, gesture.from)
@@ -240,14 +254,12 @@ export function BubblesView(props: BubblesViewProps) {
 
   function choose(event: ReactPointerEvent, id: string): void {
     event.stopPropagation()
-    interrupt()
     focus()
     onSelect(id)
   }
 
   function take(event: { stopPropagation: () => void }, proposal: BubbleProposal): void {
     event.stopPropagation()
-    interrupt()
     onAccept(proposal)
   }
 
@@ -376,8 +388,11 @@ export function BubblesView(props: BubblesViewProps) {
   return (
     <div className="bubbles">
       <div className="bubbles-bar">
-        <button type="button" onClick={settling === 'running' ? stop : start}>
-          {settling === 'running' ? 'Stop' : 'Settle'}
+        <button type="button" onClick={settleNow}>
+          Settle now
+        </button>
+        <button type="button" onClick={spread}>
+          Spread
         </button>
         {proposals.length > 0 && (
           <button type="button" onClick={onAcceptAll}>
@@ -388,21 +403,28 @@ export function BubblesView(props: BubblesViewProps) {
           type="button"
           aria-pressed={linking !== null}
           onClick={() => {
-            interrupt()
             setLinking(linking ? null : { from: null })
             focus()
           }}
         >
           Link
         </button>
+        {/* Both keep the width of their longest word, so pressing a bubble never reflows the bar
+            and drops the sheet a line under the hand that pressed it. */}
         <button
           type="button"
+          className="bubbles-wide"
           disabled={!selectedRoom}
           onClick={() => selectedRoom && onPin(selectedRoom.id, !selectedRoom.pinned)}
         >
           {selectedRoom?.pinned ? 'Let go' : 'Hold in place'}
         </button>
-        <button type="button" disabled={!selectedRoom && !selectedEdge} onClick={removeSelected}>
+        <button
+          type="button"
+          className="bubbles-wide"
+          disabled={!selectedRoom && !selectedEdge}
+          onClick={removeSelected}
+        >
           {selectedEdge ? 'Delete link' : selectedRoom ? 'Delete room' : 'Delete'}
         </button>
         {selectedEdge && (
@@ -436,11 +458,7 @@ export function BubblesView(props: BubblesViewProps) {
           Fit
         </button>
         <p className="bubbles-status" role="status">
-          {settling === 'running'
-            ? 'Settling…'
-            : settling === 'settled'
-              ? 'Settled'
-              : 'Not settled'}
+          {moving ? 'Moving' : 'Resting'}
         </p>
       </div>
       <p className="bubbles-hint">{hint}</p>
@@ -449,121 +467,124 @@ export function BubblesView(props: BubblesViewProps) {
           {capacityMessage(entry)}
         </p>
       ))}
-      <svg
-        ref={svgRef}
-        className={linking ? 'bubbles-sheet bubbles-linking' : 'bubbles-sheet'}
-        viewBox={viewBoxOf(extent, camera)}
-        preserveAspectRatio="xMidYMid meet"
-        style={{ '--per-px': String(perPixel) } as CSSProperties}
-        tabIndex={0}
-        role="application"
-        aria-label="Bubble diagram"
-        onPointerDownCapture={(event) => {
-          touchesRef.current.set(event.pointerId, [event.clientX, event.clientY])
-          if (touchesRef.current.size < 2) return
-          // A second finger is a pinch, not a second grab, so it never reaches what it landed on.
-          event.stopPropagation()
-          beginPinch()
-        }}
-        onPointerDown={grabSheet}
-        onKeyDown={(event) => {
-          if (event.key === 'Delete' || event.key === 'Backspace') {
-            if (!selectedRoom && !selectedEdge) return
-            event.preventDefault()
-            removeSelected()
-            return
-          }
-          if (event.key === 'Escape') {
-            setLinking(null)
-            return
-          }
-          if (event.key === '+' || event.key === '=') {
-            event.preventDefault()
-            zoomBy(ZOOM_STEP)
-            return
-          }
-          if (event.key === '-' || event.key === '_') {
-            event.preventDefault()
-            zoomBy(1 / ZOOM_STEP)
-            return
-          }
-          if (event.key === '0') {
-            event.preventDefault()
-            setCamera(fitCamera)
-          }
-        }}
-      >
-        <Bands
-          storeys={state.storeys}
-          bandHeight={state.bandHeight}
-          shown={shown}
-          perPixel={perPixel}
-        />
-        {edges.map((edge) => {
-          const a = placed.get(edge.a)
-          const b = placed.get(edge.b)
-          if (!a || !b) return null
-          return (
-            <Link
-              key={edge.id}
-              id={edge.id}
-              a={a}
-              b={b}
-              kind={edge.kind}
-              selected={edge.id === selected}
-              dimmed={only !== null && edge.storey !== only}
-              onSelect={chooseLink}
-            />
-          )
-        })}
-        {gesture?.kind === 'link' &&
-          (() => {
-            const from = placed.get(gesture.from)
-            return from ? (
-              <line
-                x1={from.x}
-                y1={from.y}
-                x2={gesture.at.x}
-                y2={gesture.at.y}
-                className="link link-drawn"
+      <div className="bubbles-body">
+        <svg
+          ref={svgRef}
+          className={linking ? 'bubbles-sheet bubbles-linking' : 'bubbles-sheet'}
+          viewBox={viewBoxOf(extent, camera)}
+          preserveAspectRatio="xMidYMid meet"
+          style={{ '--per-px': String(perPixel) } as CSSProperties}
+          tabIndex={0}
+          role="application"
+          aria-label="Bubble diagram"
+          onPointerDownCapture={(event) => {
+            touchesRef.current.set(event.pointerId, [event.clientX, event.clientY])
+            if (touchesRef.current.size < 2) return
+            // A second finger is a pinch, not a second grab, so it never reaches what it landed on.
+            event.stopPropagation()
+            beginPinch()
+          }}
+          onPointerDown={grabSheet}
+          onKeyDown={(event) => {
+            if (event.key === 'Delete' || event.key === 'Backspace') {
+              if (!selectedRoom && !selectedEdge) return
+              event.preventDefault()
+              removeSelected()
+              return
+            }
+            if (event.key === 'Escape') {
+              setLinking(null)
+              return
+            }
+            if (event.key === '+' || event.key === '=') {
+              event.preventDefault()
+              zoomBy(ZOOM_STEP)
+              return
+            }
+            if (event.key === '-' || event.key === '_') {
+              event.preventDefault()
+              zoomBy(1 / ZOOM_STEP)
+              return
+            }
+            if (event.key === '0') {
+              event.preventDefault()
+              setCamera(fitCamera)
+            }
+          }}
+        >
+          <Bands
+            storeys={state.storeys}
+            bandHeight={state.bandHeight}
+            shown={shown}
+            perPixel={perPixel}
+          />
+          {edges.map((edge) => {
+            const a = placed.get(edge.a)
+            const b = placed.get(edge.b)
+            if (!a || !b) return null
+            return (
+              <Link
+                key={edge.id}
+                id={edge.id}
+                a={a}
+                b={b}
+                kind={edge.kind}
+                selected={edge.id === selected}
+                dimmed={only !== null && edge.storey !== only}
+                onSelect={chooseLink}
+              />
+            )
+          })}
+          {gesture?.kind === 'link' &&
+            (() => {
+              const from = placed.get(gesture.from)
+              return from ? (
+                <line
+                  x1={from.x}
+                  y1={from.y}
+                  x2={gesture.at.x}
+                  y2={gesture.at.y}
+                  className="link link-drawn"
+                />
+              ) : null
+            })()}
+          {drawn.map((body) => {
+            const room = named.get(body.id)
+            return room ? (
+              <Bubble
+                key={body.id}
+                body={body}
+                room={room}
+                selected={body.id === selected || linking?.from === body.id}
+                dimmed={dimmedRoom(body.id)}
+                handlers={handlers}
               />
             ) : null
-          })()}
-        {drawn.map((body) => {
-          const room = named.get(body.id)
-          return room ? (
-            <Bubble
-              key={body.id}
-              body={body}
-              room={room}
-              selected={body.id === selected || linking?.from === body.id}
-              dimmed={dimmedRoom(body.id)}
-              handlers={handlers}
-            />
-          ) : null
-        })}
-        {drawable.map((proposal) => {
-          const a = placed.get(proposal.a)
-          const b = placed.get(proposal.b)
-          return a && b ? (
-            <Proposed
-              key={`${proposal.rowId}:${proposal.a}:${proposal.b}`}
-              a={a}
-              b={b}
-              proposal={proposal}
-              source={proposal.source}
-              onAccept={takeProposal}
-            />
-          ) : null
-        })}
-        <Legend
-          at={{
-            x: shown.minX + LEGEND_PX.inset * perPixel,
-            y: shown.minY + shown.height - (LEGEND_PX.height + LEGEND_PX.inset) * perPixel,
-          }}
-          perPixel={perPixel}
-        />
-      </svg>
+          })}
+          {drawable.map((proposal) => {
+            const a = placed.get(proposal.a)
+            const b = placed.get(proposal.b)
+            return a && b ? (
+              <Proposed
+                key={`${proposal.rowId}:${proposal.a}:${proposal.b}`}
+                a={a}
+                b={b}
+                proposal={proposal}
+                source={proposal.source}
+                onAccept={takeProposal}
+              />
+            ) : null
+          })}
+          <Legend
+            at={{
+              x: shown.minX + LEGEND_PX.inset * perPixel,
+              y: shown.minY + shown.height - (LEGEND_PX.height + LEGEND_PX.inset) * perPixel,
+            }}
+            perPixel={perPixel}
+          />
+        </svg>
+        <WeightsPanel weights={weights} onSetWeight={onSetWeight} />
+      </div>
       {spoken.length > 0 && (
         <ul className="proposals">
           {spoken.map((proposal) => (

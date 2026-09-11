@@ -3,11 +3,16 @@ import {
   bandOf,
   createState,
   defaultLayout,
+  layoutFor,
   radiusOf,
   settle,
+  SPREAD_SECONDS,
+  spreadLayout,
   step,
+  STILL_FRAMES,
   type SimulationEdge,
   type SimulationRoom,
+  type SimulationState,
 } from './simulation'
 
 function room(id: string, targetArea: number, storey = 0, extra: Partial<SimulationRoom> = {}) {
@@ -128,7 +133,7 @@ describe('settling', () => {
     const out = settle(createState([], [], 1), defaultLayout)
     expect(out).toEqual({
       state: { bodies: [], links: [], storeys: 1, bandHeight: 12, energy: 0 },
-      iterations: 1,
+      iterations: STILL_FRAMES,
       settled: true,
     })
   })
@@ -162,5 +167,137 @@ describe('a single step', () => {
     expect(before.bodies[0]).toEqual({ ...before.bodies[0] })
     expect(before.bodies[1]!.x).toBe(1)
     expect(after.bodies[1]!.x).toBeGreaterThan(1)
+  })
+})
+
+describe('the same picture every time', () => {
+  it('settles two states built from one program to the same places', () => {
+    const { rooms, edges } = program(16, 2, 18)
+    const first = settle(createState(rooms, edges, 2), defaultLayout).state
+    const second = settle(createState(rooms, edges, 2), defaultLayout).state
+    for (const [index, body] of first.bodies.entries()) {
+      const other = second.bodies[index]!
+      expect(other.x).toBeCloseTo(body.x, 9)
+      expect(other.y).toBeCloseTo(body.y, 9)
+    }
+  })
+})
+
+describe('the correction after the forces', () => {
+  const restDistance = radiusOf(40) * 2 + defaultLayout.restGap
+
+  /** Two circles of one size, overlapping by half a metre. */
+  function pair(extra: Partial<SimulationRoom> = {}) {
+    const inside = restDistance / 2 - 0.25
+    return [
+      room('a', 40, 0, { bubble: { x: -inside, y: 6 }, ...extra }),
+      room('b', 40, 0, { bubble: { x: inside, y: 6 } }),
+    ]
+  }
+
+  const between = (state: SimulationState): number => {
+    const [a, b] = state.bodies
+    return Math.hypot(a!.x - b!.x, a!.y - b!.y)
+  }
+
+  it('puts two free bubbles at exactly the distance they keep, in the frame they overlap in', () => {
+    const start = createState(pair(), [], 1)
+    expect(between(start)).toBeLessThan(restDistance)
+    expect(between(step(start, defaultLayout))).toBeCloseTo(restDistance, 9)
+  })
+
+  it('leaves a pinned bubble where it is and moves the free one clear of it', () => {
+    const after = step(createState(pair({ pinned: true }), [], 1), defaultLayout)
+    expect(after.bodies[0]).toMatchObject({ id: 'a', y: 6 })
+    expect(after.bodies[0]!.x).toBe(-(restDistance / 2 - 0.25))
+    expect(between(after)).toBeCloseTo(restDistance, 9)
+  })
+
+  it('leaves two pinned bubbles on each other, because pinned is the person’s hand', () => {
+    const rooms = [
+      room('a', 40, 0, { pinned: true, bubble: { x: -1, y: 6 } }),
+      room('b', 40, 0, { pinned: true, bubble: { x: 1, y: 6 } }),
+    ]
+    const out = settle(createState(rooms, [], 1), defaultLayout)
+    expect(out.state.bodies[0]).toMatchObject({ x: -1, y: 6 })
+    expect(out.state.bodies[1]).toMatchObject({ x: 1, y: 6 })
+  })
+
+  it('brings a bubble dropped on another to rest exactly clear of it', () => {
+    const rooms = [
+      room('a', 40, 0, { bubble: { x: -0.5, y: 6 } }),
+      room('b', 40, 0, { bubble: { x: 0.5, y: 6 } }),
+    ]
+    const out = settle(createState(rooms, [], 1), defaultLayout)
+    expect(out.settled).toBe(true)
+    expect(out.iterations).toBeLessThan(defaultLayout.maxIterations)
+    expect(between(out.state)).toBeCloseTo(restDistance, 9)
+  })
+
+  it('leaves no two bubbles of a whole program resting on each other', () => {
+    const { rooms, edges } = program(16, 2, 18)
+    const out = settle(createState(rooms, edges, 2), defaultLayout)
+    expect(out.settled).toBe(true)
+    for (const [i, a] of out.state.bodies.entries())
+      for (const b of out.state.bodies.slice(i + 1))
+        expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThan(a.radius + b.radius)
+  })
+})
+
+describe('the user requirements weight', () => {
+  /** Two small rooms side by side, far enough from the middle for the push between them to tell. */
+  function twoRooms(first: string, second: string) {
+    return [
+      room('a', 8, 0, { tier: first, bubble: { x: -8, y: 6 } }),
+      room('b', 8, 0, { tier: second, bubble: { x: 8, y: 6 } }),
+    ]
+  }
+  const apartAt = (rooms: readonly SimulationRoom[], weight: number): number => {
+    const out = settle(createState(rooms, [], 1), layoutFor(weight))
+    expect(out.settled).toBe(true)
+    const [a, b] = out.state.bodies
+    return Math.hypot(a!.x - b!.x, a!.y - b!.y)
+  }
+
+  it('parts a public room from a private one further as the weight rises', () => {
+    const rooms = twoRooms('public', 'private')
+    expect(apartAt(rooms, 1)).toBeGreaterThan(apartAt(rooms, 0) + 0.2)
+  })
+
+  it('leaves two rooms of one tier at the same distance at either weight', () => {
+    const rooms = twoRooms('private', 'private')
+    expect(apartAt(rooms, 1)).toBeCloseTo(apartAt(rooms, 0), 9)
+  })
+
+  it('leaves an exempt room, such as a bathroom, out of the gradient', () => {
+    const rooms = twoRooms('public', 'exempt')
+    expect(apartAt(rooms, 1)).toBeCloseTo(apartAt(rooms, 0), 9)
+  })
+
+  it('pulls a wanted link harder as the weight rises', () => {
+    expect(layoutFor(1).springStiffness).toBeGreaterThan(layoutFor(0).springStiffness)
+    expect(layoutFor(0.5).springStiffness).toBe(defaultLayout.springStiffness)
+  })
+})
+
+describe('spread', () => {
+  it('triples the push between bubbles and the air they keep', () => {
+    const wide = spreadLayout(defaultLayout)
+    expect(wide.repulsion).toBe(defaultLayout.repulsion * 3)
+    expect(wide.spread).toBe(defaultLayout.spread * 3)
+    expect(wide.restGap).toBe(defaultLayout.restGap * 3)
+    expect(wide.springStiffness).toBe(defaultLayout.springStiffness)
+  })
+
+  it('opens a settled cloud out and lets it settle again', () => {
+    const { rooms, edges } = program(16, 2, 18)
+    const settled = settle(createState(rooms, edges, 2), defaultLayout).state
+    const reach = (state: typeof settled): number =>
+      state.bodies.reduce((widest, body) => Math.max(widest, Math.abs(body.x)), 0)
+    let opened = settled
+    for (let frame = 0; frame < SPREAD_SECONDS / defaultLayout.timeStep; frame++)
+      opened = step(opened, spreadLayout(defaultLayout))
+    expect(reach(opened)).toBeGreaterThan(reach(settled) * 1.5)
+    expect(settle(opened, defaultLayout).settled).toBe(true)
   })
 })

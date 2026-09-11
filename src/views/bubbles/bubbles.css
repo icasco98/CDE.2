@@ -23,6 +23,10 @@
   cursor: pointer;
 }
 
+.bubbles-bar button.bubbles-wide {
+  min-width: 8.5rem;
+}
+
 .bubbles-bar button:disabled {
   color: #9a958c;
   cursor: default;
@@ -57,6 +61,41 @@
   color: #8a3f2a;
 }
 
+/* The sheet and the weights side by side, so a slider and what it does to the diagram are read together. */
+.bubbles-body {
+  display: flex;
+  align-items: stretch;
+  gap: 1rem;
+}
+
+.weights-panel {
+  flex: none;
+  width: 14rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2ddd3;
+  border-radius: 4px;
+  background: #faf8f4;
+}
+
+.weights-panel h2 {
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+/* A long family name wraps onto a second line rather than being cut off at the panel's edge. */
+.weights-panel .field > span {
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.weights-panel .note {
+  margin: 0;
+}
+
 .bubbles-sheet {
   /* The metres one CSS pixel covers, set by the view on every camera change; every mark that must
      hold its size on the screen is sized from it. */
@@ -65,8 +104,8 @@
      own drawing and running off the bottom of the screen. */
   height: 65vh;
   min-height: 320px;
-  flex: none;
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
   background: #faf8f4;
   border: 1px solid #e2ddd3;
   border-radius: 4px;

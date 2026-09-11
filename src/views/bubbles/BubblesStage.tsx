@@ -3,7 +3,7 @@ import { selection, useSelection } from '../../app/selection'
 import { session } from '../../app/session'
 import { useProject } from '../../app/useProject'
 import { storeyLabel, type Position } from '../../bubbles'
-import type { Commit, EdgeKind, Result } from '../../model'
+import type { Commit, EdgeKind, Family, Result } from '../../model'
 import { connectionSource, proposedConnections, roomTypeById } from '../../rulebook'
 import { BubblesView } from './BubblesView'
 import type { BubbleProposal } from './types'
@@ -15,10 +15,10 @@ export function BubblesStage() {
 
   const rooms = useMemo(
     () =>
-      project.rooms.map((room) => ({
-        ...room,
-        category: roomTypeById(room.type)?.category,
-      })),
+      project.rooms.map((room) => {
+        const kind = roomTypeById(room.type)
+        return { ...room, category: kind?.category, tier: kind?.tier }
+      }),
     [project.rooms],
   )
 
@@ -82,6 +82,7 @@ export function BubblesStage() {
       proposals={proposals}
       storeys={project.storeys}
       plot={project.plot}
+      weights={project.weights}
       selected={selected}
       onMoveBubble={(id: string, at: Position, commit: Commit) =>
         session.actions.setBubble(id, at, commit)
@@ -109,6 +110,9 @@ export function BubblesStage() {
             }
           }),
         )
+      }
+      onSetWeight={(family: Family, weight: number) =>
+        report(session.actions.setWeights({ ...project.weights, [family]: weight }))
       }
       onSelect={selection.select}
       onRefuse={session.say}

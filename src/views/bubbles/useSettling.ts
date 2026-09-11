@@ -1,25 +1,35 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  createState,
-  defaultLayout,
-  step,
-  type LayoutConfig,
-  type SimulationState,
-} from '../../bubbles'
+import { createState, defaultLayout, type LayoutConfig, type Position } from '../../bubbles'
 import type { Commit } from '../../model'
+import { browserFrames, createRun, type Frames, type Landing } from './run'
 import type { BubbleLink, BubbleRoom } from './types'
 
-export type Settling = 'ready' | 'running' | 'settled' | 'stopped'
-
-export type SettleControls = {
-  readonly settling: Settling
-  readonly start: () => void
-  readonly stop: () => void
-  /** A hand on a bubble ends a run, and makes any earlier claim that the picture had settled false. */
-  readonly interrupt: () => void
+type SettleControls = {
+  /** What the status line says: the picture is moving, or it is resting. */
+  readonly moving: boolean
+  readonly settleNow: () => void
+  readonly spread: () => void
+  readonly hold: (id: string, at: Position) => void
+  readonly release: (landing: Landing | null) => void
 }
 
-type Report = (id: string, at: { x: number; y: number }, commit: Commit) => void
+type Report = (id: string, at: Position, commit: Commit) => void
+
+/**
+ * Everything the simulation is built from, so a room added, resized, pinned or moved between
+ * storeys starts a new picture while a bubble merely travelling across the sheet does not.
+ */
+function shapeOf(
+  rooms: readonly BubbleRoom[],
+  edges: readonly BubbleLink[],
+  storeys: number,
+): string {
+  const program = rooms.map(
+    (room) =>
+      `${room.id}:${room.storey}:${room.storeysSpanned}:${room.targetArea}:${room.pinned}:${room.tier ?? ''}`,
+  )
+  return `${storeys}|${program.join(',')}|${edges.map((edge) => `${edge.a}-${edge.b}`).join(',')}`
+}
 
 export function useSettling(
   rooms: readonly BubbleRoom[],
@@ -27,72 +37,47 @@ export function useSettling(
   storeys: number,
   onMoveBubble: Report,
   config: LayoutConfig = defaultLayout,
+  frames: Frames = browserFrames,
 ): SettleControls {
-  const [settling, setSettling] = useState<Settling>('ready')
-  const frame = useRef(0)
-  const state = useRef<SimulationState | null>(null)
+  const [moving, setMoving] = useState(false)
   const latest = useRef({ rooms, edges, storeys, onMoveBubble, config })
   latest.current = { rooms, edges, storeys, onMoveBubble, config }
 
-  /** Every bubble moves as a preview and the last one commits, so a whole settle is one step to undo. */
-  const report = useCallback((next: SimulationState, commit: Commit) => {
-    const moving = next.bodies.filter((body) => !body.pinned)
-    moving.forEach((body, index) => {
-      const last = commit === 'commit' && index === moving.length - 1
-      latest.current.onMoveBubble(body.id, { x: body.x, y: body.y }, last ? 'commit' : 'preview')
-    })
-  }, [])
+  /** Every bubble moves as a preview and the last one commits, so a whole run is one step to undo. */
+  const run = useRef(
+    createRun({
+      frames,
+      state: createState(rooms, edges, storeys),
+      layout: () => latest.current.config,
+      report: (bodies, commit) =>
+        bodies.forEach((body, index) => {
+          const last = commit === 'commit' && index === bodies.length - 1
+          latest.current.onMoveBubble(
+            body.id,
+            { x: body.x, y: body.y },
+            last ? 'commit' : 'preview',
+          )
+        }),
+      watch: setMoving,
+    }),
+  ).current
 
-  const halt = useCallback(
-    (reason: Settling) => {
-      if (frame.current !== 0) cancelAnimationFrame(frame.current)
-      frame.current = 0
-      const current = state.current
-      state.current = null
-      if (current) report(current, 'commit')
-      setSettling(reason)
-    },
-    [report],
-  )
+  const shape = shapeOf(rooms, edges, storeys)
+  useEffect(() => {
+    const program = latest.current
+    run.begin(createState(program.rooms, program.edges, program.storeys))
+  }, [run, shape])
 
-  const start = useCallback(() => {
-    if (frame.current !== 0) return
-    const { rooms: program, edges: links, storeys: levels, config: layout } = latest.current
-    state.current = createState(program, links, levels)
-    let iterations = 0
-    const tick = () => {
-      const current = state.current
-      if (!current) return
-      iterations += 1
-      const next = step(current, layout)
-      state.current = next
-      if (next.energy < layout.energyThreshold || iterations >= layout.maxIterations) {
-        halt('settled')
-        return
-      }
-      report(next, 'preview')
-      frame.current = requestAnimationFrame(tick)
-    }
-    setSettling('running')
-    frame.current = requestAnimationFrame(tick)
-  }, [halt, report])
+  /** A weight moved changes the forces, so the picture is asked to answer them. */
+  useEffect(() => run.look(), [run, config])
 
-  const stop = useCallback(() => {
-    if (frame.current === 0) return
-    halt('stopped')
-  }, [halt])
+  useEffect(() => () => run.stop(), [run])
 
-  const interrupt = useCallback(() => {
-    if (frame.current !== 0) halt('stopped')
-    else setSettling('ready')
-  }, [halt])
-
-  useEffect(
-    () => () => {
-      if (frame.current !== 0) cancelAnimationFrame(frame.current)
-    },
-    [],
-  )
-
-  return { settling, start, stop, interrupt }
+  return {
+    moving,
+    settleNow: useCallback(() => run.settleNow(), [run]),
+    spread: useCallback(() => run.spread(), [run]),
+    hold: useCallback((id: string, at: Position) => run.hold(id, at), [run]),
+    release: useCallback((landing: Landing | null) => run.release(landing), [run]),
+  }
 }
