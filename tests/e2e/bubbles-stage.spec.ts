@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 /** The forces run while the tab is open, so nothing on the sheet is measured until it stops. */
 async function resting(page: Page) {
@@ -137,12 +137,11 @@ function roomNamed(page: Page, name: string) {
  * A bubble, with a point on it that the pointer really reaches: the bubbles pile up before they
  * are settled, and a proposal's thread draws over them, so the centre is not always the bubble's.
  */
-async function bubbleAt(page: Page, name: string) {
-  const circle = roomNamed(page, name).locator('[data-bubble]')
+async function aimAt(page: Page, circle: Locator, what: string) {
   const id = await circle.getAttribute('data-bubble')
   const box = await circle.boundingBox()
   const [x, y] = await Promise.all([circle.getAttribute('cx'), circle.getAttribute('cy')])
-  if (!id || !box) throw new Error(`${name} is not on the sheet`)
+  if (!id || !box) throw new Error(`${what} is not on the sheet`)
   const screen = await page.evaluate(
     ([shape, wanted]: [{ x: number; y: number; width: number; height: number }, string]) => {
       for (const down of [0, -0.3, 0.3, -0.5, 0.5])
@@ -158,11 +157,15 @@ async function bubbleAt(page: Page, name: string) {
     },
     [box, id] as [{ x: number; y: number; width: number; height: number }, string],
   )
-  if (!screen) throw new Error(`${name} is covered wherever it is aimed at`)
+  if (!screen) throw new Error(`${what} is covered wherever it is aimed at`)
   const held = await sheetPointOf(page, screen)
   const sheet = { x: Number(x), y: Number(y) }
   // The hand holds the bubble where it took hold of it, so a drop is aimed by that offset, not by its centre.
   return { sheet, screen, grabbed: { x: sheet.x - held.x, y: sheet.y - held.y } }
+}
+
+async function bubbleAt(page: Page, name: string) {
+  return aimAt(page, roomNamed(page, name).locator('[data-bubble]'), name)
 }
 
 async function drag(page: Page, from: { x: number; y: number }, to: { x: number; y: number }) {
@@ -493,4 +496,219 @@ test('a diagram left at rest opens at rest, and no bubble moves on arrival', asy
   // Not "settles again quickly": at rest the moment it is drawn, and not a bubble out of place.
   expect(await page.locator('.bubbles-status').textContent()).toBe('Resting')
   expect(await placesOn(page)).toEqual(before)
+})
+
+/** A villa of this many storeys rebuilt from the household, so the program has a stair through it. */
+async function openWithStair(page: Page, storeys: number) {
+  await page.goto('/')
+  for (let more = 1; more < storeys; more++)
+    await page.getByRole('button', { name: 'Add storey' }).click()
+  await page.getByRole('button', { name: /rebuild program from household/i }).click()
+  await page.getByRole('button', { name: 'Bubbles' }).click()
+  await expect(page.locator('svg g[data-room]').first()).toBeVisible()
+  await resting(page)
+}
+
+/** The id a room is drawn under, taken from any twin of it. */
+async function roomIdOf(page: Page, name: string): Promise<string> {
+  const id = await roomNamed(page, name).first().getAttribute('data-room')
+  if (!id) throw new Error(`${name} is not on the sheet`)
+  return id
+}
+
+function twin(page: Page, id: string, storey: number) {
+  return page.locator(`[data-room="${id}"][data-twin="${storey}"]`)
+}
+
+/** Where one twin stands on the sheet, in metres. */
+async function twinPlace(page: Page, id: string, storey: number) {
+  const circle = twin(page, id, storey).locator('[data-bubble]')
+  const [x, y] = await Promise.all([circle.getAttribute('cx'), circle.getAttribute('cy')])
+  return { x: Number(x), y: Number(y) }
+}
+
+async function twinAt(page: Page, id: string, storey: number) {
+  return aimAt(page, twin(page, id, storey).locator('[data-bubble]'), `twin ${storey} of ${id}`)
+}
+
+/** Joins a room to one twin of another through link mode, and leaves the mode again. */
+async function linkToTwin(page: Page, from: string, id: string, storey: number) {
+  await page.getByRole('button', { name: 'Link', exact: true }).click()
+  await clickBubble(page, from)
+  const at = (await twinAt(page, id, storey)).screen
+  await page.mouse.click(at.x, at.y)
+  await page.locator('svg.bubbles-sheet').press('Escape')
+  await resting(page)
+}
+
+/** The two ends of a stair's span as the program row asks for them. */
+async function setSpan(page: Page, name: string, from: string, to: string) {
+  await page.getByRole('button', { name: 'Requirements' }).click()
+  const row = page
+    .locator('table.program tbody tr')
+    .filter({ has: page.getByLabel('Room name').and(page.locator(`[value="${name}"]`)) })
+  await row.getByLabel('From').selectOption({ label: from })
+  await row.getByLabel('To').selectOption({ label: to })
+  await page.getByRole('button', { name: 'Bubbles' }).click()
+  await resting(page)
+}
+
+test('a stair is drawn on every floor it serves, its twins one above the other', async ({
+  page,
+}) => {
+  await openWithStair(page, 2)
+  const stair = await roomIdOf(page, 'Stair')
+  await expect(page.locator(`[data-room="${stair}"]`)).toHaveCount(2)
+  await expect(twin(page, stair, 0).locator('.bubble-span').first()).toHaveText('Ground to First')
+
+  const bands = await bandsOf(page)
+  const [ground, first] = bands
+  if (!ground || !first) throw new Error('there are no bands')
+  const below = await twinPlace(page, stair, 0)
+  const above = await twinPlace(page, stair, 1)
+  expect(above.x).toBeCloseTo(below.x, 6)
+  expect(above.y).toBeCloseTo(below.y - ground.height, 6)
+  expect(below.y).toBeGreaterThan(ground.top)
+  expect(below.y).toBeLessThan(ground.top + ground.height)
+  expect(above.y).toBeGreaterThan(first.top)
+  expect(above.y).toBeLessThan(first.top + first.height)
+})
+
+test('dragging one twin of a stair carries the other in the same frame', async ({ page }) => {
+  await openWithStair(page, 2)
+  const stair = await roomIdOf(page, 'Stair')
+  const bands = await bandsOf(page)
+  const ground = bands[0]
+  if (!ground) throw new Error('there is no Ground band')
+  const before = await twinPlace(page, stair, 1)
+  const held = await twinAt(page, stair, 0)
+
+  await page.mouse.move(held.screen.x, held.screen.y)
+  await page.mouse.down()
+  await page.mouse.move(held.screen.x + 90, held.screen.y, { steps: 6 })
+  // Still holding: the twin upstairs has to have come along with the hand by now.
+  const below = await twinPlace(page, stair, 0)
+  const above = await twinPlace(page, stair, 1)
+  expect(Math.abs(above.x - before.x)).toBeGreaterThan(2)
+  expect(above.x).toBeCloseTo(below.x, 6)
+  expect(above.y).toBeCloseTo(below.y - ground.height, 6)
+  await page.mouse.up()
+})
+
+test('a link drawn to a twin is an edge on that twin’s own floor', async ({ page }) => {
+  await openWithStair(page, 2)
+  const stair = await roomIdOf(page, 'Stair')
+  await settle(page)
+
+  await linkToTwin(page, 'Entry', stair, 0)
+  await expect(page.locator('[data-edge]')).toHaveCount(1)
+  await expect(page.locator('[data-edge]').first()).toHaveAttribute('data-storey', '0')
+
+  await linkToTwin(page, 'Bedroom 1', stair, 1)
+  await expect(page.locator('[data-edge]')).toHaveCount(2)
+  await expect(page.locator('[data-edge]').nth(1)).toHaveAttribute('data-storey', '1')
+})
+
+test('the storey filter shows the twin of that floor and dims the rest', async ({ page }) => {
+  await openWithStair(page, 2)
+  const stair = await roomIdOf(page, 'Stair')
+  await page
+    .getByRole('group', { name: 'Storey shown' })
+    .getByRole('button', { name: 'First' })
+    .click()
+  await expect(twin(page, stair, 1)).not.toHaveClass(/bubble-dimmed/)
+  await expect(twin(page, stair, 0)).toHaveClass(/bubble-dimmed/)
+})
+
+test('a twin dropped in a band the stair does not stand on is refused, and comes back', async ({
+  page,
+}) => {
+  await openWithStair(page, 2)
+  await settle(page)
+  const stair = await roomIdOf(page, 'Stair')
+  const bands = await bandsOf(page)
+  const ground = bands[0]
+  if (!ground) throw new Error('there is no Ground band')
+  const above = await twinAt(page, stair, 1)
+  // Straight down by one band, which carries the twin on First into the Ground band and the room's
+  // own place below the sheet: the whole stair would have to change floors for that to be taken.
+  const top = await onSheet(page, above.sheet.x, ground.top)
+  const bottom = await onSheet(page, above.sheet.x, ground.top + ground.height)
+  await drag(page, above.screen, {
+    x: above.screen.x,
+    y: above.screen.y + (bottom.y - top.y),
+  })
+  await expect(page.locator('.messages')).toContainText('set its span in the program')
+  await resting(page)
+
+  const back = await twinPlace(page, stair, 1)
+  expect(back.y).toBeGreaterThan(bands[1]!.top)
+  expect(back.y).toBeLessThan(bands[1]!.top + bands[1]!.height)
+  await page.getByRole('button', { name: 'Requirements' }).click()
+  await expect(
+    page
+      .locator('table.program tbody tr')
+      .filter({ has: page.getByLabel('Room name').and(page.locator('[value="Stair"]')) })
+      .getByLabel('From'),
+  ).toHaveValue('0')
+})
+
+test('a stair set from First to Second is drawn in the upper bands only', async ({ page }) => {
+  await openWithStair(page, 3)
+  const stair = await roomIdOf(page, 'Stair')
+  await expect(page.locator(`[data-room="${stair}"]`)).toHaveCount(3)
+
+  await setSpan(page, 'Stair', 'First', 'Second')
+  await expect(page.locator(`[data-room="${stair}"]`)).toHaveCount(2)
+  await expect(twin(page, stair, 0)).toHaveCount(0)
+  await expect(twin(page, stair, 1)).toHaveCount(1)
+  await expect(twin(page, stair, 2).locator('.bubble-span').first()).toHaveText('First to Second')
+})
+
+/** Where a point in metres on the zoning sheet lands on the screen. */
+async function onZoningSheet(page: Page, x: number, y: number) {
+  return page.evaluate(
+    ([mx, my]) => {
+      const sheet = document.querySelector('svg.zoning-sheet')
+      const screen = sheet instanceof SVGSVGElement ? sheet.getScreenCTM() : null
+      if (!screen) throw new Error('there is no sheet')
+      const point = new DOMPoint(mx, my).matrixTransform(screen)
+      return { x: point.x, y: point.y }
+    },
+    [x, y],
+  )
+}
+
+test('a stair from Ground to Second is three twins here and one prism in the massing', async ({
+  page,
+}) => {
+  await openWithStair(page, 3)
+  const stair = await roomIdOf(page, 'Stair')
+  await setSpan(page, 'Stair', 'Ground', 'First')
+  await expect(page.locator(`[data-room="${stair}"]`)).toHaveCount(2)
+
+  await setSpan(page, 'Stair', 'Ground', 'Second')
+  await expect(page.locator(`[data-room="${stair}"]`)).toHaveCount(3)
+  await expect(twin(page, stair, 2).locator('.bubble-span').first()).toHaveText('Ground to Second')
+
+  await page.getByRole('button', { name: 'Zoning' }).click()
+  const tray = page
+    .locator('[data-tray]')
+    .filter({ hasText: /^Stair/ })
+    .first()
+  const from = await tray.boundingBox()
+  if (!from) throw new Error('the Stair is not in the tray')
+  await drag(
+    page,
+    { x: from.x + from.width / 2, y: from.y + from.height / 2 },
+    await onZoningSheet(page, 5, 5),
+  )
+  await expect(page.locator('svg.zoning-sheet [data-room]')).toHaveCount(1)
+
+  await page.getByRole('button', { name: 'Massing' }).click()
+  // One room standing through three storeys is one prism, not three: four walls and a roof.
+  await expect(page.locator('svg.massing-sheet [data-room]')).toHaveCount(1)
+  await expect(page.locator('svg.massing-sheet [data-room] polygon')).toHaveCount(5)
+  for (const storey of [0, 1, 2])
+    await expect(page.locator(`[data-storey="${storey}"] td`).first()).not.toHaveText('0.0 m²')
 })

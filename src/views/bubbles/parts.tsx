@@ -4,7 +4,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react'
-import { bandOf, storeyLabel, type Body, type Position } from '../../bubbles'
+import { bandOf, storeyLabel, twinY, type Body, type Position } from '../../bubbles'
 import { categoryLabels } from '../../rulebook'
 import type { Extent } from '../camera'
 import { categoryClass } from './frame'
@@ -32,9 +32,14 @@ function labelSize(radius: number): number {
 }
 
 /** The two marks sit opposite each other on the rim: what holds the room on the left, what links it on the right. */
-function onRim(body: Body, toTheLeft: boolean): Position {
-  const away = body.radius * Math.SQRT1_2
-  return { x: body.x + (toTheLeft ? -away : away), y: body.y - away }
+function onRim(at: Position, radius: number, toTheLeft: boolean): Position {
+  const away = radius * Math.SQRT1_2
+  return { x: at.x + (toTheLeft ? -away : away), y: at.y - away }
+}
+
+/** The storeys a stair reaches, in the words the bands are labelled with. */
+function spanMark(storey: number, span: number): string {
+  return `${storeyLabel(storey)} to ${storeyLabel(storey + span - 1)}`
 }
 
 /**
@@ -82,46 +87,59 @@ export function Bands(props: {
 
 export type BubbleHandlers = {
   readonly onGrab: (event: ReactPointerEvent, body: Body) => void
-  readonly onReach: (event: ReactPointerEvent, body: Body) => void
+  /** The link is drawn from the twin the handle was taken from, so it starts where the hand is. */
+  readonly onReach: (event: ReactPointerEvent, body: Body, storey: number) => void
 }
 
 type BubbleProps = {
   readonly body: Body
   readonly room: BubbleRoom
+  /** The storey this twin is drawn in; the room has one twin in every band it reaches. */
+  readonly twin: number
+  readonly bandHeight: number
   readonly selected: boolean
   /** On a storey the filter is not showing: drawn faint and out of the pointer's reach. */
   readonly dimmed: boolean
   readonly handlers: BubbleHandlers
 }
 
-/** Memoised on the body the simulation hands back, so a zoom or a pan draws no bubble again. */
+/** Memoised on the body and which twin of it this is, so a zoom or a pan draws no bubble again. */
 export const Bubble = memo(function Bubble(props: BubbleProps) {
-  const { body, room, handlers } = props
-  const rim = onRim(body, false)
-  const held = onRim(body, true)
+  const { body, room, twin, handlers } = props
+  const span = Math.max(1, Math.trunc(body.storeysSpanned))
+  const at = { x: body.x, y: twinY(body, twin, props.bandHeight) }
+  const rim = onRim(at, body.radius, false)
+  const held = onRim(at, body.radius, true)
   const classes = ['bubble']
   if (props.selected) classes.push('bubble-selected')
   if (props.dimmed) classes.push('bubble-dimmed')
   return (
     <g
       data-room={body.id}
+      data-twin={twin}
       className={classes.join(' ')}
       style={{ '--label-m': String(labelSize(body.radius)) } as CSSProperties}
     >
       <circle
         data-bubble={body.id}
-        cx={body.x}
-        cy={body.y}
+        cx={at.x}
+        cy={at.y}
         r={body.radius}
         className={`bubble-shape ${categoryClass(room.category)}`}
         onPointerDown={(event) => handlers.onGrab(event, body)}
       />
-      <text x={body.x} y={body.y} dy="-0.35em" className="bubble-name">
+      <text x={at.x} y={at.y} dy={span > 1 ? '-0.85em' : '-0.35em'} className="bubble-name">
         {room.name}
       </text>
-      <text x={body.x} y={body.y} dy="0.95em" className="bubble-area">
+      <text x={at.x} y={at.y} dy={span > 1 ? '0.45em' : '0.95em'} className="bubble-area">
         {Math.round(room.targetArea)} m²
       </text>
+      {/* A room drawn twice must say so on the bubble itself, or two circles read as two rooms. */}
+      {span > 1 && (
+        <text x={at.x} y={at.y} dy="1.85em" className="bubble-span">
+          {spanMark(body.storey, span)}
+        </text>
+      )}
       {room.pinned && (
         <circle cx={held.x} cy={held.y} r={Math.max(0.45, body.radius * 0.16)} className="pin-mark">
           <title>Held in place</title>
@@ -134,7 +152,7 @@ export const Bubble = memo(function Bubble(props: BubbleProps) {
         r={Math.max(0.55, body.radius * 0.2)}
         className="reach"
         data-reach={body.id}
-        onPointerDown={(event) => handlers.onReach(event, body)}
+        onPointerDown={(event) => handlers.onReach(event, body, twin)}
       >
         <title>Drag to another room to connect them</title>
       </circle>
@@ -147,27 +165,41 @@ export const Link = memo(function Link(props: {
   id: string
   a: Body
   b: Body
+  /** The storey the edge is on: it is drawn between the twin of each end that stands there. */
+  storey: number
+  bandHeight: number
   kind: string
   selected: boolean
   dimmed: boolean
   onSelect: (event: ReactPointerEvent, id: string) => void
 }) {
-  const { a, b } = props
+  const from = { x: props.a.x, y: twinY(props.a, props.storey, props.bandHeight) }
+  const to = { x: props.b.x, y: twinY(props.b, props.storey, props.bandHeight) }
   const select = (event: ReactPointerEvent): void => props.onSelect(event, props.id)
   return (
     <g
       data-edge={props.id}
       data-kind={props.kind}
+      data-storey={props.storey}
       className={props.dimmed ? 'link-group link-dimmed' : 'link-group'}
     >
-      <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} className="link-grip" onPointerDown={select} />
-      {/* One space flowing into the next is a broad opening; a door is the single line. */}
-      {props.kind === 'open' && <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} className="link-flow" />}
       <line
-        x1={a.x}
-        y1={a.y}
-        x2={b.x}
-        y2={b.y}
+        x1={from.x}
+        y1={from.y}
+        x2={to.x}
+        y2={to.y}
+        className="link-grip"
+        onPointerDown={select}
+      />
+      {/* One space flowing into the next is a broad opening; a door is the single line. */}
+      {props.kind === 'open' && (
+        <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} className="link-flow" />
+      )}
+      <line
+        x1={from.x}
+        y1={from.y}
+        x2={to.x}
+        y2={to.y}
         className={props.selected ? 'link link-selected' : 'link'}
         onPointerDown={select}
       />
@@ -181,25 +213,36 @@ function markRadius(a: Body, b: Body): number {
 }
 
 /** From rim to rim: a proposal draws over the bubbles, so its thread must never cover one. */
-function betweenRims(a: Body, b: Body): readonly [Position, Position] {
-  const span = Math.hypot(b.x - a.x, b.y - a.y)
-  const unit = { x: (b.x - a.x) / (span || 1), y: (b.y - a.y) / (span || 1) }
+function betweenRims(
+  a: Position,
+  b: Position,
+  radii: readonly [number, number],
+): readonly [Position, Position] {
+  const between = Math.hypot(b.x - a.x, b.y - a.y)
+  const unit = { x: (b.x - a.x) / (between || 1), y: (b.y - a.y) / (between || 1) }
   return [
-    { x: a.x + unit.x * a.radius, y: a.y + unit.y * a.radius },
-    { x: b.x - unit.x * b.radius, y: b.y - unit.y * b.radius },
+    { x: a.x + unit.x * radii[0], y: a.y + unit.y * radii[0] },
+    { x: b.x - unit.x * radii[1], y: b.y - unit.y * radii[1] },
   ]
 }
 
 export const Proposed = memo(function Proposed(props: {
   a: Body
   b: Body
+  /** The storey the connection would be on, so it is offered between the twins that would hold it. */
+  storey: number
+  bandHeight: number
   proposal: BubbleProposal
   /** The rulebook row's words, shown on hover. */
   source: string
   onAccept: (event: ReactPointerEvent, proposal: BubbleProposal) => void
 }) {
   const { a, b } = props
-  const [from, to] = betweenRims(a, b)
+  const [from, to] = betweenRims(
+    { x: a.x, y: twinY(a, props.storey, props.bandHeight) },
+    { x: b.x, y: twinY(b, props.storey, props.bandHeight) },
+    [a.radius, b.radius],
+  )
   const at = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }
   const radius = markRadius(a, b)
   return (

@@ -210,6 +210,20 @@ table.program td input[type='number'] {
   width: 90px;
 }
 
+/* The two ends of a stair's span, side by side in the width one storey select had. */
+.spans {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.spans label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+  color: #6d6862;
+}
+
 .below-floor {
   border-color: #a5442c;
 }

@@ -11,6 +11,8 @@ export {
   spreadLayout,
   step,
   STILL_FRAMES,
+  twinsOf,
+  twinY,
 } from './simulation'
 export type {
   Band,

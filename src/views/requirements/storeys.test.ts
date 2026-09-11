@@ -42,6 +42,27 @@ describe('a storey more or less', () => {
     expect(spanOf(stair)).toBe(1)
   })
 
+  it('leaves a stair that stops short of the top where the person set it', () => {
+    const stair = add('stair')
+    addStorey(store)
+    addStorey(store)
+    expect(spanOf(stair)).toBe(3)
+    // Ground to First in a house of three storeys: the span is the person's, not the house's.
+    store.actions.setStorey(stair, 0, 2)
+    expect(addStorey(store).ok).toBe(true)
+    expect(store.getState().storeys).toBe(4)
+    expect(spanOf(stair)).toBe(2)
+  })
+
+  it('stretches a stair that starts upstairs from where it starts', () => {
+    const stair = add('stair')
+    addStorey(store)
+    store.actions.setStorey(stair, 1, 1)
+    expect(addStorey(store).ok).toBe(true)
+    expect(store.getState().rooms.find((room) => room.id === stair)?.storey).toBe(1)
+    expect(spanOf(stair)).toBe(2)
+  })
+
   it('leaves every other kind on the storey it stands on', () => {
     const bedroom = add('bedroom')
     addStorey(store)

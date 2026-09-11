@@ -7,9 +7,12 @@ async function resting(page: Page) {
   await expect(page.locator('.bubbles-status')).toHaveText('Resting', { timeout: 30000 })
 }
 
+/** The sample's twelve rooms, one of them a stair drawn in both of the bands it spans. */
+const TWINS = 13
+
 async function open(page: Page) {
   await page.goto(page_)
-  await expect(page.locator('[data-bubble]')).toHaveCount(12)
+  await expect(page.locator('[data-bubble]')).toHaveCount(TWINS)
   await resting(page)
 }
 
@@ -59,7 +62,7 @@ test('settles to the same picture from two fresh loads', async ({ page }) => {
   await open(page)
   await settle(page)
   expect(await positions(page)).toEqual(first)
-  expect(first.length).toBe(12)
+  expect(first.length).toBe(TWINS)
 })
 
 /** Where a bubble stands on the sheet, in metres, so a camera that moves does not read as a drag. */

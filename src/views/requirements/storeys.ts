@@ -4,9 +4,16 @@ import { spansAllStoreys } from '../../rulebook'
 /** What changing the storey count needs of the session, so a test can hand it a plain store. */
 type Changing = Pick<Store, 'getState' | 'transaction' | 'actions'>
 
-/** The rooms that stand on every storey the house has: a stair on the ground, a lift beside it. */
-function spanning(store: Changing): readonly Room[] {
-  return store.getState().rooms.filter((room) => spansAllStoreys(room.type) && room.storey === 0)
+/**
+ * The stairs and lifts that reach the top storey of the house as it stands. One that stops short is
+ * a span the person set by hand, so a storey added above it or taken off below it leaves it alone.
+ */
+function reachingTheTop(store: Changing): readonly Room[] {
+  const { rooms, storeys } = store.getState()
+  return rooms.filter(
+    (room) =>
+      spansAllStoreys(room.type) && room.storey + Math.max(1, room.storeysSpanned) === storeys,
+  )
 }
 
 /**
@@ -15,13 +22,13 @@ function spanning(store: Changing): readonly Room[] {
  */
 export function addStorey(store: Changing): Result {
   const storeys = store.getState().storeys + 1
-  const stretch = spanning(store)
+  const stretch = reachingTheTop(store)
   if (stretch.length === 0) return store.actions.addStorey()
   return store.transaction(() => {
     const added = store.actions.addStorey()
     if (!added.ok) return added
     for (const room of stretch) {
-      const reaching = store.actions.setStorey(room.id, 0, storeys)
+      const reaching = store.actions.setStorey(room.id, room.storey, storeys - room.storey)
       if (!reaching.ok) return reaching
     }
   })
@@ -30,11 +37,11 @@ export function addStorey(store: Changing): Result {
 /** A storey fewer. The stairs come down first, or the storey they reach would read as in use. */
 export function removeStorey(store: Changing): Result {
   const storeys = Math.max(1, store.getState().storeys - 1)
-  const shorten = spanning(store)
+  const shorten = reachingTheTop(store).filter((room) => room.storey < storeys)
   if (shorten.length === 0) return store.actions.removeStorey()
   return store.transaction(() => {
     for (const room of shorten) {
-      const shortened = store.actions.setStorey(room.id, 0, storeys)
+      const shortened = store.actions.setStorey(room.id, room.storey, storeys - room.storey)
       if (!shortened.ok) return shortened
     }
     const removed = store.actions.removeStorey()

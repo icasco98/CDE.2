@@ -28,7 +28,9 @@ function shapeOf(
     (room) =>
       `${room.id}:${room.storey}:${room.storeysSpanned}:${room.targetArea}:${room.pinned}:${room.tier ?? ''}`,
   )
-  return `${storeys}|${program.join(',')}|${edges.map((edge) => `${edge.a}-${edge.b}`).join(',')}`
+  // An edge's storey is in here because it settles which twin of a stair the link pulls on.
+  const links = edges.map((edge) => `${edge.a}-${edge.b}:${edge.storey}`)
+  return `${storeys}|${program.join(',')}|${links.join(',')}`
 }
 
 export function useSettling(

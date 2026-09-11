@@ -19,6 +19,7 @@ function programOfThirty(): SimulationRoom[] {
 const edges = Array.from({ length: 29 }, (_unused, index) => ({
   a: `room-${index}`,
   b: `room-${index + 1}`,
+  storey: 0,
 }))
 
 /** The best of five runs after a warm-up, so neither compilation nor a stray collection is charged to the budget. */

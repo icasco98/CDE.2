@@ -1,10 +1,55 @@
 import { useState } from 'react'
 import type { Room } from '../../model'
-import { categoryLabels, roomTypeById, typesByCategory } from '../../rulebook'
+import { categoryLabels, roomTypeById, spansAllStoreys, typesByCategory } from '../../rulebook'
 import { session } from '../../app/session'
 import { NumberInput } from './fields'
 import { storeyLabel } from './format'
 import { refusalOf } from './refusals'
+import { spanBetween, startsFor, topAfterStart, topOf, topsFor } from './spans'
+
+type Told = (problem: string | null) => void
+
+/** The two ends of a stair or a lift, which is what its storey column asks for instead of one storey. */
+function Spans({ room, storeys, told }: { room: Room; storeys: number; told: Told }) {
+  const top = topOf(room)
+  const set = (from: number, to: number): void =>
+    told(refusalOf(session.actions.setStorey(room.id, from, spanBetween(from, to))))
+  return (
+    <span className="spans">
+      <label>
+        <span>From</span>
+        <select
+          aria-label="From"
+          value={room.storey}
+          onChange={(event) => {
+            const from = Number(event.target.value)
+            set(from, topAfterStart(from, top, storeys))
+          }}
+        >
+          {startsFor(storeys).map((storey) => (
+            <option key={storey} value={storey}>
+              {storeyLabel(storey)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        <span>To</span>
+        <select
+          aria-label="To"
+          value={topAfterStart(room.storey, top, storeys)}
+          onChange={(event) => set(room.storey, Number(event.target.value))}
+        >
+          {topsFor(room.storey, storeys).map((storey) => (
+            <option key={storey} value={storey}>
+              {storeyLabel(storey)}
+            </option>
+          ))}
+        </select>
+      </label>
+    </span>
+  )
+}
 
 function floorNote(type: string, targetArea: number): string | null {
   const floor = roomTypeById(type)?.legalFloor
@@ -51,19 +96,23 @@ export function ProgramRow({ room, storeys }: { room: Room; storeys: number }) {
         </select>
       </td>
       <td>
-        <select
-          aria-label="Storey"
-          value={room.storey}
-          onChange={(event) =>
-            setProblem(refusalOf(session.actions.setStorey(room.id, Number(event.target.value))))
-          }
-        >
-          {Array.from({ length: storeys }, (_, storey) => (
-            <option key={storey} value={storey}>
-              {storeyLabel(storey)}
-            </option>
-          ))}
-        </select>
+        {spansAllStoreys(room.type) ? (
+          <Spans room={room} storeys={storeys} told={setProblem} />
+        ) : (
+          <select
+            aria-label="Storey"
+            value={room.storey}
+            onChange={(event) =>
+              setProblem(refusalOf(session.actions.setStorey(room.id, Number(event.target.value))))
+            }
+          >
+            {Array.from({ length: storeys }, (_, storey) => (
+              <option key={storey} value={storey}>
+                {storeyLabel(storey)}
+              </option>
+            ))}
+          </select>
+        )}
       </td>
       <td>
         <NumberInput
