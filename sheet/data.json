@@ -1,9 +1,9 @@
 {
-  "revision": 20,
+  "revision": 21,
   "date": "11 Sep 2026",
   "session": "Session 3",
   "repo": "https://github.com/icasco98/CDE.2",
-  "headline": "G1 hallways merged. G0 zoning gestures is still being built.",
+  "headline": "Running through the rest on your word: G0 in review, A8 export started; G2, G3, G4 follow G0, then G5.",
   "decide": [],
   "yours": [
     {
@@ -32,6 +32,12 @@
       "task": "G0",
       "name": "Zoning gestures",
       "model": "Opus",
+      "stage": 2
+    },
+    {
+      "task": "A8",
+      "name": "Export PDF and DXF",
+      "model": "Opus",
       "stage": 1
     },
     {
@@ -40,13 +46,6 @@
       "model": "Opus",
       "stage": 4,
       "pr": 43
-    },
-    {
-      "task": "F4",
-      "name": "Stair on every floor",
-      "model": "Opus",
-      "stage": 4,
-      "pr": 38
     }
   ],
   "stages": ["Briefed", "Building", "Review", "Your merge", "Merged"],
@@ -57,8 +56,8 @@
     "Double-click start scripts (#27). Sheet updates on request, not hourly."
   ],
   "next": [
-    "Review G0 and G1 in the running app.",
-    "G2 lay out from bubbles, then G3 and G4 together, then G5.",
-    "A8 export, then A9 the usability run (needs O3 and O5)."
+    "G0 fixes, review, merge; then G2, G3, G4 in parallel.",
+    "A8 export in review when it reports; then G5 draw tool.",
+    "A9 usability run (needs O3 the known house and O5 the fresh brief)."
   ]
 }
