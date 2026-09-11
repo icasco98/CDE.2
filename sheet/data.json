@@ -1,9 +1,9 @@
 {
-  "revision": 11,
+  "revision": 12,
   "date": "11 Sep 2026",
   "session": "Session 3",
   "repo": "https://github.com/icasco98/CDE.2",
-  "headline": "Fix list from your first test is in the plan. F1 and F2 are being built; F3 follows F2.",
+  "headline": "F1 is back with its agent for four fixes; F2 is still building. Nothing waits on you.",
   "decide": [],
   "yours": [
     {
@@ -32,7 +32,7 @@
       "task": "F1",
       "name": "Storeys and companions",
       "model": "Opus",
-      "stage": 1
+      "stage": 2
     },
     {
       "task": "F2",
@@ -60,7 +60,7 @@
     "All four stages merged: requirements, bubbles, zoning, massing (#19, #23, #24).",
     "Double-click start scripts for Windows and Mac (#27).",
     "Owner's first test: comments on requirements and bubbles became F1, F2, F3 (#28).",
-    "F1 storeys and companions, F2 bubbles rework started.",
+    "F1 built and reviewed: sent back for four fixes (model must not read the rulebook, one companion naming rule, rebuild adds every companion, Add lands on the kind's storey). F2 building.",
     "Briefs and the sheet builder kept in the repository (#18). Hourly updates scheduled."
   ],
   "next": [
