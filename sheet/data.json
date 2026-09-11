@@ -1,5 +1,5 @@
 {
-  "revision": 18,
+  "revision": 19,
   "date": "11 Sep 2026",
   "session": "Session 3",
   "repo": "https://github.com/icasco98/CDE.2",
@@ -53,7 +53,7 @@
     "All four stages merged; F1 to F4 from your first tests merged (#31, #33, #35, #38).",
     "Second test became six tasks: G0 gestures without hidden keys, G1 hallways, G2 lay out from bubbles, G3 one Plan tab, G4 joins and alignment, G5 draw tool (#40).",
     "G0 and G1 started.",
-    "Double-click start scripts (#27). Hourly updates scheduled."
+    "Double-click start scripts (#27). Sheet updates on request, not hourly."
   ],
   "next": [
     "Review G0 and G1 in the running app.",
