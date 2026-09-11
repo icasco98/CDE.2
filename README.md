@@ -10,7 +10,9 @@ where two walls happen to land.
 
 ## Run
 
-Node 22.
+Node 22 or newer. Double-click `start.cmd` on Windows or
+`start.command` on a Mac: the first run installs, every run opens the
+tool in the browser. From a terminal, the same is:
 
 ```
 npm ci
