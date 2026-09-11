@@ -69,7 +69,7 @@ export function useSettling(
   }, [run, shape])
 
   /** A weight moved changes the forces, so the picture is asked to answer them. */
-  useEffect(() => run.wake(), [run, config])
+  useEffect(() => run.look(), [run, config])
 
   useEffect(() => () => run.stop(), [run])
 

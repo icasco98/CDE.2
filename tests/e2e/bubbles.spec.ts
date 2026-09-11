@@ -62,18 +62,34 @@ test('settles to the same picture from two fresh loads', async ({ page }) => {
   expect(first.length).toBe(12)
 })
 
-test('a dragged bubble follows the hand and is held in place', async ({ page }) => {
+/** Where a bubble stands on the sheet, in metres, so a camera that moves does not read as a drag. */
+async function placeOf(page: Page, id: string) {
+  const circle = page.locator(`[data-bubble="${id}"]`)
+  const [x, y] = await Promise.all([circle.getAttribute('cx'), circle.getAttribute('cy')])
+  return { x: Number(x), y: Number(y) }
+}
+
+test('a dragged bubble follows the hand, and the hand’s hold goes with the hand', async ({
+  page,
+}) => {
   await open(page)
   await settle(page)
   const bubble = page.locator('[data-bubble]').first()
   const id = await bubble.getAttribute('data-bubble')
-  const before = await centre(bubble)
-  await drag(page, before, { x: before.x + 120, y: before.y - 60 })
+  if (!id) throw new Error('no bubble to drag')
+  const before = await placeOf(page, id)
+  const from = await centre(bubble)
+  await page.mouse.move(from.x, from.y)
+  await page.mouse.down()
+  await page.mouse.move((from.x + from.x + 120) / 2, from.y - 30)
+  await page.mouse.move(from.x + 120, from.y - 60)
+  const held = await placeOf(page, id)
+  expect(Math.hypot(held.x - before.x, held.y - before.y)).toBeGreaterThan(2)
+  await page.mouse.up()
   await resting(page)
-  const after = await centre(bubble)
-  expect(Math.hypot(after.x - before.x, after.y - before.y)).toBeGreaterThan(80)
-  await expect(page.locator(`[data-room="${id}"] .pin-mark`)).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Let go' })).toBeEnabled()
+  // The hand's hold goes with the hand: only Hold in place lasts.
+  await expect(page.locator(`[data-room="${id}"] .pin-mark`)).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Hold in place' })).toBeEnabled()
 })
 
 test('dragging from one bubble to another connects them', async ({ page }) => {

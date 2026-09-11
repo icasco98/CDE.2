@@ -71,20 +71,36 @@ function start(rooms: readonly SimulationRoom[], layout: LayoutConfig = defaultL
 }
 
 describe('the frame loop', () => {
-  it('asks for no frame at all while the picture is resting', () => {
+  it('asks for no frame at all for a picture that is already at rest', () => {
     const { run, clock, moves } = start([room('a', { bubble: { x: 0, y: 6 } })])
-    run.wake()
-    clock.run(40)
+    run.look()
+    // The steps that prove it still were taken on the spot, so nothing was ever scheduled.
+    expect(clock.asked()).toBe(0)
     expect(clock.waiting()).toBe(0)
-    // Three quiet frames to be sure, and not one bubble told to move.
-    expect(clock.asked()).toBe(3)
     expect(moves).toEqual([])
+  })
+
+  it('opens a picture left at rest without moving a bubble', () => {
+    const rooms = [room('a', { bubble: { x: -18, y: 6 } }), room('b', { bubble: { x: 18, y: 6 } })]
+    const first = start(rooms)
+    first.run.look()
+    first.clock.run(400)
+    const settled = first.moves.filter((move) => move.id === 'b').at(-1)
+    if (!settled) throw new Error('nothing settled')
+
+    const again = start([
+      room('a', { bubble: { x: -settled.x, y: settled.y } }),
+      room('b', { bubble: { x: settled.x, y: settled.y } }),
+    ])
+    again.run.look()
+    expect(again.clock.asked()).toBe(0)
+    expect(again.moves).toEqual([])
   })
 
   it('runs while the picture moves, then asks for nothing and records no step of its own', () => {
     const rooms = [room('a', { bubble: { x: -18, y: 6 } }), room('b', { bubble: { x: 18, y: 6 } })]
     const { run, clock, moves, status } = start(rooms)
-    run.wake()
+    run.look()
     const frames = clock.run(400)
     expect(frames).toBeGreaterThan(3)
     expect(clock.waiting()).toBe(0)
@@ -109,19 +125,29 @@ describe('the frame loop', () => {
   })
 
   it('records where a drag landed only once the cloud it disturbed has stopped', () => {
-    const rooms = [
-      room('a', { bubble: { x: -6, y: 6 }, pinned: true }),
-      room('b', { bubble: { x: 6, y: 6 } }),
-    ]
+    const rooms = [room('a', { bubble: { x: -6, y: 6 } }), room('b', { bubble: { x: 6, y: 6 } })]
     const { run, clock } = start(rooms)
-    let landed = 0
+    const landed: { x: number; y: number }[] = []
     run.hold('a', { x: 4, y: 6 })
     clock.run(2)
-    run.release(() => landed++)
-    expect(landed).toBe(0)
+    run.release((rest) => landed.push(rest))
+    expect(landed).toHaveLength(0)
     clock.run(400)
-    expect(landed).toBe(1)
+    expect(landed).toHaveLength(1)
     expect(clock.waiting()).toBe(0)
+  })
+
+  it('holds the dragged bubble against the forces and lets it go again on release', () => {
+    const rooms = [room('a', { bubble: { x: -6, y: 6 } }), room('b', { bubble: { x: 6, y: 6 } })]
+    const { run, clock, moves } = start(rooms)
+    run.hold('a', { x: 4, y: 6 })
+    clock.run(6)
+    // Held on the far side of its neighbour, it stays there and the neighbour is the one that gives way.
+    expect(moves.filter((move) => move.id === 'a').at(-1)).toMatchObject({ x: 4, y: 6 })
+    expect(moves.filter((move) => move.id === 'b').at(-1)!.x).toBeGreaterThan(6)
+    run.release(null)
+    clock.run(400)
+    expect(moves.filter((move) => move.id === 'a').at(-1)!.x).not.toBe(4)
   })
 
   it('settles to rest at once when it is told to, and asks for no frame after', () => {

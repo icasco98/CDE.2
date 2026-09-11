@@ -34,6 +34,19 @@ export function extentOf(
   return { minX: -width / 2, minY: top, width, height }
 }
 
+/**
+ * Whether a frame already holds what wants drawing. The sheet must not swim under the hand while
+ * the forces run, so the frame is left alone until the picture stops or something leaves it.
+ */
+export function holds(frame: Extent, wanted: Extent): boolean {
+  return (
+    frame.minX <= wanted.minX &&
+    frame.minY <= wanted.minY &&
+    frame.minX + frame.width >= wanted.minX + wanted.width &&
+    frame.minY + frame.height >= wanted.minY + wanted.height
+  )
+}
+
 export function pointerAt(svg: SVGSVGElement, clientX: number, clientY: number): Position {
   const screen = svg.getScreenCTM()
   if (!screen) return { x: 0, y: 0 }

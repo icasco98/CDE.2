@@ -22,8 +22,11 @@ export const browserFrames: Frames = {
   cancel: (handle) => cancelAnimationFrame(handle),
 }
 
-/** What a drag leaves behind: told to the store once the cloud around the bubble has stopped. */
-export type Landing = () => void
+/** What a drag leaves behind, told where the bubble came to rest once the cloud has stopped. */
+export type Landing = (rest: Position) => void
+
+/** The bubble under the hand, and whether the person was already holding that room in place. */
+type Hand = { readonly id: string; readonly at: Position; readonly held: boolean }
 
 type RunParts = {
   readonly frames: Frames
@@ -38,7 +41,7 @@ type Run = {
   /** A new picture, because the rooms, the links or the storeys changed. */
   readonly begin: (state: SimulationState) => void
   /** Something outside the picture changed the forces, such as a weight: look again. */
-  readonly wake: () => void
+  readonly look: () => void
   /** A bubble under the hand: it goes where the pointer is and the rest answer in the same frame. */
   readonly hold: (id: string, at: Position) => void
   /** The hand lets go; the run carries on to rest and the landing is recorded there. */
@@ -57,8 +60,8 @@ type Run = {
 export function createRun(parts: RunParts): Run {
   let state = parts.state
   let handle = 0
-  let hand: { readonly id: string; readonly at: Position } | null = null
-  let landing: Landing | null = null
+  let hand: Hand | null = null
+  let landing: { readonly id: string; readonly tell: Landing } | null = null
   let spreadingFrames = 0
   /** Quiet frames in a row; a contact goes quiet for one while the forces behind it still press. */
   let still = 0
@@ -76,15 +79,33 @@ export function createRun(parts: RunParts): Run {
   const loose = (next: SimulationState): readonly Body[] =>
     next.bodies.filter((body) => !body.pinned || body.id === hand?.id)
 
+  /** The hand is a pin for as long as it is down: the forces move everything but the bubble held. */
   const underHand = (): SimulationState => {
     const held = hand
     if (!held) return state
     return {
       ...state,
       bodies: state.bodies.map((body) =>
-        body.id === held.id ? { ...body, x: held.at.x, y: held.at.y, vx: 0, vy: 0 } : body,
+        body.id === held.id
+          ? { ...body, x: held.at.x, y: held.at.y, vx: 0, vy: 0, pinned: true }
+          : body,
       ),
     }
+  }
+
+  /** That pin is the hand's and not the room's, so it comes off again the moment the step is over. */
+  const letGo = (next: SimulationState): SimulationState => {
+    const held = hand
+    if (!held || held.held) return next
+    return {
+      ...next,
+      bodies: next.bodies.map((body) => (body.id === held.id ? { ...body, pinned: false } : body)),
+    }
+  }
+
+  const placeOf = (next: SimulationState, id: string): Position | null => {
+    const body = next.bodies.find((each) => each.id === id)
+    return body ? { x: body.x, y: body.y } : null
   }
 
   /**
@@ -97,13 +118,15 @@ export function createRun(parts: RunParts): Run {
     landing = null
     if (stepped) parts.report(loose(next), record && !land ? 'commit' : 'preview')
     stepped = false
-    land?.()
+    if (!land) return
+    const rest = placeOf(next, land.id)
+    if (rest) land.tell(rest)
   }
 
   function advance(): boolean {
     const base = parts.layout()
     const config = spreadingFrames > 0 ? spreadLayout(base) : base
-    const next = step(underHand(), config)
+    const next = letGo(step(underHand(), config))
     state = next
     if (spreadingFrames > 0) spreadingFrames -= 1
     const quiet = next.energy < config.energyThreshold
@@ -131,6 +154,22 @@ export function createRun(parts: RunParts): Run {
     handle = parts.frames.request(tick)
   }
 
+  /**
+   * Looks before asking for a frame: the steps that would prove the picture still are taken here
+   * and nothing is scheduled, so a project whose bubbles were left at rest opens at rest.
+   */
+  function look(): void {
+    still = 0
+    if (handle !== 0) return
+    for (let taken = 0; taken < STILL_FRAMES; taken++)
+      if (!advance()) {
+        announce(false)
+        return
+      }
+    announce(true)
+    handle = parts.frames.request(tick)
+  }
+
   function cancel(): void {
     if (handle !== 0) parts.frames.cancel(handle)
     handle = 0
@@ -139,18 +178,19 @@ export function createRun(parts: RunParts): Run {
   return {
     begin(next) {
       state = next
-      wake()
+      look()
     },
-    wake,
+    look,
     hold(id, at) {
       // A second drag closes the first: the bubble it left is recorded where it lies rather than later.
       if (landing) finish(state, false)
-      hand = { id, at }
+      hand = hand?.id === id ? { ...hand, at } : { id, at, held: heldInPlace(state, id) }
       wake()
     },
     release(next) {
+      const held = hand
       hand = null
-      landing = next
+      landing = next && held ? { id: held.id, tell: next } : null
       wake()
     },
     spread() {
@@ -162,18 +202,20 @@ export function createRun(parts: RunParts): Run {
       cancel()
       spreadingFrames = 0
       const out = settle(underHand(), parts.layout())
-      state = out.state
+      state = letGo(out.state)
       still = STILL_FRAMES
       if (out.iterations > STILL_FRAMES) stepped = true
-      finish(out.state, true)
+      finish(state, true)
       announce(false)
     },
     stop() {
       cancel()
-      const land = landing
-      landing = null
-      land?.()
+      finish(state, false)
       announce(false)
     },
   }
+}
+
+function heldInPlace(state: SimulationState, id: string): boolean {
+  return state.bodies.find((body) => body.id === id)?.pinned ?? false
 }

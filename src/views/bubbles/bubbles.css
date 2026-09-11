@@ -23,6 +23,10 @@
   cursor: pointer;
 }
 
+.bubbles-bar button.bubbles-wide {
+  min-width: 8.5rem;
+}
+
 .bubbles-bar button:disabled {
   color: #9a958c;
   cursor: default;
@@ -66,7 +70,7 @@
 
 .weights-panel {
   flex: none;
-  width: 13rem;
+  width: 14rem;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -80,6 +84,12 @@
 .weights-panel h2 {
   font-size: 0.95rem;
   margin: 0;
+}
+
+/* A long family name wraps onto a second line rather than being cut off at the panel's edge. */
+.weights-panel .field > span {
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .weights-panel .note {

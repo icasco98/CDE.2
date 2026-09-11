@@ -191,6 +191,8 @@ async function link(page: Page, from: string, to: string) {
   await clickBubble(page, from)
   await clickBubble(page, to)
   await page.locator('svg.bubbles-sheet').press('Escape')
+  // A new link is a new pull, so the cloud answers it before anything is aimed at a bubble again.
+  await resting(page)
 }
 
 /** The storey the program table gives a room, by the name in its row. */
@@ -378,22 +380,34 @@ test('Spread opens a tight cloud out and lets it settle again', async ({ page })
   await expect(page.locator('.bubbles-status')).toHaveText('Resting', { timeout: 30000 })
 })
 
-test('the weights stand beside the diagram and the user requirements weight moves it', async ({
+test('the weights stand beside the diagram, the last two marked as acting in zoning', async ({
+  page,
+}) => {
+  await openBubbles(page)
+  await expect(page.getByRole('slider', { name: 'User requirements' })).toBeVisible()
+  await expect(page.getByRole('slider', { name: 'Site constraints' })).toBeVisible()
+  await expect(page.getByRole('slider', { name: 'Environmental factors' })).toBeVisible()
+  await expect(page.getByText('acts in zoning')).toHaveCount(2)
+})
+
+test('raising the user requirements weight parts the Diwaniya from the Master Bedroom', async ({
   page,
 }) => {
   await openBubbles(page)
   const weight = page.getByRole('slider', { name: 'User requirements' })
-  await expect(weight).toBeVisible()
-  await expect(page.getByRole('slider', { name: 'Site constraints' })).toBeVisible()
-  await expect(page.getByText('acts in zoning').first()).toBeVisible()
-
   await weight.fill('0')
+  await settle(page)
+  // Put the two side by side first: the weight is read on the air between them, not on wherever
+  // in the cloud each of them happened to settle.
+  const diwaniya = await bubbleAt(page, 'Diwaniya')
+  const master = await bubbleAt(page, 'Master Bedroom')
+  await drag(page, master.screen, diwaniya.screen)
   await settle(page)
   const low = await apart(page, 'Diwaniya', 'Master Bedroom')
 
   await weight.fill('1')
   await settle(page)
-  expect(await apart(page, 'Diwaniya', 'Master Bedroom')).toBeGreaterThan(low)
+  expect(await apart(page, 'Diwaniya', 'Master Bedroom')).toBeGreaterThan(low + 2)
 })
 
 test('a weight moved on the Bubbles tab is still there after a reload', async ({ page }) => {
@@ -419,4 +433,64 @@ test('a weight moved on the Bubbles tab is still there after a reload', async ({
   await expect(page.getByRole('slider', { name: 'Site constraints' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Bubbles' }).click()
   await expect(page.getByRole('slider', { name: 'Site constraints' })).toHaveValue(moved)
+})
+
+/** The room's own pinned flag as the store saved it, which is what Hold in place sets. */
+async function pinnedInStore(page: Page, name: string) {
+  return page.evaluate((wanted) => {
+    const saved = window.localStorage.getItem('cde.project')
+    if (!saved) return undefined
+    const rooms = JSON.parse(saved).rooms as { name: string; pinned: boolean }[] | undefined
+    return rooms?.find((room) => room.name === wanted)?.pinned
+  }, name)
+}
+
+test('a drag holds a bubble only while the hand is on it, and Hold in place lasts', async ({
+  page,
+}) => {
+  await openBubbles(page)
+  const drop = await bubbleAt(page, 'Formal Living')
+  const kitchen = await bubbleAt(page, 'Kitchen')
+  await drag(page, kitchen.screen, { x: drop.screen.x, y: drop.screen.y - 40 })
+  await resting(page)
+  await expect(page.getByRole('button', { name: 'Hold in place' })).toBeEnabled()
+  await expect(roomNamed(page, 'Kitchen').locator('.pin-mark')).toHaveCount(0)
+  await expect.poll(() => pinnedInStore(page, 'Kitchen')).toBe(false)
+
+  await page.getByRole('button', { name: 'Hold in place' }).click()
+  await expect(roomNamed(page, 'Kitchen').locator('.pin-mark')).toHaveCount(1)
+  await expect.poll(() => pinnedInStore(page, 'Kitchen')).toBe(true)
+
+  const again = await bubbleAt(page, 'Kitchen')
+  await drag(page, again.screen, { x: again.screen.x + 60, y: again.screen.y })
+  await resting(page)
+  await expect(roomNamed(page, 'Kitchen').locator('.pin-mark')).toHaveCount(1)
+  await expect.poll(() => pinnedInStore(page, 'Kitchen')).toBe(true)
+})
+
+/** Every bubble's place on the sheet, in metres, by the id it is drawn under. */
+async function placesOn(page: Page) {
+  return page.$$eval('[data-bubble]', (circles) =>
+    circles
+      .map(
+        (circle) =>
+          `${circle.getAttribute('data-bubble')} ${circle.getAttribute('cx')} ${circle.getAttribute('cy')}`,
+      )
+      .sort(),
+  )
+}
+
+test('a diagram left at rest opens at rest, and no bubble moves on arrival', async ({ page }) => {
+  await openBubbles(page)
+  await settle(page)
+  const before = await placesOn(page)
+
+  await page.getByRole('button', { name: 'Requirements' }).click()
+  await expect(page.locator('svg.bubbles-sheet')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Bubbles' }).click()
+  await expect(page.locator('svg g[data-room]').first()).toBeVisible()
+
+  // Not "settles again quickly": at rest the moment it is drawn, and not a bubble out of place.
+  expect(await page.locator('.bubbles-status').textContent()).toBe('Resting')
+  expect(await placesOn(page)).toEqual(before)
 })

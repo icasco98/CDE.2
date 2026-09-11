@@ -49,7 +49,7 @@ export const defaultLayout: LayoutConfig = {
   damping: 0.9,
   /** Short enough that the stiffest force, collision, stays stable in a semi-implicit step. */
   timeStep: 0.1,
-  /** Mean kinetic energy per room; below it nothing moves far enough to see. */
+  /** The mean energy of movement per room; below it nothing moves far enough to see. */
   energyThreshold: 1e-3,
   /** Thirty rooms settle in about a hundred and sixty; the rest is headroom before the animation is cut off. */
   maxIterations: 600,
@@ -68,13 +68,15 @@ export const STILL_FRAMES = 3
 /**
  * The user-requirements weight on the simulation: a house whose owner's own wishes count for more
  * gathers what belongs together harder and parts the public rooms from the private ones harder.
+ * The range is wide, a quarter of the pull to nearly twice it and a tier gap of one to three, so
+ * that moving the slider is felt on the sheet rather than looked for.
  */
 export function layoutFor(weight: number): LayoutConfig {
   const w = Number.isFinite(weight) ? Math.min(1, Math.max(0, weight)) : 0.5
   return {
     ...defaultLayout,
-    springStiffness: defaultLayout.springStiffness * (0.5 + w),
-    tierRepulsion: 1 + w,
+    springStiffness: defaultLayout.springStiffness * (0.25 + 1.5 * w),
+    tierRepulsion: 1 + 2 * w,
   }
 }
 
@@ -112,7 +114,10 @@ export type SimulationState = {
   readonly links: readonly Link[]
   readonly storeys: number
   readonly bandHeight: number
-  /** Mean kinetic energy per room after the last step; Infinity before the first. */
+  /**
+   * How much the picture moved in the last step, as a mean energy per room taken from how far each
+   * bubble really went; Infinity before the first step.
+   */
   readonly energy: number
 }
 
@@ -299,13 +304,19 @@ function separate(work: readonly Work[], config: LayoutConfig): void {
     }
     if (clear) break
   }
-  // The correction is the last word on where a bubble went, so its speed is made to say the same:
-  // a bubble the forces drove into its neighbour and the correction put back has not moved at all.
+  // A bubble the forces drove into its neighbour and the correction put back has not moved, so the
+  // correction takes that speed off it again; it never adds any, or a bubble let go inside another
+  // would be thrown across the sheet instead of set down beside it.
   for (const [index, w] of work.entries()) {
     const was = from[index]
     if (!was || w.body.pinned) continue
-    w.vx += (w.x - was.x) / config.timeStep
-    w.vy += (w.y - was.y) / config.timeStep
+    const bx = (w.x - was.x) / config.timeStep
+    const by = (w.y - was.y) / config.timeStep
+    const back = Math.hypot(bx, by)
+    if (back === 0 || bx * w.vx + by * w.vy >= 0) continue
+    const share = Math.min(1, Math.hypot(w.vx, w.vy) / back)
+    w.vx += bx * share
+    w.vy += by * share
   }
 }
 
@@ -347,10 +358,12 @@ export function step(
       const clear = clearOf(a.body, b.body, config)
       const [ux, uy, distance] = apart(b.x - a.x, b.y - a.y, i + j)
       const overlap = clear - distance
-      // A soft collision below contact, and a bounded inverse-square breeze above it that spreads the cloud.
+      // A soft collision below contact, and a bounded inverse-square breeze above it that spreads
+      // the cloud. The correction puts a deep overlap right in one frame, so the collision is only
+      // asked for the last gap of it; unasked, it flings a bubble let go inside another off the sheet.
       const push =
         (tiersApart(a.body, b.body) ? config.tierRepulsion : 1) *
-        ((overlap > 0 ? config.repulsion * overlap : 0) +
+        ((overlap > 0 ? config.repulsion * Math.min(overlap, config.restGap) : 0) +
           (config.spread * clear * clear) / Math.max(distance, clear) ** 2)
       a.fx -= push * ux
       a.fy -= push * uy
@@ -383,8 +396,14 @@ export function step(
 
   separate(work, config)
 
+  // What a bubble did is where it ended up: one held still between its neighbours has speed and
+  // goes nowhere, and the picture is at rest when nothing goes anywhere.
   let energy = 0
-  for (const w of work) energy += 0.5 * massOf(w.body) * (w.vx * w.vx + w.vy * w.vy)
+  for (const w of work) {
+    const dx = (w.x - w.body.x) / interval
+    const dy = (w.y - w.body.y) / interval
+    energy += 0.5 * massOf(w.body) * (dx * dx + dy * dy)
+  }
 
   const bodies = work.map((w) =>
     w.body.pinned ? w.body : { ...w.body, x: w.x, y: w.y, vx: w.vx, vy: w.vy },

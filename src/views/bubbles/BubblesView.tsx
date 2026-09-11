@@ -30,7 +30,7 @@ import {
   type Camera,
 } from '../camera'
 import { bandDrop, insideBands } from './bands'
-import { asPoint, bodyAt, extentOf, pointerAt } from './frame'
+import { asPoint, bodyAt, extentOf, holds, pointerAt } from './frame'
 import { Bands, Bubble, Legend, LEGEND_PX, Link, Proposed } from './parts'
 import type { Landing } from './run'
 import { useSettling } from './useSettling'
@@ -97,7 +97,11 @@ export function BubblesView(props: BubblesViewProps) {
   /** Drawn widest first, so a small room is never buried under a large one before the cloud is settled. */
   const drawn = useMemo(() => [...bodies].sort((a, b) => b.radius - a.radius), [bodies])
   const aspect = box.height > 0 ? box.width / box.height : 0
-  const extent = extentOf(bodies, state.storeys, state.bandHeight, aspect)
+  const wanted = extentOf(bodies, state.storeys, state.bandHeight, aspect)
+  /** Held still while the forces run, so a drop lands on the metre it was aimed at. */
+  const framed = useRef(wanted)
+  if (!moving || !holds(framed.current, wanted)) framed.current = wanted
+  const extent = framed.current
   const shown = visibleExtent(extent, camera)
   const perPixel = metresPerPixel(extent, camera, box)
   const crowded = storeyCapacity(rooms, plot.polygon, storeys).filter((entry) => entry.over)
@@ -143,7 +147,6 @@ export function BubblesView(props: BubblesViewProps) {
       return
     }
     onSelect(body.id)
-    if (!body.pinned) onPin(body.id, true)
     const pointer = at(event)
     movedRef.current = false
     begin({
@@ -197,9 +200,10 @@ export function BubblesView(props: BubblesViewProps) {
   }
 
   /**
-   * Where a dragged bubble comes to rest, and the storey of the band it was let go in, as one
-   * step to undo: the refusal is said the moment the hand lets go, the record waits until the
-   * cloud the drag disturbed has stopped, so the drag and everything it moved are one step.
+   * What a drag leaves behind. A storey is a change to the program and is recorded the moment the
+   * hand lets go, so the bubble is pulled towards its new band and not the one it is leaving. A
+   * move is nothing but a move: the bubble is let go and recorded where the forces bring it to
+   * rest, and the previews since the drag began fold into that one step.
    */
   function land(id: string, rest: Position): Landing | null {
     const room = named.get(id)
@@ -208,12 +212,11 @@ export function BubblesView(props: BubblesViewProps) {
     if (drop.refused === 'stair')
       onRefuse(`${room.name} spans storeys, so it is not moved between them by hand.`)
     const settled = { x: rest.x, y: drop.y }
-    if (drop.storey === room.storey) return () => void onDropBubble(id, settled)
-    return () => {
-      if (onDropBubble(id, settled, drop.storey)) return
+    if (drop.storey === room.storey) return (at: Position) => void onDropBubble(id, at)
+    if (!onDropBubble(id, settled, drop.storey))
       // The model would not have the storey, so the bubble goes back inside the band it belongs to.
       onDropBubble(id, { x: rest.x, y: insideBands(rest, room, state.storeys, state.bandHeight) })
-    }
+    return null
   }
 
   function releasePointer(event: PointerEvent): void {
@@ -406,14 +409,22 @@ export function BubblesView(props: BubblesViewProps) {
         >
           Link
         </button>
+        {/* Both keep the width of their longest word, so pressing a bubble never reflows the bar
+            and drops the sheet a line under the hand that pressed it. */}
         <button
           type="button"
+          className="bubbles-wide"
           disabled={!selectedRoom}
           onClick={() => selectedRoom && onPin(selectedRoom.id, !selectedRoom.pinned)}
         >
           {selectedRoom?.pinned ? 'Let go' : 'Hold in place'}
         </button>
-        <button type="button" disabled={!selectedRoom && !selectedEdge} onClick={removeSelected}>
+        <button
+          type="button"
+          className="bubbles-wide"
+          disabled={!selectedRoom && !selectedEdge}
+          onClick={removeSelected}
+        >
           {selectedEdge ? 'Delete link' : selectedRoom ? 'Delete room' : 'Delete'}
         </button>
         {selectedEdge && (
