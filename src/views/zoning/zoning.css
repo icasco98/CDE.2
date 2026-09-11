@@ -192,10 +192,33 @@
 }
 
 /*
+ * Two rooms an open connection runs between are drawn as one space: the union is filled and
+ * stroked, and each of them keeps an unpainted shape over it, which is what the pointer finds.
+ */
+.zoning-sheet .join-shape {
+  fill: #efe9dc;
+  stroke: #6f6a62;
+  stroke-width: 1.5px;
+  pointer-events: none;
+}
+
+.zoning-sheet .join-selected .join-shape {
+  stroke: #2f6f8f;
+  stroke-width: 3px;
+}
+
+.zoning-sheet .room-in-join {
+  fill: transparent;
+  stroke: none;
+  cursor: grab;
+}
+
+/*
  * The room's own label size in metres, held to a band of screen pixels: a label never balloons
  * when the sheet is drawn close, and never disappears when the whole plot is in view.
  */
-.zoning-sheet .room {
+.zoning-sheet .room,
+.zoning-sheet .join {
   font-size: clamp(
     calc(var(--per-px) * 8px),
     calc(var(--label-m) * 1px),
@@ -203,7 +226,8 @@
   );
 }
 
-.zoning-sheet .room text {
+.zoning-sheet .room text,
+.zoning-sheet .join text {
   text-anchor: middle;
   dominant-baseline: middle;
   fill: #2b2822;
@@ -303,7 +327,8 @@
 
 /* The hand pans the sheet: the plot slides under it, and nothing is picked up or let go. */
 .zoning-sheet.zoning-panning,
-.zoning-sheet.zoning-panning .room-shape {
+.zoning-sheet.zoning-panning .room-shape,
+.zoning-sheet.zoning-panning .room-in-join {
   cursor: grabbing;
 }
 

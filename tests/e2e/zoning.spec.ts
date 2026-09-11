@@ -48,6 +48,9 @@ async function place(page: Page, name: string, x: number, y: number) {
     .locator('[data-tray]')
     .filter({ hasText: new RegExp(`^${name}`) })
     .first()
+  // The tray scrolls, and so does the page under a full zoning bar: a room far down it is
+  // brought into view first, as a hand would scroll to it.
+  await tray.scrollIntoViewIfNeeded()
   const from = await tray.boundingBox()
   if (!from) throw new Error(`${name} is not in the tray`)
   await drag(
@@ -645,4 +648,110 @@ test('a stair added to a two-storey program stands on both storeys at one place'
   await page.getByRole('button', { name: 'First', exact: true }).click()
   await expect(roomNamed(page, 'Stair')).toHaveCount(1)
   expect(await pointsOf(page, 'Stair')).toBe(onGround)
+})
+
+/** The zoning with the rulebook's default connections taken, which is where an open edge comes from. */
+async function openZoningConnected(page: Page): Promise<void> {
+  await page.goto('/')
+  await page.getByRole('button', { name: /rebuild program from household/i }).click()
+  await page.getByLabel('Hold rooms inside the plot').check()
+  await page.getByRole('button', { name: 'Bubbles' }).click()
+  await page.getByRole('button', { name: 'Accept all proposals' }).click()
+  await page.getByRole('button', { name: 'Zoning' }).click()
+  await expect(page.locator('svg.zoning-sheet')).toBeVisible()
+}
+
+/** Turns the room that is picked by its rotation handle, to a whole number of degrees. */
+async function turnTo(page: Page, x: number, y: number, degrees: number): Promise<void> {
+  const radians = (degrees * Math.PI) / 180
+  const reach = 4
+  await drag(
+    page,
+    await centreOf(page, '[data-rotate-handle]'),
+    await onSheet(page, x + Math.sin(radians) * reach, y - Math.cos(radians) * reach),
+  )
+}
+
+test('two rooms an open connection joins are drawn as one space', async ({ page }) => {
+  await openZoningConnected(page)
+  await place(page, 'Family Living', 8, 8)
+  await place(page, 'Dining Room', 8, 12.75)
+  await expect(page.locator('[data-join]')).toHaveCount(1)
+  await expect(page.locator('[data-join]')).toHaveAttribute('data-join', /^room_\w+:room_\w+$/)
+  await expect(page.locator('[data-join]')).toContainText('Family Living 38.5 m²')
+  await expect(page.locator('[data-join]')).toContainText('Dining Room 24 m²')
+  await expect(page.locator('.join-label')).toHaveText('Family Living 38.5 m² · Dining Room 24 m²')
+  // Two rooms still, with their own areas, and no wall or door drawn where they flow together.
+  await expect(page.locator('[data-room]')).toHaveCount(2)
+  await expect(page.locator('[data-room][data-area="38.50"]')).toHaveCount(1)
+  await expect(page.locator('[data-room][data-area="24.00"]')).toHaveCount(1)
+  await expect(page.locator('[data-edge]')).toHaveCount(0)
+  await expect(page.locator('.room-name')).toHaveCount(0)
+  // Picking either room lights the whole outline and gives that room its own handles.
+  await clickSheet(page, 8, 8)
+  await expect(page.locator('.join-selected')).toHaveCount(1)
+  await expect(page.locator('[data-rotate-handle]')).toHaveCount(1)
+})
+
+test('a room moved away from the one it was joined to is a room again', async ({ page }) => {
+  await openZoningConnected(page)
+  await place(page, 'Family Living', 8, 8)
+  await place(page, 'Dining Room', 8, 12.75)
+  await expect(page.locator('[data-join]')).toHaveCount(1)
+  await drag(page, await onSheet(page, 8, 12.75), await onSheet(page, 8, 19))
+  await expect(page.locator('[data-join]')).toHaveCount(0)
+  // The connection is still in the graph, drawn as the tension any unrealised edge is drawn as.
+  await expect(page.locator('[data-tension]')).toHaveCount(1)
+  await expect(roomNamed(page, 'Family Living')).toHaveAttribute('data-area', '38.50')
+  await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '24.00')
+})
+
+test('Align to north squares the room that is picked, and Align to plot squares it to the street', async ({
+  page,
+}) => {
+  await openZoning(page)
+  await place(page, 'Kitchen', 8, 8.125)
+  await turnTo(page, 8, 8.125, 15)
+  await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-rotation', '15.0')
+  await page.getByRole('button', { name: 'Align to north' }).click()
+  await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-rotation', '0.0')
+
+  await page.getByRole('button', { name: 'Requirements' }).click()
+  await page.getByLabel('North (degrees from up)').fill('30')
+  await page.getByRole('button', { name: 'Zoning' }).click()
+  await page.getByRole('button', { name: 'Align to north' }).click()
+  await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-rotation', '30.0')
+
+  // The plot's street side runs along the sheet, so the plot squares the room back off north.
+  await page.getByRole('button', { name: 'Align to plot' }).click()
+  await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-rotation', '0.0')
+})
+
+test('with no room picked, Align to north turns every room in one step to undo', async ({
+  page,
+}) => {
+  await openZoning(page)
+  await place(page, 'Kitchen', 6, 6)
+  await turnTo(page, 6, 6, 15)
+  await place(page, 'Dining Room', 14, 16)
+  await turnTo(page, 14, 16, 345)
+  // An empty corner of the sheet, which lets the selection go: the buttons then act on every room.
+  await clickSheet(page, 18, 2)
+  await expect(page.locator('[data-rotate-handle]')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Align to north' }).click()
+  await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-rotation', '0.0')
+  await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-rotation', '0.0')
+  await page.getByRole('button', { name: 'Undo', exact: true }).click()
+  await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-rotation', '15.0')
+  await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-rotation', '345.0')
+})
+
+test('a pinned room is not aligned, and the message says why', async ({ page }) => {
+  await openZoning(page)
+  await place(page, 'Kitchen', 8, 8.125)
+  await turnTo(page, 8, 8.125, 15)
+  await page.getByRole('button', { name: 'Pin' }).click()
+  await page.getByRole('button', { name: 'Align to north' }).click()
+  await expect(page.locator('.messages')).toContainText('Kitchen is pinned')
+  await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-rotation', '15.0')
 })
