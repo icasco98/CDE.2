@@ -152,3 +152,42 @@ test('undo, redo, opening a file and refusing one that cannot be read', async ({
   await page.getByRole('button', { name: 'New project' }).click()
   await expect(rowsOf(page)).toHaveCount(0)
 })
+
+/** A program row by the name it carries, which is the name the rebuild gave it. */
+function rowNamed(page: Page, name: string) {
+  return rowsOf(page).filter({
+    has: page.getByLabel('Room name').and(page.locator(`[value="${name}"]`)),
+  })
+}
+
+test('two storeys put the bedrooms upstairs, and a bedroom added brings its ensuite', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Add storey' }).click()
+  await page.getByRole('button', { name: 'Rebuild program from household' }).click()
+
+  await expect(rowNamed(page, 'Stair')).toHaveCount(1)
+  await expect(rowNamed(page, 'Master Bedroom').getByLabel('Storey')).toHaveValue('1')
+  await expect(rowNamed(page, 'Ensuite, Master Bedroom').getByLabel('Storey')).toHaveValue('1')
+  await expect(rowNamed(page, 'Bedroom 2').getByLabel('Storey')).toHaveValue('1')
+  await expect(rowNamed(page, 'Kitchen').getByLabel('Storey')).toHaveValue('0')
+
+  await page.getByLabel('Master bedroom on the ground floor').check()
+  await page.getByRole('button', { name: 'Rebuild program from household' }).click()
+  await expect(
+    rowNamed(page, 'Master Bedroom').getByLabel('Storey').locator('option:checked'),
+  ).toHaveText('Ground')
+  await expect(rowNamed(page, 'Ensuite, Master Bedroom').getByLabel('Storey')).toHaveValue('0')
+  await expect(rowNamed(page, 'Bedroom 1').getByLabel('Storey')).toHaveValue('1')
+
+  const before = await rowsOf(page).count()
+  await page.getByLabel('Kind to add').selectOption('bedroom')
+  await page.getByRole('button', { name: 'Add room' }).click()
+  await expect(rowsOf(page)).toHaveCount(before + 2)
+  await expect(rowNamed(page, 'Ensuite, Bedroom').getByLabel('Storey')).toHaveValue('1')
+
+  await page.getByRole('button', { name: 'Undo' }).click()
+  await expect(rowsOf(page)).toHaveCount(before)
+  await expect(rowNamed(page, 'Ensuite, Bedroom')).toHaveCount(0)
+})

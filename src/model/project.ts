@@ -43,6 +43,7 @@ export const startingHousehold: Household = {
   maid: false,
   driver: false,
   womensReception: false,
+  masterOnGround: false,
 }
 
 export function emptyProject(newId: IdGenerator, name = 'Untitled'): Project {

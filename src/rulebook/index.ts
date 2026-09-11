@@ -10,8 +10,15 @@ export type {
   Typical,
 } from './types'
 export { byPlotBand, freeProportion, lengthAsNeeded } from './types'
-export { categoryLabels, plotBandFor, roomTypeById, typesByCategory, typicalArea } from './sizes'
-export { defaultProgram } from './program'
-export type { ProgramRoom } from './program'
+export {
+  categoryLabels,
+  plotBandFor,
+  roomTypeById,
+  spansAllStoreys,
+  typesByCategory,
+  typicalArea,
+} from './sizes'
+export { companionName, defaultProgram, standingOf } from './program'
+export type { ProgramRoom, Standing } from './program'
 export { connectionSource } from './defaultConnections'
 export { proposedConnections } from './proposals'

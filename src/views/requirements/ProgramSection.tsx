@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { area } from '../../geometry'
 import type { Project } from '../../model'
-import { categoryLabels, roomTypeById, typesByCategory, typicalArea } from '../../rulebook'
+import { categoryLabels, typesByCategory } from '../../rulebook'
 import { session } from '../../app/session'
+import { addRoomWithCompanion } from './addRoom'
 import { Section } from './fields'
+import { addStorey, removeStorey } from './storeys'
 import { metres2, storeyLabel } from './format'
 import { ProgramRow } from './ProgramRow'
 import { refusalOf } from './refusals'
@@ -14,17 +16,7 @@ export function ProgramSection({ project }: { project: Project }) {
   const plotArea = area(project.plot.polygon)
 
   const addRoom = (): void => {
-    const type = roomTypeById(kind)
-    setProblem(
-      refusalOf(
-        session.actions.addRoom({
-          type: kind,
-          name: type?.label ?? kind,
-          targetArea: typicalArea(kind, plotArea),
-          storey: 0,
-        }),
-      ),
-    )
+    setProblem(refusalOf(addRoomWithCompanion(session, kind, plotArea, project.storeys)))
   }
 
   const perStorey = Array.from({ length: project.storeys }, (_, storey) =>
@@ -75,10 +67,10 @@ export function ProgramSection({ project }: { project: Project }) {
         <button type="button" onClick={addRoom}>
           Add room
         </button>
-        <button type="button" onClick={() => setProblem(refusalOf(session.actions.addStorey()))}>
+        <button type="button" onClick={() => setProblem(refusalOf(addStorey(session)))}>
           Add storey
         </button>
-        <button type="button" onClick={() => setProblem(refusalOf(session.actions.removeStorey()))}>
+        <button type="button" onClick={() => setProblem(refusalOf(removeStorey(session)))}>
           Remove storey
         </button>
       </div>

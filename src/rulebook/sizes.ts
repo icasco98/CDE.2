@@ -53,6 +53,11 @@ export function roomTypeById(id: string): RoomType | undefined {
   return byId.get(id)
 }
 
+/** A stair and a lift stand on every storey they serve, so the table gives them every storey. */
+export function spansAllStoreys(kindId: string): boolean {
+  return byId.get(kindId)?.defaultStorey === 'all'
+}
+
 export function plotBandFor(kindId: string, plotAreaM2: number): Band | undefined {
   const row = plotBands.find((entry) => plotAreaM2 <= entry.upTo) ?? plotBands[plotBands.length - 1]
   return row?.bands[kindId]

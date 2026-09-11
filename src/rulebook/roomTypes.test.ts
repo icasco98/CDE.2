@@ -63,6 +63,18 @@ describe('the room-type table in code matches the one a person reads', () => {
     expect(fromCode).toEqual(fromMarkdown)
   })
 
+  it('holds the same default storey and companion for every kind', () => {
+    const fromMarkdown = rows.map((cells) => [cells[8], cells[9]])
+    const fromCode = roomTypes.map((type) => [type.defaultStorey, type.companion ?? '–'])
+    expect(fromCode).toEqual(fromMarkdown)
+  })
+
+  it('names a kind the table holds as every companion', () => {
+    const ids = new Set(roomTypes.map((type) => type.id))
+    for (const type of roomTypes)
+      if (type.companion !== undefined) expect(ids.has(type.companion)).toBe(true)
+  })
+
   it('holds the same plot bands for the diwaniya and the two living rooms', () => {
     const rowsByBand = tableAfter('## Sizes that scale with the plot')
     const samples = [300, 500, 900]
