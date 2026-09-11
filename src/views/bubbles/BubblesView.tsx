@@ -83,6 +83,8 @@ export function BubblesView(props: BubblesViewProps) {
   const bodies = state.bodies
   const named = useMemo(() => new Map(rooms.map((room) => [room.id, room])), [rooms])
   const placed = useMemo(() => new Map(bodies.map((body) => [body.id, body])), [bodies])
+  /** Drawn widest first, so a small room is never buried under a large one before the cloud is settled. */
+  const drawn = useMemo(() => [...bodies].sort((a, b) => b.radius - a.radius), [bodies])
   const aspect = box.height > 0 ? box.width / box.height : 0
   const extent = extentOf(bodies, state.storeys, state.bandHeight, aspect)
   const shown = visibleExtent(extent, camera)
@@ -527,7 +529,7 @@ export function BubblesView(props: BubblesViewProps) {
               />
             ) : null
           })()}
-        {bodies.map((body) => {
+        {drawn.map((body) => {
           const room = named.get(body.id)
           return room ? (
             <Bubble

@@ -94,6 +94,20 @@ async function bandsOf(page: Page): Promise<{ top: number; height: number }[]> {
   )
 }
 
+/** The metre a point on the screen is over. */
+async function sheetPointOf(page: Page, at: { x: number; y: number }) {
+  return page.evaluate(
+    ([cx, cy]) => {
+      const sheet = document.querySelector('svg.bubbles-sheet')
+      const screen = sheet instanceof SVGSVGElement ? sheet.getScreenCTM() : null
+      if (!screen) throw new Error('there is no sheet')
+      const point = new DOMPoint(cx, cy).matrixTransform(screen.inverse())
+      return { x: point.x, y: point.y }
+    },
+    [at.x, at.y],
+  )
+}
+
 /** Where a point in sheet metres lands on the screen. */
 async function onSheet(page: Page, x: number, y: number) {
   return page.evaluate(
@@ -138,7 +152,10 @@ async function bubbleAt(page: Page, name: string) {
     [box, id] as [{ x: number; y: number; width: number; height: number }, string],
   )
   if (!screen) throw new Error(`${name} is covered wherever it is aimed at`)
-  return { sheet: { x: Number(x), y: Number(y) }, screen }
+  const held = await sheetPointOf(page, screen)
+  const sheet = { x: Number(x), y: Number(y) }
+  // The hand holds the bubble where it took hold of it, so a drop is aimed by that offset, not by its centre.
+  return { sheet, screen, grabbed: { x: sheet.x - held.x, y: sheet.y - held.y } }
 }
 
 async function drag(page: Page, from: { x: number; y: number }, to: { x: number; y: number }) {
@@ -190,7 +207,7 @@ test('a bubble dropped in the First band puts the room upstairs in the program',
   const first = bands[1]
   if (!first) throw new Error('there is no First storey')
   const kitchen = await bubbleAt(page, 'Kitchen')
-  const to = await onSheet(page, kitchen.sheet.x, first.top + first.height / 2)
+  const to = await onSheet(page, kitchen.sheet.x, first.top + first.height / 2 - kitchen.grabbed.y)
   await drag(page, kitchen.screen, to)
   await page.getByRole('button', { name: 'Requirements' }).click()
   expect(await storeyOf(page, 'Kitchen')).toBe('First')
@@ -203,7 +220,11 @@ test('a bubble let go at the very edge of the First band stays on the Ground', a
   const first = bands[1]
   if (!ground || !first) throw new Error('there are no bands')
   const kitchen = await bubbleAt(page, 'Kitchen')
-  const to = await onSheet(page, kitchen.sheet.x, first.top + first.height * 0.96)
+  const to = await onSheet(
+    page,
+    kitchen.sheet.x,
+    first.top + first.height * 0.96 - kitchen.grabbed.y,
+  )
   await drag(page, kitchen.screen, to)
   expect((await bubbleAt(page, 'Kitchen')).sheet.y).toBeGreaterThan(ground.top)
   await page.getByRole('button', { name: 'Requirements' }).click()
@@ -219,7 +240,7 @@ test('a linked room says why it cannot go upstairs', async ({ page }) => {
   const first = bands[1]
   if (!first) throw new Error('there is no First storey')
   const kitchen = await bubbleAt(page, 'Kitchen')
-  const to = await onSheet(page, kitchen.sheet.x, first.top + first.height / 2)
+  const to = await onSheet(page, kitchen.sheet.x, first.top + first.height / 2 - kitchen.grabbed.y)
   await drag(page, kitchen.screen, to)
   await expect(page.locator('.messages')).toContainText('Unlink it to move it')
   await page.getByRole('button', { name: 'Requirements' }).click()
