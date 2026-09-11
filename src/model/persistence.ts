@@ -29,11 +29,18 @@ function storeysToHeights(document: Document): Document {
   return { ...document, heights: Array.from({ length: storeys }, () => STARTING_HEIGHT_M) }
 }
 
+/** A household written before the master bedroom could be asked for did not ask for it. */
+function householdMasterOnGround(document: Document): Document {
+  const household = isDocument(document.household) ? document.household : {}
+  return { ...document, household: { masterOnGround: false, ...household } }
+}
+
 /** From the version keyed to the next one. */
 const migrations: ReadonlyMap<number, Migration> = new Map<number, Migration>([
   [1, (document) => ({ household: startingHousehold, ...document })],
   [2, weightsToFamilies],
   [3, storeysToHeights],
+  [4, householdMasterOnGround],
 ])
 
 export function serialize(project: Project): string {

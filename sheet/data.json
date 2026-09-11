@@ -1,11 +1,15 @@
 {
-  "revision": 10,
+  "revision": 12,
   "date": "11 Sep 2026",
   "session": "Session 3",
   "repo": "https://github.com/icasco98/CDE.2",
-  "headline": "All four stages are merged. The owner is testing the tool by hand before A8 export starts.",
+  "headline": "F1 is back with its agent for four fixes; F2 is still building. Nothing waits on you.",
   "decide": [],
   "yours": [
+    {
+      "id": "test2",
+      "text": "Test zoning and massing by hand and send comments."
+    },
     {
       "id": "o3",
       "text": "O3 \u00b7 The known house: plot, north, program, the built plan."
@@ -20,14 +24,22 @@
     },
     {
       "id": "o7",
-      "text": "O7 \u00b7 Correct the forces in rulebook/forces.md."
-    },
-    {
-      "id": "o8",
-      "text": "Correct rulebook/default-connections.md when projects show."
+      "text": "O7 \u00b7 Correct rulebook/forces.md and default-connections.md when you have time."
     }
   ],
   "agents": [
+    {
+      "task": "F1",
+      "name": "Storeys and companions",
+      "model": "Opus",
+      "stage": 2
+    },
+    {
+      "task": "F2",
+      "name": "Bubbles rework",
+      "model": "Opus",
+      "stage": 1
+    },
     {
       "task": "A7",
       "name": "Massing",
@@ -45,16 +57,15 @@
   ],
   "stages": ["Briefed", "Building", "Review", "Your merge", "Merged"],
   "done": [
-    "Requirements and bubbles run over one store with autosave (#9, #10, #11).",
-    "Weights are the three families; default connections proposed in the bubbles (#15, #16).",
-    "A6 zoning merged: place, move, rotate, resize, carve, doors, tensions, proposals (#19).",
-    "A7 massing merged: prisms per storey, four presets, envelope numbers, storey heights (#23).",
-    "A12 zoom and pan merged (#24).",
+    "All four stages merged: requirements, bubbles, zoning, massing (#19, #23, #24).",
+    "Double-click start scripts for Windows and Mac (#27).",
+    "Owner's first test: comments on requirements and bubbles became F1, F2, F3 (#28).",
+    "F1 built and reviewed: sent back for four fixes (model must not read the rulebook, one companion naming rule, rebuild adds every companion, Add lands on the kind's storey). F2 building.",
     "Briefs and the sheet builder kept in the repository (#18). Hourly updates scheduled."
   ],
   "next": [
-    "Owner tests the tool by hand; fixes from that come first.",
-    "A8 export on the owner's word.",
-    "A9 usability run (needs O3 the known house and O5 the fresh brief)."
+    "Review F1 and F2; start F3 when F2 merges.",
+    "Owner's comments on zoning and massing.",
+    "A8 export, then A9 the usability run (needs O3 and O5)."
   ]
 }
