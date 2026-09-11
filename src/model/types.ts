@@ -3,7 +3,11 @@ import type { Footprint, Point, Polygon } from '../geometry/types'
 export const EXTERIOR = 'EXTERIOR'
 
 /** The document format; a bump needs a migration in persistence.ts. */
-export const PROJECT_VERSION = 2
+export const PROJECT_VERSION = 3
+
+/** The three families of forces the tool balances, named in rulebook/forces.md. */
+export const families = ['userRequirements', 'siteConstraints', 'environmentalFactors'] as const
+export type Family = (typeof families)[number]
 
 export type EdgeKind = 'door' | 'open' | 'main-door'
 

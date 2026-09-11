@@ -124,6 +124,38 @@ describe('the project file', () => {
     expect(back.ok && back.value.household.bedrooms).toBe(7)
   })
 
+  it('maps the placeholder weights to the three families and drops the budget key', () => {
+    const project = furnished()
+    const document = {
+      ...project,
+      version: 2,
+      weights: { client: 0.8, climate: 0.2, budget: 0.4 },
+    }
+    const back = deserialize(JSON.stringify(document))
+    expect(back.ok && back.value.weights).toEqual({
+      userRequirements: 0.8,
+      environmentalFactors: 0.2,
+    })
+    expect(back.ok && back.value.version).toBe(PROJECT_VERSION)
+  })
+
+  it('migrates a version 1 document with placeholder weights through both steps', () => {
+    const project = furnished()
+    const document: Record<string, unknown> = {
+      ...project,
+      version: 1,
+      weights: { client: 0.6, climate: 0.1, budget: 0.9 },
+    }
+    delete document.household
+    const back = deserialize(JSON.stringify(document))
+    expect(back.ok && back.value.household).toEqual(startingHousehold)
+    expect(back.ok && back.value.weights).toEqual({
+      userRequirements: 0.6,
+      environmentalFactors: 0.1,
+    })
+    expect(back.ok && back.value.version).toBe(PROJECT_VERSION)
+  })
+
   it('refuses a version it cannot migrate and one from a newer tool', () => {
     const project = furnished()
     expect(deserialize(JSON.stringify({ ...project, version: 0 }))).toMatchObject({

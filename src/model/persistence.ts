@@ -14,9 +14,19 @@ export type Storage = {
 
 type Migration = (document: Document) => Document
 
+/** The placeholder sliders become the three families named in rulebook/forces.md. */
+function weightsToFamilies(document: Document): Document {
+  const old = isDocument(document.weights) ? document.weights : {}
+  const weights: Document = {}
+  if (typeof old.client === 'number') weights.userRequirements = old.client
+  if (typeof old.climate === 'number') weights.environmentalFactors = old.climate
+  return { ...document, weights }
+}
+
 /** From the version keyed to the next one. */
 const migrations: ReadonlyMap<number, Migration> = new Map<number, Migration>([
   [1, (document) => ({ household: startingHousehold, ...document })],
+  [2, weightsToFamilies],
 ])
 
 export function serialize(project: Project): string {
