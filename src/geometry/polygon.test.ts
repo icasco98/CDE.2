@@ -6,6 +6,7 @@ import {
   differencePolygons,
   edgesOf,
   nearestPointOnBoundary,
+  nearestPointOnSegment,
   pointInPolygon,
   pointOnBoundary,
   rectangleToPolygon,
@@ -123,6 +124,13 @@ describe('the boundary', () => {
   it('reads a point within the tolerance of a wall as on it', () => {
     expect(pointOnBoundary(room, [0.01, 3], 0.05)).toBe(true)
     expect(pointOnBoundary(room, [0.1, 3], 0.05)).toBe(false)
+  })
+
+  it('holds a point to the ends of one segment', () => {
+    expect(nearestPointOnSegment([2, 5], [0, 0], [4, 0])).toEqual([2, 0])
+    expect(nearestPointOnSegment([9, 5], [0, 0], [4, 0])).toEqual([4, 0])
+    expect(nearestPointOnSegment([-9, 5], [0, 0], [4, 0])).toEqual([0, 0])
+    expect(nearestPointOnSegment([1, 1], [2, 2], [2, 2])).toEqual([2, 2])
   })
 })
 

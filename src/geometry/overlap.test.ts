@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { footprintsOverlap, obbOf, obbsSeparated, OVERLAP_TOLERANCE } from './overlap'
+import { footprintsOverlap, obbOf, obbsSeparated, sharedArea, OVERLAP_TOLERANCE } from './overlap'
 import { rectangleToPolygon } from './polygon'
-import type { Footprint } from './types'
+import type { Footprint, Polygon } from './types'
 
 function rectangle(
   left: number,
@@ -84,5 +84,44 @@ describe('the oriented bounding box', () => {
 
   it('reads two boxes a whole metre apart as separated', () => {
     expect(obbsSeparated(obbOf(rectangle(0, 0, 4, 4)), obbOf(rectangle(5, 0, 4, 4)))).toBe(true)
+  })
+})
+
+describe('the area two rooms really hold in common', () => {
+  it('is nothing for rooms standing apart or brought flush wall to wall', () => {
+    expect(sharedArea(rectangle(0, 0, 4, 4), rectangle(9, 0, 4, 4))).toBe(0)
+    expect(sharedArea(rectangle(0, 0, 4, 4), rectangle(4, 0, 4, 4))).toBeCloseTo(0, 9)
+  })
+
+  it('is the overlap itself where two rooms really lie over each other', () => {
+    expect(sharedArea(rectangle(0, 0, 4, 4), rectangle(3, 3, 4, 4))).toBeCloseTo(1, 9)
+  })
+
+  it('is nothing for a cutter sitting in the notch it made, which the cheap test calls a maybe', () => {
+    const notched: Polygon = [
+      [0, 0],
+      [1, 0],
+      [1, 1],
+      [3, 1],
+      [3, 0],
+      [4, 0],
+      [4, 4],
+      [0, 4],
+    ]
+    const room: Footprint = { polygon: notched, rotation: 0 }
+    const cutter = rectangle(1, -1, 2, 2)
+    expect(footprintsOverlap(room, cutter)).toBe(true)
+    expect(sharedArea(room, cutter)).toBeCloseTo(0, 9)
+  })
+
+  it('counts a bite taken out of the middle, where the difference leaves a hole', () => {
+    const withHole: Polygon = [
+      [0, 0],
+      [6, 0],
+      [6, 6],
+      [0, 6],
+    ]
+    const ring: Footprint = { polygon: withHole, rotation: 0 }
+    expect(sharedArea(ring, rectangle(2, 2, 2, 2))).toBeCloseTo(4, 9)
   })
 })

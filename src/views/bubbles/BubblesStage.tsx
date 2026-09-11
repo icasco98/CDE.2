@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
+import { selection, useSelection } from '../../app/selection'
 import { session } from '../../app/session'
 import { useProject } from '../../app/useProject'
 import type { Position } from '../../bubbles'
@@ -9,7 +10,7 @@ import { BubblesView } from './BubblesView'
 /** The bubbles view over the app's one store: every callback is a store action, refusals are said out loud. */
 export function BubblesStage() {
   const project = useProject()
-  const [selected, setSelected] = useState<string | null>(null)
+  const selected = useSelection()
 
   const rooms = useMemo(
     () =>
@@ -39,7 +40,7 @@ export function BubblesStage() {
       }
       onConnect={(a: string, b: string) => report(session.actions.connect({ a, b, kind: 'door' }))}
       onDisconnect={(edgeId: string) => report(session.actions.disconnect(edgeId))}
-      onSelect={setSelected}
+      onSelect={selection.select}
     />
   )
 }

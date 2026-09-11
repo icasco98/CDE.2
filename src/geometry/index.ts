@@ -6,6 +6,7 @@ export {
   centroid,
   differencePolygons,
   nearestPointOnBoundary,
+  nearestPointOnSegment,
   pointInPolygon,
   pointOnBoundary,
   rectangleToPolygon,
@@ -25,7 +26,7 @@ export {
   localToSheetPolygon,
   translateFootprint,
 } from './footprint'
-export { footprintsOverlap, OVERLAP_TOLERANCE } from './overlap'
+export { footprintsOverlap, sharedArea, OVERLAP_TOLERANCE } from './overlap'
 export { carveFootprint, holdsRectangle, subtractPolygons } from './carve'
 export {
   clampDrawnRectangle,
@@ -43,5 +44,5 @@ export {
   wallSnapOffset,
 } from './snap'
 export { buildingOutline, ringsToPath } from './outline'
-export type { SharedWall } from './walls'
-export { sharedWalls } from './walls'
+export type { OutwardWall, SharedWall } from './walls'
+export { outwardWalls, sharedWalls } from './walls'

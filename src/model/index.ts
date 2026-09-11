@@ -17,7 +17,7 @@ export type {
 export type { Commit } from './actions'
 export { createIdGenerator } from './ids'
 export type { IdGenerator } from './ids'
-export { checkProject } from './invariants'
+export { checkProject, occupiedStoreys } from './invariants'
 export { createStore } from './store'
 export type { Change, Listener, Store } from './store'
 export {

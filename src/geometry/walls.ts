@@ -1,4 +1,4 @@
-import { edgesOf } from './polygon'
+import { edgesOf, signedArea } from './polygon'
 import type { Point, Polygon } from './types'
 
 /** A run of wall two polygons hold in common, one end to the other. */
@@ -34,4 +34,21 @@ export function sharedWalls(a: Polygon, b: Polygon, tolerance: number): SharedWa
     }
   }
   return out
+}
+
+/** One edge of a polygon with the unit normal that points away from its inside. */
+export type OutwardWall = { readonly from: Point; readonly to: Point; readonly normal: Point }
+
+/** Every edge of `polygon` with its outward normal, read from the ring's own winding. */
+export function outwardWalls(polygon: Polygon): OutwardWall[] {
+  const outward = signedArea(polygon) >= 0 ? 1 : -1
+  const walls: OutwardWall[] = []
+  for (const [a, b] of edgesOf(polygon)) {
+    const ex = b[0] - a[0]
+    const ey = b[1] - a[1]
+    const length = Math.hypot(ex, ey)
+    if (length < 1e-12) continue
+    walls.push({ from: a, to: b, normal: [(outward * ey) / length, (-outward * ex) / length] })
+  }
+  return walls
 }

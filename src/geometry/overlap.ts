@@ -1,5 +1,5 @@
 import { outlineOf } from './footprint'
-import { boundingBox, edgesOf } from './polygon'
+import { area, boundingBox, differencePolygons, edgesOf } from './polygon'
 import type { Footprint, Point, Polygon } from './types'
 
 /** Two shapes count as overlapping only past this much, in metres: a shared wall and the rounding either side of it are not an overlap. */
@@ -80,4 +80,25 @@ function polygonsSeparated(a: Polygon, b: Polygon): boolean {
 export function footprintsOverlap(a: Footprint, b: Footprint): boolean {
   if (obbsSeparated(obbOf(a), obbOf(b))) return false
   return !polygonsSeparated(outlineOf(a), outlineOf(b))
+}
+
+function pieceArea(piece: readonly Polygon[]): number {
+  const [outer, ...holes] = piece
+  if (!outer) return 0
+  return holes.reduce((total, hole) => total - area(hole), area(outer))
+}
+
+/**
+ * The area two footprints really hold in common. `footprintsOverlap` is cheap and, for a shape a
+ * carve has left concave, can only say "maybe"; this settles the maybe against the polygon
+ * booleans, so a cutter sitting in the notch it made is not read as lying over its neighbour.
+ */
+export function sharedArea(a: Footprint, b: Footprint): number {
+  if (obbsSeparated(obbOf(a), obbOf(b))) return 0
+  const outline = outlineOf(a)
+  const left = differencePolygons(outline, [outlineOf(b)]).reduce(
+    (total, piece) => total + pieceArea(piece),
+    0,
+  )
+  return Math.max(0, area(outline) - left)
 }
