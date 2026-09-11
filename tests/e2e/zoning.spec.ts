@@ -71,19 +71,19 @@ async function pointsOf(page: Page, name: string): Promise<string | null> {
 
 test('a room dragged out of the tray is placed at its target size', async ({ page }) => {
   await openZoning(page)
-  await place(page, 'Kitchen', 5, 5)
+  await place(page, 'Kitchen', 5, 5.125)
   await expect(page.locator('[data-room]')).toHaveCount(1)
-  await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-area', '22.00')
+  await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-area', '20.63')
   await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-rotation', '0.0')
-  await expect(page.getByText('22 of 20 m²')).toBeVisible()
+  await expect(page.getByText('20.6 of 20 m²')).toBeVisible()
   await expect(page.locator('[data-tray]').filter({ hasText: /^Kitchen/ })).toHaveCount(0)
 })
 
 test('a placed room is dragged about the sheet, and undo puts it back', async ({ page }) => {
   await openZoning(page)
-  await place(page, 'Kitchen', 5, 5)
+  await place(page, 'Kitchen', 5, 5.125)
   const before = await pointsOf(page, 'Kitchen')
-  await drag(page, await onSheet(page, 5, 5), await onSheet(page, 12, 12))
+  await drag(page, await onSheet(page, 5, 5.125), await onSheet(page, 12, 12))
   const after = await pointsOf(page, 'Kitchen')
   expect(after).not.toBe(before)
   await page.getByRole('button', { name: 'Undo' }).click()
@@ -92,35 +92,37 @@ test('a placed room is dragged about the sheet, and undo puts it back', async ({
 
 test('a room is turned by its handle and by the quarter-turn button', async ({ page }) => {
   await openZoning(page)
-  await place(page, 'Kitchen', 8, 8)
-  await clickSheet(page, 8, 8)
+  await place(page, 'Kitchen', 8, 8.125)
+  await clickSheet(page, 8, 8.125)
   await expect(page.locator('[data-rotate-handle]')).toBeVisible()
-  await drag(page, await centreOf(page, '[data-rotate-handle]'), await onSheet(page, 14, 8))
+  await drag(page, await centreOf(page, '[data-rotate-handle]'), await onSheet(page, 14, 8.125))
   await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-rotation', '90.0')
-  await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-area', '22.00')
+  await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-area', '20.63')
   await page.getByRole('button', { name: 'Rotate 90°' }).click()
   await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-rotation', '180.0')
-  await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-area', '22.00')
+  await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-area', '20.63')
 })
 
 test('a room is resized by a corner handle and the label follows', async ({ page }) => {
   await openZoning(page)
-  await place(page, 'Kitchen', 8, 8)
-  await clickSheet(page, 8, 8)
-  await drag(page, await centreOf(page, '[data-resize-handle="1,1"]'), await onSheet(page, 12, 12))
-  await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-area', '40.50')
-  await expect(page.getByText('40.5 of 20 m²')).toBeVisible()
+  await place(page, 'Kitchen', 8, 8.125)
+  await clickSheet(page, 8, 8.125)
+  await drag(
+    page,
+    await centreOf(page, '[data-resize-handle="1,1"]'),
+    await onSheet(page, 12.25, 12.25),
+  )
+  await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-area', '42.00')
+  await expect(page.getByText('42 of 20 m²')).toBeVisible()
 })
 
 test('a drop with Alt held carves the room under it', async ({ page }) => {
   await openZoning(page)
   await place(page, 'Dining Room', 8, 8)
   await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '24.00')
-  await place(page, 'Guest WC', 8.125, 5.75, 'Alt')
+  await place(page, 'Guest WC', 8, 5.75, 'Alt')
   await expect(page.locator('[data-room]')).toHaveCount(2)
-  const carved = await roomNamed(page, 'Dining Room').getAttribute('data-area')
-  expect(Number(carved)).toBeLessThan(23.5)
-  expect(Number(carved)).toBeGreaterThan(22)
+  await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '23.00')
 })
 
 test('a drop on top of another room is refused and said out loud', async ({ page }) => {
@@ -134,18 +136,18 @@ test('a drop on top of another room is refused and said out loud', async ({ page
 
 test('a pinned room refuses to be moved', async ({ page }) => {
   await openZoning(page)
-  await place(page, 'Kitchen', 6, 6)
-  await clickSheet(page, 6, 6)
+  await place(page, 'Kitchen', 6, 6.125)
+  await clickSheet(page, 6, 6.125)
   await page.getByRole('button', { name: 'Pin' }).click()
   const before = await pointsOf(page, 'Kitchen')
-  await drag(page, await onSheet(page, 6, 6), await onSheet(page, 14, 14))
+  await drag(page, await onSheet(page, 6, 6.125), await onSheet(page, 14, 14))
   await expect(page.locator('.messages')).toContainText('Kitchen is pinned')
   expect(await pointsOf(page, 'Kitchen')).toBe(before)
 })
 
 test('a proposed door is accepted with a click and disconnected with Delete', async ({ page }) => {
   await openZoning(page)
-  await place(page, 'Kitchen', 5, 5)
+  await place(page, 'Kitchen', 5, 5.125)
   await place(page, 'Dining Room', 10.75, 5)
   await expect(page.locator('[data-proposal]')).toHaveCount(1)
   await expect(page.locator('[data-edge]')).toHaveCount(0)
@@ -153,7 +155,7 @@ test('a proposed door is accepted with a click and disconnected with Delete', as
   await expect(page.locator('[data-edge]')).toHaveCount(1)
   await expect(page.locator('[data-proposal]')).toHaveCount(0)
   await clickSheet(page, 17, 1.5)
-  await clickSheet(page, 7.75, 5)
+  await clickSheet(page, 7.75, 5.125)
   await expect(page.locator('.door-selected')).toHaveCount(1)
   await page.keyboard.press('Delete')
   await expect(page.locator('[data-edge]')).toHaveCount(0)
@@ -162,7 +164,7 @@ test('a proposed door is accepted with a click and disconnected with Delete', as
 
 test('an edge whose rooms share no wall is drawn as a tension', async ({ page }) => {
   await openZoning(page)
-  await place(page, 'Kitchen', 5, 5)
+  await place(page, 'Kitchen', 5, 5.125)
   await place(page, 'Dining Room', 10.75, 5)
   await page.locator('[data-proposal]').click()
   await expect(page.locator('[data-edge]')).toHaveCount(1)
@@ -173,8 +175,8 @@ test('an edge whose rooms share no wall is drawn as a tension', async ({ page })
 
 test('a room is unplaced back to the tray', async ({ page }) => {
   await openZoning(page)
-  await place(page, 'Kitchen', 6, 6)
-  await clickSheet(page, 6, 6)
+  await place(page, 'Kitchen', 6, 6.125)
+  await clickSheet(page, 6, 6.125)
   await page.getByRole('button', { name: 'Unplace' }).click()
   await expect(page.locator('[data-room]')).toHaveCount(0)
   await expect(page.locator('[data-tray]').filter({ hasText: /^Kitchen/ })).toHaveCount(1)
@@ -200,7 +202,7 @@ test('each storey is drawn on its own, with the one below as a ghost', async ({ 
 
 test('a room picked in the bubbles is the room picked in the zoning', async ({ page }) => {
   await openZoning(page)
-  await place(page, 'Kitchen', 6, 6)
+  await place(page, 'Kitchen', 6, 6.125)
   await expect(roomNamed(page, 'Kitchen')).toHaveClass(/room-selected/)
   await page.getByRole('button', { name: 'Bubbles' }).click()
   await expect(page.getByRole('button', { name: /Hold in place|Let go/ })).toBeEnabled()

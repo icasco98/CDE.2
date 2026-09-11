@@ -39,14 +39,15 @@ export function sizesOf(type: RoomType | undefined, plotAreaM2: number): RoomSiz
   }
 }
 
-/** Up to the next grid line, so a side rounded off never lands under the size that was asked for. */
-function ceilToGrid(value: number): number {
-  return Math.ceil(value / GRID_M - 1e-9) * GRID_M
+/** To the nearest grid line, so a small room is not pushed over its target by the rounding alone. */
+function toGrid(value: number): number {
+  return Math.max(GRID_M, Math.round(value / GRID_M) * GRID_M)
 }
 
 /**
  * The rectangle a room of `targetArea` opens at: the sides that hold that area at `proportion`,
- * each rounded up to the grid, so the room starts on the grid and never under its target.
+ * each taken to the nearest grid line, and then, while that leaves the room under its target, a
+ * grid step added to the longer side, which is the smaller of the two additions it could take.
  */
 export function startingRectangle(
   targetArea: number,
@@ -54,10 +55,13 @@ export function startingRectangle(
 ): { readonly width: number; readonly depth: number } {
   const wanted = Math.max(GRID_M * GRID_M, targetArea)
   const shape = proportion > 0 ? proportion : 1
-  return {
-    width: ceilToGrid(Math.sqrt(wanted * shape)),
-    depth: ceilToGrid(Math.sqrt(wanted / shape)),
+  let width = toGrid(Math.sqrt(wanted * shape))
+  let depth = toGrid(Math.sqrt(wanted / shape))
+  while (width * depth < wanted - 1e-9) {
+    if (width >= depth) width += GRID_M
+    else depth += GRID_M
   }
+  return { width, depth }
 }
 
 export function offTarget(liveArea: number, targetArea: number): boolean {
