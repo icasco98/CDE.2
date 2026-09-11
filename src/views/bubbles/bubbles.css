@@ -40,14 +40,12 @@
 }
 
 .bubbles-storeys,
-.bubbles-ask,
 .bubbles-kind {
   display: flex;
   align-items: center;
   gap: 0.25rem;
 }
 
-.bubbles-ask,
 .bubbles-kind {
   gap: 0.5rem;
   color: #6d6862;

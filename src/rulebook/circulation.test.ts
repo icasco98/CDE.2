@@ -134,6 +134,17 @@ describe('what the Bubbles tab reads off each storey', () => {
     ])
   })
 
+  it('says nothing about a storey that has a hallway, however many private rooms stand on it', () => {
+    const rooms = [
+      room('hallway', 8.2, 1),
+      room('master-bedroom', 28, 1),
+      room('bedroom', 18, 1),
+      room('bedroom', 18, 1),
+      room('office-study', 14, 1),
+    ]
+    expect(circulationPerStorey(rooms, 2)[1]).toEqual({ storey: 1, hasHallway: true })
+  })
+
   it('says nothing about a storey whose rooms ask for no corridor', () => {
     expect(circulationPerStorey([room('bedroom', 18)], 1)).toEqual([
       { storey: 0, hasHallway: false },

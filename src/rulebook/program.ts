@@ -1,5 +1,5 @@
 import type { Household } from '../model'
-import { hallwayArea, hallwayName, needsHallway } from './circulation'
+import { hallwayArea, hallwayFollows, hallwayName, needsHallway } from './circulation'
 import { roomTypeById, typicalArea } from './sizes'
 
 export type ProgramRoom = {
@@ -90,19 +90,26 @@ export function defaultProgram(
   for (let i = 0; i < cars; i++) add('garage', `Garage bay ${i + 1}`)
 
   // A hallway is sized from the rooms it serves, so the storey has to be whole before one can be
-  // laid out; they go in together afterwards, beside the stair they open onto.
-  const hallways: ProgramRoom[] = []
+  // laid out; every place is read off that whole storey and they go in together afterwards.
+  const hallways: { readonly at: number; readonly room: ProgramRoom }[] = []
   for (let storey = 0; storey < levels; storey++) {
     if (!needsHallway(rooms, storey)) continue
     hallways.push({
-      type: 'hallway',
-      name: hallwayName(storey, levels),
-      targetArea: hallwayArea(rooms, storey),
-      storey,
-      storeysSpanned: 1,
+      at: hallwayFollows(rooms, storey),
+      room: {
+        type: 'hallway',
+        name: hallwayName(storey, levels),
+        targetArea: hallwayArea(rooms, storey),
+        storey,
+        storeysSpanned: 1,
+      },
     })
   }
-  const stair = rooms.findIndex((room) => room.type === 'stair')
-  const after = (stair >= 0 ? stair : rooms.findIndex((room) => room.type === 'entry-foyer')) + 1
-  return [...rooms.slice(0, after), ...hallways, ...rooms.slice(after)]
+  const laid: ProgramRoom[] = []
+  for (let at = 0; at <= rooms.length; at++) {
+    for (const hallway of hallways) if (hallway.at === at) laid.push(hallway.room)
+    const room = rooms[at]
+    if (room) laid.push(room)
+  }
+  return laid
 }

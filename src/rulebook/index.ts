@@ -18,7 +18,7 @@ export {
   typesByCategory,
   typicalArea,
 } from './sizes'
-export { circulationPerStorey, hallwayArea, hallwayName } from './circulation'
+export { circulationPerStorey, hallwayArea, hallwayFollows, hallwayName } from './circulation'
 export type { StoreyCirculation } from './circulation'
 export { companionName, defaultProgram, standingOf } from './program'
 export type { ProgramRoom, Standing } from './program'

@@ -757,23 +757,32 @@ test('deleting the hallway upstairs brings the nudge, and Add hallway answers it
   expect(await storeyOf(page, 'First Hallway')).toBe('First')
 })
 
-test('with every storey showing, Add hallway takes the lowest floor without one, then asks', async ({
+test('with every storey showing, Add hallway takes the lowest floor without one', async ({
   page,
 }) => {
   await openWithStair(page, 2)
   await settle(page)
+  // Both floors have one after the rebuild, so there is no floor left for the button to serve.
+  await expect(addHallwayButton(page)).toBeDisabled()
+  await expect(addHallwayButton(page)).toHaveAttribute(
+    'title',
+    'Every storey has a hallway; add another from the program.',
+  )
+
   await clickBubble(page, 'Ground Hallway')
   await page.locator('svg.bubbles-sheet').press('Delete')
   await expect(roomNamed(page, 'Ground Hallway')).toHaveCount(0)
 
   await addHallwayButton(page).click()
   await expect(roomNamed(page, 'Ground Hallway')).toHaveCount(1)
-
-  // Both floors have one now, so there is no lowest without one and the person is asked which.
-  await addHallwayButton(page).click()
-  const asked = page.getByRole('group', { name: 'Storey for the hallway' })
-  await expect(asked).toBeVisible()
-  await asked.getByRole('button', { name: 'First' }).click()
-  await expect(asked).toHaveCount(0)
-  await expect(roomNamed(page, 'First Hallway')).toHaveCount(2)
+  await expect(addHallwayButton(page)).toBeDisabled()
+  // The program reads as a rebuild would have written it, corridor behind the stair and all.
+  await page.getByRole('button', { name: 'Requirements' }).click()
+  expect(
+    await page
+      .locator('table.program tbody tr input[aria-label="Room name"]')
+      .evaluateAll((inputs) =>
+        inputs.slice(0, 4).map((input) => (input as HTMLInputElement).value),
+      ),
+  ).toEqual(['Entry', 'Stair', 'Ground Hallway', 'First Hallway'])
 })

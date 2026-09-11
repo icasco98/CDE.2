@@ -43,6 +43,8 @@ import './bubbles.css'
 /** How far the hand may wander before a press on the sheet is a pan rather than a click, in pixels. */
 const DRAG_PX = 3
 
+const EVERY_STOREY_SERVED = 'Every storey has a hallway; add another from the program.'
+
 /** Two fingers on the sheet: the metre under their middle, how far apart they began, and the scale they began at. */
 type Pinch = { readonly grabbed: Point; readonly span: number; readonly scale: number }
 
@@ -89,8 +91,6 @@ export function BubblesView(props: BubblesViewProps) {
   const [box, setBox] = useState({ width: 0, height: 0 })
   /** The storey being worked on, or nothing for all of them: the others are dimmed, never hidden. */
   const [only, setOnly] = useState<number | null>(null)
-  /** Set while every storey already has a hallway and the person is being asked which one to add to. */
-  const [askingWhere, setAskingWhere] = useState(false)
   /** The user-requirements weight is a force, so a slider moved is a new layout for the simulation. */
   const layout = useMemo(() => layoutFor(weightOf(weights, 'userRequirements')), [weights])
   const { moving, settleNow, spread, hold, release } = useSettling(
@@ -125,6 +125,8 @@ export function BubblesView(props: BubblesViewProps) {
   const shown = visibleExtent(extent, camera)
   const perPixel = metresPerPixel(extent, camera, box)
   const crowded = storeyCapacity(rooms, plot.polygon, storeys).filter((entry) => entry.over)
+  /** Every storey holds a hallway, so there is no floor on this tab left for the button to serve. */
+  const served = circulation.every((entry) => entry.hasHallway)
   const selectedRoom = named.get(selected ?? '')
   const selectedEdge = edges.find((edge) => edge.id === selected)
 
@@ -390,19 +392,11 @@ export function BubblesView(props: BubblesViewProps) {
     })
   }
 
-  /**
-   * The filter says which storey; with all of them showing, the lowest storey that has no hallway,
-   * and when every storey has one there is no lowest to pick, so the person is asked.
-   */
+  /** The filter says which storey; with all of them showing, the lowest storey that has none. */
   function addHallway(): void {
-    setAskingWhere(false)
-    if (only !== null) {
-      onAddHallway(only)
-      return
-    }
     const without = circulation.find((entry) => !entry.hasHallway)
-    if (without) onAddHallway(without.storey)
-    else setAskingWhere(true)
+    const storey = only ?? without?.storey
+    if (storey !== undefined) onAddHallway(storey)
   }
 
   function removeSelected(): void {
@@ -432,26 +426,6 @@ export function BubblesView(props: BubblesViewProps) {
         <button type="button" onClick={spread}>
           Spread
         </button>
-        <button type="button" onClick={addHallway}>
-          Add hallway
-        </button>
-        {askingWhere && (
-          <span className="bubbles-ask" role="group" aria-label="Storey for the hallway">
-            <span>Which storey?</span>
-            {Array.from({ length: Math.max(1, storeys) }, (_unused, storey) => (
-              <button
-                key={storey}
-                type="button"
-                onClick={() => {
-                  setAskingWhere(false)
-                  onAddHallway(storey)
-                }}
-              >
-                {storeyLabel(storey)}
-              </button>
-            ))}
-          </span>
-        )}
         {proposals.length > 0 && (
           <button type="button" onClick={onAcceptAll}>
             Accept all proposals
@@ -512,6 +486,15 @@ export function BubblesView(props: BubblesViewProps) {
             </button>
           ))}
         </div>
+        {/* A program action, not a force, so it stands with the filter that says which storey it acts on. */}
+        <button
+          type="button"
+          disabled={served}
+          title={served ? EVERY_STOREY_SERVED : undefined}
+          onClick={addHallway}
+        >
+          Add hallway
+        </button>
         <button type="button" onClick={() => setCamera(fitCamera)}>
           Fit
         </button>

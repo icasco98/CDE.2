@@ -7,11 +7,10 @@ import type { Commit, EdgeKind, Family, Result } from '../../model'
 import {
   circulationPerStorey,
   connectionSource,
-  hallwayArea,
-  hallwayName,
   proposedConnections,
   roomTypeById,
 } from '../../rulebook'
+import { addHallway } from './addHallway'
 import { BubblesView } from './BubblesView'
 import type { BubbleProposal } from './types'
 
@@ -69,18 +68,6 @@ export function BubblesStage() {
       selection.select(null)
   }
 
-  /** Sized from the rooms standing on that storey at this moment, which is what the rule reads. */
-  const addHallway = (storey: number): void => {
-    report(
-      session.actions.addRoom({
-        type: 'hallway',
-        name: hallwayName(storey, project.storeys),
-        targetArea: hallwayArea(project.rooms, storey),
-        storey,
-      }),
-    )
-  }
-
   /** The bubble and the storey its band gives it are one step; a storey the graph refuses is none. */
   const drop = (id: string, at: Position, storey?: number): boolean => {
     const result = session.transaction(() => {
@@ -125,7 +112,9 @@ export function BubblesStage() {
         report(session.actions.setEdgeKind(edgeId, kind))
       }
       onRemoveRoom={remove}
-      onAddHallway={addHallway}
+      onAddHallway={(storey: number) =>
+        report(addHallway(session, project.rooms, storey, project.storeys))
+      }
       onAccept={(proposal: BubbleProposal) => report(take(proposal))}
       onAcceptAll={() =>
         report(

@@ -87,6 +87,8 @@ export function createActions(context: Context) {
       name?: string
       storey?: number
       storeysSpanned?: number
+      /** The room this one stands behind in the program; on the end when it names no room. */
+      after?: string
     }): Result<string> {
       if (!positive(input.targetArea)) return badArea
       const project = state()
@@ -99,7 +101,13 @@ export function createActions(context: Context) {
         targetArea: input.targetArea,
         pinned: false,
       }
-      const result = settle({ ...project, rooms: [...project.rooms, room] })
+      const behind =
+        input.after === undefined ? -1 : project.rooms.findIndex((each) => each.id === input.after)
+      const rooms =
+        behind < 0
+          ? [...project.rooms, room]
+          : [...project.rooms.slice(0, behind + 1), room, ...project.rooms.slice(behind + 1)]
+      const result = settle({ ...project, rooms })
       return result.ok ? ok(room.id) : result
     },
 

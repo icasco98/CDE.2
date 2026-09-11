@@ -104,6 +104,24 @@ export function needsHallway(rooms: readonly CirculationRoom[], storey: number):
   return wantsHallway(rooms, storey) !== undefined
 }
 
+/**
+ * Where a hallway stands in the program: behind the stair that serves its storey, behind the entry
+ * where there is no stair, and on the end where there is neither. Rebuilding the program and adding
+ * one by hand read this same rule, so two programs holding the same rooms read the same way. The
+ * answer is the place in the list the hallway takes, so it is one past the room it follows, and
+ * past any hallway of a lower storey already standing there, which keeps the corridors in the
+ * order of their floors.
+ */
+export function hallwayFollows(rooms: readonly CirculationRoom[], storey: number): number {
+  const stair = rooms.findIndex((room) => room.type === 'stair' && standsOn(room, storey))
+  const entry = rooms.findIndex((room) => room.type === 'entry-foyer')
+  const behind = stair >= 0 ? stair : entry
+  if (behind < 0) return rooms.length
+  let at = behind + 1
+  while (rooms[at]?.type === 'hallway' && (rooms[at]?.storey ?? storey) < storey) at++
+  return at
+}
+
 /** What a hallway is called: one house-wide corridor needs no storey in its name, several do. */
 export function hallwayName(storey: number, storeys: number): string {
   return storeys > 1 ? `${storeyLabel(storey)} Hallway` : 'Hallway'
