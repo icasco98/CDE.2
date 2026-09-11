@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { rectangleToPolygon, type Point } from '../../geometry'
+import type { Point } from '../geometry'
 import {
   fitCamera,
   MAX_ZOOM,
@@ -10,11 +10,11 @@ import {
   zoomAbout,
   ZOOM_STEP,
   type Camera,
+  type Extent,
 } from './camera'
-import { extentOf } from './frame'
 
-const plot = rectangleToPolygon({ left: 0, top: 0, width: 20, depth: 25 })
-const extent = extentOf(plot, [])
+/** A twenty by twenty-five metre plot with the sheet's own margin around it. */
+const extent: Extent = { minX: -2.5, minY: -2.5, width: 25, height: 30 }
 
 /** Where a metre sits across the drawing, which is where it sits on the screen: the sheet meets its box whole. */
 function across(camera: Camera, at: Point): Point {

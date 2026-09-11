@@ -6,7 +6,7 @@ import {
   type Point,
   type Polygon,
 } from '../../geometry'
-import { fitCamera, metresPerPixel, viewBoxOf, zoomAbout, ZOOM_STEP } from './camera'
+import { fitCamera, metresPerPixel, viewBoxOf, zoomAbout, ZOOM_STEP } from '../camera'
 import { extentOf } from './frame'
 import { moveFootprint, sheetOf, type Neighbour, type Sheet } from './gestures'
 

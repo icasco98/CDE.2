@@ -18,7 +18,7 @@ import {
   zoomAbout,
   ZOOM_STEP,
   type Camera,
-} from './camera'
+} from '../camera'
 import { defaultProportion, startingRectangle } from './defaults'
 import { edgeMarks, proposalsFrom } from './doors'
 import { extentOf, pointerAt } from './frame'
