@@ -243,6 +243,58 @@ function cornerCount(points: string | null): number {
   return (points ?? '').trim().split(/\s+/).length
 }
 
+test('Restore shape says what is in its way rather than opening a prompt with no answer', async ({
+  page,
+}) => {
+  await openZoning(page)
+  await place(page, 'Dining Room', 8, 8)
+  await place(page, 'Guest WC', 8, 5.75)
+  await page.locator('[data-carve]').click()
+  await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '23.00')
+  await clickSheet(page, 8, 9)
+  const restore = page.getByRole('button', { name: 'Restore shape' })
+  await expect(restore).toHaveAttribute('aria-disabled', 'true')
+  await expect(restore).toHaveAttribute('title', /Guest WC would be left.*move it first/)
+  // Marked refused to anyone reading the page, and still pressable, because pressing it is how
+  // the reason is said out loud; Playwright will not press such a button unless it is told to.
+  await restore.click({ force: true })
+  await expect(page.locator('[data-ask]')).toHaveCount(0)
+  await expect(page.locator('.messages')).toContainText('move it first')
+  await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '23.00')
+})
+
+test('a prompt a button opened stands on the room, not on the button', async ({ page }) => {
+  await openZoning(page)
+  await place(page, 'Dining Room', 8, 8)
+  await place(page, 'Kitchen', 8, 4.5)
+  await page.locator('[data-carve]').click()
+  await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '21.25')
+  await clickSheet(page, 8, 9)
+  await page.getByRole('button', { name: 'Restore shape' }).click()
+  await expect(page.locator('[data-ask]')).toBeVisible()
+  const prompt = await page.locator('[data-ask]').boundingBox()
+  const middle = await onSheet(page, 8, 8)
+  if (!prompt) throw new Error('the prompt has no box')
+  expect(Math.abs(prompt.x + prompt.width / 2 - middle.x)).toBeLessThan(40)
+  expect(prompt.y).toBeGreaterThan(middle.y)
+  await page.locator('[data-carve]').click()
+  await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '24.00')
+  await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-area', '17.88')
+})
+
+test('the wall handles show on the room that is picked, with no pointer over it', async ({
+  page,
+}) => {
+  await openZoning(page)
+  await place(page, 'Kitchen', 5, 5.125)
+  await place(page, 'Dining Room', 10.75, 5)
+  await clickSheet(page, 17, 20)
+  await expect(page.locator('[data-wall].wall-shown')).toHaveCount(0)
+  await clickSheet(page, 5, 5.125)
+  await expect(roomNamed(page, 'Kitchen')).toHaveClass(/room-selected/)
+  await expect(page.locator('[data-wall].wall-shown')).toHaveCount(1)
+})
+
 test('Restore shape returns a carved room to the rectangle its kind opens at', async ({ page }) => {
   await openZoning(page)
   await carveTheDiningRoom(page)
@@ -251,6 +303,8 @@ test('Restore shape returns a carved room to the rectangle its kind opens at', a
   await page.getByRole('button', { name: 'Restore shape' }).click()
   await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '24.00')
   expect(cornerCount(await pointsOf(page, 'Dining Room'))).toBe(4)
+  // The shape is back, so there is no carve left to undo.
+  await expect(page.getByRole('button', { name: 'Undo carve' })).toHaveCount(0)
 })
 
 test('Undo carve gives a room back the outline it had before it was cut', async ({ page }) => {

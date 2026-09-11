@@ -282,6 +282,17 @@ export function carveWith(cutter: Footprint, sheet: Sheet): Attempt<readonly Pla
   return settled(carved)
 }
 
+/**
+ * Why the carve this landing would need is refused, or nothing where the room lands clear or the
+ * carve is allowed. A gesture offered on a button asks this first, so it never opens a prompt
+ * whose only answer is Put back.
+ */
+export function carveRefusal(landing: Landing, sheet: Sheet): string | null {
+  if (landing.over.length === 0) return null
+  const carve = carveWith(landing.footprint, sheet)
+  return carve.ok ? null : carve.reason
+}
+
 /** A room redrawn to an outline on the sheet, written in its own frame, so its rotation is kept. */
 function reshape(footprint: Footprint, outline: Polygon): Footprint {
   const frame = frameOf(footprint)

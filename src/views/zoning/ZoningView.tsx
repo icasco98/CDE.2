@@ -5,7 +5,6 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { boundingBox, outlineOf, type Footprint, type Handle, type Point } from '../../geometry'
@@ -25,6 +24,7 @@ import { edgeMarks, proposalsFrom, wallPairs, type WallPair } from './doors'
 import { extentOf, pointerAt } from './frame'
 import {
   angleTo,
+  carveRefusal,
   carveWith,
   droppedAt,
   landOver,
@@ -129,6 +129,14 @@ type Asked = {
   readonly at: readonly [number, number]
   /** Whether answering uses up the outline remembered for this room, as undoing a carve does. */
   readonly forgets: boolean
+}
+
+/** What a button on the selected room would do, and the sentence standing in its way. */
+type Offer = { readonly landing: Landing; readonly refusal: string | null }
+
+/** The same sentence on the button and in the message it says, so nothing is hidden in a tooltip. */
+function heldBack(name: string, doing: string, refusal: string): string {
+  return `${name} cannot ${doing}: ${refusal}; move it first.`
 }
 
 const emptySheet: Sheet = { others: [], outlines: [], boundary: [] }
@@ -247,6 +255,33 @@ export function ZoningView(props: ZoningViewProps) {
     sizes.get(room.type)?.proportion ?? defaultProportion
 
   const sizeFor = (room: Room): Size => startingRectangle(room.targetArea, proportionFor(room))
+
+  /** Where a point on the sheet falls on the screen, in pixels: a prompt stands on its own room. */
+  function onScreen(point: Point): Point {
+    const screen = svgRef.current?.getScreenCTM()
+    if (!screen) return point
+    const at = new DOMPoint(point[0], point[1]).matrixTransform(screen)
+    return [at.x, at.y]
+  }
+
+  /**
+   * What a button would leave the selected room with, and why it would be refused. Worked out
+   * while the hand is still, so a button says up front that it cannot do what it offers, and the
+   * pointer path is never charged for it.
+   */
+  function offerOf(footprint: Footprint | undefined): Offer | null {
+    if (!footprint || !grabbable || !selectedRoom || gesture !== null) return null
+    const sheet = sheetFor(selectedRoom.id)
+    const landing = landOver(footprint, sheet)
+    return { landing, refusal: carveRefusal(landing, sheet) }
+  }
+
+  const restoreOffer = offerOf(
+    selectedRoom && isPlaced(selectedRoom)
+      ? restoredTo(selectedRoom.footprint, sizeFor(selectedRoom))
+      : undefined,
+  )
+  const undoOffer = offerOf(remembered)
 
   function attemptFor(grip: Grip, pointer: Point, free: boolean): Attempt<Footprint> {
     const sheet = sheetRef.current
@@ -684,38 +719,32 @@ export function ZoningView(props: ZoningViewProps) {
     else onPlace(selectedRoom.id, attempt.value, 'commit')
   }
 
-  /** The room put back to the rectangle its kind opens at, about the centre it stands on now. */
-  function restore(event: ReactMouseEvent): void {
-    if (!selectedRoom || !isPlaced(selectedRoom) || !grabbable) return
-    if (selectedRoom.pinned) {
-      onRefuse(`${selectedRoom.name} is pinned.`)
+  /** A button that reshapes the selected room, with the prompt standing on the room itself. */
+  function reshape(room: Placed, offer: Offer | null, doing: string): void {
+    if (!offer) return
+    if (room.pinned) {
+      onRefuse(`${room.name} is pinned.`)
       return
     }
-    sheetRef.current = sheetFor(selectedRoom.id)
+    if (offer.refusal) {
+      onRefuse(heldBack(room.name, doing, offer.refusal))
+      return
+    }
+    sheetRef.current = sheetFor(room.id)
     movedRef.current = false
-    const rectangle = restoredTo(selectedRoom.footprint, sizeFor(selectedRoom))
-    ask(selectedRoom, landOver(rectangle, sheetRef.current), selectedRoom.footprint, [
-      event.clientX,
-      event.clientY,
-    ])
+    ask(room, offer.landing, room.footprint, onScreen(centreOf(offer.landing.footprint)), true)
+  }
+
+  /** The room put back to the rectangle its kind opens at, about the centre it stands on now. */
+  function restore(): void {
+    if (!selectedRoom || !isPlaced(selectedRoom)) return
+    reshape(selectedRoom, restoreOffer, 'be restored')
   }
 
   /** The outline the room had before the last thing that cut it, if it will stand there now. */
-  function undoCarve(event: ReactMouseEvent): void {
-    if (!selectedRoom || !isPlaced(selectedRoom) || !remembered) return
-    if (selectedRoom.pinned) {
-      onRefuse(`${selectedRoom.name} is pinned.`)
-      return
-    }
-    sheetRef.current = sheetFor(selectedRoom.id)
-    movedRef.current = false
-    ask(
-      selectedRoom,
-      landOver(remembered, sheetRef.current),
-      selectedRoom.footprint,
-      [event.clientX, event.clientY],
-      true,
-    )
+  function undoCarve(): void {
+    if (!selectedRoom || !isPlaced(selectedRoom)) return
+    reshape(selectedRoom, undoOffer, 'go back')
   }
 
   /** The keys zoom about the middle of what is drawn, which is the one point no hand is on. */
@@ -729,9 +758,11 @@ export function ZoningView(props: ZoningViewProps) {
     return room ? sizeFor(room) : { width: 1, depth: 1 }
   }
 
+  /** On the room picked, so a click finds the gesture, and under the pointer, so a sweep does too. */
   function wallShown(pair: WallPair): boolean {
     if (gesture?.kind === 'wall') return keyOf(gesture.pair) === keyOf(pair)
     if (hoveredWall === keyOf(pair)) return true
+    if (selected === pair.a || selected === pair.b) return true
     return hovered === pair.a || hovered === pair.b
   }
 
@@ -742,11 +773,30 @@ export function ZoningView(props: ZoningViewProps) {
         <button type="button" onClick={turn} disabled={!grabbable}>
           Rotate 90°
         </button>
-        <button type="button" onClick={restore} disabled={!grabbable}>
+        <button
+          type="button"
+          onClick={restore}
+          disabled={!grabbable}
+          aria-disabled={restoreOffer?.refusal ? true : undefined}
+          title={
+            restoreOffer?.refusal && selectedRoom
+              ? heldBack(selectedRoom.name, 'be restored', restoreOffer.refusal)
+              : undefined
+          }
+        >
           Restore shape
         </button>
         {remembered && grabbable && (
-          <button type="button" onClick={undoCarve}>
+          <button
+            type="button"
+            onClick={undoCarve}
+            aria-disabled={undoOffer?.refusal ? true : undefined}
+            title={
+              undoOffer?.refusal && selectedRoom
+                ? heldBack(selectedRoom.name, 'go back', undoOffer.refusal)
+                : undefined
+            }
+          >
             Undo carve
           </button>
         )}

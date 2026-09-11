@@ -17,6 +17,7 @@ import {
 import { createIdGenerator, createStore, type Project } from '../../model'
 import {
   angleTo,
+  carveRefusal,
   carveWith,
   droppedAt,
   landOver,
@@ -612,6 +613,14 @@ describe('restoring a room to the rectangle its kind opens at', () => {
     const sheet = sheetOf([neighbour('Kitchen', box(5, 0, 4, 4))], [])
     const landing = landOver(restoredTo(box(0, 0, 4, 4), { width: 7, depth: 4 }), sheet)
     expect(landing.over.map((other) => other.id)).toEqual(['Kitchen'])
+    expect(carveRefusal(landing, sheet)).toBeNull()
+  })
+
+  it('says why beforehand where the rectangle would carve a neighbour it may not carve', () => {
+    const small: RoomSizes = { proportion: 1, minArea: 15 }
+    const sheet = sheetOf([neighbour('Guest WC', box(5, 0, 4, 4), false, small)], [])
+    const landing = landOver(restoredTo(box(0, 0, 4, 4), { width: 7, depth: 4 }), sheet)
+    expect(carveRefusal(landing, sheet)).toBe('Guest WC would be left under its smallest 15 m²')
   })
 })
 
@@ -635,6 +644,15 @@ describe('putting back the outline a room had before its last carve', () => {
     const landing = landOver(before, sheet)
     expect(landing.over).toEqual([])
     expect(area(outlineOf(landing.footprint))).toBeCloseTo(16, 9)
+    expect(carveRefusal(landing, sheet)).toBeNull()
+  })
+
+  it('says why beforehand where going back would carve the room standing in the bite', () => {
+    const small: RoomSizes = { proportion: 1, minArea: 3.5 }
+    const sheet = sheetOf([neighbour('Guest WC', cutter, false, small)], [])
+    expect(carveRefusal(landOver(before, sheet), sheet)).toBe(
+      'Guest WC would be left under its smallest 3.5 m²',
+    )
   })
 })
 

@@ -33,6 +33,12 @@
   cursor: default;
 }
 
+/* A button that would be refused reads as refused, but still answers with the reason when pressed. */
+.zoning-bar button[aria-disabled='true'] {
+  color: #9a958c;
+  border-style: dashed;
+}
+
 .zoning-bar button[aria-pressed='true'] {
   background: #1f1d1a;
   border-color: #1f1d1a;
