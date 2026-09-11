@@ -11,3 +11,6 @@ playwright/.cache/
 .idea/
 *.swp
 .DS_Store
+
+sheet/index.html
+sheet/board.json

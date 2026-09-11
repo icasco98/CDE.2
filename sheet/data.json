@@ -1,0 +1,65 @@
+{
+  "revision": 5,
+  "date": "11 Sep 2026",
+  "session": "Session 3",
+  "repo": "https://github.com/icasco98/CDE.2",
+  "headline": "A6 zoning is built and under review; sent back for two fixes before it comes to you.",
+  "decide": [],
+  "yours": [
+    {
+      "id": "o3",
+      "text": "O3 \u00b7 The known house: plot, north, program, the built plan."
+    },
+    {
+      "id": "o5",
+      "text": "O5 \u00b7 A fresh brief for the usability run."
+    },
+    {
+      "id": "o1",
+      "text": "O1 \u00b7 The firm's edition of MEW R-6."
+    },
+    {
+      "id": "o7",
+      "text": "O7 \u00b7 Correct the forces in rulebook/forces.md."
+    },
+    {
+      "id": "o8",
+      "text": "Correct rulebook/default-connections.md when projects show."
+    }
+  ],
+  "agents": [
+    {
+      "task": "A6",
+      "name": "Zoning",
+      "model": "Opus",
+      "stage": 2
+    },
+    {
+      "task": "A11",
+      "name": "Default connections",
+      "model": "Opus",
+      "stage": 4,
+      "pr": 16
+    },
+    {
+      "task": "A10",
+      "name": "Weights as families",
+      "model": "Sonnet",
+      "stage": 4,
+      "pr": 15
+    }
+  ],
+  "stages": ["Briefed", "Building", "Review", "Your merge", "Merged"],
+  "done": [
+    "Requirements and bubbles run over one store with autosave (#9, #10, #11).",
+    "Force list drafted under the three families, provisional (#12).",
+    "Weights are the three families; old project files migrate (#14, #15).",
+    "Default connections table, 28 rows, proposed in the bubbles (#16).",
+    "A6 zoning built: place, move, rotate, resize, carve, doors, tensions, proposals. In review."
+  ],
+  "next": [
+    "Review A6 in the running app.",
+    "A7 massing, A8 export, A9 usability run.",
+    "Milestone 2 waits on O4 walls and the forces revisit."
+  ]
+}

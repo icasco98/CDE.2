@@ -98,7 +98,8 @@ for Revit when the owner's own workflow needs it.
 ## How a task runs
 
 1. The cofounder writes the brief: goal, files, definition of done,
-   which standards apply and how they are checked.
+   which standards apply and how they are checked. Briefs are kept in
+   `briefs/`, one file per task.
 2. The owner approves the start.
 3. An agent works on a branch from the brief and this repository only.
 4. The cofounder reviews the diff, runs the checks, tests the action
