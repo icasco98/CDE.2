@@ -178,7 +178,7 @@ td.id{width:40px}td.deps{white-space:nowrap;color:var(--ink-2);font:400 12px "IB
 <div class="sheet">
   <div class="titleblock"><div><span class="eyebrow">Progress sheet</span><h1>Conceptual Design Engine, CDE.2</h1></div><div class="rev" id="rev"></div></div>
   <p class="headline" id="headline"></p>
-  <div class="block"><h2>Decide <small id="decide-hint">tap once; the cofounder picks it up within the hour</small></h2><ul class="decide" id="decide"></ul></div>
+  <div class="block"><h2>Decide <small id="decide-hint">tap once; the cofounder acts on it when next asked</small></h2><ul class="decide" id="decide"></ul></div>
   <div class="block"><h2>Agents at work</h2><ul class="lanes" id="agents"></ul></div>
   <div class="two">
     <div class="block"><h2>Done this session</h2><ol class="list" id="done"></ol></div>
@@ -188,7 +188,7 @@ td.id{width:40px}td.deps{white-space:nowrap;color:var(--ink-2);font:400 12px "IB
     <div class="block"><h2>Yours to do</h2><ul class="yours" id="yours"></ul></div>
     <div class="block"><h2>Milestones</h2><ul class="bars" id="bars"></ul></div>
   </div>
-  <div class="block note"><h2>Note for the cofounder <small>read at the next check-in</small></h2><textarea id="note-text" placeholder="Send A6 back: the rotation handle is too small."></textarea><div class="actions"><button type="button" id="note-send">Send</button><span class="offline" id="note-state"></span></div><ul class="sent" id="notes"></ul></div>
+  <div class="block note"><h2>Note for the cofounder <small>read when the cofounder is next asked</small></h2><textarea id="note-text" placeholder="Send A6 back: the rotation handle is too small."></textarea><div class="actions"><button type="button" id="note-send">Send</button><span class="offline" id="note-state"></span></div><ul class="sent" id="notes"></ul></div>
   <details><summary>Full task register</summary><div class="register">${register}</div></details>
   <div class="foot">Register read from <a href="${data.repo}/blob/main/PLAN.md">PLAN.md</a> on main when the sheet was built. Everything above it updates live.</div>
 </div>
@@ -218,7 +218,7 @@ function render() {
   $('notes').innerHTML = notes.map((n) => '<li><span class="when">' + when(n.at) + '</span>' + esc(n.text) + (n.read ? ' <span class="state">· read</span>' : '') + '</li>').join('')
   const live = !!db
   document.querySelectorAll('#decide button, #note-send').forEach((b) => { b.disabled = !live })
-  $('decide-hint').textContent = live ? 'tap once; the cofounder picks it up within the hour' : 'buttons work inside claude.ai'
+  $('decide-hint').textContent = live ? 'tap once; the cofounder acts on it when next asked' : 'buttons work inside claude.ai'
   $('note-state').textContent = live ? '' : 'Notes need claude.ai.'
 }
 render()
