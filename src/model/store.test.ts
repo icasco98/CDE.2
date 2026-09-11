@@ -100,6 +100,27 @@ describe('connect', () => {
     ])
   })
 
+  it('changes an edge kind in place, keeping the same edge', () => {
+    const a = addRoom('bedroom')
+    const b = addRoom('bathroom')
+    const edge = id(store.actions.connect({ a, b, kind: 'door' }))
+    expect(store.actions.setEdgeKind(edge, 'open').ok).toBe(true)
+    expect(store.getState().edges).toEqual([{ id: edge, a, b, kind: 'open', storey: 0 }])
+    store.undo()
+    expect(store.getState().edges[0]?.kind).toBe('door')
+  })
+
+  it('refuses a kind for an edge that is not there, and refuses the main door either way', () => {
+    const hall = addRoom('hall')
+    const diwaniya = addRoom('diwaniya')
+    expect(codes(store.actions.setEdgeKind('ghost', 'open'))).toEqual(['no-such-edge'])
+    const main = id(store.actions.connect({ a: EXTERIOR, b: hall, kind: 'main-door' }))
+    const inside = id(store.actions.connect({ a: hall, b: diwaniya, kind: 'door' }))
+    expect(codes(store.actions.setEdgeKind(main, 'door'))).toEqual(['main-door-kind'])
+    expect(codes(store.actions.setEdgeKind(inside, 'main-door'))).toEqual(['main-door-kind'])
+    expect(store.getState().edges.map((edge) => edge.kind)).toEqual(['main-door', 'door'])
+  })
+
   it('disconnects an edge and refuses one that is not there', () => {
     const a = addRoom('bedroom')
     const b = addRoom('bathroom')

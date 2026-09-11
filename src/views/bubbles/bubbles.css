@@ -10,6 +10,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .bubbles-bar button {
@@ -27,7 +28,26 @@
   cursor: default;
 }
 
-.bubbles-status {
+.bubbles-bar button[aria-pressed='true'] {
+  background: #1f1d1a;
+  border-color: #1f1d1a;
+  color: #faf8f4;
+}
+
+.bubbles-storeys,
+.bubbles-kind {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.bubbles-kind {
+  gap: 0.5rem;
+  color: #6d6862;
+}
+
+.bubbles-status,
+.bubbles-hint {
   margin: 0;
   color: #6d6862;
 }
@@ -38,94 +58,195 @@
 }
 
 .bubbles-sheet {
-  flex: 1;
-  min-height: 0;
+  /* The metres one CSS pixel covers, set by the view on every camera change; every mark that must
+     hold its size on the screen is sized from it. */
+  --per-px: 0.03;
+  /* A definite height, so the sheet letterboxes inside it rather than growing to the shape of its
+     own drawing and running off the bottom of the screen. */
+  height: 65vh;
+  min-height: 320px;
+  flex: none;
   width: 100%;
   background: #faf8f4;
   border: 1px solid #e2ddd3;
   border-radius: 4px;
   touch-action: none;
+  user-select: none;
 }
 
 .bubbles-sheet:focus-visible {
   outline: 2px solid #6d6862;
 }
 
-.band-even {
+/* In link mode the whole sheet is a target, and the cursor says so before anything is clicked. */
+.bubbles-linking {
+  cursor: crosshair;
+}
+
+/*
+ * Every mark on the sheet is scoped to it: the zoning sheet has marks of the same names, and one
+ * stylesheet must not paint the other's.
+ *
+ * Every stroke and dash below is in pixels on the screen, not metres on the sheet: zooming in
+ * draws a bigger bubble, not a heavier line, and zooming out never leaves a ring covering the sheet.
+ */
+.bubbles-sheet * {
+  vector-effect: non-scaling-stroke;
+}
+
+.bubbles-sheet .band-even {
   fill: #f3efe6;
 }
 
-.band-odd {
+.bubbles-sheet .band-odd {
   fill: #ece7db;
 }
 
-.band-label {
+/* The line between two bands is the storey boundary; the name below it is that band's storey. */
+.bubbles-sheet .band-line {
+  stroke: #b7b1a5;
+  stroke-width: 1px;
+}
+
+.bubbles-sheet .band-label {
   fill: #8b857b;
+  font-size: calc(var(--per-px) * 12px);
+  letter-spacing: 0.04em;
   pointer-events: none;
 }
 
-.link {
+/* The categories of the room-type table, and the neutral fill for a room outside it. */
+.bubbles-sheet .category-reception {
+  fill: #d7a6a1;
+}
+
+.bubbles-sheet .category-shared {
+  fill: #e2c48f;
+}
+
+.bubbles-sheet .category-private {
+  fill: #a9c2d2;
+}
+
+.bubbles-sheet .category-service {
+  fill: #c4bfb2;
+}
+
+.bubbles-sheet .category-open {
+  fill: #b9cbb0;
+}
+
+.bubbles-sheet .category-none {
+  fill: #d6d9d3;
+}
+
+.bubbles-sheet .link {
   stroke: #8f887d;
-  stroke-width: 0.18;
+  stroke-width: 2px;
   pointer-events: none;
 }
 
-.link-selected {
+.bubbles-sheet .link-selected {
   stroke: #2f6f8f;
-  stroke-width: 0.4;
+  stroke-width: 4px;
 }
 
-.link-drawn {
+/* One space flowing into the next: the door's own line inside a broad opening. */
+.bubbles-sheet .link-flow {
+  stroke: #8f887d;
+  stroke-width: 9px;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.bubbles-sheet .link-drawn {
   stroke: #2f6f8f;
-  stroke-width: 0.25;
-  stroke-dasharray: 0.6 0.5;
+  stroke-width: 2.5px;
+  stroke-dasharray: 7 5;
 }
 
 /* A line is too thin to aim at, so a wide invisible twin takes the click. */
-.link-grip {
+.bubbles-sheet .link-grip {
   stroke: transparent;
-  stroke-width: 1.2;
+  stroke-width: 14px;
   cursor: pointer;
 }
 
-.bubble circle {
+.bubbles-sheet .bubble-shape {
   stroke: #6f6a62;
-  stroke-width: 0.08;
+  stroke-width: 1px;
   cursor: grab;
 }
 
-.bubble-selected circle {
+.bubbles-sheet .bubble-selected .bubble-shape {
   stroke: #2f6f8f;
-  stroke-width: 0.3;
+  stroke-width: 3px;
 }
 
-.bubble text {
+/*
+ * The bubble's own label size in metres, held to a band of screen pixels: a name never balloons
+ * when the sheet is drawn close, and never disappears when the whole diagram is in view.
+ */
+.bubbles-sheet .bubble {
+  font-size: clamp(
+    calc(var(--per-px) * 8px),
+    calc(var(--label-m) * 1px),
+    calc(var(--per-px) * 14px)
+  );
+}
+
+.bubbles-sheet .bubble text {
   text-anchor: middle;
   dominant-baseline: middle;
   fill: #2b2822;
   paint-order: stroke;
   stroke: #faf8f4;
-  stroke-width: 0.35;
+  stroke-width: 3px;
   stroke-linejoin: round;
   pointer-events: none;
 }
 
-.bubble-area {
+.bubbles-sheet .bubble-area {
   fill: #6d6862;
+  font-size: 0.82em;
 }
 
-.pin-mark {
-  fill: #8a3f2a;
-  stroke: #fffdf9;
-  stroke-width: 0.1;
+/* A storey the filter is not showing is still drawn, greyed, and takes no pointer. */
+.bubbles-sheet .bubble-dimmed,
+.bubbles-sheet .link-dimmed {
+  opacity: 0.35;
   pointer-events: none;
 }
 
-.reach {
+.bubbles-sheet .bubble-dimmed .bubble-shape {
+  fill: #dedbd4;
+  stroke: #b7b1a5;
+}
+
+.bubbles-sheet .bubble-dimmed text {
+  fill: #8b857b;
+}
+
+.bubbles-sheet .pin-mark {
+  fill: #8a3f2a;
+  stroke: #fffdf9;
+  stroke-width: 1px;
+  pointer-events: none;
+}
+
+/* The handle a link is dragged from: faint until the hand or the selection is on its bubble. */
+.bubbles-sheet .reach {
   fill: #fffdf9;
   stroke: #2f6f8f;
-  stroke-width: 0.12;
+  stroke-width: 1.5px;
+  opacity: 0.3;
   cursor: crosshair;
+}
+
+.bubbles-sheet .bubble:hover .reach,
+.bubbles-sheet .bubble-selected .reach {
+  opacity: 1;
+  stroke-width: 2.5px;
 }
 
 /*
@@ -133,47 +254,70 @@
  * taken. It draws over the bubbles so the mark is always there to click, and takes the pointer only
  * on the thread and the mark, so a bubble underneath is still grabbed everywhere else.
  */
-.proposal {
+.bubbles-sheet .proposal {
   cursor: pointer;
   pointer-events: none;
 }
 
 /* The dotted line is too thin to aim at, so a narrow invisible twin takes the hover and the click. */
-.proposal-grip {
+.bubbles-sheet .proposal-grip {
   stroke: transparent;
-  stroke-width: 0.4;
+  stroke-width: 6px;
   pointer-events: stroke;
 }
 
-.proposal-line {
+.bubbles-sheet .proposal-line {
   stroke: #8f887d;
-  stroke-width: 0.12;
-  stroke-dasharray: 0.35 0.45;
+  stroke-width: 1.5px;
+  stroke-dasharray: 4 5;
   opacity: 0.7;
   pointer-events: none;
 }
 
-.proposal-mark {
+.bubbles-sheet .proposal-mark {
   fill: #fffdf9;
   stroke: #8f887d;
-  stroke-width: 0.1;
+  stroke-width: 1.5px;
   pointer-events: auto;
 }
 
-.proposal-plus {
+.bubbles-sheet .proposal-plus {
   text-anchor: middle;
   dominant-baseline: central;
   fill: #6d6862;
   pointer-events: none;
 }
 
-.proposal:hover .proposal-line {
+.bubbles-sheet .proposal:hover .proposal-line {
   opacity: 1;
   stroke: #2f6f8f;
 }
 
-.proposal:hover .proposal-mark {
+.bubbles-sheet .proposal:hover .proposal-mark {
   stroke: #2f6f8f;
+}
+
+/* The legend reads the sheet, so it never takes a pointer meant for what is under it. */
+.bubbles-sheet .legend {
+  pointer-events: none;
+}
+
+.bubbles-sheet .legend-panel {
+  fill: #fffdf9;
+  fill-opacity: 0.92;
+  stroke: #e2ddd3;
+  stroke-width: 1px;
+}
+
+.bubbles-sheet .legend-swatch {
+  stroke: #6f6a62;
+  stroke-width: 1px;
+}
+
+.bubbles-sheet .legend-label {
+  dominant-baseline: middle;
+  fill: #4a453d;
+  font-size: 11px;
 }
 
 .proposals {

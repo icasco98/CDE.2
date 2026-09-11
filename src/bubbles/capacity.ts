@@ -14,8 +14,11 @@ export type StoreyCapacity = {
   readonly over: boolean
 }
 
+/** The storeys are named on screen as the program table names them, so one house has one set of names. */
+const named = ['Ground', 'First', 'Second']
+
 export function storeyLabel(storey: number): string {
-  return storey === 0 ? 'Ground' : `Level ${storey}`
+  return named[storey] ?? `Storey ${storey}`
 }
 
 function round(value: number): number {

@@ -166,6 +166,22 @@ export function createActions(context: Context) {
       return result.ok ? ok(edge.id) : result
     },
 
+    /** An edge keeps its identity when its kind changes; the main door is made by connect alone. */
+    setEdgeKind(edgeId: string, kind: EdgeKind): Result {
+      const project = state()
+      const edge = project.edges.find((each) => each.id === edgeId)
+      if (!edge) return missing('edge', edgeId)
+      if (edge.kind === 'main-door' || kind === 'main-door')
+        return refused({
+          code: 'main-door-kind',
+          message: 'the main door is made by connecting the outside, not by changing a kind',
+        })
+      return settle({
+        ...project,
+        edges: project.edges.map((each) => (each.id === edgeId ? { ...each, kind } : each)),
+      })
+    },
+
     disconnect(edgeId: string): Result {
       const project = state()
       if (!project.edges.some((edge) => edge.id === edgeId)) return missing('edge', edgeId)
