@@ -14,6 +14,8 @@ import {
   layoutFor,
   storeyCapacity,
   storeyLabel,
+  twinsOf,
+  twinY,
   type Body,
   type Position,
 } from '../../bubbles'
@@ -29,7 +31,7 @@ import {
   ZOOM_STEP,
   type Camera,
 } from '../camera'
-import { bandDrop, insideBands } from './bands'
+import { bandDrop, insideBand, STAIR_STAYS } from './bands'
 import { asPoint, bodyAt, extentOf, holds, pointerAt } from './frame'
 import { Bands, Bubble, Legend, LEGEND_PX, Link, Proposed } from './parts'
 import type { Landing } from './run'
@@ -46,7 +48,13 @@ type Pinch = { readonly grabbed: Point; readonly span: number; readonly scale: n
 
 type Gesture =
   | { readonly kind: 'move'; readonly id: string; readonly grabbed: Position }
-  | { readonly kind: 'link'; readonly from: string; readonly at: Position }
+  /** A link being drawn: the room it comes from, the storey of the twin it was taken from, and the pointer. */
+  | {
+      readonly kind: 'link'
+      readonly from: string
+      readonly fromStorey: number
+      readonly at: Position
+    }
   /** The sheet slid under the hand: the metre grabbed and where on the screen the hand started. */
   | { readonly kind: 'pan'; readonly grabbed: Point; readonly from: Point }
   | (Pinch & { readonly kind: 'pinch' })
@@ -94,8 +102,17 @@ export function BubblesView(props: BubblesViewProps) {
   const bodies = state.bodies
   const named = useMemo(() => new Map(rooms.map((room) => [room.id, room])), [rooms])
   const placed = useMemo(() => new Map(bodies.map((body) => [body.id, body])), [bodies])
-  /** Drawn widest first, so a small room is never buried under a large one before the cloud is settled. */
-  const drawn = useMemo(() => [...bodies].sort((a, b) => b.radius - a.radius), [bodies])
+  /**
+   * Every twin there is to draw, widest first, so a small room is never buried under a large one
+   * before the cloud is settled.
+   */
+  const drawn = useMemo(
+    () =>
+      bodies
+        .flatMap((body) => twinsOf(body).map((storey) => ({ body, storey })))
+        .sort((a, b) => b.body.radius - a.body.radius),
+    [bodies],
+  )
   const aspect = box.height > 0 ? box.width / box.height : 0
   const wanted = extentOf(bodies, state.storeys, state.bandHeight, aspect)
   /** Held still while the forces run, so a drop lands on the metre it was aimed at. */
@@ -108,13 +125,11 @@ export function BubblesView(props: BubblesViewProps) {
   const selectedRoom = named.get(selected ?? '')
   const selectedEdge = edges.find((edge) => edge.id === selected)
 
-  /** A stair stands on several storeys, and stays lit while the filter shows any one of them. */
-  const dimmedRoom = (id: string): boolean => {
-    const room = named.get(id)
-    if (only === null || !room) return false
-    const span = Math.max(1, Math.trunc(room.storeysSpanned))
-    return only < room.storey || only >= room.storey + span
-  }
+  /** A twin belongs to one storey, so a stair's ground twin dims like any other ground room. */
+  const dimmedTwin = (storey: number): boolean => only !== null && only !== storey
+
+  /** A room is out of the pointer's reach only when every twin of it is dimmed. */
+  const dimmedRoom = (body: Body): boolean => twinsOf(body).every((storey) => dimmedTwin(storey))
 
   const at = useCallback((event: { clientX: number; clientY: number }): Position => {
     const svg = svgRef.current
@@ -156,10 +171,10 @@ export function BubblesView(props: BubblesViewProps) {
     })
   }
 
-  function reach(event: ReactPointerEvent, body: Body): void {
+  function reach(event: ReactPointerEvent, body: Body, storey: number): void {
     event.stopPropagation()
     focus()
-    begin({ kind: 'link', from: body.id, at: at(event) })
+    begin({ kind: 'link', from: body.id, fromStorey: storey, at: at(event) })
   }
 
   /** Two fingers zoom about the metre their middle began on and carry it along with them. */
@@ -209,13 +224,17 @@ export function BubblesView(props: BubblesViewProps) {
     const room = named.get(id)
     if (!room) return null
     const drop = bandDrop(rest, room, state.storeys, state.bandHeight)
-    if (drop.refused === 'stair')
-      onRefuse(`${room.name} spans storeys, so it is not moved between them by hand.`)
+    if (drop.refused === 'stair') {
+      onRefuse(STAIR_STAYS)
+      // Every twin came with the hand, so the whole room goes back into the band it belongs to.
+      onDropBubble(id, { x: rest.x, y: drop.y })
+      return null
+    }
     const settled = { x: rest.x, y: drop.y }
     if (drop.storey === room.storey) return (at: Position) => void onDropBubble(id, at)
     if (!onDropBubble(id, settled, drop.storey))
       // The model would not have the storey, so the bubble goes back inside the band it belongs to.
-      onDropBubble(id, { x: rest.x, y: insideBands(rest, room, state.storeys, state.bandHeight) })
+      onDropBubble(id, { x: rest.x, y: insideBand(rest, room, state.storeys, state.bandHeight) })
     return null
   }
 
@@ -242,8 +261,8 @@ export function BubblesView(props: BubblesViewProps) {
       )
       return
     }
-    const target = bodyAt(bodies, pointer, gesture.from)
-    if (target && !dimmedRoom(target.id)) onConnect(gesture.from, target.id)
+    const target = bodyAt(bodies, pointer, state.bandHeight, gesture.from)
+    if (target && !dimmedRoom(target)) onConnect(gesture.from, target.id)
   }
 
   /** The sheet takes the wheel whole, so the page never scrolls under it; a trackpad pinch arrives here with `ctrlKey` and zooms the same way. */
@@ -280,7 +299,8 @@ export function BubblesView(props: BubblesViewProps) {
   const handlers = useMemo(
     () => ({
       onGrab: (event: ReactPointerEvent, body: Body) => live.current.grab(event, body),
-      onReach: (event: ReactPointerEvent, body: Body) => live.current.reach(event, body),
+      onReach: (event: ReactPointerEvent, body: Body, storey: number) =>
+        live.current.reach(event, body, storey),
     }),
     [],
   )
@@ -528,6 +548,8 @@ export function BubblesView(props: BubblesViewProps) {
                 id={edge.id}
                 a={a}
                 b={b}
+                storey={edge.storey}
+                bandHeight={state.bandHeight}
                 kind={edge.kind}
                 selected={edge.id === selected}
                 dimmed={only !== null && edge.storey !== only}
@@ -541,22 +563,24 @@ export function BubblesView(props: BubblesViewProps) {
               return from ? (
                 <line
                   x1={from.x}
-                  y1={from.y}
+                  y1={twinY(from, gesture.fromStorey, state.bandHeight)}
                   x2={gesture.at.x}
                   y2={gesture.at.y}
                   className="link link-drawn"
                 />
               ) : null
             })()}
-          {drawn.map((body) => {
+          {drawn.map(({ body, storey }) => {
             const room = named.get(body.id)
             return room ? (
               <Bubble
-                key={body.id}
+                key={`${body.id}:${storey}`}
                 body={body}
                 room={room}
+                twin={storey}
+                bandHeight={state.bandHeight}
                 selected={body.id === selected || linking?.from === body.id}
-                dimmed={dimmedRoom(body.id)}
+                dimmed={dimmedTwin(storey)}
                 handlers={handlers}
               />
             ) : null
@@ -569,6 +593,8 @@ export function BubblesView(props: BubblesViewProps) {
                 key={`${proposal.rowId}:${proposal.a}:${proposal.b}`}
                 a={a}
                 b={b}
+                storey={proposal.storey}
+                bandHeight={state.bandHeight}
                 proposal={proposal}
                 source={proposal.source}
                 onAccept={takeProposal}

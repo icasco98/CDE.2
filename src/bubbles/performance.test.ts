@@ -1,11 +1,16 @@
 import { expect, it } from 'vitest'
 import { createState, defaultLayout, layoutFor, step, type SimulationEdge } from './simulation'
 
-/** Thirty rooms over two storeys and thirty links, the size a villa's program runs to. */
+/**
+ * Thirty rooms over three storeys and thirty links, the size a villa's program runs to, with three
+ * of them stairs through every storey: nine twins where a plain program has three.
+ */
+const spanning = new Set([4, 13, 22])
+
 const rooms = Array.from({ length: 30 }, (_unused, index) => ({
   id: `room-${index}`,
-  storey: index % 3 === 0 ? 1 : 0,
-  storeysSpanned: 1,
+  storey: spanning.has(index) ? 0 : index % 3,
+  storeysSpanned: spanning.has(index) ? 3 : 1,
   targetArea: 8 + (index % 7) * 6,
   pinned: index % 11 === 0,
   tier: ['public', 'semi-public', 'private', 'exempt'][index % 4],
@@ -15,6 +20,7 @@ const rooms = Array.from({ length: 30 }, (_unused, index) => ({
 const edges: SimulationEdge[] = Array.from({ length: 30 }, (_unused, index) => ({
   a: `room-${index}`,
   b: `room-${(index + 3) % 30}`,
+  storey: index % 3,
 })).filter((edge) => edge.a !== edge.b)
 
 /** The best of five runs after a warm-up, so neither compilation nor a stray collection is charged. */
@@ -35,7 +41,7 @@ function milliseconds(work: () => void): number {
  */
 it('takes one frame of thirty bubbles and thirty links in under a millisecond', () => {
   const layout = layoutFor(1)
-  let state = createState(rooms, edges, 2)
+  let state = createState(rooms, edges, 3)
   const took = milliseconds(() => {
     for (let frame = 0; frame < 20; frame++) state = step(state, layout)
   })
@@ -44,7 +50,7 @@ it('takes one frame of thirty bubbles and thirty links in under a millisecond', 
 })
 
 it('takes a frame of the same program under the plain layout in under a millisecond', () => {
-  let state = createState(rooms, edges, 2)
+  let state = createState(rooms, edges, 3)
   const took = milliseconds(() => {
     for (let frame = 0; frame < 20; frame++) state = step(state, defaultLayout)
   })

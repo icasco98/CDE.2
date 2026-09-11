@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { createIdGenerator, createStore, deserialize, serialize } from '../model'
 import {
   bandOf,
   createState,
@@ -10,6 +11,8 @@ import {
   spreadLayout,
   step,
   STILL_FRAMES,
+  twinsOf,
+  twinY,
   type SimulationEdge,
   type SimulationRoom,
   type SimulationState,
@@ -32,7 +35,7 @@ function program(count: number, storeys: number, links: number) {
       const key = i < j ? `${i}:${j}` : `${j}:${i}`
       if (seen.has(key)) continue
       seen.add(key)
-      edges.push({ a: `room_${i}`, b: `room_${j}` })
+      edges.push({ a: `room_${i}`, b: `room_${j}`, storey: rooms[i]?.storey ?? 0 })
     }
   return { rooms, edges }
 }
@@ -72,7 +75,7 @@ describe('settling', () => {
       room('a', 30, 0, { pinned: true, bubble: { x: 3, y: 4 } }),
       room('b', 30, 0, { bubble: { x: 3.5, y: 4.5 } }),
     ]
-    const out = settle(createState(rooms, [{ a: 'a', b: 'b' }], 1), defaultLayout)
+    const out = settle(createState(rooms, [{ a: 'a', b: 'b', storey: 0 }], 1), defaultLayout)
     expect(out.state.bodies[0]).toMatchObject({ id: 'a', x: 3, y: 4, vx: 0, vy: 0 })
   })
 
@@ -81,7 +84,7 @@ describe('settling', () => {
       room('a', 20, 0, { bubble: { x: -40, y: 0 } }),
       room('b', 20, 0, { bubble: { x: 40, y: 0 } }),
     ]
-    const start = createState(rooms, [{ a: 'a', b: 'b' }], 1)
+    const start = createState(rooms, [{ a: 'a', b: 'b', storey: 0 }], 1)
     const before = Math.abs(start.bodies[1]!.x - start.bodies[0]!.x)
     const out = settle(start, defaultLayout)
     const after = Math.abs(out.state.bodies[1]!.x - out.state.bodies[0]!.x)
@@ -111,10 +114,16 @@ describe('settling', () => {
     }
   })
 
-  it('draws a stair to the boundary its two bands share', () => {
+  it('brings a stair to rest with a twin in the middle of every band it spans', () => {
     const rooms = [room('stair', 12, 0, { storeysSpanned: 2 })]
     const out = settle(createState(rooms, [], 2), defaultLayout)
-    expect(out.state.bodies[0]!.y).toBeCloseTo(out.state.bandHeight, 0)
+    const stair = out.state.bodies[0]!
+    const height = out.state.bandHeight
+    for (const storey of twinsOf(stair))
+      expect(twinY(stair, storey, height)).toBeCloseTo(
+        bandOf(storey, out.state.storeys, height).centre,
+        1,
+      )
   })
 
   it('stops when the picture stops moving', () => {
@@ -140,7 +149,7 @@ describe('settling', () => {
 
   it('ignores an edge whose ends are not both rooms', () => {
     const rooms = [room('a', 20)]
-    expect(createState(rooms, [{ a: 'a', b: 'EXTERIOR' }], 1).links).toEqual([])
+    expect(createState(rooms, [{ a: 'a', b: 'EXTERIOR', storey: 0 }], 1).links).toEqual([])
   })
 
   it('settles thirty rooms and forty links well inside the budget', () => {
@@ -299,5 +308,127 @@ describe('spread', () => {
       opened = step(opened, spreadLayout(defaultLayout))
     expect(reach(opened)).toBeGreaterThan(reach(settled) * 1.5)
     expect(settle(opened, defaultLayout).settled).toBe(true)
+  })
+})
+
+describe('a room on every storey it serves', () => {
+  const HEIGHT = 12
+
+  it('draws every storey it spans, and only those', () => {
+    expect(twinsOf({ storey: 0, storeysSpanned: 3 })).toEqual([0, 1, 2])
+    expect(twinsOf({ storey: 1, storeysSpanned: 2 })).toEqual([1, 2])
+    expect(twinsOf({ storey: 2, storeysSpanned: 1 })).toEqual([2])
+  })
+
+  it('puts every twin at the same x and the same height inside its own band', () => {
+    const stair = { storey: 0, storeysSpanned: 3, y: 30 }
+    const bands = [0, 1, 2].map((storey) => bandOf(storey, 3, HEIGHT))
+    const inside = (storey: number): number =>
+      twinY(stair, storey, HEIGHT) - (bands[storey]?.top ?? 0)
+    expect(twinY(stair, 0, HEIGHT)).toBe(30)
+    expect(inside(1)).toBeCloseTo(inside(0), 9)
+    expect(inside(2)).toBeCloseTo(inside(0), 9)
+  })
+
+  it('lends its nearest twin to a storey it does not reach', () => {
+    const stair = { storey: 1, storeysSpanned: 2, y: 18 }
+    expect(twinY(stair, 0, HEIGHT)).toBe(18)
+    expect(twinY(stair, 9, HEIGHT)).toBe(twinY(stair, 2, HEIGHT))
+  })
+
+  it('pulls a stair towards a room it is linked to upstairs, and not towards the floor below', () => {
+    const rooms = [
+      room('stair', 12, 0, { storeysSpanned: 2, bubble: { x: 0, y: 18 } }),
+      room('bedroom', 24, 1, { bubble: { x: 20, y: 6 } }),
+    ]
+    const out = settle(
+      createState(rooms, [{ a: 'stair', b: 'bedroom', storey: 1 }], 2),
+      defaultLayout,
+    )
+    const [stair, bedroom] = out.state.bodies
+    const height = out.state.bandHeight
+    // The link is on the first storey, so it is the upper twin the spring holds beside the bedroom.
+    const upstairs = Math.hypot(stair!.x - bedroom!.x, twinY(stair!, 1, height) - bedroom!.y)
+    expect(Math.abs(stair!.x - bedroom!.x)).toBeLessThan(20)
+    expect(upstairs).toBeCloseTo(stair!.radius + bedroom!.radius + defaultLayout.restGap, 1)
+    // And the room itself has not left the ground: only the picture of it upstairs went to meet it.
+    const ground = bandOf(0, 2, height)
+    expect(stair!.y).toBeGreaterThan(ground.top)
+    expect(stair!.y).toBeLessThan(ground.bottom)
+  })
+
+  it('has no band pull left on a stair whose twins are each in the middle of their band', () => {
+    const height = 12
+    const rooms = [room('stair', 12, 0, { storeysSpanned: 2, bubble: { x: 0, y: 0 } })]
+    const state = createState(rooms, [], 2)
+    const centred = {
+      ...state,
+      bandHeight: height,
+      bodies: [{ ...state.bodies[0]!, x: 0, y: bandOf(0, 2, height).centre }],
+    }
+    const after = step(centred, defaultLayout)
+    expect(after.bodies[0]!.y).toBeCloseTo(bandOf(0, 2, height).centre, 9)
+    expect(after.bodies[0]!.vy).toBeCloseTo(0, 9)
+  })
+
+  it('settles a program with three stairs to the same picture twice', () => {
+    const rooms = [
+      room('stair_a', 12, 0, { storeysSpanned: 3 }),
+      room('stair_b', 9, 1, { storeysSpanned: 2 }),
+      room('lift', 5, 0, { storeysSpanned: 3 }),
+      room('hall', 18, 0),
+      room('landing', 14, 2),
+    ]
+    const edges: SimulationEdge[] = [
+      { a: 'stair_a', b: 'hall', storey: 0 },
+      { a: 'stair_a', b: 'landing', storey: 2 },
+      { a: 'stair_b', b: 'landing', storey: 2 },
+    ]
+    const first = settle(createState(rooms, edges, 3), defaultLayout).state
+    const second = settle(createState(rooms, edges, 3), defaultLayout).state
+    for (const [index, body] of first.bodies.entries()) {
+      expect(second.bodies[index]!.x).toBeCloseTo(body.x, 9)
+      expect(second.bodies[index]!.y).toBeCloseTo(body.y, 9)
+    }
+  })
+
+  it('keeps a stair’s twins clear of the rooms in their own bands', () => {
+    const rooms = [
+      room('stair', 12, 0, { storeysSpanned: 2, bubble: { x: 0, y: 18 } }),
+      room('kitchen', 20, 0, { bubble: { x: 0.5, y: 18 } }),
+      room('bedroom', 20, 1, { bubble: { x: -0.5, y: 6 } }),
+    ]
+    const out = settle(createState(rooms, [], 2), defaultLayout)
+    const height = out.state.bandHeight
+    const [stair, kitchen, bedroom] = out.state.bodies
+    expect(
+      Math.hypot(stair!.x - kitchen!.x, twinY(stair!, 0, height) - kitchen!.y),
+    ).toBeGreaterThan(stair!.radius + kitchen!.radius)
+    expect(
+      Math.hypot(stair!.x - bedroom!.x, twinY(stair!, 1, height) - bedroom!.y),
+    ).toBeGreaterThan(stair!.radius + bedroom!.radius)
+  })
+})
+
+describe('a stair through a saved project', () => {
+  it('round trips a ground-to-second stair and draws it in three bands', () => {
+    const store = createStore(undefined, { newId: createIdGenerator(4) })
+    store.actions.addStorey()
+    store.actions.addStorey()
+    const added = store.actions.addRoom({
+      type: 'stair',
+      name: 'Stair',
+      targetArea: 15,
+      storey: 0,
+      storeysSpanned: 3,
+    })
+    expect(added.ok).toBe(true)
+    const project = store.getState()
+    const back = deserialize(serialize(project))
+    expect(back.ok && back.value).toEqual(project)
+    // Nothing about a twin is stored, so the span that came back is the whole of what draws them.
+    const rooms = back.ok ? back.value.rooms : []
+    const state = createState(rooms, [], back.ok ? back.value.storeys : 1)
+    expect(twinsOf(state.bodies[0]!)).toEqual([0, 1, 2])
   })
 })

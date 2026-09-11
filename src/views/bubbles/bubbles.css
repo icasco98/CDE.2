@@ -250,6 +250,13 @@
   font-size: 0.82em;
 }
 
+/* The storeys a stair reaches, said on every twin of it, in the quietest voice on the bubble. */
+.bubbles-sheet .bubble-span {
+  fill: #6d6862;
+  font-size: 0.72em;
+  font-style: italic;
+}
+
 /* A storey the filter is not showing is still drawn, greyed, and takes no pointer. */
 .bubbles-sheet .bubble-dimmed,
 .bubbles-sheet .link-dimmed {

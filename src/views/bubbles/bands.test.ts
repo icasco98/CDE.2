@@ -44,9 +44,29 @@ describe('a bubble let go in a band', () => {
     })
   })
 
-  it('refuses to move a stair, and leaves it across the storeys it spans', () => {
-    expect(bandDrop({ x: 3, y: 6 }, stair, STOREYS, HEIGHT)).toEqual({ storey: 0, y: 6 })
-    const three = bandDrop({ x: 3, y: 6 }, { storey: 0, storeysSpanned: 2 }, 3, HEIGHT)
-    expect(three).toEqual({ storey: 0, y: 13.2, refused: 'stair' })
+  it('lets a stair be moved about inside the band its lowest twin stands in', () => {
+    expect(bandDrop({ x: 3, y: 18 }, stair, STOREYS, HEIGHT)).toEqual({ storey: 0, y: 18 })
+  })
+
+  it('refuses a stair let go in a band it does not stand on, and puts it back', () => {
+    // Its upper twin is one band above its stored place, so a drop in First would carry that one
+    // off the top of the sheet: the whole room goes back into the Ground band instead.
+    expect(bandDrop({ x: 3, y: 6 }, stair, STOREYS, HEIGHT)).toEqual({
+      storey: 0,
+      y: 13.2,
+      refused: 'stair',
+    })
+    const below = bandDrop({ x: 3, y: 30 }, stair, STOREYS, HEIGHT)
+    expect(below).toEqual({ storey: 0, y: 22.8, refused: 'stair' })
+  })
+
+  it('reads a stair on the first storey against the first band, not the ground', () => {
+    const upper = { storey: 1, storeysSpanned: 2 }
+    expect(bandDrop({ x: 3, y: 18 }, upper, 3, HEIGHT)).toEqual({ storey: 1, y: 18 })
+    expect(bandDrop({ x: 3, y: 30 }, upper, 3, HEIGHT)).toEqual({
+      storey: 1,
+      y: 22.8,
+      refused: 'stair',
+    })
   })
 })

@@ -12,8 +12,11 @@ export type SimulationRoom = {
   readonly tier?: string
 }
 
-/** An edge reduced to the pair it joins; ids that name no room, EXTERIOR among them, are dropped. */
-export type SimulationEdge = { readonly a: string; readonly b: string }
+/**
+ * An edge reduced to the pair it joins and the storey it is on, which is the storey whose twin it
+ * pulls; ids that name no room, EXTERIOR among them, are dropped.
+ */
+export type SimulationEdge = { readonly a: string; readonly b: string; readonly storey: number }
 
 export type LayoutConfig = {
   readonly springStiffness: number
@@ -107,7 +110,13 @@ export type Body = {
   readonly tier?: string
 }
 
-export type Link = { readonly a: number; readonly b: number }
+/** A link between two bodies, pulling on the twin of each that the edge's storey names. */
+export type Link = {
+  readonly a: number
+  readonly b: number
+  readonly aTwin: number
+  readonly bTwin: number
+}
 
 export type SimulationState = {
   readonly bodies: readonly Body[]
@@ -146,6 +155,33 @@ function spanOf(storeysSpanned: number): number {
   return Math.max(1, Math.trunc(storeysSpanned))
 }
 
+/** What the twins are read from: where a room stands and how many storeys it reaches. */
+type Standing = { readonly storey: number; readonly storeysSpanned: number }
+
+/** The storeys a room is drawn on, lowest first: one, or one for each storey a stair spans. */
+export function twinsOf(room: Standing): readonly number[] {
+  const span = spanOf(room.storeysSpanned)
+  return Array.from({ length: span }, (_unused, above) => room.storey + above)
+}
+
+/** Which of a room's twins stands on a storey; a room that does not reach it lends its nearest. */
+function twinOn(room: Standing, storey: number): number {
+  return Math.min(Math.max(storey - room.storey, 0), spanOf(room.storeysSpanned) - 1)
+}
+
+/**
+ * Where a room's twin on a storey is drawn. The stored bubble is the lowest twin's place, and every
+ * other twin sits at the same x and at the same height inside its own band, which is one band
+ * higher for each storey up, so the view derives them and nothing new is stored.
+ */
+export function twinY(
+  body: Standing & { readonly y: number },
+  storey: number,
+  bandHeight: number,
+): number {
+  return body.y - twinOn(body, storey) * bandHeight
+}
+
 /**
  * Wide enough for the largest room and a neighbour side by side, and for the busiest storey's
  * rooms to lie in a rough square, so nothing has to spill into the storey above.
@@ -173,9 +209,12 @@ function hash01(id: string, salt: number): number {
   return ((hash >>> 0) % 100000) / 100000
 }
 
-/** The centre of a room's own band, or the boundary its bands share when it is a stair. */
-function bandCentreOf(storey: number, span: number, storeys: number, bandHeight: number): number {
-  return (Math.max(1, storeys) - storey - span / 2) * bandHeight
+/**
+ * The middle of a room's own band. A stair is drawn once in every band it reaches, and its stored
+ * place is the lowest twin's, so the lowest band is the one that place is pulled to.
+ */
+function bandCentreOf(storey: number, storeys: number, bandHeight: number): number {
+  return (Math.max(1, storeys) - storey - 0.5) * bandHeight
 }
 
 function spreadWidth(rooms: readonly SimulationRoom[]): number {
@@ -194,7 +233,7 @@ export function createState(
   const width = spreadWidth(rooms)
   const bodies = rooms.map((room) => {
     const span = spanOf(room.storeysSpanned)
-    const centre = bandCentreOf(room.storey, span, levels, bandHeight)
+    const centre = bandCentreOf(room.storey, levels, bandHeight)
     return {
       id: room.id,
       x: room.bubble ? room.bubble.x : (hash01(room.id, 1) - 0.5) * width,
@@ -213,20 +252,36 @@ export function createState(
   for (const edge of edges) {
     const a = at.get(edge.a)
     const b = at.get(edge.b)
-    if (a === undefined || b === undefined || a === b) continue
-    links.push({ a, b })
+    const from = a === undefined ? undefined : bodies[a]
+    const to = b === undefined ? undefined : bodies[b]
+    if (a === undefined || b === undefined || a === b || !from || !to) continue
+    // Which twin each end lends the link is fixed the moment the picture is built, so a step
+    // that runs every frame never reads a storey again.
+    links.push({
+      a,
+      b,
+      aTwin: twinOn(from, edge.storey),
+      bTwin: twinOn(to, edge.storey),
+    })
   }
   return { bodies, links, storeys: levels, bandHeight, energy: Infinity }
 }
 
 type Work = {
   readonly body: Body
+  /** How many twins the room is drawn as, read once so the pair loops never count it again. */
+  readonly span: number
   x: number
   y: number
   vx: number
   vy: number
   fx: number
   fy: number
+}
+
+/** Where one twin of a room being worked on stands: a fixed band above its stored place. */
+function twinHeight(w: Work, twin: number, bandHeight: number): number {
+  return w.y - twin * bandHeight
 }
 
 /** Two circles exactly on top of each other need a direction to part along; their indices fix one. */
@@ -281,7 +336,7 @@ function clearOf(a: Body, b: Body, config: LayoutConfig): number {
  * centres, the move split by inverse area so the larger room gives way less. A pinned body takes
  * none of it, because pinned is the person's hand; two pinned bodies left on each other stay.
  */
-function separate(work: readonly Work[], config: LayoutConfig): void {
+function separate(work: readonly Work[], config: LayoutConfig, bandHeight: number): void {
   const from = work.map((w) => ({ x: w.x, y: w.y }))
   for (let pass = 0; pass < CORRECTION_PASSES; pass++) {
     let clear = true
@@ -291,15 +346,19 @@ function separate(work: readonly Work[], config: LayoutConfig): void {
       for (let j = i + 1; j < work.length; j++) {
         const b = work[j]
         if (!b || (a.body.pinned && b.body.pinned)) continue
-        const [ux, uy, distance] = apart(b.x - a.x, b.y - a.y, i + j)
-        const overlap = clearOf(a.body, b.body, config) - distance
-        if (overlap <= CLEARED) continue
-        clear = false
-        const share = shareOf(a.body, b.body)
-        a.x -= ux * overlap * share
-        a.y -= uy * overlap * share
-        b.x += ux * overlap * (1 - share)
-        b.y += uy * overlap * (1 - share)
+        for (let ka = 0; ka < a.span; ka++)
+          for (let kb = 0; kb < b.span; kb++) {
+            const down = twinHeight(b, kb, bandHeight) - twinHeight(a, ka, bandHeight)
+            const [ux, uy, distance] = apart(b.x - a.x, down, i + j)
+            const overlap = clearOf(a.body, b.body, config) - distance
+            if (overlap <= CLEARED) continue
+            clear = false
+            const share = shareOf(a.body, b.body)
+            a.x -= ux * overlap * share
+            a.y -= uy * overlap * share
+            b.x += ux * overlap * (1 - share)
+            b.y += uy * overlap * (1 - share)
+          }
       }
     }
     if (clear) break
@@ -320,14 +379,23 @@ function separate(work: readonly Work[], config: LayoutConfig): void {
   }
 }
 
+/**
+ * One frame. The rule that keeps a stair one body is the plainest one there is: every force is
+ * worked out between twins, and what acts on a twin acts on the room it belongs to. A twin is a
+ * fixed band above the stored place, so a force on it is a force on the body without any carrying
+ * over, the sums are as fixed as they are for a room with one twin, and the pair loops run over a
+ * villa's few twins rather than over another set of bodies.
+ */
 export function step(
   state: SimulationState,
   config: LayoutConfig = defaultLayout,
 ): SimulationState {
   const count = state.bodies.length
   if (count === 0) return { ...state, energy: 0 }
+  const height = state.bandHeight
   const work: Work[] = state.bodies.map((body) => ({
     body,
+    span: spanOf(body.storeysSpanned),
     x: body.x,
     y: body.y,
     vx: body.vx,
@@ -340,7 +408,8 @@ export function step(
     const a = work[link.a]
     const b = work[link.b]
     if (!a || !b) continue
-    const [ux, uy, distance] = apart(b.x - a.x, b.y - a.y, link.a + link.b)
+    const down = twinHeight(b, link.bTwin, height) - twinHeight(a, link.aTwin, height)
+    const [ux, uy, distance] = apart(b.x - a.x, down, link.a + link.b)
     const rest = a.body.radius + b.body.radius + config.restGap
     const pull = config.springStiffness * (distance - rest)
     a.fx += pull * ux
@@ -356,19 +425,23 @@ export function step(
       const b = work[j]
       if (!b) continue
       const clear = clearOf(a.body, b.body, config)
-      const [ux, uy, distance] = apart(b.x - a.x, b.y - a.y, i + j)
-      const overlap = clear - distance
-      // A soft collision below contact, and a bounded inverse-square breeze above it that spreads
-      // the cloud. The correction puts a deep overlap right in one frame, so the collision is only
-      // asked for the last gap of it; unasked, it flings a bubble let go inside another off the sheet.
-      const push =
-        (tiersApart(a.body, b.body) ? config.tierRepulsion : 1) *
-        ((overlap > 0 ? config.repulsion * Math.min(overlap, config.restGap) : 0) +
-          (config.spread * clear * clear) / Math.max(distance, clear) ** 2)
-      a.fx -= push * ux
-      a.fy -= push * uy
-      b.fx += push * ux
-      b.fy += push * uy
+      for (let ka = 0; ka < a.span; ka++)
+        for (let kb = 0; kb < b.span; kb++) {
+          const down = twinHeight(b, kb, height) - twinHeight(a, ka, height)
+          const [ux, uy, distance] = apart(b.x - a.x, down, i + j)
+          const overlap = clear - distance
+          // A soft collision below contact, and a bounded inverse-square breeze above it that spreads
+          // the cloud. The correction puts a deep overlap right in one frame, so the collision is only
+          // asked for the last gap of it; unasked, it flings a bubble let go inside another off the sheet.
+          const push =
+            (tiersApart(a.body, b.body) ? config.tierRepulsion : 1) *
+            ((overlap > 0 ? config.repulsion * Math.min(overlap, config.restGap) : 0) +
+              (config.spread * clear * clear) / Math.max(distance, clear) ** 2)
+          a.fx -= push * ux
+          a.fy -= push * uy
+          b.fx += push * ux
+          b.fy += push * uy
+        }
     }
   }
 
@@ -376,13 +449,10 @@ export function step(
   for (const w of work) {
     if (w.body.pinned) continue
     const mass = massOf(w.body)
-    const target = bandCentreOf(
-      w.body.storey,
-      w.body.storeysSpanned,
-      state.storeys,
-      state.bandHeight,
-    )
-    w.fy += config.bandPull * (target - w.y)
+    const target = bandCentreOf(w.body.storey, state.storeys, height)
+    // Each twin is pulled to the middle of its own band, and every one of those pulls comes to the
+    // same distance, so the sum over a stair's twins is that one pull taken as many times.
+    w.fy += config.bandPull * w.span * (target - w.y)
     w.fx += config.centrePull * -w.x
     w.vx = (w.vx + (w.fx / mass) * interval) * config.damping
     w.vy = (w.vy + (w.fy / mass) * interval) * config.damping
@@ -394,7 +464,7 @@ export function step(
     w.y += w.vy * interval
   }
 
-  separate(work, config)
+  separate(work, config, height)
 
   // What a bubble did is where it ended up: one held still between its neighbours has speed and
   // goes nowhere, and the picture is at rest when nothing goes anywhere.
