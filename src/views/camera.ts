@@ -1,5 +1,15 @@
-import type { Point } from '../../geometry'
-import type { Extent } from './frame'
+import type { Point } from '../geometry'
+
+/* Both sheets are drawn in metres over an extent, so one camera serves the zoning plan and the
+   bubble diagram alike: nothing here knows what is drawn, only how much of it is in view. */
+
+/** A box on the sheet in metres: what a sheet draws, or the part of it a camera shows. */
+export type Extent = {
+  readonly minX: number
+  readonly minY: number
+  readonly width: number
+  readonly height: number
+}
 
 /** The whole sheet at one, and eight times that at the closest, which reads a 6 m² room comfortably. */
 export const MAX_ZOOM = 8

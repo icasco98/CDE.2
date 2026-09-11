@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BubblesView, type BubbleProposal } from '../src/views/bubbles'
 import type { Position } from '../src/bubbles'
-import type { Commit } from '../src/model'
+import type { Commit, EdgeKind, Result } from '../src/model'
 import { connectionSource, proposedConnections } from '../src/rulebook'
 import { categoryOf, sampleStore } from './sample'
 import '../src/styles.css'
@@ -12,6 +12,7 @@ const store = sampleStore()
 function Playground() {
   const [project, setProject] = useState(store.getState())
   const [selected, setSelected] = useState<string | null>(null)
+  const [refusal, setRefusal] = useState<string | null>(null)
   useEffect(() => store.subscribe(setProject), [])
 
   const rooms = useMemo(
@@ -28,6 +29,8 @@ function Playground() {
     [project.rooms, project.edges],
   )
 
+  const took = (result: Result<unknown>): boolean => result.ok
+
   const take = (proposal: BubbleProposal) =>
     store.actions.connect({
       a: proposal.a,
@@ -39,6 +42,7 @@ function Playground() {
   return (
     <main className="playground">
       <h1>Bubbles</h1>
+      {refusal ? <p className="problem">{refusal}</p> : null}
       <BubblesView
         rooms={rooms}
         edges={project.edges}
@@ -49,11 +53,28 @@ function Playground() {
         onMoveBubble={(id: string, at: Position, commit: Commit) =>
           store.actions.setBubble(id, at, commit)
         }
+        onDropBubble={(id: string, at: Position, storey?: number) =>
+          took(
+            store.transaction(() => {
+              const moved = store.actions.setBubble(id, at, 'commit')
+              if (!moved.ok || storey === undefined) return moved
+              return store.actions.setStorey(id, storey)
+            }),
+          )
+        }
         onPin={(id: string, pinned: boolean) =>
           pinned ? store.actions.pin(id) : store.actions.unpin(id)
         }
         onConnect={(a: string, b: string) => store.actions.connect({ a, b, kind: 'door' })}
-        onDisconnect={(edgeId: string) => store.actions.disconnect(edgeId)}
+        onDisconnect={(edgeId: string) => {
+          store.actions.disconnect(edgeId)
+          setSelected((held) => (held === edgeId ? null : held))
+        }}
+        onSetEdgeKind={(edgeId: string, kind: EdgeKind) => store.actions.setEdgeKind(edgeId, kind)}
+        onRemoveRoom={(id: string) => {
+          store.actions.removeRoom(id)
+          setSelected(null)
+        }}
         onAccept={(proposal: BubbleProposal) => take(proposal)}
         onAcceptAll={() =>
           store.transaction(() => {
@@ -64,6 +85,7 @@ function Playground() {
           })
         }
         onSelect={setSelected}
+        onRefuse={(message: string) => setRefusal(message)}
       />
     </main>
   )

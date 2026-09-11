@@ -10,7 +10,7 @@ const plot20by25 = [
 
 describe('storey labels', () => {
   it('names the ground storey and the levels above it', () => {
-    expect([0, 1, 2].map(storeyLabel)).toEqual(['Ground', 'Level 1', 'Level 2'])
+    expect([0, 1, 2, 3].map(storeyLabel)).toEqual(['Ground', 'First', 'Second', 'Storey 3'])
   })
 })
 

@@ -1,15 +1,8 @@
 import { boundingBox, type Point, type Polygon } from '../../geometry'
+import type { Extent } from '../camera'
 
 /** Air around the drawing in metres, so a label or a handle at the edge is not cut off. */
 const MARGIN = 2.5
-
-/** A box on the sheet in metres: what is drawn, or the part of it a camera shows. */
-export type Extent = {
-  readonly minX: number
-  readonly minY: number
-  readonly width: number
-  readonly height: number
-}
 
 /** The plot and everything drawn on it, with room around the lot for the marks outside a wall. */
 export function extentOf(plot: Polygon, outlines: readonly Polygon[]): Extent {
