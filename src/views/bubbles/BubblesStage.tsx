@@ -4,7 +4,13 @@ import { session } from '../../app/session'
 import { useProject } from '../../app/useProject'
 import { storeyLabel, type Position } from '../../bubbles'
 import type { Commit, EdgeKind, Family, Result } from '../../model'
-import { connectionSource, proposedConnections, roomTypeById } from '../../rulebook'
+import {
+  circulationPerStorey,
+  connectionSource,
+  proposedConnections,
+  roomTypeById,
+} from '../../rulebook'
+import { addHallway } from './addHallway'
 import { BubblesView } from './BubblesView'
 import type { BubbleProposal } from './types'
 
@@ -29,6 +35,11 @@ export function BubblesStage() {
         source: connectionSource(proposal.rowId),
       })),
     [project.rooms, project.edges],
+  )
+
+  const circulation = useMemo(
+    () => circulationPerStorey(project.rooms, project.storeys),
+    [project.rooms, project.storeys],
   )
 
   const report = (result: Result<unknown>): boolean => {
@@ -81,6 +92,7 @@ export function BubblesStage() {
       edges={project.edges}
       proposals={proposals}
       storeys={project.storeys}
+      circulation={circulation}
       plot={project.plot}
       weights={project.weights}
       selected={selected}
@@ -100,6 +112,9 @@ export function BubblesStage() {
         report(session.actions.setEdgeKind(edgeId, kind))
       }
       onRemoveRoom={remove}
+      onAddHallway={(storey: number) =>
+        report(addHallway(session, project.rooms, storey, project.storeys))
+      }
       onAccept={(proposal: BubbleProposal) => report(take(proposal))}
       onAcceptAll={() =>
         report(

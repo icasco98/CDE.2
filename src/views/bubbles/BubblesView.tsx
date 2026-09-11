@@ -43,6 +43,8 @@ import './bubbles.css'
 /** How far the hand may wander before a press on the sheet is a pan rather than a click, in pixels. */
 const DRAG_PX = 3
 
+const EVERY_STOREY_SERVED = 'Every storey has a hallway; add another from the program.'
+
 /** Two fingers on the sheet: the metre under their middle, how far apart they began, and the scale they began at. */
 type Pinch = { readonly grabbed: Point; readonly span: number; readonly scale: number }
 
@@ -69,9 +71,10 @@ function notchesOf(event: WheelEvent): number {
 }
 
 export function BubblesView(props: BubblesViewProps) {
-  const { rooms, edges, proposals, storeys, plot, weights, selected } = props
+  const { rooms, edges, proposals, storeys, circulation, plot, weights, selected } = props
   const { onMoveBubble, onDropBubble, onPin, onConnect, onDisconnect, onSetEdgeKind } = props
-  const { onRemoveRoom, onAccept, onAcceptAll, onSetWeight, onSelect, onRefuse } = props
+  const { onRemoveRoom, onAddHallway, onAccept, onAcceptAll, onSetWeight, onSelect, onRefuse } =
+    props
   const svgRef = useRef<SVGSVGElement>(null)
   /** Whether the hand has moved at all, so a press that stays put is a click and not a pan or a drag. */
   const movedRef = useRef(false)
@@ -122,6 +125,8 @@ export function BubblesView(props: BubblesViewProps) {
   const shown = visibleExtent(extent, camera)
   const perPixel = metresPerPixel(extent, camera, box)
   const crowded = storeyCapacity(rooms, plot.polygon, storeys).filter((entry) => entry.over)
+  /** Every storey holds a hallway, so there is no floor on this tab left for the button to serve. */
+  const served = circulation.every((entry) => entry.hasHallway)
   const selectedRoom = named.get(selected ?? '')
   const selectedEdge = edges.find((edge) => edge.id === selected)
 
@@ -387,6 +392,13 @@ export function BubblesView(props: BubblesViewProps) {
     })
   }
 
+  /** The filter says which storey; with all of them showing, the lowest storey that has none. */
+  function addHallway(): void {
+    const without = circulation.find((entry) => !entry.hasHallway)
+    const storey = only ?? without?.storey
+    if (storey !== undefined) onAddHallway(storey)
+  }
+
   function removeSelected(): void {
     if (selectedEdge) onDisconnect(selectedEdge.id)
     else if (selectedRoom) onRemoveRoom(selectedRoom.id)
@@ -474,6 +486,15 @@ export function BubblesView(props: BubblesViewProps) {
             </button>
           ))}
         </div>
+        {/* A program action, not a force, so it stands with the filter that says which storey it acts on. */}
+        <button
+          type="button"
+          disabled={served}
+          title={served ? EVERY_STOREY_SERVED : undefined}
+          onClick={addHallway}
+        >
+          Add hallway
+        </button>
         <button type="button" onClick={() => setCamera(fitCamera)}>
           Fit
         </button>
@@ -487,6 +508,22 @@ export function BubblesView(props: BubblesViewProps) {
           {capacityMessage(entry)}
         </p>
       ))}
+      {circulation.map((entry) =>
+        entry.wanted === undefined ? null : (
+          <p className="bubbles-nudge" key={entry.storey}>
+            <span>{entry.wanted}</span>
+            {/* Two buttons on the tab say Add hallway, so this one names the storey it is about
+                for anyone who reads it by its label rather than beside its own line. */}
+            <button
+              type="button"
+              aria-label={`Add hallway on ${storeyLabel(entry.storey)}`}
+              onClick={() => onAddHallway(entry.storey)}
+            >
+              Add hallway
+            </button>
+          </p>
+        ),
+      )}
       <div className="bubbles-body">
         <svg
           ref={svgRef}

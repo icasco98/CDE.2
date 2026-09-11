@@ -4,6 +4,13 @@ import { deserialize } from '../../src/model'
 
 const rowsOf = (page: Page) => page.locator('table.program tbody tr')
 
+/** A program row by the name it carries, which is the name the rebuild gave it. */
+function rowNamed(page: Page, name: string) {
+  return rowsOf(page).filter({
+    has: page.getByLabel('Room name').and(page.locator(`[value="${name}"]`)),
+  })
+}
+
 async function enterRequirements(page: Page): Promise<void> {
   await page.goto('/')
   await page.getByLabel('Project name').fill('Al Bidaa House')
@@ -34,8 +41,7 @@ test('a person enters a plot, a household and a program, and it is still there a
   // The three weights stand beside the diagram they change, on the Bubbles tab, not here.
   await expect(page.getByRole('slider', { name: 'Site constraints' })).toHaveCount(0)
 
-  const diwaniya = rooms.nth(1)
-  await expect(diwaniya.getByLabel('Room name')).toHaveValue('Diwaniya')
+  const diwaniya = rowNamed(page, 'Diwaniya')
   await expect(diwaniya.getByLabel('Target area')).toHaveValue('52.5')
 
   await diwaniya.getByLabel('Target area').fill('8')
@@ -63,7 +69,7 @@ test('a person enters a plot, a household and a program, and it is still there a
   await expect(page.getByLabel('Live-in maid')).toBeChecked()
   await expect(page.getByRole('checkbox', { name: 'Driver', exact: true })).toBeChecked()
   await expect(rowsOf(page)).toHaveCount(before)
-  await expect(rowsOf(page).nth(1).getByLabel('Target area')).toHaveValue('8')
+  await expect(rowNamed(page, 'Diwaniya').getByLabel('Target area')).toHaveValue('8')
   await expect(rowsOf(page).nth(0).getByLabel('Storey')).toHaveValue('1')
 })
 
@@ -147,13 +153,6 @@ test('undo, redo, opening a file and refusing one that cannot be read', async ({
   await expect(rowsOf(page)).toHaveCount(0)
 })
 
-/** A program row by the name it carries, which is the name the rebuild gave it. */
-function rowNamed(page: Page, name: string) {
-  return rowsOf(page).filter({
-    has: page.getByLabel('Room name').and(page.locator(`[value="${name}"]`)),
-  })
-}
-
 test('two storeys put the bedrooms upstairs, and a bedroom added brings its ensuite', async ({
   page,
 }) => {
@@ -184,4 +183,18 @@ test('two storeys put the bedrooms upstairs, and a bedroom added brings its ensu
   await page.getByRole('button', { name: 'Undo' }).click()
   await expect(rowsOf(page)).toHaveCount(before)
   await expect(rowNamed(page, 'Ensuite, Bedroom')).toHaveCount(0)
+})
+
+test('a two-storey rebuild lays a hallway on each floor, sized from that floor', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Add storey' }).click()
+  await page.getByRole('button', { name: 'Rebuild program from household' }).click()
+
+  await expect(rowNamed(page, 'Ground Hallway').getByLabel('Storey')).toHaveValue('0')
+  await expect(rowNamed(page, 'First Hallway').getByLabel('Storey')).toHaveValue('1')
+  // A tenth of the 214 m² downstairs and of the 82 m² of bedrooms and ensuites upstairs.
+  await expect(rowNamed(page, 'Ground Hallway').getByLabel('Target area')).toHaveValue('21.4')
+  await expect(rowNamed(page, 'First Hallway').getByLabel('Target area')).toHaveValue('8.2')
 })
