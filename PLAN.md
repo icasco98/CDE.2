@@ -28,8 +28,8 @@ for help. No solver, no findings, no analysis.
 | A7 | **Massing.** Salvaged 3D re-pointed at the graph: storeys, heights, envelope numbers, click to select. | A3, A6 | A room selected in any view is selected in all three. | todo |
 | A8 | **Export.** PDF to scale, DXF, produced in the browser. | A6, A7 | A printed sheet measures true at its stated scale. The DXF opens in AutoCAD with layers per storey. | todo |
 | A9 | **Sample project and usability run.** A sample project; the two owner projects run through the whole loop; fix list worked. | A4 to A8, A10, A11, O3, O5 | The milestone's done condition is met and timed. | todo |
-| A10 | **Weights as the three families.** The three sliders become user requirements, site constraints and environmental factors, the families in `rulebook/forces.md`; a project saved with the placeholder keys opens with them mapped. | A4 | The three names are on screen; an old project file opens without loss. | todo |
-| A11 | **Default connections from the rulebook.** A table of default adjacencies per room kind (kitchen to dining, ensuite to its bedroom, diwaniya to the exterior); rebuilding the program shows them in the bubbles as proposed links a click accepts. Nothing connects without the click. | A5, O2 | Rebuilding the program proposes the defaults; accepting one creates the edge; the table has a source per row. | todo |
+| A10 | **Weights as the three families.** The three sliders become user requirements, site constraints and environmental factors, the families in `rulebook/forces.md`; a project saved with the placeholder keys opens with them mapped. | A4 | The three names are on screen; an old project file opens without loss. | done, PR #15 |
+| A11 | **Default connections from the rulebook.** A table of default adjacencies per room kind (kitchen to dining, ensuite to its bedroom, diwaniya to the exterior); rebuilding the program shows them in the bubbles as proposed links a click accepts. Nothing connects without the click. | A5, O2 | Rebuilding the program proposes the defaults; accepting one creates the edge; the table has a source per row. | done, PR #16 |
 
 ### Owner tasks
 
