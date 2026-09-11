@@ -3,7 +3,8 @@ import { boundingBox, type Point, type Polygon } from '../../geometry'
 /** Air around the drawing in metres, so a label or a handle at the edge is not cut off. */
 const MARGIN = 2.5
 
-type Extent = {
+/** A box on the sheet in metres: what is drawn, or the part of it a camera shows. */
+export type Extent = {
   readonly minX: number
   readonly minY: number
   readonly width: number
@@ -20,10 +21,6 @@ export function extentOf(plot: Polygon, outlines: readonly Polygon[]): Extent {
     width: Math.max(1, bounds.width + MARGIN * 2),
     height: Math.max(1, bounds.depth + MARGIN * 2),
   }
-}
-
-export function viewBoxOf(extent: Extent): string {
-  return `${extent.minX} ${extent.minY} ${extent.width} ${extent.height}`
 }
 
 /** Where a pointer event lands on the sheet, in metres. */

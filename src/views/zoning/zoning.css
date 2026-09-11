@@ -80,6 +80,9 @@
 }
 
 .zoning-sheet {
+  /* The metres one CSS pixel covers, set by the view on every camera change; every mark on the
+     sheet that must hold its size on the screen is sized from it. */
+  --per-px: 0.03;
   flex: 1;
   min-width: 0;
   height: 100%;
@@ -97,27 +100,34 @@
 /*
  * Every mark on the sheet is scoped to it: the bubbles sheet has marks of the same names,
  * and one stylesheet must not paint the other's.
+ *
+ * Every stroke and dash below is in pixels on the screen, not metres on the sheet: zooming in
+ * draws a bigger room, not a heavier wall, and zooming out never leaves a handle covering the plot.
  */
+.zoning-sheet * {
+  vector-effect: non-scaling-stroke;
+}
+
 .zoning-sheet .grid-line {
   fill: none;
   stroke: #ddd6c8;
-  stroke-width: 0.03;
+  stroke-width: 0.5px;
 }
 
 .zoning-sheet .plot {
   stroke: #6f6a62;
-  stroke-width: 0.12;
+  stroke-width: 2px;
 }
 
 /* The plot is drawn for reference when it does not bind, so it is thin and broken. */
 .zoning-sheet .plot-off {
-  stroke-width: 0.05;
-  stroke-dasharray: 0.5 0.4;
+  stroke-width: 1px;
+  stroke-dasharray: 8 6;
 }
 
 .zoning-sheet .street {
   stroke: #4a453d;
-  stroke-width: 0.34;
+  stroke-width: 5px;
   stroke-linecap: square;
 }
 
@@ -130,10 +140,20 @@
   pointer-events: none;
 }
 
+/* The arrow and the bar are drawn in pixels inside a counter-scaled group, so their type is too. */
+.zoning-sheet .north text,
+.zoning-sheet .scale-bar text {
+  font-size: 12px;
+}
+
+.zoning-sheet .street-label {
+  font-size: calc(var(--per-px) * 11px);
+}
+
 .zoning-sheet .north line,
 .zoning-sheet .scale-bar line {
   stroke: #6d6862;
-  stroke-width: 0.08;
+  stroke-width: 1.5px;
 }
 
 .zoning-sheet .north polygon {
@@ -143,26 +163,38 @@
 .zoning-sheet .ghost {
   fill: none;
   stroke: #c9c2b4;
-  stroke-width: 0.07;
-  stroke-dasharray: 0.35 0.3;
+  stroke-width: 1px;
+  stroke-dasharray: 5 4;
 }
 
 .zoning-sheet .room-shape {
   fill: #efe9dc;
   stroke: #6f6a62;
-  stroke-width: 0.09;
+  stroke-width: 1.5px;
   cursor: grab;
 }
 
 .zoning-sheet .room-selected .room-shape {
   stroke: #2f6f8f;
-  stroke-width: 0.2;
+  stroke-width: 3px;
 }
 
 .zoning-sheet .room-pinned {
   fill: #e8ddcd;
-  stroke-dasharray: 0.4 0.2;
+  stroke-dasharray: 6 3;
   cursor: not-allowed;
+}
+
+/*
+ * The room's own label size in metres, held to a band of screen pixels: a label never balloons
+ * when the sheet is drawn close, and never disappears when the whole plot is in view.
+ */
+.zoning-sheet .room {
+  font-size: clamp(
+    calc(var(--per-px) * 8px),
+    calc(var(--label-m) * 1px),
+    calc(var(--per-px) * 14px)
+  );
 }
 
 .zoning-sheet .room text {
@@ -171,12 +203,13 @@
   fill: #2b2822;
   paint-order: stroke;
   stroke: #efe9dc;
-  stroke-width: 0.16;
+  stroke-width: 3px;
   stroke-linejoin: round;
   pointer-events: none;
 }
 
 .zoning-sheet .room-area {
+  font-size: 0.9em;
   fill: #6d6862;
 }
 
@@ -186,38 +219,38 @@
 
 .zoning-sheet .rotate-stem {
   stroke: #2f6f8f;
-  stroke-width: 0.06;
+  stroke-width: 1px;
 }
 
 .zoning-sheet .rotate-handle {
   fill: #fffdf9;
   stroke: #2f6f8f;
-  stroke-width: 0.12;
+  stroke-width: 2px;
   cursor: crosshair;
 }
 
 .zoning-sheet .resize-handle {
   fill: #fffdf9;
   stroke: #2f6f8f;
-  stroke-width: 0.1;
+  stroke-width: 1.5px;
   cursor: pointer;
 }
 
 .zoning-sheet .door-gap {
   stroke: #faf8f4;
-  stroke-width: 0.22;
+  stroke-width: 3.5px;
 }
 
 .zoning-sheet .door-leaf {
   stroke: #4a453d;
-  stroke-width: 0.08;
+  stroke-width: 1.5px;
   cursor: pointer;
 }
 
 /* A door mark is too thin to aim at, so a wide invisible twin takes the click. */
 .zoning-sheet .door-grip {
   stroke: transparent;
-  stroke-width: 0.9;
+  stroke-width: 14px;
   cursor: pointer;
 }
 
@@ -228,8 +261,8 @@
 
 .zoning-sheet .tension {
   stroke: #b1652f;
-  stroke-width: 0.14;
-  stroke-dasharray: 0.5 0.35;
+  stroke-width: 2px;
+  stroke-dasharray: 8 5;
   pointer-events: stroke;
 }
 
@@ -243,13 +276,13 @@
   fill: #fffdf9;
   fill-opacity: 0.7;
   stroke: #6d8f6f;
-  stroke-width: 0.08;
+  stroke-width: 1.5px;
   pointer-events: auto;
 }
 
 .zoning-sheet .proposal-plus {
   stroke: #4a7a4c;
-  stroke-width: 0.12;
+  stroke-width: 2px;
   fill: none;
 }
 
@@ -257,7 +290,13 @@
   fill: #2f6f8f;
   fill-opacity: 0.12;
   stroke: #2f6f8f;
-  stroke-width: 0.1;
-  stroke-dasharray: 0.4 0.3;
+  stroke-width: 1.5px;
+  stroke-dasharray: 6 5;
   pointer-events: none;
+}
+
+/* The hand pans the sheet: the plot slides under it, and nothing is picked up or let go. */
+.zoning-sheet.zoning-panning,
+.zoning-sheet.zoning-panning .room-shape {
+  cursor: grabbing;
 }

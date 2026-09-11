@@ -1,4 +1,4 @@
-import { memo, type PointerEvent as ReactPointerEvent } from 'react'
+import { memo, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import {
   GRID_M,
   anchorPointOf,
@@ -17,14 +17,39 @@ import { belowMinimum, offTarget, type RoomSizes } from './defaults'
 import type { DoorMark, ProposalMark, TensionMark } from './doors'
 import { pointsOf } from './frame'
 
+/*
+ * Everything that must hold its size on the screen does so in one of three ways: a line keeps its
+ * weight through `vector-effect: non-scaling-stroke`; text takes a per-zoom font size from the
+ * sheet's `--per-px`, the metres one pixel covers, so a zoom changes one style and no room group
+ * is drawn again; and a mark of fixed shape is drawn in pixels inside a group counter-scaled by
+ * that same number. A door keeps its 0.9 m opening in metres: it measures a wall, and a wall is
+ * not a mark on the screen.
+ */
+
 /** The clear opening a door and an open edge are drawn with, in metres. */
 const DOOR_M = 0.9
 const OPEN_M = 1.6
 
-/** How far outside its wall the rotation handle sits, in metres. */
-const ROTATE_REACH = 1.2
+/** How far outside its wall the rotation handle sits, and how wide each handle is, in pixels. */
+const ROTATE_REACH_PX = 19
+const ROTATE_HANDLE_PX = 8
+const RESIZE_HANDLE_PX = 10
 
-/** The label on a roomy room, in metres of cap height. */
+/** The reach of the "+" that offers a door, in pixels, so it is the same target at every zoom. */
+const PROPOSAL_PX = 8
+
+/** The scale bar at its longest, in pixels: it shortens its run rather than run off the sheet. */
+const SCALE_BAR_PX = 160
+
+/** The runs a scale bar will admit, longest first, each with the length of its ticks, in metres. */
+const SCALE_RUNS = [
+  { length: 5, tick: 1 },
+  { length: 2, tick: 0.5 },
+  { length: 1, tick: 0.25 },
+  { length: 0.5, tick: 0.1 },
+] as const
+
+/** The label on a roomy room, in metres of cap height; the stylesheet holds it to a band of pixels. */
 const LABEL_M = 0.62
 
 /** A label shrinks with its room so a short name sits inside it; a long name in a small room still runs over the wall. */
@@ -132,7 +157,7 @@ export function PlotSheet({ plot }: { plot: Plot }) {
               y2={wall.to[1]}
               className="street"
             />
-            <text x={middle[0]} y={middle[1]} className="street-label" fontSize={0.8}>
+            <text x={middle[0]} y={middle[1]} className="street-label">
               street
             </text>
           </g>
@@ -142,27 +167,43 @@ export function PlotSheet({ plot }: { plot: Plot }) {
   )
 }
 
-export function NorthArrow({ north, at }: { north: number; at: Point }) {
+export function NorthArrow({
+  north,
+  at,
+  perPixel,
+}: {
+  north: number
+  at: Point
+  perPixel: number
+}) {
   return (
-    <g className="north" transform={`translate(${at[0]} ${at[1]}) rotate(${north})`}>
-      <line x1={0} y1={1.4} x2={0} y2={-1.4} />
-      <polygon points="0,-1.9 0.45,-0.9 -0.45,-0.9" />
-      <text x={0} y={2.5} fontSize={0.9}>
+    <g
+      className="north"
+      transform={`translate(${at[0]} ${at[1]}) scale(${perPixel}) rotate(${north})`}
+    >
+      <line x1={0} y1={22} x2={0} y2={-22} />
+      <polygon points="0,-30 7,-14 -7,-14" />
+      <text x={0} y={38}>
         N
       </text>
     </g>
   )
 }
 
-export function ScaleBar({ at }: { at: Point }) {
+/** The longest run that still fits the bar's screen length, so the number under it stays honest. */
+export function ScaleBar({ at, perPixel }: { at: Point; perPixel: number }) {
+  const run = SCALE_RUNS.find((entry) => entry.length / perPixel <= SCALE_BAR_PX) ?? SCALE_RUNS[3]
+  const across = run.length / perPixel
+  const ticks = Math.round(run.length / run.tick)
   return (
-    <g className="scale-bar" transform={`translate(${at[0]} ${at[1]})`}>
-      <line x1={0} y1={0} x2={5} y2={0} />
-      {[0, 1, 2, 3, 4, 5].map((metre) => (
-        <line key={metre} x1={metre} y1={-0.25} x2={metre} y2={0.25} />
-      ))}
-      <text x={5} y={1.1} fontSize={0.8}>
-        5 m
+    <g className="scale-bar" transform={`translate(${at[0]} ${at[1]}) scale(${perPixel})`}>
+      <line x1={0} y1={0} x2={across} y2={0} />
+      {Array.from({ length: ticks + 1 }, (_unused, index) => {
+        const x = (index * across) / ticks
+        return <line key={index} x1={x} y1={-5} x2={x} y2={5} />
+      })}
+      <text x={across} y={20}>
+        {`${run.length} m`}
       </text>
     </g>
   )
@@ -186,7 +227,11 @@ type RoomShapeProps = {
   readonly onGrab: (event: ReactPointerEvent, id: string) => void
 }
 
-/** Memoised on the room the store hands back: a drag replaces only the room being dragged, so every other group keeps its props and is not drawn again. */
+/**
+ * Memoised on the room the store hands back: a drag replaces only the room being dragged, and the
+ * camera reaches the labels through the stylesheet, so no other group is drawn again for a drag or
+ * a zoom.
+ */
 export const RoomShape = memo(function RoomShape(props: RoomShapeProps) {
   const { room, sizes } = props
   const footprint = room.footprint
@@ -203,20 +248,21 @@ export const RoomShape = memo(function RoomShape(props: RoomShapeProps) {
       data-rotation={footprint.rotation.toFixed(1)}
       data-area={measure.toFixed(2)}
       className={props.selected ? 'room room-selected' : 'room'}
+      style={{ '--label-m': String(label) } as CSSProperties}
     >
       <polygon
         points={pointsOf(outline)}
         className={room.pinned ? 'room-shape room-pinned' : 'room-shape'}
         onPointerDown={(event) => props.onGrab(event, room.id)}
       />
-      <text x={middle[0]} y={middle[1] - label * 0.6} className="room-name" fontSize={label}>
+      <text x={middle[0]} y={middle[1]} dy="-0.6em" className="room-name">
         {room.name}
       </text>
       <text
         x={middle[0]}
-        y={middle[1] + label * 0.8}
+        y={middle[1]}
+        dy="0.75em"
         className={warn ? 'room-area room-area-warning' : 'room-area'}
-        fontSize={label * 0.85}
       >
         {`${metres2(measure)} of ${metres2(room.targetArea)} m²`}
       </text>
@@ -226,43 +272,46 @@ export const RoomShape = memo(function RoomShape(props: RoomShapeProps) {
 
 type HandleProps = {
   readonly footprint: Footprint
+  /** The metres one pixel covers, so a handle is the same target however close the sheet is drawn. */
+  readonly perPixel: number
   readonly onRotate: (event: ReactPointerEvent) => void
   readonly onResize: (event: ReactPointerEvent, sx: Handle, sy: Handle) => void
 }
 
-export function Handles({ footprint, onRotate, onResize }: HandleProps) {
+export function Handles({ footprint, perPixel, onRotate, onResize }: HandleProps) {
   const radians = (footprint.rotation * Math.PI) / 180
   const north = anchorPointOf(footprint, 0, -1)
-  const grip: Point = [
-    north[0] + Math.sin(radians) * ROTATE_REACH,
-    north[1] - Math.cos(radians) * ROTATE_REACH,
-  ]
+  const reach = ROTATE_REACH_PX * perPixel
+  const grip: Point = [north[0] + Math.sin(radians) * reach, north[1] - Math.cos(radians) * reach]
   return (
     <g className="handles">
       <line x1={north[0]} y1={north[1]} x2={grip[0]} y2={grip[1]} className="rotate-stem" />
-      <circle
-        cx={grip[0]}
-        cy={grip[1]}
-        r={0.45}
-        className="rotate-handle"
-        data-rotate-handle="true"
-        onPointerDown={onRotate}
-      >
-        <title>Turn the room</title>
-      </circle>
+      <g transform={`translate(${grip[0]} ${grip[1]}) scale(${perPixel})`}>
+        <circle
+          cx={0}
+          cy={0}
+          r={ROTATE_HANDLE_PX}
+          className="rotate-handle"
+          data-rotate-handle="true"
+          onPointerDown={onRotate}
+        >
+          <title>Turn the room</title>
+        </circle>
+      </g>
       {HANDLES.map(([sx, sy]) => {
         const at = anchorPointOf(footprint, sx, sy)
         return (
-          <rect
-            key={`${sx},${sy}`}
-            x={at[0] - 0.3}
-            y={at[1] - 0.3}
-            width={0.6}
-            height={0.6}
-            className="resize-handle"
-            data-resize-handle={`${sx},${sy}`}
-            onPointerDown={(event) => onResize(event, sx, sy)}
-          />
+          <g key={`${sx},${sy}`} transform={`translate(${at[0]} ${at[1]}) scale(${perPixel})`}>
+            <rect
+              x={-RESIZE_HANDLE_PX / 2}
+              y={-RESIZE_HANDLE_PX / 2}
+              width={RESIZE_HANDLE_PX}
+              height={RESIZE_HANDLE_PX}
+              className="resize-handle"
+              data-resize-handle={`${sx},${sy}`}
+              onPointerDown={(event) => onResize(event, sx, sy)}
+            />
+          </g>
         )
       })}
     </g>
@@ -329,19 +378,23 @@ export function Tension({ mark }: { mark: TensionMark }) {
 
 export function Proposal({
   mark,
+  perPixel,
   onAccept,
 }: {
   mark: ProposalMark
+  perPixel: number
   onAccept: (event: ReactPointerEvent) => void
 }) {
-  const [x, y] = mark.at
+  const arm = PROPOSAL_PX * 0.6
   return (
-    <g data-proposal={`${mark.a}|${mark.b}`} className="proposal" onPointerDown={onAccept}>
-      <circle cx={x} cy={y} r={0.5} className="proposal-grip" />
-      <path
-        d={`M ${x - 0.3} ${y} L ${x + 0.3} ${y} M ${x} ${y - 0.3} L ${x} ${y + 0.3}`}
-        className="proposal-plus"
-      />
+    <g
+      data-proposal={`${mark.a}|${mark.b}`}
+      className="proposal"
+      transform={`translate(${mark.at[0]} ${mark.at[1]}) scale(${perPixel})`}
+      onPointerDown={onAccept}
+    >
+      <circle cx={0} cy={0} r={PROPOSAL_PX} className="proposal-grip" />
+      <path d={`M ${-arm} 0 L ${arm} 0 M 0 ${-arm} L 0 ${arm}`} className="proposal-plus" />
       <title>Connect these two rooms with a door</title>
     </g>
   )
