@@ -1,0 +1,178 @@
+import { describe, expect, it } from 'vitest'
+import { area } from '../geometry'
+import { createIdGenerator, createStore, EXTERIOR, type Project } from '../model'
+import { defaultProgram } from './program'
+import { proposedConnections, type Proposal, type ProposalRoom } from './proposals'
+
+/** The starting household on the starting plot: three bedrooms, two cars, no maid, no driver. */
+function startingProject(): Project {
+  const store = createStore(undefined, { newId: createIdGenerator(7) })
+  const project = store.getState()
+  for (const room of defaultProgram(area(project.plot.polygon), project.household))
+    store.actions.addRoom({ ...room, storey: 0 })
+  return store.getState()
+}
+
+/** A proposal read the way a person reads it: the two names and what kind of edge it would be. */
+function named(project: Project, proposals: readonly Proposal[]): readonly string[] {
+  const nameOf = (id: string): string =>
+    id === EXTERIOR ? 'Outside' : (project.rooms.find((room) => room.id === id)?.name ?? id)
+  return proposals.map(
+    (proposal) =>
+      `${nameOf(proposal.a)} to ${nameOf(proposal.b)} (${proposal.kind}, ${proposal.rowId})`,
+  )
+}
+
+const referenceCase: readonly string[] = [
+  'Outside to Entry (main-door, D1)',
+  'Outside to Diwaniya (door, D2)',
+  'Outside to Garage bay 1 (door, D3)',
+  'Outside to Garage bay 2 (door, D3)',
+  'Entry to Formal Living (door, D5)',
+  'Entry to Family Living (door, D6)',
+  'Entry to Guest WC (door, D7)',
+  'Kitchen to Dining Room (door, D12)',
+  'Dining Room to Family Living (open, D18)',
+  'Master Bedroom to Ensuite, Master Bedroom (door, D19)',
+  'Bedroom 1 to Ensuite, Bedroom 1 (door, D21)',
+  'Bedroom 2 to Ensuite, Bedroom 2 (door, D21)',
+]
+
+describe('the reference case: the starting household on the starting plot', () => {
+  it('proposes exactly the defaults the program implies', () => {
+    const project = startingProject()
+    expect(project.rooms).toHaveLength(15)
+    expect(named(project, proposedConnections(project.rooms, project.edges))).toEqual(referenceCase)
+  })
+
+  it('pairs each ensuite with the bedroom added immediately before it', () => {
+    const project = startingProject()
+    const suites = proposedConnections(project.rooms, project.edges).filter(
+      (proposal) => proposal.rowId === 'D19' || proposal.rowId === 'D21',
+    )
+    const at = (id: string): number => project.rooms.findIndex((room) => room.id === id)
+    expect(suites).toHaveLength(3)
+    for (const suite of suites) expect(at(suite.b)).toBe(at(suite.a) + 1)
+  })
+
+  it('proposes nothing a second time once every proposal is accepted', () => {
+    const store = createStore(undefined, { newId: createIdGenerator(7) })
+    const first = store.getState()
+    for (const room of defaultProgram(area(first.plot.polygon), first.household))
+      store.actions.addRoom({ ...room, storey: 0 })
+    const project = store.getState()
+    for (const proposal of proposedConnections(project.rooms, project.edges))
+      expect(store.actions.connect(proposal).ok).toBe(true)
+    const settled = store.getState()
+    expect(settled.edges).toHaveLength(referenceCase.length)
+    expect(proposedConnections(settled.rooms, settled.edges)).toEqual([])
+  })
+
+  it('drops a proposal as soon as its edge exists', () => {
+    const project = startingProject()
+    const before = proposedConnections(project.rooms, project.edges)
+    const first = before[0]
+    if (!first) throw new Error('the reference case proposes nothing')
+    const withEdge = {
+      ...project,
+      edges: [{ id: 'edge-1', a: first.a, b: first.b, kind: first.kind, storey: first.storey }],
+    }
+    const after = proposedConnections(withEdge.rooms, withEdge.edges)
+    expect(after).toHaveLength(before.length - 1)
+    expect(after).not.toContainEqual(first)
+  })
+})
+
+describe('what the table will not propose', () => {
+  const room = (id: string, type: string, storey = 0, storeysSpanned = 1): ProposalRoom => ({
+    id,
+    type,
+    storey,
+    storeysSpanned,
+  })
+
+  it('offers no second front door once the project has one', () => {
+    const rooms = [room('entry', 'entry-foyer')]
+    const edges = [{ id: 'e1', a: EXTERIOR, b: 'entry', kind: 'main-door' as const, storey: 0 }]
+    expect(proposedConnections(rooms, [])).toHaveLength(1)
+    expect(proposedConnections(rooms, edges)).toEqual([])
+  })
+
+  it('offers no front door when another room already holds it', () => {
+    const rooms = [room('entry', 'entry-foyer'), room('diwaniya', 'diwaniya')]
+    const edges = [{ id: 'e1', a: EXTERIOR, b: 'other', kind: 'main-door' as const, storey: 0 }]
+    const proposals = proposedConnections(rooms, edges)
+    expect(proposals.map((proposal) => proposal.rowId)).toEqual(['D2'])
+  })
+
+  it('offers one front door only, however many entries there are', () => {
+    const rooms = [room('entry-a', 'entry-foyer'), room('entry-b', 'entry-foyer')]
+    const frontDoors = proposedConnections(rooms, []).filter(
+      (proposal) => proposal.kind === 'main-door',
+    )
+    expect(frontDoors).toHaveLength(1)
+  })
+
+  it('leaves two rooms on different storeys unconnected when no stair spans them', () => {
+    const rooms = [room('kitchen', 'kitchen', 0), room('dining', 'dining-room', 1)]
+    expect(proposedConnections(rooms, [])).toEqual([])
+  })
+
+  it('connects a stair to a room on any storey the stair spans', () => {
+    const rooms = [room('hall', 'hallway', 1), room('stair', 'stair', 0, 2)]
+    const proposals = proposedConnections(rooms, [])
+    expect(proposals).toEqual([{ a: 'hall', b: 'stair', kind: 'open', storey: 1, rowId: 'D26' }])
+  })
+
+  it('meets the outside on the lowest storey a room stands on', () => {
+    const rooms = [room('garage', 'garage', 2)]
+    expect(proposedConnections(rooms, [])).toEqual([
+      { a: EXTERIOR, b: 'garage', kind: 'door', storey: 2, rowId: 'D3' },
+    ])
+  })
+})
+
+describe('pairing', () => {
+  const room = (id: string, type: string): ProposalRoom => ({
+    id,
+    type,
+    storey: 0,
+    storeysSpanned: 1,
+  })
+
+  it('gives a hub one proposal per room it serves', () => {
+    const rooms = [
+      room('hall', 'hallway'),
+      room('bed-1', 'bedroom'),
+      room('bed-2', 'bedroom'),
+      room('bed-3', 'bedroom'),
+    ]
+    const proposals = proposedConnections(rooms, []).filter((proposal) => proposal.rowId === 'D24')
+    expect(proposals.map((proposal) => proposal.b)).toEqual(['bed-1', 'bed-2', 'bed-3'])
+  })
+
+  it('gives an auxiliary room to the nearest room before it, and to one row only', () => {
+    const rooms = [
+      room('bed-1', 'bedroom'),
+      room('master', 'master-bedroom'),
+      room('ensuite-1', 'ensuite-bathroom'),
+    ]
+    const proposals = proposedConnections(rooms, []).filter(
+      (proposal) => proposal.b === 'ensuite-1',
+    )
+    expect(proposals).toEqual([
+      { a: 'master', b: 'ensuite-1', kind: 'door', storey: 0, rowId: 'D19' },
+    ])
+  })
+
+  it('leaves an auxiliary room alone when no room of its kind comes before it', () => {
+    const rooms = [room('ensuite-1', 'ensuite-bathroom'), room('bed-1', 'bedroom')]
+    expect(proposedConnections(rooms, [])).toEqual([])
+  })
+
+  it('is the same list every time it is asked', () => {
+    const project = startingProject()
+    const once = proposedConnections(project.rooms, project.edges)
+    expect(proposedConnections(project.rooms, project.edges)).toEqual(once)
+  })
+})

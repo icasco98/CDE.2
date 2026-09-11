@@ -1,10 +1,11 @@
-export { EXTERIOR, PROJECT_VERSION } from './types'
+export { EXTERIOR, PROJECT_VERSION, families } from './types'
 export type {
   Actor,
   Bubble,
   Edge,
   EdgeKind,
   Endpoint,
+  Family,
   Household,
   Plot,
   Project,

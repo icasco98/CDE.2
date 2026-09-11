@@ -126,3 +126,36 @@ export function Link(props: {
     </g>
   )
 }
+
+/** The mark is big enough to aim at on a small bubble and never so big it hides the two rooms. */
+function markRadius(a: Body, b: Body): number {
+  return Math.min(0.7, Math.max(0.35, Math.min(a.radius, b.radius) * 0.3))
+}
+
+export function Proposed(props: {
+  a: Body
+  b: Body
+  /** The rulebook row's words, shown on hover. */
+  source: string
+  onAccept: (event: ReactPointerEvent) => void
+}) {
+  const { a, b } = props
+  const at = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+  const radius = markRadius(a, b)
+  return (
+    <g
+      data-proposal={`${a.id}:${b.id}`}
+      className="proposal"
+      onPointerDown={props.onAccept}
+      role="button"
+    >
+      <title>{props.source}</title>
+      <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} className="proposal-grip" />
+      <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} className="proposal-line" />
+      <circle cx={at.x} cy={at.y} r={radius} className="proposal-mark" />
+      <text x={at.x} y={at.y} className="proposal-plus" fontSize={radius * 1.8}>
+        +
+      </text>
+    </g>
+  )
+}
