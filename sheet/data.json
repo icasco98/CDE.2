@@ -1,28 +1,10 @@
 {
-  "revision": 9,
+  "revision": 10,
   "date": "11 Sep 2026",
   "session": "Session 3",
   "repo": "https://github.com/icasco98/CDE.2",
-  "headline": "A7 massing and A12 zoom and pan are reviewed and wait on your merge. All four stages now exist.",
-  "decide": [
-    {
-      "id": "merge-23",
-      "kind": "merge",
-      "text": "Merge PR #23 (A7 massing). Reviewed and driven in the app: two storeys, four presets, height edits.",
-      "link": "https://github.com/icasco98/CDE.2/pull/23"
-    },
-    {
-      "id": "merge-24",
-      "kind": "merge",
-      "text": "Merge PR #24 (A12 zoom and pan). Reviewed and driven in the app: an ensuite's label is readable zoomed in.",
-      "link": "https://github.com/icasco98/CDE.2/pull/24"
-    },
-    {
-      "id": "start-a8",
-      "kind": "start",
-      "text": "Start A8 export (PDF to scale and DXF, in the browser) after A7 merges."
-    }
-  ],
+  "headline": "All four stages are merged. The owner is testing the tool by hand before A8 export starts.",
+  "decide": [],
   "yours": [
     {
       "id": "o3",
@@ -50,22 +32,15 @@
       "task": "A7",
       "name": "Massing",
       "model": "Opus",
-      "stage": 3,
+      "stage": 4,
       "pr": 23
     },
     {
       "task": "A12",
       "name": "Zoom and pan",
       "model": "Opus",
-      "stage": 3,
-      "pr": 24
-    },
-    {
-      "task": "A6",
-      "name": "Zoning",
-      "model": "Opus",
       "stage": 4,
-      "pr": 19
+      "pr": 24
     }
   ],
   "stages": ["Briefed", "Building", "Review", "Your merge", "Merged"],
@@ -73,13 +48,13 @@
     "Requirements and bubbles run over one store with autosave (#9, #10, #11).",
     "Weights are the three families; default connections proposed in the bubbles (#15, #16).",
     "A6 zoning merged: place, move, rotate, resize, carve, doors, tensions, proposals (#19).",
-    "Model gained storey heights; decision 16: massing is an axonometric SVG (#21).",
-    "A7 massing built and reviewed: prisms per storey, four presets, envelope numbers (#23).",
-    "A12 zoom and pan built and reviewed (#24)."
+    "A7 massing merged: prisms per storey, four presets, envelope numbers, storey heights (#23).",
+    "A12 zoom and pan merged (#24).",
+    "Briefs and the sheet builder kept in the repository (#18). Hourly updates scheduled."
   ],
   "next": [
-    "A8 export on your word, after A7 merges.",
-    "A9 usability run (needs O3 the known house and O5 the fresh brief).",
-    "Milestone 2 waits on O4 walls and the forces revisit."
+    "Owner tests the tool by hand; fixes from that come first.",
+    "A8 export on the owner's word.",
+    "A9 usability run (needs O3 the known house and O5 the fresh brief)."
   ]
 }
