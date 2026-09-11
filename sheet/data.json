@@ -1,9 +1,9 @@
 {
-  "revision": 12,
+  "revision": 13,
   "date": "11 Sep 2026",
   "session": "Session 3",
   "repo": "https://github.com/icasco98/CDE.2",
-  "headline": "F1 is back with its agent for four fixes; F2 is still building. Nothing waits on you.",
+  "headline": "F1 merged: rebuilds follow the storeys, rooms bring their companions. F2 is still building.",
   "decide": [],
   "yours": [
     {
@@ -29,16 +29,17 @@
   ],
   "agents": [
     {
-      "task": "F1",
-      "name": "Storeys and companions",
-      "model": "Opus",
-      "stage": 2
-    },
-    {
       "task": "F2",
       "name": "Bubbles rework",
       "model": "Opus",
       "stage": 1
+    },
+    {
+      "task": "F1",
+      "name": "Storeys and companions",
+      "model": "Opus",
+      "stage": 4,
+      "pr": 31
     },
     {
       "task": "A7",
@@ -60,7 +61,7 @@
     "All four stages merged: requirements, bubbles, zoning, massing (#19, #23, #24).",
     "Double-click start scripts for Windows and Mac (#27).",
     "Owner's first test: comments on requirements and bubbles became F1, F2, F3 (#28).",
-    "F1 built and reviewed: sent back for four fixes (model must not read the rulebook, one companion naming rule, rebuild adds every companion, Add lands on the kind's storey). F2 building.",
+    "F1 merged: default storey and companion per kind, master-on-ground option, stairs span every storey (#31). F2 building.",
     "Briefs and the sheet builder kept in the repository (#18). Hourly updates scheduled."
   ],
   "next": [
