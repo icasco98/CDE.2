@@ -16,7 +16,7 @@ connection from where two walls happen to land.
 | **Room** | `id`, `name`, `type`, `storey`, `storeysSpanned`, `targetArea`, `bubble?`, `footprint?`, `pinned` | `type` keys the room-type table. `bubble` is `{x, y}` in the bubble view. `footprint` is `{polygon, rotation}`: a rigid polygon in its own frame, turned about its centre, absent while unplaced. A stair is a room with `storeysSpanned > 1`. `pinned` means the solver may not move it. |
 | **Edge** | `id`, `a`, `b`, `kind`, `storey`, `hint?` | `a`/`b` are room ids, or the singleton `EXTERIOR`. `kind` is `door`, `open` (one space flows into the next) or `main-door` (exactly one per project, from `EXTERIOR`). `hint` is a wall position for drawing; losing it changes nothing. |
 | **Household** | `familySize`, `bedrooms`, `cars`, `maid`, `driver`, `womensReception` | Who the house is for. The room program is generated from it. |
-| **Weights** | one number per force | The person's own priorities on this project. Always on screen. |
+| **Weights** | one number per family of forces: user requirements, site constraints, environmental factors | The person's own priorities on this project. Always on screen. The forces inside each family and their default strengths are in the rulebook. |
 | **Actor** | `id`, `name`, `role`, `waypoints[]` | Waypoints are room ids. Routes are derived. |
 
 Invariants: an edge joins two rooms that share a storey, or a stair
