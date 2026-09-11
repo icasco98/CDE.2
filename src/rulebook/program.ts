@@ -9,20 +9,31 @@ export type ProgramRoom = {
   readonly storeysSpanned: number
 }
 
-/** A kind the table puts on every storey stands on the ground and reaches the top, as a stair does. */
-function spanOf(kindId: string, storeys: number): number {
-  return roomTypeById(kindId)?.defaultStorey === 'all' ? storeys : 1
+/** Where a room of a kind stands the moment it is made: its storey and the storeys it reaches. */
+export type Standing = { readonly storey: number; readonly storeysSpanned: number }
+
+/**
+ * The table's default storey read into a house of this many storeys. `any` opens on the ground
+ * beside `ground`, and above two storeys every `upper` kind still opens on the first; the person
+ * moves rooms up from there. A kind the table puts on every storey stands on the ground and
+ * reaches the top, which is what a stair and a lift do.
+ */
+export function standingOf(kindId: string, storeys: number): Standing {
+  const levels = Math.max(1, Math.trunc(storeys))
+  const where = roomTypeById(kindId)?.defaultStorey ?? 'ground'
+  if (where === 'all') return { storey: 0, storeysSpanned: levels }
+  if (where === 'top') return { storey: levels - 1, storeysSpanned: 1 }
+  if (where === 'upper') return { storey: levels > 1 ? 1 : 0, storeysSpanned: 1 }
+  return { storey: 0, storeysSpanned: 1 }
 }
 
 /**
- * The storey a kind opens on. `any` opens on the ground beside `ground`, and above two storeys every
- * `upper` kind still opens on the first; the person moves rooms up from there.
+ * What a companion is called. An ensuite is one of several in a house, so it carries the name of
+ * the room it serves; every other companion is one to a house and its own label says enough.
  */
-function storeyOf(kindId: string, storeys: number): number {
-  const where = roomTypeById(kindId)?.defaultStorey ?? 'ground'
-  if (where === 'top') return storeys - 1
-  if (where === 'upper') return storeys > 1 ? 1 : 0
-  return 0
+export function companionName(companionId: string, roomName: string): string {
+  const label = roomTypeById(companionId)?.label ?? companionId
+  return companionId === 'ensuite-bathroom' ? `Ensuite, ${roomName}` : label
 }
 
 /** The standard trio plus the rooms this household implies, each at its typical target area. */
@@ -33,14 +44,23 @@ export function defaultProgram(
 ): readonly ProgramRoom[] {
   const levels = Math.max(1, Math.trunc(storeys))
   const rooms: ProgramRoom[] = []
-  const add = (type: string, name: string, storey = storeyOf(type, levels)): void => {
+
+  const put = (type: string, name: string, storey: number): void => {
     rooms.push({
       type,
       name,
       targetArea: typicalArea(type, plotAreaM2),
       storey,
-      storeysSpanned: spanOf(type, levels),
+      storeysSpanned: standingOf(type, levels).storeysSpanned,
     })
+  }
+
+  const add = (type: string, name: string, on = standingOf(type, levels).storey): void => {
+    put(type, name, on)
+    // A companion stands with the room it serves, so it takes that room's storey, not its own
+    // default, and brings nothing further of its own.
+    const companion = roomTypeById(type)?.companion
+    if (companion) put(companion, companionName(companion, name), on)
   }
 
   add('entry-foyer', 'Entry')
@@ -59,20 +79,11 @@ export function defaultProgram(
     const name = i === 0 ? 'Master Bedroom' : `Bedroom ${i}`
     const kind = i === 0 ? 'master-bedroom' : 'bedroom'
     // Parents on the ground floor is a common Kuwaiti arrangement, so the household may ask for it.
-    const storey = i === 0 && household.masterOnGround ? 0 : storeyOf(kind, levels)
-    add(kind, name, storey)
-    // A companion stands with the room it serves, so the ensuite takes its own bedroom's storey.
-    add('ensuite-bathroom', `Ensuite, ${name}`, storey)
+    add(kind, name, i === 0 && household.masterOnGround ? 0 : standingOf(kind, levels).storey)
   }
 
-  if (household.maid) {
-    add('maid-room', 'Maid Room')
-    add('maid-bathroom', 'Maid Bathroom', storeyOf('maid-room', levels))
-  }
-  if (household.driver) {
-    add('driver-room', 'Driver Room')
-    add('driver-bathroom', 'Driver Bathroom', storeyOf('driver-room', levels))
-  }
+  if (household.maid) add('maid-room', 'Maid Room')
+  if (household.driver) add('driver-room', 'Driver Room')
 
   const cars = Math.max(0, Math.trunc(household.cars))
   for (let i = 0; i < cars; i++) add('garage', `Garage bay ${i + 1}`)

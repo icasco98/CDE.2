@@ -16,7 +16,7 @@ beforeEach(() => {
 describe('adding a room from the program', () => {
   it('brings the companion the table names, and one undo removes the pair', () => {
     expect(addRoomWithCompanion(store, 'bedroom', plotArea, 1).ok).toBe(true)
-    expect(names()).toEqual(['Bedroom', 'Ensuite Bathroom, Bedroom'])
+    expect(names()).toEqual(['Bedroom', 'Ensuite, Bedroom'])
     expect(store.getState().rooms.map((room) => room.type)).toEqual(['bedroom', 'ensuite-bathroom'])
     store.undo()
     expect(names()).toEqual([])
@@ -37,5 +37,19 @@ describe('adding a room from the program', () => {
     store.actions.addStorey()
     addRoomWithCompanion(store, 'stair', plotArea, store.getState().storeys)
     expect(store.getState().rooms[0]).toMatchObject({ storey: 0, storeysSpanned: 2 })
+  })
+
+  it('puts a room on the storey the table gives its kind', () => {
+    store.actions.addStorey()
+    const storeys = store.getState().storeys
+    addRoomWithCompanion(store, 'bedroom', plotArea, storeys)
+    addRoomWithCompanion(store, 'kitchen', plotArea, storeys)
+    addRoomWithCompanion(store, 'roof-annex', plotArea, storeys)
+    expect(store.getState().rooms.map((room) => [room.name, room.storey])).toEqual([
+      ['Bedroom', 1],
+      ['Ensuite, Bedroom', 1],
+      ['Kitchen', 0],
+      ['Roof Annex', 1],
+    ])
   })
 })

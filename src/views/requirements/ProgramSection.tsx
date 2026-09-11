@@ -5,6 +5,7 @@ import { categoryLabels, typesByCategory } from '../../rulebook'
 import { session } from '../../app/session'
 import { addRoomWithCompanion } from './addRoom'
 import { Section } from './fields'
+import { addStorey, removeStorey } from './storeys'
 import { metres2, storeyLabel } from './format'
 import { ProgramRow } from './ProgramRow'
 import { refusalOf } from './refusals'
@@ -66,10 +67,10 @@ export function ProgramSection({ project }: { project: Project }) {
         <button type="button" onClick={addRoom}>
           Add room
         </button>
-        <button type="button" onClick={() => setProblem(refusalOf(session.actions.addStorey()))}>
+        <button type="button" onClick={() => setProblem(refusalOf(addStorey(session)))}>
           Add storey
         </button>
-        <button type="button" onClick={() => setProblem(refusalOf(session.actions.removeStorey()))}>
+        <button type="button" onClick={() => setProblem(refusalOf(removeStorey(session)))}>
           Remove storey
         </button>
       </div>

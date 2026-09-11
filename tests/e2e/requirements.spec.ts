@@ -185,9 +185,9 @@ test('two storeys put the bedrooms upstairs, and a bedroom added brings its ensu
   await page.getByLabel('Kind to add').selectOption('bedroom')
   await page.getByRole('button', { name: 'Add room' }).click()
   await expect(rowsOf(page)).toHaveCount(before + 2)
-  await expect(rowNamed(page, 'Ensuite Bathroom, Bedroom')).toHaveCount(1)
+  await expect(rowNamed(page, 'Ensuite, Bedroom').getByLabel('Storey')).toHaveValue('1')
 
   await page.getByRole('button', { name: 'Undo' }).click()
   await expect(rowsOf(page)).toHaveCount(before)
-  await expect(rowNamed(page, 'Ensuite Bathroom, Bedroom')).toHaveCount(0)
+  await expect(rowNamed(page, 'Ensuite, Bedroom')).toHaveCount(0)
 })

@@ -446,9 +446,10 @@ test('a stair added to a two-storey program stands on both storeys at one place'
   page,
 }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Add storey' }).click()
   await page.getByLabel('Kind to add').selectOption('stair')
   await page.getByRole('button', { name: 'Add room' }).click()
+  // The storey comes after the stair, so the stair is stretched onto it rather than made with it.
+  await page.getByRole('button', { name: 'Add storey' }).click()
   await page.getByRole('button', { name: 'Zoning' }).click()
   await expect(page.locator('svg.zoning-sheet')).toBeVisible()
 

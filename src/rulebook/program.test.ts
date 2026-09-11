@@ -33,6 +33,7 @@ describe('the program a household implies', () => {
     expect(program.map((room) => room.type)).toEqual([
       'entry-foyer',
       'diwaniya',
+      'diwaniya-wc',
       'formal-living',
       'family-living',
       'dining-room',
@@ -98,6 +99,7 @@ describe('the storeys the program opens on', () => {
       'Entry',
       'Stair',
       'Diwaniya',
+      'Diwaniya WC',
       'Formal Living',
       'Family Living',
       'Dining Room',
@@ -124,6 +126,19 @@ describe('the storeys the program opens on', () => {
       'Bedroom 2',
       'Ensuite, Bedroom 2',
     ])
+  })
+
+  it('brings every companion the table names, beside the room it serves', () => {
+    const program = defaultProgram(500, large, 2)
+    const beside = (name: string): string | undefined => {
+      const at = program.findIndex((room) => room.name === name)
+      return program[at + 1]?.name
+    }
+    expect(beside('Diwaniya')).toBe('Diwaniya WC')
+    expect(beside('Master Bedroom')).toBe('Ensuite, Master Bedroom')
+    expect(beside('Bedroom 3')).toBe('Ensuite, Bedroom 3')
+    expect(beside('Maid Room')).toBe('Maid Bathroom')
+    expect(beside('Driver Room')).toBe('Driver Bathroom')
   })
 
   it('keeps the staff rooms and their bathrooms together on the ground', () => {

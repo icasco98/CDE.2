@@ -18,7 +18,7 @@ export {
   typesByCategory,
   typicalArea,
 } from './sizes'
-export { defaultProgram } from './program'
-export type { ProgramRoom } from './program'
+export { companionName, defaultProgram, standingOf } from './program'
+export type { ProgramRoom, Standing } from './program'
 export { connectionSource } from './defaultConnections'
 export { proposedConnections } from './proposals'

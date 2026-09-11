@@ -32,6 +32,7 @@ const referenceCase: readonly string[] = [
   'Entry to Formal Living (door, D5)',
   'Entry to Family Living (door, D6)',
   'Entry to Guest WC (door, D7)',
+  'Diwaniya to Diwaniya WC (door, D11)',
   'Kitchen to Dining Room (door, D12)',
   'Dining Room to Family Living (open, D18)',
   'Master Bedroom to Ensuite, Master Bedroom (door, D19)',
@@ -42,7 +43,7 @@ const referenceCase: readonly string[] = [
 describe('the reference case: the starting household on the starting plot', () => {
   it('proposes exactly the defaults the program implies', () => {
     const project = startingProject()
-    expect(project.rooms).toHaveLength(15)
+    expect(project.rooms).toHaveLength(16)
     expect(named(project, proposedConnections(project.rooms, project.edges))).toEqual(referenceCase)
   })
 
