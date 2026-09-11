@@ -74,3 +74,12 @@ A reversal is a new entry, never an edit.
     screen a person uses) and on Sonnet for mechanical work fully
     determined by the brief (tooling, scaffolding, formatting). Agents
     never run on Fable, to conserve it for review.
+
+16. **Massing is drawn, not rendered.** The massing view is a
+    parallel-projection (axonometric) SVG of each storey's footprints
+    extruded to that storey's height, in the same DOM as the other
+    views: a room is a `<g data-room>` like everywhere else, selection
+    and hover are ordinary events, the printed sheet reuses the SVG,
+    and there is no WebGL and no 3D library. Four fixed view
+    directions and a horizontal orbit are enough to read a mass. A
+    true 3D viewer, if ever wanted, arrives with IFC in milestone 5.

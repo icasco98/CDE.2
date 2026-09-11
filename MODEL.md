@@ -11,7 +11,7 @@ connection from where two walls happen to land.
 
 | Entity | Fields | Notes |
 |---|---|---|
-| **Project** | `id`, `name`, `storeys`, `plot`, `household`, `rooms[]`, `edges[]`, `weights`, `actors[]`, `version` | One JSON document. Metres and m². |
+| **Project** | `id`, `name`, `storeys`, `heights[]`, `plot`, `household`, `rooms[]`, `edges[]`, `weights`, `actors[]`, `version` | One JSON document. Metres and m². `heights` is the floor-to-floor height of each storey in metres, one entry per storey, 3.5 unless the person changes it; the Municipality's 3 m clear minimum and 15 m maximum are walls in the rulebook, not limits on the field. |
 | **Plot** | `on` (boolean: the boundary binds), `polygon`, `north` (degrees from up), `street` (which edges face a street) | `on` false: the plot is drawn for reference and constrains nothing. A rectangle today, any polygon later; same field either way. |
 | **Room** | `id`, `name`, `type`, `storey`, `storeysSpanned`, `targetArea`, `bubble?`, `footprint?`, `pinned` | `type` keys the room-type table. `bubble` is `{x, y}` in the bubble view. `footprint` is `{polygon, rotation}`: a rigid polygon in its own frame, turned about its centre, absent while unplaced. A stair is a room with `storeysSpanned > 1`. `pinned` means the solver may not move it. |
 | **Edge** | `id`, `a`, `b`, `kind`, `storey`, `hint?` | `a`/`b` are room ids, or the singleton `EXTERIOR`. `kind` is `door`, `open` (one space flows into the next) or `main-door` (exactly one per project, from `EXTERIOR`). `hint` is a wall position for drawing; losing it changes nothing. |
@@ -67,7 +67,8 @@ by side. The tool never presents one answer.
    same area; rooms dragged, rotated, reshaped and carved by hand; an
    unrealised edge shown as tension between two rooms.
 4. **Massing.** The same graph stood up: storeys, heights, envelope as
-   the union of rooms.
+   the union of rooms, drawn in parallel projection with its numbers
+   (floor area, envelope, roof, volume) beside it.
 
 Each stage adds constraints. None changes the graph.
 
@@ -92,8 +93,8 @@ Each stage adds constraints. None changes the graph.
   accepts it.
 - **Settle** runs the solver on unpinned rooms. It is interruptible:
   grab a room and it pins, the rest continue.
-- **Undo** covers rooms, edges, plot, weights and household. The
-  project's name, actors and camera are outside it.
+- **Undo** covers rooms, edges, plot, heights, weights and household.
+  The project's name, actors and camera are outside it.
 
 ## Persistence
 
