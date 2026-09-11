@@ -14,9 +14,9 @@ import {
   type Position,
 } from '../../bubbles'
 import { bodyAt, extentOf, pointerAt, viewBoxOf } from './frame'
-import { Bands, Bubble, Link } from './parts'
+import { Bands, Bubble, Link, Proposed } from './parts'
 import { useSettling } from './useSettling'
-import type { BubblesViewProps } from './types'
+import type { BubbleProposal, BubblesViewProps } from './types'
 import './bubbles.css'
 
 type Gesture =
@@ -25,8 +25,8 @@ type Gesture =
   | null
 
 export function BubblesView(props: BubblesViewProps) {
-  const { rooms, edges, storeys, plot, selected } = props
-  const { onMoveBubble, onPin, onConnect, onDisconnect, onSelect } = props
+  const { rooms, edges, proposals, storeys, plot, selected } = props
+  const { onMoveBubble, onPin, onConnect, onDisconnect, onAccept, onAcceptAll, onSelect } = props
   const svgRef = useRef<SVGSVGElement>(null)
   const [gesture, setGesture] = useState<Gesture>(null)
   const [aspect, setAspect] = useState(0)
@@ -109,12 +109,29 @@ export function BubblesView(props: BubblesViewProps) {
 
   const handlers = { onGrab: grab, onReach: reach, onDrag: drag, onRelease: release }
 
+  /** The outside is not a bubble, so a proposal touching it is offered in words instead of as a line. */
+  const roomOf = (proposal: BubbleProposal): string =>
+    named.has(proposal.a) ? proposal.a : proposal.b
+  const drawable = proposals.filter((proposal) => placed.has(proposal.a) && placed.has(proposal.b))
+  const spoken = proposals.filter((proposal) => !placed.has(proposal.a) || !placed.has(proposal.b))
+
+  function accept(event: { stopPropagation: () => void }, proposal: BubbleProposal) {
+    event.stopPropagation()
+    interrupt()
+    onAccept(proposal)
+  }
+
   return (
     <div className="bubbles">
       <div className="bubbles-bar">
         <button type="button" onClick={settling === 'running' ? stop : start}>
           {settling === 'running' ? 'Stop' : 'Settle'}
         </button>
+        {proposals.length > 0 && (
+          <button type="button" onClick={onAcceptAll}>
+            Accept all proposals
+          </button>
+        )}
         <button
           type="button"
           disabled={!selectedRoom}
@@ -200,7 +217,34 @@ export function BubblesView(props: BubblesViewProps) {
             />
           ) : null
         })}
+        {drawable.map((proposal) => {
+          const a = placed.get(proposal.a)
+          const b = placed.get(proposal.b)
+          return a && b ? (
+            <Proposed
+              key={`${proposal.rowId}:${proposal.a}:${proposal.b}`}
+              a={a}
+              b={b}
+              source={proposal.source}
+              onAccept={(event) => accept(event, proposal)}
+            />
+          ) : null
+        })}
       </svg>
+      {spoken.length > 0 && (
+        <ul className="proposals">
+          {spoken.map((proposal) => (
+            <li key={`${proposal.rowId}:${proposal.a}:${proposal.b}`}>
+              <span>
+                {named.get(roomOf(proposal))?.name ?? roomOf(proposal)}: {proposal.source}
+              </span>
+              <button type="button" onClick={(event) => accept(event, proposal)}>
+                Accept
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
