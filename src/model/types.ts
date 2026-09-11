@@ -3,7 +3,7 @@ import type { Footprint, Point, Polygon } from '../geometry/types'
 export const EXTERIOR = 'EXTERIOR'
 
 /** The document format; a bump needs a migration in persistence.ts. */
-export const PROJECT_VERSION = 1
+export const PROJECT_VERSION = 2
 
 export type EdgeKind = 'door' | 'open' | 'main-door'
 
@@ -23,6 +23,16 @@ export type Plot = {
   readonly north: number
   /** Indices of the polygon sides that face a street, side `i` running from vertex `i` to `i + 1`. */
   readonly street: readonly number[]
+}
+
+/** Who the house is for; the program screen reads the rooms it implies from it. */
+export type Household = {
+  readonly familySize: number
+  readonly bedrooms: number
+  readonly cars: number
+  readonly maid: boolean
+  readonly driver: boolean
+  readonly womensReception: boolean
 }
 
 export type Room = {
@@ -62,6 +72,7 @@ export type Project = {
   readonly name: string
   readonly storeys: number
   readonly plot: Plot
+  readonly household: Household
   readonly rooms: readonly Room[]
   readonly edges: readonly Edge[]
   readonly weights: Weights

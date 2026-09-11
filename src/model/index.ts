@@ -5,6 +5,7 @@ export type {
   Edge,
   EdgeKind,
   Endpoint,
+  Household,
   Plot,
   Project,
   Result,

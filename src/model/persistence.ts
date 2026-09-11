@@ -1,4 +1,5 @@
 import { isDocument, parseProject, type Document } from './parse'
+import { startingHousehold } from './project'
 import type { Store } from './store'
 import { PROJECT_VERSION, ok, refused, type Project, type Result, type Violation } from './types'
 
@@ -13,8 +14,10 @@ export type Storage = {
 
 type Migration = (document: Document) => Document
 
-/** From the version keyed to the next one. There is one version today, so the table is empty. */
-const migrations: ReadonlyMap<number, Migration> = new Map<number, Migration>()
+/** From the version keyed to the next one. */
+const migrations: ReadonlyMap<number, Migration> = new Map<number, Migration>([
+  [1, (document) => ({ household: startingHousehold, ...document })],
+])
 
 export function serialize(project: Project): string {
   return JSON.stringify({ ...project, version: PROJECT_VERSION }, null, 2)

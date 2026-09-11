@@ -5,6 +5,7 @@ import {
   type Actor,
   type Edge,
   type EdgeKind,
+  type Household,
   type Plot,
   type Project,
   type Result,
@@ -133,6 +134,18 @@ export function parseProject(document: Document): Result<Project> {
     }
   }
 
+  const householdOf = (value: unknown, at: string): Household => {
+    const raw = nested(value, at)
+    return {
+      familySize: count(raw.familySize, `${at}.familySize`),
+      bedrooms: count(raw.bedrooms, `${at}.bedrooms`),
+      cars: count(raw.cars, `${at}.cars`),
+      maid: flag(raw.maid, `${at}.maid`),
+      driver: flag(raw.driver, `${at}.driver`),
+      womensReception: flag(raw.womensReception, `${at}.womensReception`),
+    }
+  }
+
   const weightsOf = (value: unknown, at: string): Weights =>
     Object.fromEntries(
       Object.entries(nested(value, at)).map(([force, weight]) => [
@@ -146,6 +159,7 @@ export function parseProject(document: Document): Result<Project> {
     name: text(document.name, 'name'),
     storeys: count(document.storeys, 'storeys'),
     plot: plotOf(document.plot, 'plot'),
+    household: householdOf(document.household, 'household'),
     rooms: list(document.rooms, 'rooms').map((raw, i) => room(raw, `rooms[${i}]`)),
     edges: list(document.edges, 'edges').map((raw, i) => edge(raw, `edges[${i}]`)),
     weights: weightsOf(document.weights, 'weights'),

@@ -9,6 +9,7 @@ import {
   serialize,
   type Storage,
 } from './persistence'
+import { startingHousehold } from './project'
 import { createStore } from './store'
 import { EXTERIOR, PROJECT_VERSION, type Project, type Result, type Violation } from './types'
 
@@ -107,6 +108,20 @@ describe('the project file', () => {
     const document = { ...project, edges: [...project.edges, project.edges[1]] }
     const back = deserialize(JSON.stringify(document))
     expect(back.ok ? [] : back.problems.map((p) => p.code)).toEqual(['edge-duplicate'])
+  })
+
+  it('gives a document written before households the household a project starts with', () => {
+    const document: Record<string, unknown> = { ...furnished(), version: 1 }
+    delete document.household
+    const back = deserialize(JSON.stringify(document))
+    expect(back.ok && back.value.household).toEqual(startingHousehold)
+    expect(back.ok && back.value.version).toBe(PROJECT_VERSION)
+  })
+
+  it('leaves the household of a document that already carries one', () => {
+    const project = { ...furnished(), household: { ...startingHousehold, bedrooms: 7 } }
+    const back = deserialize(JSON.stringify(project))
+    expect(back.ok && back.value.household.bedrooms).toBe(7)
   })
 
   it('refuses a version it cannot migrate and one from a newer tool', () => {

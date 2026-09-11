@@ -1,4 +1,4 @@
-import { occupiedStoreys } from './invariants'
+import { checkProject, occupiedStoreys } from './invariants'
 import type { IdGenerator } from './ids'
 import {
   dropRoom,
@@ -16,6 +16,7 @@ import {
   type Bubble,
   type EdgeKind,
   type Endpoint,
+  type Household,
   type Plot,
   type Project,
   type Result,
@@ -69,6 +70,15 @@ export function createActions(context: Context) {
 
   return {
     newProject: (name?: string): Result => context.reset(emptyProject(newId, name)),
+
+    /** Opens a project that came from a file: it replaces the one in hand, history and all. */
+    load(project: Project): Result {
+      const problems = checkProject(project)
+      return problems.length > 0 ? { ok: false, problems } : context.reset(project)
+    },
+
+    /** The name is the person's label for the document, not part of the design, so undo passes it by. */
+    setName: (name: string): Result => settle({ ...state(), name }, 'aside'),
 
     addRoom(input: {
       type: string
@@ -169,6 +179,8 @@ export function createActions(context: Context) {
       settle({ ...state(), plot: { ...state().plot, street } }),
 
     setWeights: (weights: Weights): Result => settle({ ...state(), weights }),
+
+    setHousehold: (household: Household): Result => settle({ ...state(), household }),
 
     addStorey: (): Result => settle({ ...state(), storeys: state().storeys + 1 }, 'aside'),
 
