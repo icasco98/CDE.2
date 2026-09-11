@@ -148,7 +148,7 @@ function insideBoundary(footprint: Footprint, boundary: Polygon): Footprint {
 }
 
 /** The cheap test rejects the many, and only a maybe is settled against the real common area. */
-function overlaps(a: Footprint, b: Footprint): boolean {
+export function overlaps(a: Footprint, b: Footprint): boolean {
   if (!footprintsOverlap(a, b)) return false
   try {
     return sharedArea(a, b) > OVERLAP_AREA_M2

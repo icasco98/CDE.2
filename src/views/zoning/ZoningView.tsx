@@ -19,9 +19,11 @@ import {
   ZOOM_STEP,
   type Camera,
 } from '../camera'
+import { alignRooms, northAngle, plotAngle } from './align'
 import { defaultProportion, startingRectangle } from './defaults'
 import { edgeMarks, proposalsFrom, wallPairs, type WallPair } from './doors'
 import { extentOf, pointerAt } from './frame'
+import { joinsOf, type Join } from './joins'
 import {
   angleTo,
   carveRefusal,
@@ -50,6 +52,7 @@ import {
   DropGhost,
   Ghosts,
   Handles,
+  JoinShape,
   NorthArrow,
   PendingRoom,
   PlotSheet,
@@ -201,18 +204,37 @@ export function ZoningView(props: ZoningViewProps) {
     [rooms, storey],
   )
   const standing = useMemo(
-    () => placed.map((room) => ({ id: room.id, outline: outlineOf(room.footprint) })),
+    () =>
+      placed.map((room) => ({
+        id: room.id,
+        name: room.name,
+        outline: outlineOf(room.footprint),
+      })),
     [placed],
   )
-  const marks = useMemo(
+  const joins = useMemo(
     () =>
-      edgeMarks(
+      joinsOf(
         standing,
         edges.filter((edge) => edge.storey === storey),
-        plot,
       ),
-    [standing, edges, storey, plot],
+    [standing, edges, storey],
   )
+  /** The join each room is drawn inside, so a room knows to leave its wall and its label to it. */
+  const joined = useMemo(
+    () => new Map(joins.flatMap((join) => join.ids.map((id): [string, Join] => [id, join]))),
+    [joins],
+  )
+  const marks = useMemo(() => {
+    // An open edge inside a join has no wall left to hang a door on; every other edge is drawn
+    // as it always was, which for an edge into the join is on the union's own outline.
+    const inside = new Set(joins.flatMap((join) => join.edgeIds))
+    return edgeMarks(
+      standing,
+      edges.filter((edge) => edge.storey === storey && !inside.has(edge.id)),
+      plot,
+    )
+  }, [standing, edges, storey, plot, joins])
   const pairs = useMemo(() => wallPairs(standing), [standing])
   const proposals = useMemo(() => proposalsFrom(pairs, edges, storey), [pairs, edges, storey])
   const extent = useMemo(
@@ -719,6 +741,32 @@ export function ZoningView(props: ZoningViewProps) {
     else onPlace(selectedRoom.id, attempt.value, 'commit')
   }
 
+  /**
+   * Square the room that is picked, or every placed room on the storey that is not held, to a
+   * direction: one transaction, one undo step, and a room already standing that way is left
+   * alone rather than written again.
+   */
+  function align(target: number): void {
+    if (selectedRoom && grabbable && selectedRoom.pinned) {
+      onRefuse(`${selectedRoom.name} is pinned.`)
+      return
+    }
+    const turning =
+      selectedRoom && grabbable && isPlaced(selectedRoom)
+        ? [selectedRoom]
+        : placed.filter((room) => !room.pinned)
+    const aligned = alignRooms(
+      turning.map(neighbourOf),
+      placed.map(neighbourOf),
+      plot.on ? plot.polygon : [],
+      target,
+    )
+    for (const skip of aligned.skipped) {
+      onRefuse(`${skip.name} could not be aligned: ${skip.reason}.`)
+    }
+    if (aligned.placements.length > 0) onPlaceAll(aligned.placements)
+  }
+
   /** A button that reshapes the selected room, with the prompt standing on the room itself. */
   function reshape(room: Placed, offer: Offer | null, doing: string): void {
     if (!offer) return
@@ -802,6 +850,16 @@ export function ZoningView(props: ZoningViewProps) {
         )}
         <button
           type="button"
+          disabled={placed.length === 0}
+          onClick={() => align(northAngle(plot))}
+        >
+          Align to north
+        </button>
+        <button type="button" disabled={placed.length === 0} onClick={() => align(plotAngle(plot))}>
+          Align to plot
+        </button>
+        <button
+          type="button"
           disabled={!selectedRoom}
           onClick={() => selectedRoom && onPin(selectedRoom.id, !selectedRoom.pinned)}
         >
@@ -882,6 +940,14 @@ export function ZoningView(props: ZoningViewProps) {
           {marks.tensions.map((mark) => (
             <Tension key={mark.edgeId} mark={mark} />
           ))}
+          {/* Under the rooms, which keep their own shapes to take the pointer. */}
+          {joins.map((join) => (
+            <JoinShape
+              key={join.key}
+              join={join}
+              selected={selected !== null && join.ids.includes(selected)}
+            />
+          ))}
           {placed
             .filter((room) => room.id !== asked?.id)
             .map((room) => (
@@ -890,6 +956,7 @@ export function ZoningView(props: ZoningViewProps) {
                 room={room}
                 sizes={sizes.get(room.type)}
                 selected={room.id === selected}
+                joined={joined.has(room.id)}
                 onGrab={onGrabRoom}
                 onHover={onHoverRoom}
               />

@@ -8,10 +8,12 @@ import {
   type Point,
   type Polygon,
 } from '../../geometry'
+import type { Edge } from '../../model'
 import { fitCamera, metresPerPixel, viewBoxOf, zoomAbout, ZOOM_STEP } from '../camera'
 import { wallPairs } from './doors'
 import { extentOf } from './frame'
 import { moveFootprint, moveSharedWall, sheetOf, type Neighbour, type Sheet } from './gestures'
+import { joinsOf } from './joins'
 
 /** No kind's smallest size in the way, so the budget is the geometry and nothing else. */
 const anySize = { proportion: 1.25 }
@@ -141,4 +143,30 @@ it('answers one pointer move of a wall drag over thirty placed rooms in under 2 
   })
   expect(moved).toBeGreaterThan(15)
   expect(took / 20).toBeLessThan(2)
+})
+
+/**
+ * What one render of a joined storey runs: the open edges read for the walls their rooms share,
+ * and the union drawn for each join. Thirty rooms wall to wall with ten open connections among
+ * them is a fuller storey than any villa this tool draws.
+ */
+it('joins thirty placed rooms across ten open edges in under 2 ms', () => {
+  const standing = storeyFlush().map((room) => ({
+    id: room.id,
+    name: room.name,
+    outline: outlineOf(room.footprint),
+  }))
+  const edges: Edge[] = Array.from({ length: 10 }, (_unused, index) => ({
+    id: `edge-${index}`,
+    a: `room-${index * 2}`,
+    b: `room-${index * 2 + 1}`,
+    kind: 'open',
+    storey: 0,
+  }))
+  let joins = 0
+  const took = milliseconds(() => {
+    joins = joinsOf(standing, edges).length
+  })
+  expect(joins).toBe(10)
+  expect(took).toBeLessThan(2)
 })

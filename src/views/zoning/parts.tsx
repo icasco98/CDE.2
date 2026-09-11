@@ -13,17 +13,20 @@ import {
   centroid,
   outlineOf,
   outwardWalls,
+  ringsToPath,
   wallDirection,
   wallMidpoint,
   type Footprint,
   type Handle,
   type Point,
+  type Polygon,
 } from '../../geometry'
 import type { Plot, Room } from '../../model'
 import { metres2, storeyLabel } from '../requirements/format'
 import { belowMinimum, offTarget, type RoomSizes } from './defaults'
 import type { DoorMark, ProposalMark, TensionMark, WallPair } from './doors'
 import { pointsOf } from './frame'
+import type { Join } from './joins'
 
 /*
  * Everything that must hold its size on the screen does so in one of three ways: a line keeps its
@@ -72,8 +75,8 @@ const SCALE_RUNS = [
 const LABEL_M = 0.62
 
 /** A label shrinks with its room so a short name sits inside it; a long name in a small room still runs over the wall. */
-function labelSize(footprint: Footprint, name: string): number {
-  const bounds = boundingBox(footprint.polygon)
+function labelSize(polygon: Polygon, name: string): number {
+  const bounds = boundingBox(polygon)
   const byWidth = (bounds.width * 1.8) / Math.max(1, name.length)
   return Math.min(LABEL_M, Math.max(0.3, Math.min(byWidth, bounds.depth * 0.3)))
 }
@@ -239,10 +242,34 @@ export function Ghosts({ footprints }: { footprints: readonly Footprint[] }) {
   )
 }
 
+/**
+ * Rooms an open connection runs between, drawn as the one space they make: the union of their
+ * outlines filled once and stroked once, and one label carrying every name and every area. The
+ * rooms themselves are still drawn over it, unfilled, so every gesture on either of them is the
+ * gesture it always was.
+ */
+export function JoinShape({ join, selected }: { join: Join; selected: boolean }) {
+  return (
+    <g
+      className={selected ? 'join join-selected' : 'join'}
+      style={{ '--label-m': String(labelSize(join.outline, join.label)) } as CSSProperties}
+    >
+      <path data-join={join.key} d={ringsToPath(join.rings)} className="join-shape">
+        <title>{join.label}</title>
+      </path>
+      <text x={join.at[0]} y={join.at[1]} className="join-label">
+        {join.label}
+      </text>
+    </g>
+  )
+}
+
 type RoomShapeProps = {
   readonly room: Room
   readonly sizes: RoomSizes | undefined
   readonly selected: boolean
+  /** Whether the room is drawn inside a join, which carries its wall and its label for it. */
+  readonly joined: boolean
   readonly onGrab: (event: ReactPointerEvent, id: string) => void
   /** The room under the pointer, so the handles on its shared walls show themselves. */
   readonly onHover: (id: string | null) => void
@@ -260,7 +287,7 @@ export const RoomShape = memo(function RoomShape(props: RoomShapeProps) {
   const outline = outlineOf(footprint)
   const measure = area(outline)
   const middle = centroid(outline)
-  const label = labelSize(footprint, room.name)
+  const label = labelSize(footprint.polygon, room.name)
   const warn =
     offTarget(measure, room.targetArea) || (sizes ? belowMinimum(footprint, sizes) : false)
   return (
@@ -271,24 +298,32 @@ export const RoomShape = memo(function RoomShape(props: RoomShapeProps) {
       className={props.selected ? 'room room-selected' : 'room'}
       style={{ '--label-m': String(label) } as CSSProperties}
     >
+      {/* A joined room keeps its shape to take the pointer and gives up its fill, its wall and
+          its label to the join, so no wall is drawn where the two rooms flow into one another. */}
       <polygon
         points={pointsOf(outline)}
-        className={room.pinned ? 'room-shape room-pinned' : 'room-shape'}
+        className={
+          props.joined ? 'room-in-join' : room.pinned ? 'room-shape room-pinned' : 'room-shape'
+        }
         onPointerDown={(event) => props.onGrab(event, room.id)}
         onPointerEnter={() => props.onHover(room.id)}
         onPointerLeave={() => props.onHover(null)}
       />
-      <text x={middle[0]} y={middle[1]} dy="-0.6em" className="room-name">
-        {room.name}
-      </text>
-      <text
-        x={middle[0]}
-        y={middle[1]}
-        dy="0.75em"
-        className={warn ? 'room-area room-area-warning' : 'room-area'}
-      >
-        {`${metres2(measure)} of ${metres2(room.targetArea)} m²`}
-      </text>
+      {!props.joined && (
+        <text x={middle[0]} y={middle[1]} dy="-0.6em" className="room-name">
+          {room.name}
+        </text>
+      )}
+      {!props.joined && (
+        <text
+          x={middle[0]}
+          y={middle[1]}
+          dy="0.75em"
+          className={warn ? 'room-area room-area-warning' : 'room-area'}
+        >
+          {`${metres2(measure)} of ${metres2(room.targetArea)} m²`}
+        </text>
+      )}
     </g>
   )
 })
@@ -509,7 +544,7 @@ export function PendingRoom({
       data-pending={id}
       data-area={measure.toFixed(2)}
       className="room room-pending"
-      style={{ '--label-m': String(labelSize(footprint, name)) } as CSSProperties}
+      style={{ '--label-m': String(labelSize(footprint.polygon, name)) } as CSSProperties}
     >
       <polygon points={pointsOf(outline)} className="pending-shape" />
       <text x={middle[0]} y={middle[1]} dy="-0.6em" className="room-name">
