@@ -1,6 +1,7 @@
 export { capacityMessage, storeyCapacity, storeyLabel } from './capacity'
 export type { StoreyCapacity } from './capacity'
 export {
+  bandHeightFor,
   bandOf,
   createState,
   defaultLayout,
