@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { outlineOf } from './footprint'
 import { rectangleToPolygon } from './polygon'
-import { sharedWalls } from './walls'
+import { outwardWalls, sharedWalls } from './walls'
 import type { Footprint, Polygon } from './types'
 
 const room = (left: number, top: number, width: number, depth: number): Polygon =>
@@ -65,5 +65,39 @@ describe('shared walls', () => {
       [0, 4],
     ]
     expect(sharedWalls(u, room(4, 0, 2, 4), 0.01)).toHaveLength(2)
+  })
+})
+
+describe('outward walls', () => {
+  const normals = (polygon: Polygon): number[][] =>
+    outwardWalls(polygon).map((wall) => [wall.normal[0] + 0, wall.normal[1] + 0])
+
+  it('points every normal away from the inside of a rectangle', () => {
+    expect(normals(room(0, 0, 4, 3))).toEqual([
+      [0, -1],
+      [1, 0],
+      [0, 1],
+      [-1, 0],
+    ])
+  })
+
+  it('points them out of the shape whichever way the ring is wound', () => {
+    expect(normals([...room(0, 0, 4, 3)].reverse())).toEqual([
+      [0, 1],
+      [1, 0],
+      [0, -1],
+      [-1, 0],
+    ])
+  })
+
+  it('leaves out an edge of no length', () => {
+    expect(
+      outwardWalls([
+        [0, 0],
+        [0, 0],
+        [4, 0],
+        [4, 3],
+      ]),
+    ).toHaveLength(3)
   })
 })
