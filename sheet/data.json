@@ -1,10 +1,27 @@
 {
-  "revision": 5,
+  "revision": 6,
   "date": "11 Sep 2026",
   "session": "Session 3",
   "repo": "https://github.com/icasco98/CDE.2",
-  "headline": "A6 zoning is built and under review; sent back for two fixes before it comes to you.",
-  "decide": [],
+  "headline": "A6 zoning is reviewed and waits on your merge. Next: A7 massing on your word.",
+  "decide": [
+    {
+      "id": "merge-19",
+      "kind": "merge",
+      "text": "Merge PR #19 (A6 zoning). Reviewed, fixes verified, driven in the app.",
+      "link": "https://github.com/icasco98/CDE.2/pull/19"
+    },
+    {
+      "id": "start-a7",
+      "kind": "start",
+      "text": "Start A7 massing after A6 merges: storeys, heights, envelope numbers, one selection across all three views."
+    },
+    {
+      "id": "start-zoom",
+      "kind": "start",
+      "text": "Add zoom and pan on the zoning sheet as a task (proposed): small labels are unreadable at whole-plot view."
+    }
+  ],
   "yours": [
     {
       "id": "o3",
@@ -32,7 +49,8 @@
       "task": "A6",
       "name": "Zoning",
       "model": "Opus",
-      "stage": 2
+      "stage": 3,
+      "pr": 19
     },
     {
       "task": "A11",
@@ -54,12 +72,13 @@
     "Requirements and bubbles run over one store with autosave (#9, #10, #11).",
     "Force list drafted under the three families, provisional (#12).",
     "Weights are the three families; old project files migrate (#14, #15).",
-    "Default connections table, 28 rows, proposed in the bubbles (#16).",
-    "A6 zoning built: place, move, rotate, resize, carve, doors, tensions, proposals. In review."
+    "Default connections table, proposed in the bubbles (#16).",
+    "A6 zoning built, sent back for two fixes, verified; awaits your merge (#19).",
+    "Briefs and the sheet builder kept in the repository (#18). Hourly updates scheduled."
   ],
   "next": [
-    "Review A6 in the running app.",
-    "A7 massing, A8 export, A9 usability run.",
+    "A7 massing on your word.",
+    "A8 export, A9 usability run (needs O3 and O5).",
     "Milestone 2 waits on O4 walls and the forces revisit."
   ]
 }
