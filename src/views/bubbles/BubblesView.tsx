@@ -236,15 +236,46 @@ export function BubblesView(props: BubblesViewProps) {
     setCamera(zoomAbout(extent, camera, asPoint(at(event)), Math.pow(ZOOM_STEP, -notchesOf(event))))
   }
 
-  const live = useRef({ move: movePointer, release: releasePointer, wheel: wheelZoom, grab, reach })
-  live.current = { move: movePointer, release: releasePointer, wheel: wheelZoom, grab, reach }
+  function choose(event: ReactPointerEvent, id: string): void {
+    event.stopPropagation()
+    interrupt()
+    focus()
+    onSelect(id)
+  }
 
-  /** Held steady through the ref, so a bubble's own group keeps its props and is not drawn again. */
+  function take(event: { stopPropagation: () => void }, proposal: BubbleProposal): void {
+    event.stopPropagation()
+    interrupt()
+    onAccept(proposal)
+  }
+
+  /** Every handler the sheet hands out, as the latest render wrote it. */
+  const latest = {
+    move: movePointer,
+    release: releasePointer,
+    wheel: wheelZoom,
+    grab,
+    reach,
+    choose,
+    take,
+  }
+  const live = useRef(latest)
+  live.current = latest
+
+  /** Held steady through the ref, so a group on the sheet keeps its props and is not drawn again. */
   const handlers = useMemo(
     () => ({
       onGrab: (event: ReactPointerEvent, body: Body) => live.current.grab(event, body),
       onReach: (event: ReactPointerEvent, body: Body) => live.current.reach(event, body),
     }),
+    [],
+  )
+  const chooseLink = useCallback(
+    (event: ReactPointerEvent, id: string) => live.current.choose(event, id),
+    [],
+  )
+  const takeProposal = useCallback(
+    (event: ReactPointerEvent, proposal: BubbleProposal) => live.current.take(event, proposal),
     [],
   )
 
@@ -332,12 +363,6 @@ export function BubblesView(props: BubblesViewProps) {
     named.has(proposal.a) ? proposal.a : proposal.b
   const drawable = proposals.filter((proposal) => placed.has(proposal.a) && placed.has(proposal.b))
   const spoken = proposals.filter((proposal) => !placed.has(proposal.a) || !placed.has(proposal.b))
-
-  function accept(event: { stopPropagation: () => void }, proposal: BubbleProposal) {
-    event.stopPropagation()
-    interrupt()
-    onAccept(proposal)
-  }
 
   const otherKind: EdgeKind = selectedEdge?.kind === 'open' ? 'door' : 'open'
   const hint = linking
@@ -485,12 +510,7 @@ export function BubblesView(props: BubblesViewProps) {
               kind={edge.kind}
               selected={edge.id === selected}
               dimmed={only !== null && edge.storey !== only}
-              onSelect={(event) => {
-                event.stopPropagation()
-                interrupt()
-                focus()
-                onSelect(edge.id)
-              }}
+              onSelect={chooseLink}
             />
           )
         })}
@@ -528,8 +548,9 @@ export function BubblesView(props: BubblesViewProps) {
               key={`${proposal.rowId}:${proposal.a}:${proposal.b}`}
               a={a}
               b={b}
+              proposal={proposal}
               source={proposal.source}
-              onAccept={(event) => accept(event, proposal)}
+              onAccept={takeProposal}
             />
           ) : null
         })}
@@ -548,7 +569,7 @@ export function BubblesView(props: BubblesViewProps) {
               <span>
                 {named.get(roomOf(proposal))?.name ?? roomOf(proposal)}: {proposal.source}
               </span>
-              <button type="button" onClick={(event) => accept(event, proposal)}>
+              <button type="button" onClick={(event) => take(event, proposal)}>
                 Accept
               </button>
             </li>

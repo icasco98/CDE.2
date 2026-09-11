@@ -8,7 +8,7 @@ import { bandOf, storeyLabel, type Body, type Position } from '../../bubbles'
 import { categoryLabels } from '../../rulebook'
 import type { Extent } from '../camera'
 import { categoryClass } from './frame'
-import type { BubbleRoom } from './types'
+import type { BubbleProposal, BubbleRoom } from './types'
 
 /*
  * What must hold its size on the screen does so as the zoning sheet does it: every stroke is in
@@ -142,30 +142,25 @@ export const Bubble = memo(function Bubble(props: BubbleProps) {
   )
 })
 
-export function Link(props: {
+/** Memoised like the bubbles, so a camera that changes nothing about the graph redraws no link. */
+export const Link = memo(function Link(props: {
   id: string
   a: Body
   b: Body
   kind: string
   selected: boolean
   dimmed: boolean
-  onSelect: (event: ReactPointerEvent) => void
+  onSelect: (event: ReactPointerEvent, id: string) => void
 }) {
   const { a, b } = props
+  const select = (event: ReactPointerEvent): void => props.onSelect(event, props.id)
   return (
     <g
       data-edge={props.id}
       data-kind={props.kind}
       className={props.dimmed ? 'link-group link-dimmed' : 'link-group'}
     >
-      <line
-        x1={a.x}
-        y1={a.y}
-        x2={b.x}
-        y2={b.y}
-        className="link-grip"
-        onPointerDown={props.onSelect}
-      />
+      <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} className="link-grip" onPointerDown={select} />
       {/* One space flowing into the next is a broad opening; a door is the single line. */}
       {props.kind === 'open' && <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} className="link-flow" />}
       <line
@@ -174,11 +169,11 @@ export function Link(props: {
         x2={b.x}
         y2={b.y}
         className={props.selected ? 'link link-selected' : 'link'}
-        onPointerDown={props.onSelect}
+        onPointerDown={select}
       />
     </g>
   )
-}
+})
 
 /** The mark is big enough to aim at on a small bubble and never so big it hides the two rooms. */
 function markRadius(a: Body, b: Body): number {
@@ -195,12 +190,13 @@ function betweenRims(a: Body, b: Body): readonly [Position, Position] {
   ]
 }
 
-export function Proposed(props: {
+export const Proposed = memo(function Proposed(props: {
   a: Body
   b: Body
+  proposal: BubbleProposal
   /** The rulebook row's words, shown on hover. */
   source: string
-  onAccept: (event: ReactPointerEvent) => void
+  onAccept: (event: ReactPointerEvent, proposal: BubbleProposal) => void
 }) {
   const { a, b } = props
   const [from, to] = betweenRims(a, b)
@@ -210,7 +206,7 @@ export function Proposed(props: {
     <g
       data-proposal={`${a.id}:${b.id}`}
       className="proposal"
-      onPointerDown={props.onAccept}
+      onPointerDown={(event) => props.onAccept(event, props.proposal)}
       role="button"
     >
       <title>{props.source}</title>
@@ -222,7 +218,7 @@ export function Proposed(props: {
       </text>
     </g>
   )
-}
+})
 
 type LegendRow = { readonly key: string; readonly label: string; readonly mark: ReactNode }
 
