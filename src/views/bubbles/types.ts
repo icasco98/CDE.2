@@ -1,5 +1,6 @@
 import type { Commit, EdgeKind, Family, Plot, Weights } from '../../model'
 import type { Position } from '../../bubbles'
+import type { StoreyCirculation } from '../../rulebook'
 
 export type BubbleRoom = {
   readonly id: string
@@ -39,6 +40,8 @@ export type BubblesViewProps = {
   readonly edges: readonly BubbleLink[]
   readonly proposals: readonly BubbleProposal[]
   readonly storeys: number
+  /** Each storey's hallway as the rulebook reads it: where one stands, and where one is wanted. */
+  readonly circulation: readonly StoreyCirculation[]
   readonly plot: Plot
   /** The three families of forces, on the sheet beside the diagram they change. */
   readonly weights: Weights
@@ -56,6 +59,8 @@ export type BubblesViewProps = {
   readonly onDisconnect: (edgeId: string) => void
   readonly onSetEdgeKind: (edgeId: string, kind: EdgeKind) => void
   readonly onRemoveRoom: (id: string) => void
+  /** A hallway on this storey, sized by the circulation rule from the rooms standing there now. */
+  readonly onAddHallway: (storey: number) => void
   readonly onAccept: (proposal: BubbleProposal) => void
   /** Every proposal at once, as one step to undo. */
   readonly onAcceptAll: () => void

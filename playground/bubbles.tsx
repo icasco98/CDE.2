@@ -3,7 +3,14 @@ import { createRoot } from 'react-dom/client'
 import { BubblesView, type BubbleProposal } from '../src/views/bubbles'
 import type { Position } from '../src/bubbles'
 import type { Commit, EdgeKind, Family, Result } from '../src/model'
-import { connectionSource, proposedConnections, roomTypeById } from '../src/rulebook'
+import {
+  circulationPerStorey,
+  connectionSource,
+  hallwayArea,
+  hallwayName,
+  proposedConnections,
+  roomTypeById,
+} from '../src/rulebook'
 import { categoryOf, sampleStore } from './sample'
 import '../src/styles.css'
 
@@ -53,6 +60,7 @@ function Playground() {
         edges={project.edges}
         proposals={proposals}
         storeys={project.storeys}
+        circulation={circulationPerStorey(project.rooms, project.storeys)}
         plot={project.plot}
         weights={project.weights}
         selected={selected}
@@ -81,6 +89,14 @@ function Playground() {
           store.actions.removeRoom(id)
           setSelected(null)
         }}
+        onAddHallway={(storey: number) =>
+          store.actions.addRoom({
+            type: 'hallway',
+            name: hallwayName(storey, project.storeys),
+            targetArea: hallwayArea(project.rooms, storey),
+            storey,
+          })
+        }
         onAccept={(proposal: BubbleProposal) => take(proposal)}
         onAcceptAll={() =>
           store.transaction(() => {

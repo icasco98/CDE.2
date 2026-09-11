@@ -712,3 +712,68 @@ test('a stair from Ground to Second is three twins here and one prism in the mas
   for (const storey of [0, 1, 2])
     await expect(page.locator(`[data-storey="${storey}"] td`).first()).not.toHaveText('0.0 m²')
 })
+
+/** The button on the bar, which the one on a nudge does not answer to: that one names its storey. */
+function addHallwayButton(page: Page) {
+  return page.getByRole('button', { name: 'Add hallway', exact: true })
+}
+
+test('the hallway upstairs is proposed to every bedroom on its own floor', async ({ page }) => {
+  await openWithStair(page, 2)
+  const hall = await roomIdOf(page, 'First Hallway')
+  for (const name of ['Master Bedroom', 'Bedroom 1', 'Bedroom 2']) {
+    const bedroom = await roomIdOf(page, name)
+    await expect(page.locator(`[data-proposal="${hall}:${bedroom}"]`)).toHaveCount(1)
+  }
+  const ground = await roomIdOf(page, 'Ground Hallway')
+  await expect(page.locator('.bubbles-nudge')).toHaveCount(0)
+  await expect(
+    page.locator(`[data-proposal="${ground}:${await roomIdOf(page, 'Stair')}"]`),
+  ).toHaveCount(1)
+})
+
+test('deleting the hallway upstairs brings the nudge, and Add hallway answers it', async ({
+  page,
+}) => {
+  await openWithStair(page, 2)
+  await settle(page)
+  const rooms = await page.locator('svg g[data-room]').count()
+
+  await clickBubble(page, 'First Hallway')
+  await page.locator('svg.bubbles-sheet').press('Delete')
+  await expect(page.locator('svg g[data-room]')).toHaveCount(rooms - 1)
+  await expect(page.locator('.bubbles-nudge')).toHaveText(
+    /First has three private rooms and no hallway\./,
+  )
+
+  await page
+    .getByRole('group', { name: 'Storey shown' })
+    .getByRole('button', { name: 'First' })
+    .click()
+  await addHallwayButton(page).click()
+  await expect(page.locator('.bubbles-nudge')).toHaveCount(0)
+  await expect(roomNamed(page, 'First Hallway')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Requirements' }).click()
+  expect(await storeyOf(page, 'First Hallway')).toBe('First')
+})
+
+test('with every storey showing, Add hallway takes the lowest floor without one, then asks', async ({
+  page,
+}) => {
+  await openWithStair(page, 2)
+  await settle(page)
+  await clickBubble(page, 'Ground Hallway')
+  await page.locator('svg.bubbles-sheet').press('Delete')
+  await expect(roomNamed(page, 'Ground Hallway')).toHaveCount(0)
+
+  await addHallwayButton(page).click()
+  await expect(roomNamed(page, 'Ground Hallway')).toHaveCount(1)
+
+  // Both floors have one now, so there is no lowest without one and the person is asked which.
+  await addHallwayButton(page).click()
+  const asked = page.getByRole('group', { name: 'Storey for the hallway' })
+  await expect(asked).toBeVisible()
+  await asked.getByRole('button', { name: 'First' }).click()
+  await expect(asked).toHaveCount(0)
+  await expect(roomNamed(page, 'First Hallway')).toHaveCount(2)
+})

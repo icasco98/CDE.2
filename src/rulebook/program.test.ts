@@ -32,6 +32,7 @@ describe('the program a household implies', () => {
     const program = defaultProgram(500, small, 1)
     expect(program.map((room) => room.type)).toEqual([
       'entry-foyer',
+      'hallway',
       'diwaniya',
       'diwaniya-wc',
       'formal-living',
@@ -88,6 +89,7 @@ describe('the storeys the program opens on', () => {
   it('sends the bedrooms and their ensuites upstairs when the house has two storeys', () => {
     const program = defaultProgram(500, small, 2)
     expect(onStorey(program, 1)).toEqual([
+      'First Hallway',
       'Master Bedroom',
       'Ensuite, Master Bedroom',
       'Bedroom 1',
@@ -98,6 +100,7 @@ describe('the storeys the program opens on', () => {
     expect(onStorey(program, 0)).toEqual([
       'Entry',
       'Stair',
+      'Ground Hallway',
       'Diwaniya',
       'Diwaniya WC',
       'Formal Living',
@@ -121,6 +124,7 @@ describe('the storeys the program opens on', () => {
     expect(onStorey(program, 0)).toContain('Master Bedroom')
     expect(onStorey(program, 0)).toContain('Ensuite, Master Bedroom')
     expect(onStorey(program, 1)).toEqual([
+      'First Hallway',
       'Bedroom 1',
       'Ensuite, Bedroom 1',
       'Bedroom 2',
@@ -150,6 +154,52 @@ describe('the storeys the program opens on', () => {
   it('opens every upper kind on the first storey of a three-storey house', () => {
     const program = defaultProgram(500, small, 3)
     expect(onStorey(program, 2)).toEqual([])
-    expect(onStorey(program, 1)).toHaveLength(6)
+    expect(onStorey(program, 1)).toHaveLength(7)
+  })
+})
+
+describe('the hallways the program lays out', () => {
+  it('gives the two-storey default program a hallway on each floor, after the stair', () => {
+    expect(defaultProgram(500, small, 2).map((room) => room.name)).toEqual([
+      'Entry',
+      'Stair',
+      'Ground Hallway',
+      'First Hallway',
+      'Diwaniya',
+      'Diwaniya WC',
+      'Formal Living',
+      'Family Living',
+      'Dining Room',
+      'Kitchen',
+      'Guest WC',
+      'Master Bedroom',
+      'Ensuite, Master Bedroom',
+      'Bedroom 1',
+      'Ensuite, Bedroom 1',
+      'Bedroom 2',
+      'Ensuite, Bedroom 2',
+      'Garage bay 1',
+    ])
+  })
+
+  it('sizes each one from the rooms on its own floor', () => {
+    const hallways = defaultProgram(500, small, 2).filter((room) => room.type === 'hallway')
+    // 196 m² served on the ground, 82 m² of bedrooms and ensuites upstairs, a tenth of each.
+    expect(hallways.map((room) => room.targetArea)).toEqual([19.6, 8.2])
+  })
+
+  it('gives a one-storey house one hallway, named without a storey', () => {
+    const hallways = defaultProgram(500, small, 1).filter((room) => room.type === 'hallway')
+    expect(hallways.map((room) => [room.name, room.storey, room.targetArea])).toEqual([
+      ['Hallway', 0, 27.8],
+    ])
+  })
+
+  it('leaves a floor a stair only reaches without one', () => {
+    const program = defaultProgram(500, small, 3)
+    expect(program.filter((room) => room.type === 'hallway').map((room) => room.name)).toEqual([
+      'Ground Hallway',
+      'First Hallway',
+    ])
   })
 })

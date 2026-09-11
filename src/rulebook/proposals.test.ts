@@ -32,18 +32,22 @@ const referenceCase: readonly string[] = [
   'Entry to Formal Living (door, D5)',
   'Entry to Family Living (door, D6)',
   'Entry to Guest WC (door, D7)',
+  'Entry to Hallway (open, D9)',
   'Diwaniya to Diwaniya WC (door, D11)',
   'Kitchen to Dining Room (door, D12)',
   'Dining Room to Family Living (open, D18)',
   'Master Bedroom to Ensuite, Master Bedroom (door, D19)',
   'Bedroom 1 to Ensuite, Bedroom 1 (door, D21)',
   'Bedroom 2 to Ensuite, Bedroom 2 (door, D21)',
+  'Hallway to Master Bedroom (door, D23)',
+  'Hallway to Bedroom 1 (door, D24)',
+  'Hallway to Bedroom 2 (door, D24)',
 ]
 
 describe('the reference case: the starting household on the starting plot', () => {
   it('proposes exactly the defaults the program implies', () => {
     const project = startingProject()
-    expect(project.rooms).toHaveLength(16)
+    expect(project.rooms).toHaveLength(17)
     expect(named(project, proposedConnections(project.rooms, project.edges))).toEqual(referenceCase)
   })
 
@@ -190,5 +194,65 @@ describe('pairing', () => {
     const project = startingProject()
     const once = proposedConnections(project.rooms, project.edges)
     expect(proposedConnections(project.rooms, project.edges)).toEqual(once)
+  })
+})
+
+describe('the hallway as a hub', () => {
+  const room = (id: string, type: string, storey = 0, storeysSpanned = 1): ProposalRoom => ({
+    id,
+    type,
+    storey,
+    storeysSpanned,
+  })
+
+  it('offers each hallway the stair, the bedrooms and the bathrooms of its own floor', () => {
+    const rooms = [
+      room('entry', 'entry-foyer'),
+      room('stair', 'stair', 0, 2),
+      room('ground-hall', 'hallway'),
+      room('first-hall', 'hallway', 1),
+      room('master', 'master-bedroom', 1),
+      room('bed', 'bedroom', 1),
+      room('bath', 'bathroom', 1),
+    ]
+    const about = (id: string): readonly string[] =>
+      proposedConnections(rooms, [])
+        .filter((proposal) => proposal.a === id || proposal.b === id)
+        .map(
+          (proposal) =>
+            `${proposal.a} to ${proposal.b} (${proposal.kind}, ${proposal.rowId}) on ${proposal.storey}`,
+        )
+    expect(about('first-hall')).toEqual([
+      'first-hall to master (door, D23) on 1',
+      'first-hall to bed (door, D24) on 1',
+      'first-hall to bath (door, D25) on 1',
+      'first-hall to stair (open, D26) on 1',
+    ])
+    // The front door opens on the ground corridor, and both corridors stand on the one stair.
+    expect(about('ground-hall')).toEqual([
+      'entry to ground-hall (open, D9) on 0',
+      'ground-hall to stair (open, D26) on 0',
+    ])
+  })
+
+  it('gives the rebuilt two-storey program a corridor to every bedroom upstairs', () => {
+    const project = startingProject(2)
+    const upstairs = project.rooms.find((each) => each.name === 'First Hallway')
+    const nameOf = (id: string): string => project.rooms.find((each) => each.id === id)?.name ?? id
+    expect(upstairs).toBeDefined()
+    expect(
+      named(
+        project,
+        proposedConnections(project.rooms, project.edges).filter(
+          (proposal) => proposal.a === upstairs?.id || proposal.b === upstairs?.id,
+        ),
+      ),
+    ).toEqual([
+      'First Hallway to Master Bedroom (door, D23)',
+      'First Hallway to Bedroom 1 (door, D24)',
+      'First Hallway to Bedroom 2 (door, D24)',
+      'First Hallway to Stair (open, D26)',
+    ])
+    expect(nameOf(project.rooms[2]?.id ?? '')).toBe('Ground Hallway')
   })
 })

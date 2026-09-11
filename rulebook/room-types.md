@@ -99,6 +99,48 @@ nothing and the bottom of the range is the floor.
 | Roof Annex | ملحق السطح | at most 100 m², counted | 40 | 25 to 100 | free | shared | private | top | – |  | legal cap |
 | Room (other) | غرفة | 10 m², 3 m | 12 | 10 to 20 | 1:1 to 1:1.6 | shared | exempt | any | – |  | legal floor |
 
+## Circulation
+
+A hallway is not sized like other rooms. It has a legal width and no
+legal area, and what it must be is long enough to reach every door it
+serves, so the tool reads its area off the rooms it serves rather than
+out of the *Typical* column. **On one storey, a hallway's target area
+is a share of the area of the rooms it serves on that storey, held
+between a floor and a ceiling, and it is never narrower than the
+Municipality's 1.20 m clear.**
+
+**The rooms it serves** are the rooms standing on that storey that are
+not circulation themselves — the stair, the lift, the entry and the
+service entrance are the circulation a corridor joins, not
+destinations off it — and not the kinds the plot ratio leaves out, the
+courtyard and the lift. A room with its own street door still counts,
+because the share is read off the storey's floor area, which is how
+published plans measure circulation.
+
+**Which storeys get one.** A storey needs a hallway when it holds two
+or more rooms of the private tier, or a stair and any other room that
+is not a companion. Two private rooms on one floor are two rooms a
+person has to reach without walking through the other, and that is a
+corridor. A stair landing with anything at all off it is the same
+corridor at its shortest. A companion is not counted: it is entered
+through the room it serves and asks for no corridor of its own. So a
+floor holding one bedroom and no stair needs none, the bedroom floor
+of a villa needs one, and so does a ground floor with a stair on it.
+
+| Quantity | Value | Basis |
+| --- | --- | --- |
+| Share of the rooms served | 10% | Published residential plans put circulation at roughly 8 to 12 per cent of floor area. Ten is the middle, and the middle is the honest single number here: a villa's bedroom floor is a corridor with rooms down both sides and sits at the top of that band, while its ground floor's reception rooms open into one another and sit at the bottom. |
+| Floor | 6 m² | The 1.20 m clear width over a 5 m run. Shorter than that is a landing, not a corridor, and the legal width still has to fit. |
+| Ceiling | 30 m² | 1.8 m wide over about 17 m, which is longer than a villa plan is deep. Past it a floor wants a second hallway or a stair hall, not one longer corridor. |
+| Minimum clear width | 1.20 m | `municipality-private-housing.md`, minimum room sizes: corridor inside the unit, 1.20 m clear. The table above carries it as the hallway's legal floor. |
+
+The width is legal and binding. The share, the floor and the ceiling
+are the cofounder's judgement and **provisional**, so under decision 9
+they only ever recommend: a hallway the person resizes by hand is left
+at the size the person gave it. They are among the first numbers to
+revisit once the known house is measured, because a plan that is
+measured says what its own circulation costs.
+
 ## Least certain
 
 Diwaniya bands, bedroom typical (some firms plan 20 to 24 for
