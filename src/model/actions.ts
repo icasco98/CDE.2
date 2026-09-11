@@ -1,6 +1,7 @@
 import { checkProject, occupiedStoreys } from './invariants'
 import type { IdGenerator } from './ids'
 import {
+  STARTING_HEIGHT_M,
   dropRoom,
   findActor,
   findRoom,
@@ -182,7 +183,30 @@ export function createActions(context: Context) {
 
     setHousehold: (household: Household): Result => settle({ ...state(), household }),
 
-    addStorey: (): Result => settle({ ...state(), storeys: state().storeys + 1 }, 'aside'),
+    /** A new storey opens at the height of the one below it, so a house of tall rooms stays tall. */
+    addStorey(): Result {
+      const project = state()
+      const top = project.heights[project.heights.length - 1] ?? STARTING_HEIGHT_M
+      return settle(
+        { ...project, storeys: project.storeys + 1, heights: [...project.heights, top] },
+        'aside',
+      )
+    },
+
+    setHeight(storey: number, metres: number): Result {
+      const project = state()
+      if (storey < 0 || storey >= project.storeys)
+        return refused({ code: 'no-such-storey', message: `there is no storey ${storey}` })
+      if (!Number.isFinite(metres) || metres <= 0)
+        return refused({
+          code: 'height-size',
+          message: 'a storey height is a positive number of metres',
+        })
+      return settle({
+        ...project,
+        heights: project.heights.map((height, level) => (level === storey ? metres : height)),
+      })
+    },
 
     removeStorey(): Result {
       const project = state()
@@ -197,7 +221,7 @@ export function createActions(context: Context) {
           code: 'storey-in-use',
           message: `storey ${top} still holds rooms or edges`,
         })
-      return settle({ ...project, storeys: top }, 'aside')
+      return settle({ ...project, storeys: top, heights: project.heights.slice(0, top) }, 'aside')
     },
 
     addActor(input: { name: string; role: string }): Result<string> {

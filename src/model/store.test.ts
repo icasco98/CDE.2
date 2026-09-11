@@ -121,6 +121,33 @@ describe('storeys', () => {
   })
 })
 
+describe('storey heights', () => {
+  it('opens every storey at 3.5 m and carries the top height onto a new one', () => {
+    expect(store.getState().heights).toEqual([3.5])
+    store.actions.setHeight(0, 4.2)
+    store.actions.addStorey()
+    expect(store.getState().heights).toEqual([4.2, 4.2])
+    store.actions.removeStorey()
+    expect(store.getState().heights).toEqual([4.2])
+  })
+
+  it('refuses a height that is not a positive number of metres, and a storey that is not there', () => {
+    expect(codes(store.actions.setHeight(0, 0))).toEqual(['height-size'])
+    expect(codes(store.actions.setHeight(0, Number.NaN))).toEqual(['height-size'])
+    expect(codes(store.actions.setHeight(1, 3))).toEqual(['no-such-storey'])
+    expect(store.getState().heights).toEqual([3.5])
+  })
+
+  it('is undone one height at a time, and fits the storeys in hand', () => {
+    store.actions.setHeight(0, 4)
+    store.actions.addStorey()
+    expect(store.getState().heights).toEqual([4, 4])
+    store.undo()
+    expect(store.getState().heights).toEqual([3.5, 3.5])
+    expect(store.getState().storeys).toBe(2)
+  })
+})
+
 describe('undo', () => {
   it('covers rooms, edges, plot, weights and household', () => {
     const room = addRoom('bedroom')

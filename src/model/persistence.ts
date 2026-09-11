@@ -1,5 +1,5 @@
 import { isDocument, parseProject, type Document } from './parse'
-import { startingHousehold } from './project'
+import { STARTING_HEIGHT_M, startingHousehold } from './project'
 import type { Store } from './store'
 import { PROJECT_VERSION, ok, refused, type Project, type Result, type Violation } from './types'
 
@@ -23,10 +23,17 @@ function weightsToFamilies(document: Document): Document {
   return { ...document, weights }
 }
 
+/** Before heights were stored every storey stood at the height a project opens on. */
+function storeysToHeights(document: Document): Document {
+  const storeys = typeof document.storeys === 'number' ? document.storeys : 1
+  return { ...document, heights: Array.from({ length: storeys }, () => STARTING_HEIGHT_M) }
+}
+
 /** From the version keyed to the next one. */
 const migrations: ReadonlyMap<number, Migration> = new Map<number, Migration>([
   [1, (document) => ({ household: startingHousehold, ...document })],
   [2, weightsToFamilies],
+  [3, storeysToHeights],
 ])
 
 export function serialize(project: Project): string {

@@ -158,6 +158,7 @@ export function parseProject(document: Document): Result<Project> {
     id: text(document.id, 'id'),
     name: text(document.name, 'name'),
     storeys: count(document.storeys, 'storeys'),
+    heights: list(document.heights, 'heights').map((height, i) => count(height, `heights[${i}]`)),
     plot: plotOf(document.plot, 'plot'),
     household: householdOf(document.household, 'household'),
     rooms: list(document.rooms, 'rooms').map((raw, i) => room(raw, `rooms[${i}]`)),

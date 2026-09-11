@@ -126,6 +126,20 @@ export function checkRoomStoreys(project: Project): readonly Violation[] {
   return violations
 }
 
+export function checkHeights(project: Project): readonly Violation[] {
+  const { heights, storeys } = project
+  if (heights.length !== storeys)
+    return [
+      say(
+        'heights-count',
+        `the project has ${storeys} storeys and ${heights.length} heights, one is wanted per storey`,
+      ),
+    ]
+  return heights
+    .filter((height) => !Number.isFinite(height) || height <= 0)
+    .map(() => say('height-size', 'a storey height is a positive number of metres'))
+}
+
 const checks = [
   checkEdgeEndpoints,
   checkEdgeStoreys,
@@ -134,6 +148,7 @@ const checks = [
   checkMainDoor,
   checkFootprints,
   checkRoomStoreys,
+  checkHeights,
 ]
 
 export function checkProject(project: Project): readonly Violation[] {

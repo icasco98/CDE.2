@@ -3,7 +3,7 @@ import type { Footprint, Point, Polygon } from '../geometry/types'
 export const EXTERIOR = 'EXTERIOR'
 
 /** The document format; a bump needs a migration in persistence.ts. */
-export const PROJECT_VERSION = 3
+export const PROJECT_VERSION = 4
 
 /** The three families of forces the tool balances, named in rulebook/forces.md. */
 export const families = ['userRequirements', 'siteConstraints', 'environmentalFactors'] as const
@@ -75,6 +75,8 @@ export type Project = {
   readonly id: string
   readonly name: string
   readonly storeys: number
+  /** The floor-to-floor height of each storey in metres, one entry per storey. */
+  readonly heights: readonly number[]
   readonly plot: Plot
   readonly household: Household
   readonly rooms: readonly Room[]
