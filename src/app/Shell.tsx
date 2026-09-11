@@ -1,6 +1,7 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
 import { deserialize, serialize } from '../model'
-import { downloadJson, fileNameFor } from './files'
+import { ExportMenu } from './ExportMenu'
+import { downloadBlob, fileNameFor } from './files'
 import { NotYet } from './NotYet'
 import { session } from './session'
 import { stages } from './stages'
@@ -53,10 +54,16 @@ export function Shell() {
             </label>
             <button
               type="button"
-              onClick={() => downloadJson(fileNameFor(project.name), serialize(project))}
+              onClick={() =>
+                downloadBlob(
+                  fileNameFor(project.name, 'json'),
+                  new Blob([serialize(project)], { type: 'application/json' }),
+                )
+              }
             >
               Save file
             </button>
+            <ExportMenu project={project} />
             <button type="button" onClick={() => session.undo()} disabled={!session.canUndo()}>
               Undo
             </button>
