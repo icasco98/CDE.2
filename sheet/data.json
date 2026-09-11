@@ -1,9 +1,9 @@
 {
-  "revision": 21,
+  "revision": 22,
   "date": "11 Sep 2026",
   "session": "Session 3",
   "repo": "https://github.com/icasco98/CDE.2",
-  "headline": "Running through the rest on your word: G0 in review, A8 export started; G2, G3, G4 follow G0, then G5.",
+  "headline": "G0 gestures and A8 export merged. G2 lay out from bubbles and G4 joins and alignment are being built; G3 follows, then G5.",
   "decide": [],
   "yours": [
     {
@@ -29,35 +29,43 @@
   ],
   "agents": [
     {
+      "task": "G2",
+      "name": "Lay out from bubbles",
+      "model": "Opus",
+      "stage": 1
+    },
+    {
+      "task": "G4",
+      "name": "Joins and alignment",
+      "model": "Opus",
+      "stage": 1
+    },
+    {
       "task": "G0",
       "name": "Zoning gestures",
       "model": "Opus",
-      "stage": 2
+      "stage": 4,
+      "pr": 46
     },
     {
       "task": "A8",
       "name": "Export PDF and DXF",
       "model": "Opus",
-      "stage": 1
-    },
-    {
-      "task": "G1",
-      "name": "Hallways",
-      "model": "Opus",
       "stage": 4,
-      "pr": 43
+      "pr": 47
     }
   ],
   "stages": ["Briefed", "Building", "Review", "Your merge", "Merged"],
   "done": [
-    "All four stages merged; F1 to F4 from your first tests merged (#31, #33, #35, #38).",
-    "Second test became six tasks: G0 gestures without hidden keys, G1 hallways, G2 lay out from bubbles, G3 one Plan tab, G4 joins and alignment, G5 draw tool (#40).",
-    "G1 merged: circulation rule, hallways in the rebuild, Add hallway and a nudge on Bubbles (#43). G0 building.",
-    "Double-click start scripts (#27). Sheet updates on request, not hourly."
+    "All four stages merged; F1 to F4 and G1 from your tests merged.",
+    "G0 merged: rooms solid, drop asks Carve or Put back, shared-wall drag, Restore shape, Undo carve, no Alt key (#46).",
+    "A8 merged: Export PDF to scale and DXF, hand-written, print scale error 0.012% (#47).",
+    "G2 and G4 started; G3 and G5 queued.",
+    "Double-click start scripts (#27)."
   ],
   "next": [
-    "G0 fixes, review, merge; then G2, G3, G4 in parallel.",
-    "A8 export in review when it reports; then G5 draw tool.",
-    "A9 usability run (needs O3 the known house and O5 the fresh brief)."
+    "Review G2 and G4, merge, then G3 one Plan tab, then G5 draw tool.",
+    "A9 usability run (needs O3 the known house and O5 the fresh brief).",
+    "Milestone 2 waits on O4 walls and the forces revisit."
   ]
 }
