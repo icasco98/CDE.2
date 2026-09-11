@@ -127,3 +127,77 @@
   stroke-width: 0.12;
   cursor: crosshair;
 }
+
+/*
+ * A proposal is the rulebook's offer, not the graph: fainter than a link, and marked where it is
+ * taken. It draws over the bubbles so the mark is always there to click, and takes the pointer only
+ * on the thread and the mark, so a bubble underneath is still grabbed everywhere else.
+ */
+.proposal {
+  cursor: pointer;
+  pointer-events: none;
+}
+
+/* The dotted line is too thin to aim at, so a narrow invisible twin takes the hover and the click. */
+.proposal-grip {
+  stroke: transparent;
+  stroke-width: 0.4;
+  pointer-events: stroke;
+}
+
+.proposal-line {
+  stroke: #8f887d;
+  stroke-width: 0.12;
+  stroke-dasharray: 0.35 0.45;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.proposal-mark {
+  fill: #fffdf9;
+  stroke: #8f887d;
+  stroke-width: 0.1;
+  pointer-events: auto;
+}
+
+.proposal-plus {
+  text-anchor: middle;
+  dominant-baseline: central;
+  fill: #6d6862;
+  pointer-events: none;
+}
+
+.proposal:hover .proposal-line {
+  opacity: 1;
+  stroke: #2f6f8f;
+}
+
+.proposal:hover .proposal-mark {
+  stroke: #2f6f8f;
+}
+
+.proposals {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.proposals li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  color: #6d6862;
+}
+
+.proposals button {
+  font: inherit;
+  padding: 0.1rem 0.7rem;
+  border: 1px solid #b7b1a5;
+  border-radius: 999px;
+  background: #fffdf9;
+  color: inherit;
+  cursor: pointer;
+}
