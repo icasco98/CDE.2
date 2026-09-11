@@ -1,9 +1,9 @@
 {
-  "revision": 17,
+  "revision": 18,
   "date": "11 Sep 2026",
   "session": "Session 3",
   "repo": "https://github.com/icasco98/CDE.2",
-  "headline": "F4 merged: a stair bubble on every floor it serves, moving as one, with a span control. Waiting for your zoning and massing comments.",
+  "headline": "Your second test became G0 to G5. G0 zoning gestures and G1 hallways are being built.",
   "decide": [],
   "yours": [
     {
@@ -29,39 +29,35 @@
   ],
   "agents": [
     {
+      "task": "G0",
+      "name": "Zoning gestures",
+      "model": "Opus",
+      "stage": 1
+    },
+    {
+      "task": "G1",
+      "name": "Hallways",
+      "model": "Opus",
+      "stage": 1
+    },
+    {
       "task": "F4",
       "name": "Stair on every floor",
       "model": "Opus",
       "stage": 4,
       "pr": 38
-    },
-    {
-      "task": "F3",
-      "name": "Live forces and weights",
-      "model": "Opus",
-      "stage": 4,
-      "pr": 35
-    },
-    {
-      "task": "F2",
-      "name": "Bubbles rework",
-      "model": "Opus",
-      "stage": 4,
-      "pr": 33
     }
   ],
   "stages": ["Briefed", "Building", "Review", "Your merge", "Merged"],
   "done": [
-    "All four stages merged: requirements, bubbles, zoning, massing (#19, #23, #24).",
-    "F1 merged: default storey and companion per kind, master-on-ground, stairs span every storey (#31).",
-    "F2 merged: zoom and pan, delete, Link button, bands assign storeys, storey filter, legend (#33).",
-    "F3 merged: live simulation, drag holds only while held, no piles, Spread, weights beside the diagram (#35).",
-    "F4 merged: one stair bubble per floor, moving as one; From and To storeys in the program (#38).",
+    "All four stages merged; F1 to F4 from your first tests merged (#31, #33, #35, #38).",
+    "Second test became six tasks: G0 gestures without hidden keys, G1 hallways, G2 lay out from bubbles, G3 one Plan tab, G4 joins and alignment, G5 draw tool (#40).",
+    "G0 and G1 started.",
     "Double-click start scripts (#27). Hourly updates scheduled."
   ],
   "next": [
-    "Owner tests again: requirements, bubbles, then zoning and massing. Comments become the next fix list.",
-    "A8 export on the owner's word.",
-    "A9 usability run (needs O3 the known house and O5 the fresh brief)."
+    "Review G0 and G1 in the running app.",
+    "G2 lay out from bubbles, then G3 and G4 together, then G5.",
+    "A8 export, then A9 the usability run (needs O3 and O5)."
   ]
 }
