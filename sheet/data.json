@@ -1,25 +1,14 @@
 {
-  "revision": 6,
+  "revision": 7,
   "date": "11 Sep 2026",
   "session": "Session 3",
   "repo": "https://github.com/icasco98/CDE.2",
-  "headline": "A6 zoning is reviewed and waits on your merge. Next: A7 massing on your word.",
+  "headline": "A6 zoning merged. A7 massing is being built. Zoom and pan (A12) is in the plan, ready to start.",
   "decide": [
     {
-      "id": "merge-19",
-      "kind": "merge",
-      "text": "Merge PR #19 (A6 zoning). Reviewed, fixes verified, driven in the app.",
-      "link": "https://github.com/icasco98/CDE.2/pull/19"
-    },
-    {
-      "id": "start-a7",
+      "id": "start-a12",
       "kind": "start",
-      "text": "Start A7 massing after A6 merges: storeys, heights, envelope numbers, one selection across all three views."
-    },
-    {
-      "id": "start-zoom",
-      "kind": "start",
-      "text": "Add zoom and pan on the zoning sheet as a task (proposed): small labels are unreadable at whole-plot view."
+      "text": "Start A12 zoom and pan on the zoning sheet (Opus, runs beside A7)."
     }
   ],
   "yours": [
@@ -46,39 +35,31 @@
   ],
   "agents": [
     {
+      "task": "A7",
+      "name": "Massing",
+      "model": "Opus",
+      "stage": 1
+    },
+    {
       "task": "A6",
       "name": "Zoning",
       "model": "Opus",
-      "stage": 3,
+      "stage": 4,
       "pr": 19
-    },
-    {
-      "task": "A11",
-      "name": "Default connections",
-      "model": "Opus",
-      "stage": 4,
-      "pr": 16
-    },
-    {
-      "task": "A10",
-      "name": "Weights as families",
-      "model": "Sonnet",
-      "stage": 4,
-      "pr": 15
     }
   ],
   "stages": ["Briefed", "Building", "Review", "Your merge", "Merged"],
   "done": [
     "Requirements and bubbles run over one store with autosave (#9, #10, #11).",
-    "Force list drafted under the three families, provisional (#12).",
-    "Weights are the three families; old project files migrate (#14, #15).",
-    "Default connections table, proposed in the bubbles (#16).",
-    "A6 zoning built, sent back for two fixes, verified; awaits your merge (#19).",
+    "Weights are the three families; default connections proposed in the bubbles (#15, #16).",
+    "A6 zoning merged: place, move, rotate, resize, carve, doors, tensions, proposals (#19).",
+    "Model gained storey heights; decision 16: massing is an axonometric SVG, no 3D engine (#21).",
+    "A7 massing started. A12 zoom and pan added to the plan.",
     "Briefs and the sheet builder kept in the repository (#18). Hourly updates scheduled."
   ],
   "next": [
-    "A7 massing on your word.",
-    "A8 export, A9 usability run (needs O3 and O5).",
-    "Milestone 2 waits on O4 walls and the forces revisit."
+    "Review A7 in the running app.",
+    "A12 zoom and pan on your word.",
+    "A8 export, A9 usability run (needs O3 and O5)."
   ]
 }
