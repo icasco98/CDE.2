@@ -48,8 +48,8 @@ async function place(page: Page, name: string, x: number, y: number) {
     .locator('[data-tray]')
     .filter({ hasText: new RegExp(`^${name}`) })
     .first()
-  // The tray scrolls, and so does the page under a full zoning bar: a room far down it is
-  // brought into view first, as a hand would scroll to it.
+  // A long program runs the tray off the foot of the window, so the room is brought into view
+  // before the drag rather than aimed at from a bounding box the pointer cannot reach.
   await tray.scrollIntoViewIfNeeded()
   const from = await tray.boundingBox()
   if (!from) throw new Error(`${name} is not in the tray`)
@@ -395,7 +395,7 @@ test('a room picked in the bubbles is the room picked in the zoning', async ({ p
   await openZoning(page)
   await place(page, 'Kitchen', 6, 6.125)
   await expect(roomNamed(page, 'Kitchen')).toHaveClass(/room-selected/)
-  await page.getByRole('button', { name: 'Bubbles' }).click()
+  await page.getByRole('button', { name: 'Bubbles', exact: true }).click()
   await expect(page.getByRole('button', { name: /Hold in place|Let go/ })).toBeEnabled()
   await page.getByRole('button', { name: 'Zoning' }).click()
   await expect(roomNamed(page, 'Kitchen')).toHaveClass(/room-selected/)
