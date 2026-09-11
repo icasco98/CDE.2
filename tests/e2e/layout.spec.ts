@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { openSheet } from './plan'
 
 type Corner = readonly [number, number]
 
@@ -19,8 +20,7 @@ async function openZoning(page: Page): Promise<void> {
   await expect(page.locator('.bubbles-status')).toHaveText('Resting', { timeout: 30000 })
   await page.getByRole('button', { name: 'Accept all proposals' }).click()
 
-  await page.getByRole('button', { name: 'Zoning' }).click()
-  await expect(page.locator('svg.zoning-sheet')).toBeVisible()
+  await openSheet(page)
 }
 
 /**

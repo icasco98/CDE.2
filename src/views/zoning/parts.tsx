@@ -24,7 +24,13 @@ import {
 import type { Plot, Room } from '../../model'
 import { metres2, storeyLabel } from '../requirements/format'
 import { belowMinimum, offTarget, type RoomSizes } from './defaults'
-import type { DoorMark, ProposalMark, TensionMark, WallPair } from './doors'
+import type {
+  DoorMark,
+  ProposalMark,
+  TensionMark,
+  VanishedWall as VanishedMark,
+  WallPair,
+} from './doors'
 import { pointsOf } from './frame'
 import type { Join } from './joins'
 
@@ -415,6 +421,44 @@ export function Door({
           onPointerDown={onSelect}
         />
       )}
+    </g>
+  )
+}
+
+/**
+ * What is left of the wall an open connection runs through once the join has taken it away: a thin
+ * dotted line on its own run, carrying the edge, so the connection is still there to be picked.
+ */
+export function VanishedWall({
+  mark,
+  selected,
+  onSelect,
+}: {
+  mark: VanishedMark
+  selected: boolean
+  onSelect: (event: ReactPointerEvent) => void
+}) {
+  return (
+    <g
+      data-edge={mark.edgeId}
+      data-door="open"
+      className={selected ? 'vanished vanished-selected' : 'vanished'}
+    >
+      <line
+        x1={mark.from[0]}
+        y1={mark.from[1]}
+        x2={mark.to[0]}
+        y2={mark.to[1]}
+        className="door-grip"
+        onPointerDown={onSelect}
+      />
+      <line
+        x1={mark.from[0]}
+        y1={mark.from[1]}
+        x2={mark.to[0]}
+        y2={mark.to[1]}
+        className="vanished-line"
+      />
     </g>
   )
 }

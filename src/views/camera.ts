@@ -1,7 +1,8 @@
 import type { Point } from '../geometry'
 
-/* Both sheets are drawn in metres over an extent, so one camera serves the zoning plan and the
-   bubble diagram alike: nothing here knows what is drawn, only how much of it is in view. */
+/* Every sheet is drawn in metres over an extent, so one camera serves the zoning plan and the
+   massing alike: nothing here knows what is drawn, only how much of it is in view. The massing's
+   metres are the projected ones, which is all that differs between the two. */
 
 /** A box on the sheet in metres: what a sheet draws, or the part of it a camera shows. */
 export type Extent = {
@@ -90,6 +91,23 @@ export function panTo(extent: Extent, camera: Camera, target: Point, at: Point):
     x: from.x + target[0] - at[0],
     y: from.y + target[1] - at[1],
   })
+}
+
+/**
+ * How far one wheel event draws a sheet closer, whether the wheel counts in pixels or in lines.
+ * A trackpad pinch arrives as a wheel in pixels with `ctrlKey` and zooms the same way.
+ */
+export function wheelFactor(event: WheelEvent): number {
+  const notches = event.deltaMode === 0 ? event.deltaY / 100 : event.deltaY / 3
+  return Math.pow(ZOOM_STEP, -notches)
+}
+
+/** Where a pointer event lands on a sheet, in that sheet's metres, whatever its camera is doing. */
+export function pointerAt(svg: SVGSVGElement, clientX: number, clientY: number): Point {
+  const screen = svg.getScreenCTM()
+  if (!screen) return [0, 0]
+  const at = new DOMPoint(clientX, clientY).matrixTransform(screen.inverse())
+  return [at.x, at.y]
 }
 
 /**

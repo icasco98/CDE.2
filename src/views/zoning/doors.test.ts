@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { outlineOf, rectangleToPolygon, type Footprint } from '../../geometry'
 import { EXTERIOR, type Edge, type Plot } from '../../model'
-import { edgeMarks, proposalsFrom, streetSides, wallPairs, type Standing } from './doors'
+import {
+  edgeMarks,
+  proposalsFrom,
+  streetSides,
+  vanishedWalls,
+  wallPairs,
+  type Standing,
+} from './doors'
 
 const plot: Plot = {
   on: true,
@@ -147,5 +154,25 @@ describe('the sides of the plot that face a street', () => {
 
   it('reads none where there is no plot', () => {
     expect(streetSides({ ...plot, polygon: [] })).toEqual([])
+  })
+})
+
+describe('the wall an open connection gives up to a join', () => {
+  it('is drawn on the run the two rooms share, carrying its own edge', () => {
+    const standing = [room('a', 0, 0, 5, 4), room('b', 5, 0, 5, 4)]
+    const marks = vanishedWalls(standing, [edge('e1', 'a', 'b', { kind: 'open' })])
+    expect(marks).toEqual([{ edgeId: 'e1', from: [5, 0], to: [5, 4] }])
+  })
+
+  it('is drawn on the longest run where the two rooms share more than one', () => {
+    const standing = [room('a', 0, 0, 5, 10), room('b', 5, 2, 5, 6)]
+    expect(vanishedWalls(standing, [edge('e1', 'a', 'b', { kind: 'open' })])[0]?.from).toEqual([
+      5, 2,
+    ])
+  })
+
+  it('is drawn nowhere for two rooms that have come apart, which the tension speaks for', () => {
+    const standing = [room('a', 0, 0, 5, 4), room('b', 9, 0, 5, 4)]
+    expect(vanishedWalls(standing, [edge('e1', 'a', 'b', { kind: 'open' })])).toEqual([])
   })
 })

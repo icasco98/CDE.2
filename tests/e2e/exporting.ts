@@ -1,5 +1,6 @@
-import { expect, type Download, type Page } from '@playwright/test'
+import { type Download, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
+import { openSheet } from './plan'
 
 type At = { x: number; y: number }
 
@@ -7,8 +8,7 @@ export async function openZoning(page: Page): Promise<void> {
   await page.goto('/')
   await page.getByRole('button', { name: /rebuild program from household/i }).click()
   await page.getByLabel('Hold rooms inside the plot').check()
-  await page.getByRole('button', { name: 'Zoning' }).click()
-  await expect(page.locator('svg.zoning-sheet')).toBeVisible()
+  await openSheet(page)
 }
 
 /** Where a point in sheet metres lands on the screen. */

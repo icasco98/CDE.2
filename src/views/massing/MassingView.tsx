@@ -1,16 +1,30 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { area, boundingBox, outlineOf, type Point } from '../../geometry'
-import { envelopeOf, facesOf, roomsInOrder } from '../../massing'
+import { envelopeOf, facesOf, roomsInOrder, type Point3 } from '../../massing'
 import { occupiedStoreys, type Room } from '../../model'
+import { pointerAt, wheelFactor } from '../camera'
 import { storeyLabel } from '../requirements/format'
-import { groundOf, northOf, viewBoxOf } from './frame'
-import { Ground, Heights, NorthMark, Numbers, Prism, ScaleReference, Views } from './parts'
+import { Storeys } from '../zoning/parts'
+import { centreOf, groundOf, northOf, planAzimuth } from './frame'
+import {
+  Ground,
+  Heights,
+  NorthMark,
+  Numbers,
+  Prism,
+  ScaleReference,
+  TurnHandle,
+  Views,
+} from './parts'
 import type { MassingViewProps } from './types'
+import { useEditing } from './useEditing'
 import { useOrbit } from './useOrbit'
 import './massing.css'
 
 export function MassingView(props: MassingViewProps) {
-  const { rooms, storeys, heights, plot, selected, onSelect, onHeight } = props
+  const { rooms, storeys, heights, plot, sizes, storey, selected } = props
+  const { onSelect, onStorey, onHeight, onPlace, onRefuse } = props
+  const svgRef = useRef<SVGSVGElement>(null)
 
   const faces = useMemo(
     () => rooms.flatMap((room) => facesOf(room, storeys, heights)),
@@ -20,7 +34,35 @@ export function MassingView(props: MassingViewProps) {
     () => [...groundOf(plot.polygon), ...faces.flatMap((face) => face.corners)],
     [plot.polygon, faces],
   )
-  const orbit = useOrbit(corners, () => onSelect(null))
+  /** The roof of the room that is picked: the turn handle stands on it, and a turn is about it. */
+  const roof = useMemo(
+    () => faces.find((face) => face.roomId === selected && face.kind === 'top'),
+    [faces, selected],
+  )
+  /**
+   * What a turn happens about: the room that is picked, or the whole placed mass when none is,
+   * so the building revolves about itself rather than swinging round the corner of the sheet.
+   */
+  const pivot = useMemo((): Point3 => {
+    const standing = faces.filter((face) => face.roomId === selected)
+    const about = standing.length > 0 ? standing : faces
+    return centreOf(about.length > 0 ? about.flatMap((face) => face.corners) : corners)
+  }, [faces, selected, corners])
+
+  const orbit = useOrbit({ corners, pivot, sheet: svgRef, onPress: () => onSelect(null) })
+  const editing = useEditing({
+    rooms,
+    sizes,
+    plot,
+    storeys,
+    heights,
+    view: orbit.view,
+    sheet: svgRef,
+    onPlace,
+    onSelect,
+    onRefuse,
+    onHold: orbit.hold,
+  })
   const groups = useMemo(() => roomsInOrder(faces, orbit.view), [faces, orbit.view])
 
   const plotArea = useMemo(() => area(plot.polygon), [plot.polygon])
@@ -40,18 +82,41 @@ export function MassingView(props: MassingViewProps) {
     return [-way[0], -way[1]]
   }, [plot.north])
 
+  const live = useRef({ zoom: orbit.zoom })
+  live.current = { zoom: orbit.zoom }
+
+  /** Taken by hand rather than through React, whose own wheel listener cannot refuse the page its scroll. */
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    const wheel = (event: WheelEvent): void => {
+      event.preventDefault()
+      live.current.zoom(pointerAt(svg, event.clientX, event.clientY), wheelFactor(event))
+    }
+    svg.addEventListener('wheel', wheel, { passive: false })
+    return () => svg.removeEventListener('wheel', wheel)
+  }, [])
+
   return (
     <div className="massing">
       <div className="massing-bar">
-        <Views azimuth={orbit.azimuth} onPreset={orbit.goTo} onFit={orbit.fit} />
+        <Storeys storeys={storeys} storey={storey} onStorey={onStorey} />
+        <Views
+          view={orbit.view}
+          planAzimuth={planAzimuth(plot.north)}
+          onGoTo={orbit.goTo}
+          onFit={orbit.fit}
+        />
       </div>
       <div className="massing-body">
         <svg
+          ref={svgRef}
           className="massing-sheet"
-          viewBox={viewBoxOf(orbit.extent)}
+          viewBox={orbit.viewBox}
           preserveAspectRatio="xMidYMid meet"
           role="application"
           aria-label="Massing"
+          onPointerDownCapture={orbit.track}
           onPointerDown={orbit.take}
         >
           <Ground plot={plot} view={orbit.view} />
@@ -68,15 +133,24 @@ export function MassingView(props: MassingViewProps) {
                 floorArea={area(outlineOf(room.footprint))}
                 faces={group.faces}
                 selected={group.roomId === selected}
+                lit={occupiedStoreys(room).includes(storey)}
                 view={orbit.view}
                 southward={southward}
                 onSelect={(event) => {
                   event.stopPropagation()
                   onSelect(group.roomId)
                 }}
+                onGrabTop={(event) => editing.grabTop(event, group.roomId)}
               />
             )
           })}
+          {roof && selected !== null && byId.get(selected)?.pinned === false && (
+            <TurnHandle
+              at={centreOf(roof.corners)}
+              view={orbit.view}
+              onGrab={(event) => editing.grabTurn(event, selected)}
+            />
+          )}
         </svg>
         <aside className="massing-side">
           <Heights heights={heights} total={envelope.buildingHeight} onHeight={onHeight} />

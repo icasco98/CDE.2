@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { openSheet, tab } from './plan'
 
 type At = { x: number; y: number }
 
@@ -6,8 +7,7 @@ async function openZoning(page: Page): Promise<void> {
   await page.goto('/')
   await page.getByRole('button', { name: /rebuild program from household/i }).click()
   await page.getByLabel('Hold rooms inside the plot').check()
-  await page.getByRole('button', { name: 'Zoning' }).click()
-  await expect(page.locator('svg.zoning-sheet')).toBeVisible()
+  await openSheet(page)
 }
 
 /** Where a point in sheet metres lands on the screen. */
@@ -381,7 +381,7 @@ test('each storey is drawn on its own, with the one below as a ghost', async ({ 
     .locator('table.program tbody tr')
     .filter({ has: page.getByLabel('Room name').and(page.locator('[value="Kitchen"]')) })
   await kitchen.getByLabel('Storey').selectOption({ label: 'First' })
-  await page.getByRole('button', { name: 'Zoning' }).click()
+  await openSheet(page)
   await expect(page.locator('[data-tray]').filter({ hasText: /^Kitchen/ })).toHaveCount(0)
   await place(page, 'Dining Room', 8, 8)
   await expect(page.locator('[data-room]')).toHaveCount(1)
@@ -397,7 +397,7 @@ test('a room picked in the bubbles is the room picked in the zoning', async ({ p
   await expect(roomNamed(page, 'Kitchen')).toHaveClass(/room-selected/)
   await page.getByRole('button', { name: 'Bubbles', exact: true }).click()
   await expect(page.getByRole('button', { name: /Hold in place|Let go/ })).toBeEnabled()
-  await page.getByRole('button', { name: 'Zoning' }).click()
+  await openSheet(page)
   await expect(roomNamed(page, 'Kitchen')).toHaveClass(/room-selected/)
 })
 
@@ -519,7 +519,8 @@ test('a drag on empty sheet pans, and the selection is untouched', async ({ page
   await expect(roomNamed(page, 'Kitchen')).toHaveClass(/room-selected/)
   await zoomBy(page, 3, 10, 12.5)
   const before = await viewBox(page)
-  const from = await onSheet(page, 12.5, 15.5)
+  // Clear of the room and of its handles, and high enough on the sheet to be under the pointer.
+  const from = await onSheet(page, 13.5, 9)
   await drag(page, from, { x: from.x - 120, y: from.y - 60 })
   expect(await viewBox(page)).not.toBe(before)
   expect(widthOf(await viewBox(page))).toBeCloseTo(widthOf(before), 6)
@@ -638,8 +639,7 @@ test('a stair added to a two-storey program stands on both storeys at one place'
   await page.getByRole('button', { name: 'Add room' }).click()
   // The storey comes after the stair, so the stair is stretched onto it rather than made with it.
   await page.getByRole('button', { name: 'Add storey' }).click()
-  await page.getByRole('button', { name: 'Zoning' }).click()
-  await expect(page.locator('svg.zoning-sheet')).toBeVisible()
+  await openSheet(page)
 
   await place(page, 'Stair', 6, 6)
   const onGround = await pointsOf(page, 'Stair')
@@ -657,8 +657,7 @@ async function openZoningConnected(page: Page): Promise<void> {
   await page.getByLabel('Hold rooms inside the plot').check()
   await page.getByRole('button', { name: 'Bubbles' }).click()
   await page.getByRole('button', { name: 'Accept all proposals' }).click()
-  await page.getByRole('button', { name: 'Zoning' }).click()
-  await expect(page.locator('svg.zoning-sheet')).toBeVisible()
+  await openSheet(page)
 }
 
 /** Turns the room that is picked by its rotation handle, to a whole number of degrees. */
@@ -685,8 +684,11 @@ test('two rooms an open connection joins are drawn as one space', async ({ page 
   await expect(page.locator('[data-room]')).toHaveCount(2)
   await expect(page.locator('[data-room][data-area="38.50"]')).toHaveCount(1)
   await expect(page.locator('[data-room][data-area="24.00"]')).toHaveCount(1)
-  await expect(page.locator('[data-edge]')).toHaveCount(0)
   await expect(page.locator('.room-name')).toHaveCount(0)
+  // No door and no wall between them: what is left of the wall is the dotted line that carries
+  // the connection, so it can still be picked here.
+  await expect(page.locator('.door-leaf')).toHaveCount(0)
+  await expect(page.locator('[data-edge][data-door="open"] .vanished-line')).toHaveCount(1)
   // Picking either room lights the whole outline and gives that room its own handles.
   await clickSheet(page, 8, 8)
   await expect(page.locator('.join-selected')).toHaveCount(1)
@@ -716,9 +718,9 @@ test('Align to north squares the room that is picked, and Align to plot squares 
   await page.getByRole('button', { name: 'Align to north' }).click()
   await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-rotation', '0.0')
 
-  await page.getByRole('button', { name: 'Requirements' }).click()
+  await tab(page, 'Requirements').click()
   await page.getByLabel('North (degrees from up)').fill('30')
-  await page.getByRole('button', { name: 'Zoning' }).click()
+  await openSheet(page)
   await page.getByRole('button', { name: 'Align to north' }).click()
   await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-rotation', '30.0')
 

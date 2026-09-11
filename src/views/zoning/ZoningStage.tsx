@@ -1,11 +1,9 @@
-import { useMemo } from 'react'
 import { selection, useSelection } from '../../app/selection'
 import { session } from '../../app/session'
 import { useProject } from '../../app/useProject'
-import { area, GRID_M, type Footprint } from '../../geometry'
-import type { Commit, Endpoint, Project, Result } from '../../model'
-import { roomTypes } from '../../rulebook'
-import { sizesOf, type RoomSizes } from './defaults'
+import { GRID_M, type Footprint } from '../../geometry'
+import type { Commit, EdgeKind, Endpoint, Project, Result } from '../../model'
+import type { RoomSizes } from './defaults'
 import { layOut } from './layout'
 import type { Placement } from './types'
 import { ZoningView } from './ZoningView'
@@ -19,9 +17,9 @@ type Plan = { readonly placements: readonly Placement[]; readonly refusals: read
 
 /**
  * Every storey laid out in turn, the lowest first, each from the rooms the one below has just put
- * down, so a stair is placed once on the storey it starts from and stands on the rest. The view
- * keeps the storey it shows to itself, so the button lays out the whole house rather than reach
- * into it; a storey with no room to spare is left alone and says why.
+ * down, so a stair is placed once on the storey it starts from and stands on the rest. The button
+ * lays out the whole house rather than the storey in view; a storey with no room to spare is left
+ * alone and says why.
  */
 function planFrom(project: Project, sizes: ReadonlyMap<string, RoomSizes>): Plan {
   let rooms = project.rooms
@@ -44,15 +42,14 @@ function planFrom(project: Project, sizes: ReadonlyMap<string, RoomSizes>): Plan
 }
 
 /** The zoning view over the app's one store: every callback is a store action, refusals are said out loud. */
-export function ZoningStage() {
+export function ZoningStage(props: {
+  readonly storey: number
+  readonly onStorey: (storey: number) => void
+  readonly sizes: ReadonlyMap<string, RoomSizes>
+}) {
   const project = useProject()
   const selected = useSelection()
-  const plotArea = area(project.plot.polygon)
-
-  const sizes = useMemo<ReadonlyMap<string, RoomSizes>>(
-    () => new Map(roomTypes.map((type) => [type.id, sizesOf(type, plotArea)])),
-    [plotArea],
-  )
+  const { sizes } = props
 
   const placeAll = (placements: readonly Placement[]): void =>
     report(
@@ -75,7 +72,7 @@ export function ZoningStage() {
 
   return (
     <>
-      <div className="zoning-bar" style={{ marginBottom: '0.5rem' }}>
+      <div className="zoning-bar zoning-lay-out">
         <button
           type="button"
           onClick={layOutAll}
@@ -94,6 +91,7 @@ export function ZoningStage() {
         rooms={project.rooms}
         edges={project.edges}
         storeys={project.storeys}
+        storey={props.storey}
         plot={project.plot}
         sizes={sizes}
         selected={selected}
@@ -110,6 +108,10 @@ export function ZoningStage() {
         }
         onDisconnect={(edgeId: string) => report(session.actions.disconnect(edgeId))}
         onSelect={selection.select}
+        onStorey={props.onStorey}
+        onSetEdgeKind={(edgeId: string, kind: EdgeKind) =>
+          report(session.actions.setEdgeKind(edgeId, kind))
+        }
         onRefuse={session.say}
       />
     </>

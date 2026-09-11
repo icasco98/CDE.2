@@ -18,7 +18,8 @@
   gap: 0.25rem;
 }
 
-.massing-views button {
+.massing-views button,
+.massing-bar .zoning-storeys button {
   font: inherit;
   padding: 0.35rem 0.9rem;
   border: 1px solid #b7b1a5;
@@ -28,7 +29,8 @@
   cursor: pointer;
 }
 
-.massing-views button[aria-pressed='true'] {
+.massing-views button[aria-pressed='true'],
+.massing-bar .zoning-storeys button[aria-pressed='true'] {
   background: #1f1d1a;
   border-color: #1f1d1a;
   color: #faf8f4;
@@ -116,11 +118,38 @@
   cursor: pointer;
 }
 
+/*
+ * Every storey is drawn; the one the Plan tab is showing is drawn full and the rest stand back,
+ * so the storey in hand reads at a glance without the others being taken away from the mass. A
+ * storey standing back is context and nothing else: it lets the pointer through, so the roof of a
+ * ground-floor room can still be taken hold of with the floor above drawn over it.
+ */
+.massing-sheet [data-storey-lit='false'] {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.massing-sheet .turn-stem {
+  stroke: #2f6f8f;
+  stroke-width: 0.06;
+  /* The stem stands over the roof it rises from; only its grip is meant to be taken hold of. */
+  pointer-events: none;
+}
+
+.massing-sheet .turn-grip {
+  fill: #fffdf9;
+  stroke: #2f6f8f;
+  stroke-width: 0.12;
+  cursor: crosshair;
+}
+
 .massing-sheet .face-top {
   fill: #f0eadd;
   stroke: #6f6a62;
   stroke-width: 0.06;
   stroke-linejoin: round;
+  /* The roof is what the hand slides the room by, so it says so under the pointer. */
+  cursor: move;
 }
 
 .massing-sheet .face-wall {

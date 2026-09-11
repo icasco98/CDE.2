@@ -1,7 +1,15 @@
 export type { Point3, View } from './projection'
-export { presets, project } from './projection'
+export {
+  ELEVATION_DEG,
+  MAX_ELEVATION_DEG,
+  MIN_ELEVATION_DEG,
+  PLAN_ELEVATION_DEG,
+  presets,
+  project,
+  unproject,
+} from './projection'
 export type { Face } from './solids'
-export { facesOf } from './solids'
+export { facesOf, levelsOf } from './solids'
 export { roomsInOrder } from './order'
 export type { Envelope } from './numbers'
 export {

@@ -1,5 +1,5 @@
 import type { Footprint } from '../../geometry'
-import type { Commit, Edge, Endpoint, Plot, Room } from '../../model'
+import type { Commit, Edge, EdgeKind, Endpoint, Plot, Room } from '../../model'
 import type { RoomSizes } from './defaults'
 
 /** A room and the footprint one gesture leaves it with. */
@@ -11,6 +11,8 @@ export type ZoningViewProps = {
   readonly rooms: readonly Room[]
   readonly edges: readonly Edge[]
   readonly storeys: number
+  /** The storey being drawn. The Plan tab holds it, so the sheet and the massing show the same one. */
+  readonly storey: number
   readonly plot: Plot
   /** The sizes each room type is drawn and judged against, keyed by type id. */
   readonly sizes: ReadonlyMap<string, RoomSizes>
@@ -24,5 +26,8 @@ export type ZoningViewProps = {
   readonly onConnect: (a: Endpoint, b: Endpoint, storey: number) => void
   readonly onDisconnect: (edgeId: string) => void
   readonly onSelect: (id: string | null) => void
+  readonly onStorey: (storey: number) => void
+  /** Changes a connection between a door and an opening in place; the edge keeps its identity. */
+  readonly onSetEdgeKind: (edgeId: string, kind: EdgeKind) => void
   readonly onRefuse: (reason: string) => void
 }

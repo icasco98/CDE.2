@@ -3,7 +3,7 @@ import { rectangleToPolygon } from '../geometry'
 import type { Room } from '../model'
 import { orderFaces, roomsInOrder } from './order'
 import { facesOf } from './solids'
-import { presets } from './projection'
+import { ELEVATION_DEG, presets } from './projection'
 
 function box(id: string, left: number): Room {
   return {
@@ -73,11 +73,15 @@ it('draws a taller prism over the low one it stands behind', () => {
   }
   const both = [...facesOf(low, 1, [3.5]), ...facesOf(tall, 1, [3.5])]
   // From the south-east the southern box stands nearest, so it is drawn last.
-  const order = roomsInOrder(both, { azimuth: 135 }).map((group) => group.roomId)
+  const order = roomsInOrder(both, { azimuth: 135, elevation: ELEVATION_DEG }).map(
+    (group) => group.roomId,
+  )
   expect(order).toEqual(['low', 'tall'])
 })
 
 it('falls back on the order the faces came in when two lie at the same depth', () => {
   // Due north the two boxes stand the same distance away, so nothing separates them but their order.
-  expect(roomsInOrder(faces, { azimuth: 0 }).map((group) => group.roomId)).toEqual(['west', 'east'])
+  expect(
+    roomsInOrder(faces, { azimuth: 0, elevation: ELEVATION_DEG }).map((group) => group.roomId),
+  ).toEqual(['west', 'east'])
 })

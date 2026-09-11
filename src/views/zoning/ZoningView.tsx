@@ -13,16 +13,18 @@ import {
   fitCamera,
   metresPerPixel,
   panTo,
+  pointerAt,
   viewBoxOf,
   visibleExtent,
+  wheelFactor,
   zoomAbout,
   ZOOM_STEP,
   type Camera,
 } from '../camera'
 import { alignRooms, northAngle, plotAngle } from './align'
 import { defaultProportion, startingRectangle } from './defaults'
-import { edgeMarks, proposalsFrom, wallPairs, type WallPair } from './doors'
-import { extentOf, pointerAt } from './frame'
+import { edgeMarks, proposalsFrom, vanishedWalls, wallPairs, type WallPair } from './doors'
+import { extentOf } from './frame'
 import { joinsOf, type Join } from './joins'
 import {
   angleTo,
@@ -62,6 +64,7 @@ import {
   Storeys,
   Tension,
   Tray,
+  VanishedWall,
   WallHandle,
 } from './parts'
 import type { Placement, ZoningViewProps } from './types'
@@ -157,15 +160,10 @@ function keyOf(pair: WallPair): string {
   return `${pair.a}:${pair.b}`
 }
 
-/** A wheel notch, whether the wheel counts in pixels or in lines; a trackpad pinch counts in pixels. */
-function notchesOf(event: WheelEvent): number {
-  return event.deltaMode === 0 ? event.deltaY / 100 : event.deltaY / 3
-}
-
 export function ZoningView(props: ZoningViewProps) {
-  const { projectId, rooms, edges, storeys, plot, sizes, selected } = props
-  const { onPlace, onPlaceAll, onUnplace, onPin, onConnect, onDisconnect, onSelect, onRefuse } =
-    props
+  const { projectId, rooms, edges, storeys, storey, plot, sizes, selected } = props
+  const { onPlace, onPlaceAll, onUnplace, onPin, onConnect, onDisconnect } = props
+  const { onSelect, onStorey, onSetEdgeKind, onRefuse } = props
   const svgRef = useRef<SVGSVGElement>(null)
   const sheetRef = useRef<Sheet>(emptySheet)
   /** Whether the drag has done anything yet, so an abandoned one puts back only what it moved and a press that never moved is a click. */
@@ -182,7 +180,6 @@ export function ZoningView(props: ZoningViewProps) {
   const [hoveredWall, setHoveredWall] = useState<string | null>(null)
   /** What each room's outline was before its last carve. View memory: the store keeps no such thing. */
   const [beforeCarve, setBeforeCarve] = useState<ReadonlyMap<string, Footprint>>(new Map())
-  const [storey, setStorey] = useState(0)
   const [camera, setCamera] = useState<Camera>(fitCamera)
   const [box, setBox] = useState({ width: 0, height: 0 })
 
@@ -235,6 +232,14 @@ export function ZoningView(props: ZoningViewProps) {
       plot,
     )
   }, [standing, edges, storey, plot, joins])
+  /** An open edge inside a join has no wall to hang a door on, so what is left of its wall is drawn. */
+  const vanished = useMemo(() => {
+    const inside = new Set(joins.flatMap((join) => join.edgeIds))
+    return vanishedWalls(
+      standing,
+      edges.filter((edge) => edge.storey === storey && inside.has(edge.id)),
+    )
+  }, [standing, edges, storey, joins])
   const pairs = useMemo(() => wallPairs(standing), [standing])
   const proposals = useMemo(() => proposalsFrom(pairs, edges, storey), [pairs, edges, storey])
   const extent = useMemo(
@@ -511,7 +516,7 @@ export function ZoningView(props: ZoningViewProps) {
   /** The sheet takes the wheel whole, so the page never scrolls under it; a trackpad pinch arrives here with `ctrlKey` and zooms the same way. */
   function wheelZoom(event: WheelEvent): void {
     event.preventDefault()
-    setCamera(zoomAbout(extent, camera, at(event), Math.pow(ZOOM_STEP, -notchesOf(event))))
+    setCamera(zoomAbout(extent, camera, at(event), wheelFactor(event)))
   }
 
   const live = useRef({
@@ -817,7 +822,7 @@ export function ZoningView(props: ZoningViewProps) {
   return (
     <div className="zoning">
       <div className="zoning-bar">
-        <Storeys storeys={storeys} storey={storey} onStorey={setStorey} />
+        <Storeys storeys={storeys} storey={storey} onStorey={onStorey} />
         <button type="button" onClick={turn} disabled={!grabbable}>
           Rotate 90°
         </button>
@@ -872,6 +877,16 @@ export function ZoningView(props: ZoningViewProps) {
         >
           Unplace
         </button>
+        {selectedEdge && selectedEdge.kind !== 'main-door' && (
+          <button
+            type="button"
+            onClick={() =>
+              onSetEdgeKind(selectedEdge.id, selectedEdge.kind === 'open' ? 'door' : 'open')
+            }
+          >
+            {selectedEdge.kind === 'open' ? 'Make it a door' : 'Make it open'}
+          </button>
+        )}
         <button
           type="button"
           disabled={!selectedEdge}
@@ -978,6 +993,22 @@ export function ZoningView(props: ZoningViewProps) {
               shown={wallShown(pair)}
               onGrab={(event) => grabWall(event, pair)}
               onHover={(over) => setHoveredWall(over ? keyOf(pair) : null)}
+            />
+          ))}
+          {vanished.map((mark) => (
+            <VanishedWall
+              key={mark.edgeId}
+              mark={mark}
+              selected={mark.edgeId === selected}
+              onSelect={(event) => {
+                event.stopPropagation()
+                if (panningWith(event)) {
+                  grabSheet(event, false)
+                  return
+                }
+                svgRef.current?.focus({ preventScroll: true })
+                onSelect(mark.edgeId)
+              }}
             />
           ))}
           {marks.doors.map((mark) => (
