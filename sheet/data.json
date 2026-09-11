@@ -1,9 +1,9 @@
 {
-  "revision": 22,
+  "revision": 23,
   "date": "11 Sep 2026",
   "session": "Session 3",
   "repo": "https://github.com/icasco98/CDE.2",
-  "headline": "G0 gestures and A8 export merged. G2 lay out from bubbles and G4 joins and alignment are being built; G3 follows, then G5.",
+  "headline": "G2 lay out from bubbles and G4 joins and alignment merged. G3 one Plan tab is being built; G5 follows.",
   "decide": [],
   "yours": [
     {
@@ -29,42 +29,36 @@
   ],
   "agents": [
     {
+      "task": "G3",
+      "name": "One Plan tab",
+      "model": "Opus",
+      "stage": 1
+    },
+    {
       "task": "G2",
       "name": "Lay out from bubbles",
       "model": "Opus",
-      "stage": 1
+      "stage": 4,
+      "pr": 49
     },
     {
       "task": "G4",
       "name": "Joins and alignment",
       "model": "Opus",
-      "stage": 1
-    },
-    {
-      "task": "G0",
-      "name": "Zoning gestures",
-      "model": "Opus",
       "stage": 4,
-      "pr": 46
-    },
-    {
-      "task": "A8",
-      "name": "Export PDF and DXF",
-      "model": "Opus",
-      "stage": 4,
-      "pr": 47
+      "pr": 50
     }
   ],
   "stages": ["Briefed", "Building", "Review", "Your merge", "Merged"],
   "done": [
-    "All four stages merged; F1 to F4 and G1 from your tests merged.",
-    "G0 merged: rooms solid, drop asks Carve or Put back, shared-wall drag, Restore shape, Undo carve, no Alt key (#46).",
-    "A8 merged: Export PDF to scale and DXF, hand-written, print scale error 0.012% (#47).",
-    "G2 and G4 started; G3 and G5 queued.",
+    "All four stages merged; F1 to F4, G0 and G1 from your tests merged; A8 export merged (#47).",
+    "G2 merged: Lay out from bubbles places every storey from the diagram in one undo step (#49).",
+    "G4 merged: open-plan rooms draw as one space; Align to north and Align to plot (#50).",
+    "G3 started; G5 queued.",
     "Double-click start scripts (#27)."
   ],
   "next": [
-    "Review G2 and G4, merge, then G3 one Plan tab, then G5 draw tool.",
+    "Review G3, merge, then G5 draw tool.",
     "A9 usability run (needs O3 the known house and O5 the fresh brief).",
     "Milestone 2 waits on O4 walls and the forces revisit."
   ]
