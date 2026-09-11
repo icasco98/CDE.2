@@ -33,6 +33,12 @@
   cursor: default;
 }
 
+/* A button that would be refused reads as refused, but still answers with the reason when pressed. */
+.zoning-bar button[aria-disabled='true'] {
+  color: #9a958c;
+  border-style: dashed;
+}
+
 .zoning-bar button[aria-pressed='true'] {
   background: #1f1d1a;
   border-color: #1f1d1a;
@@ -299,4 +305,111 @@
 .zoning-sheet.zoning-panning,
 .zoning-sheet.zoning-panning .room-shape {
   cursor: grabbing;
+}
+
+.zoning-hint {
+  margin: 0;
+  color: #6d6862;
+}
+
+/*
+ * The handle on a shared wall: hidden until the pointer is over one of the two rooms or over the
+ * handle itself, and grabbable only at its two ends, so the door mark and the "+" that offers one
+ * keep the middle of the wall to themselves.
+ */
+.zoning-sheet .wall-handle {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.zoning-sheet .wall-shown {
+  opacity: 1;
+}
+
+.zoning-sheet .wall-stem {
+  stroke: #2f6f8f;
+  stroke-width: 1.5px;
+}
+
+.zoning-sheet .wall-head {
+  fill: #2f6f8f;
+}
+
+.zoning-sheet .wall-shown .wall-grip {
+  fill: #fffdf9;
+  fill-opacity: 0.85;
+  stroke: #2f6f8f;
+  stroke-width: 1.5px;
+  cursor: move;
+  pointer-events: auto;
+}
+
+/* A room let go over another, drawn where it landed while nothing of it has been written down. */
+.zoning-sheet .pending-shape {
+  fill: #2f6f8f;
+  fill-opacity: 0.14;
+  stroke: #2f6f8f;
+  stroke-width: 2px;
+  stroke-dasharray: 7 5;
+  pointer-events: none;
+}
+
+.zoning-sheet .room-pending text {
+  stroke: #eef3f6;
+}
+
+.zoning-ask {
+  position: fixed;
+  z-index: 2;
+  transform: translate(-50%, 14px);
+  max-width: 17rem;
+  padding: 0.6rem 0.7rem;
+  background: #fffdf9;
+  border: 1px solid #b7b1a5;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgb(31 29 26 / 18%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.zoning-ask p {
+  margin: 0;
+}
+
+.ask-note {
+  color: #a5442c;
+  font-size: 0.85rem;
+}
+
+.ask-answers {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.ask-answers button {
+  font: inherit;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid #b7b1a5;
+  border-radius: 999px;
+  background: #faf8f4;
+  color: inherit;
+  cursor: pointer;
+}
+
+.ask-answers button:disabled {
+  color: #9a958c;
+  cursor: default;
+}
+
+.ask-answers button[data-carve] {
+  background: #1f1d1a;
+  border-color: #1f1d1a;
+  color: #faf8f4;
+}
+
+.ask-answers button[data-carve]:disabled {
+  background: #e6e1d8;
+  border-color: #cfc9be;
+  color: #9a958c;
 }

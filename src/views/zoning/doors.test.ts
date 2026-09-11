@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { outlineOf, rectangleToPolygon, type Footprint } from '../../geometry'
 import { EXTERIOR, type Edge, type Plot } from '../../model'
-import { edgeMarks, proposalsFrom, streetSides, type Standing } from './doors'
+import { edgeMarks, proposalsFrom, streetSides, wallPairs, type Standing } from './doors'
 
 const plot: Plot = {
   on: true,
@@ -80,24 +80,24 @@ describe('an edge drawn nowhere', () => {
 describe('a door proposed on a wall', () => {
   it('offers one where two 5 by 4 rooms side by side share a 4 m wall', () => {
     const standing = [room('a', 0, 0, 5, 4), room('b', 5, 0, 5, 4)]
-    const marks = proposalsFrom(standing, [], 0)
+    const marks = proposalsFrom(wallPairs(standing), [], 0)
     expect(marks).toHaveLength(1)
     expect(marks[0]).toEqual({ a: 'a', b: 'b', at: [5, 2] })
   })
 
   it('offers none where an edge already crosses that wall', () => {
     const standing = [room('a', 0, 0, 5, 4), room('b', 5, 0, 5, 4)]
-    expect(proposalsFrom(standing, [edge('e1', 'b', 'a')], 0)).toHaveLength(0)
+    expect(proposalsFrom(wallPairs(standing), [edge('e1', 'b', 'a')], 0)).toHaveLength(0)
   })
 
   it('offers none across a wall shorter than a door', () => {
     const standing = [room('a', 0, 0, 5, 4), room('b', 5, 3.4, 5, 4)]
-    expect(proposalsFrom(standing, [], 0)).toHaveLength(0)
+    expect(proposalsFrom(wallPairs(standing), [], 0)).toHaveLength(0)
   })
 
   it('offers none where the rooms stand apart', () => {
     const standing = [room('a', 0, 0, 5, 4), room('b', 6, 0, 5, 4)]
-    expect(proposalsFrom(standing, [], 0)).toHaveLength(0)
+    expect(proposalsFrom(wallPairs(standing), [], 0)).toHaveLength(0)
   })
 
   it('reads the wall a turned room really shows, not the wall it was drawn with', () => {
@@ -106,9 +106,28 @@ describe('a door proposed on a wall', () => {
       rotation: 90,
     }
     const standing: Standing[] = [room('a', 0, 0, 4, 2), { id: 'b', outline: outlineOf(turned) }]
-    const marks = proposalsFrom(standing, [], 0)
+    const marks = proposalsFrom(wallPairs(standing), [], 0)
     expect(marks).toHaveLength(1)
     expect(marks[0]?.at?.[0]).toBeCloseTo(4, 9)
+  })
+})
+
+describe('the walls a storey holds in common', () => {
+  it('gives one pair with the longest run two rooms share', () => {
+    const standing = [room('a', 0, 0, 5, 4), room('b', 5, 0, 5, 4), room('c', 12, 0, 5, 4)]
+    const pairs = wallPairs(standing)
+    expect(pairs).toHaveLength(1)
+    expect(pairs[0]?.a).toBe('a')
+    expect(pairs[0]?.b).toBe('b')
+    expect(pairs[0]?.wall).toEqual({ from: [5, 0], to: [5, 4] })
+    // Both rooms reach five metres back from that wall, which is what a handle on it may not swamp.
+    expect(pairs[0]?.across).toBeCloseTo(5, 9)
+  })
+
+  it('gives a pair on a wall too short for a door, which a proposal passes over', () => {
+    const standing = [room('a', 0, 0, 5, 4), room('b', 5, 3.4, 5, 4)]
+    expect(wallPairs(standing)).toHaveLength(1)
+    expect(proposalsFrom(wallPairs(standing), [], 0)).toHaveLength(0)
   })
 })
 

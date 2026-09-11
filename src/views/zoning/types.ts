@@ -6,6 +6,8 @@ import type { RoomSizes } from './defaults'
 export type Placement = { readonly id: string; readonly footprint: Footprint }
 
 export type ZoningViewProps = {
+  /** The project in hand: what a room was before its last carve is forgotten when another opens. */
+  readonly projectId: string
   readonly rooms: readonly Room[]
   readonly edges: readonly Edge[]
   readonly storeys: number
@@ -15,8 +17,8 @@ export type ZoningViewProps = {
   /** A room id, an edge id, or nothing. */
   readonly selected: string | null
   readonly onPlace: (id: string, footprint: Footprint, commit: Commit) => void
-  /** A carve: the cutter and every room it cut, as one step. */
-  readonly onCarve: (placements: readonly Placement[]) => void
+  /** Several rooms as one step to undo: a carve, or a wall moved between two rooms. */
+  readonly onPlaceAll: (placements: readonly Placement[]) => void
   readonly onUnplace: (id: string) => void
   readonly onPin: (id: string, pinned: boolean) => void
   readonly onConnect: (a: Endpoint, b: Endpoint, storey: number) => void

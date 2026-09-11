@@ -6,25 +6,37 @@ import {
   outlineOf,
   rectangleToPolygon,
   sharedArea,
+  sharedWalls,
+  WALL_TOLERANCE,
   type Footprint,
   type Handle,
   type Point,
   type Polygon,
+  type SharedWall,
 } from '../../geometry'
 import { createIdGenerator, createStore, type Project } from '../../model'
 import {
   angleTo,
+  carveRefusal,
   carveWith,
-  dropFootprint,
+  droppedAt,
+  landOver,
   moveFootprint,
+  movedTo,
+  moveSharedWall,
   normaliseAngle,
   resizeFootprint,
+  restoredTo,
   rotateFootprint,
   sheetOf,
   snapAngle,
+  wallNormal,
+  type Attempt,
   type Neighbour,
   type Sheet,
+  type WallShift,
 } from './gestures'
+import type { RoomSizes } from './defaults'
 
 const plot: Polygon = rectangleToPolygon({ left: 0, top: 0, width: 20, depth: 25 })
 
@@ -32,8 +44,15 @@ function box(left: number, top: number, width: number, depth: number, rotation =
   return { polygon: rectangleToPolygon({ left, top, width, depth }), rotation }
 }
 
-function neighbour(id: string, footprint: Footprint, pinned = false): Neighbour {
-  return { id, name: id, footprint, pinned }
+const anySize: RoomSizes = { proportion: 1.25 }
+
+function neighbour(
+  id: string,
+  footprint: Footprint,
+  pinned = false,
+  sizes: RoomSizes = anySize,
+): Neighbour {
+  return { id, name: id, footprint, pinned, sizes }
 }
 
 function alone(boundary: Polygon = []): Sheet {
@@ -68,15 +87,16 @@ describe('moving a room', () => {
     expect(attempt.ok ? '' : attempt.reason).toContain('Kitchen')
   })
 
-  it('lets a cutter through the same overlap', () => {
+  it('names the room a move was let go over rather than refusing it out of hand', () => {
     const sheet = sheetOf([neighbour('Kitchen', box(10, 10, 4, 3))], [])
-    expect(moveFootprint(box(0, 0, 4, 3), [10, 10], sheet, true).ok).toBe(true)
+    const landing = landOver(movedTo(box(0, 0, 4, 3), [10, 10]), sheet)
+    expect(landing.over.map((other) => other.id)).toEqual(['Kitchen'])
   })
 
-  it('leaves a cutter where the hand put it rather than flush with the wall it is to cut', () => {
+  it('leaves a room let go over another where the hand put it, not flush with the wall it cuts', () => {
     const sheet = sheetOf([neighbour('Kitchen', box(10, 10, 4, 3))], [])
-    const cut = settled(moveFootprint(box(0, 0, 4, 3), [9.75, 12], sheet, true))
-    expect(boundingBox(outlineOf(cut)).left).toBeCloseTo(9.75, 9)
+    const cut = landOver(movedTo(box(0, 0, 4, 3), [9.75, 12]), sheet)
+    expect(boundingBox(outlineOf(cut.footprint)).left).toBeCloseTo(9.75, 9)
     const moved = settled(moveFootprint(box(0, 0, 4, 3), [5.75, 12], sheet))
     expect(boundingBox(outlineOf(moved)).left + 4).toBeCloseTo(10, 9)
   })
@@ -167,21 +187,23 @@ describe('resizing a room', () => {
 
 describe('dropping a room', () => {
   it('centres the rectangle on the drop point and snaps it to the grid', () => {
-    const dropped = settled(dropFootprint([10.1, 10.1], { width: 5.5, depth: 4.5 }, alone()))
-    const bounds = boundingBox(outlineOf(dropped))
+    const dropped = landOver(droppedAt([10.1, 10.1], { width: 5.5, depth: 4.5 }), alone())
+    const bounds = boundingBox(outlineOf(dropped.footprint))
     expect(bounds.left).toBeCloseTo(7.25, 9)
     expect(bounds.top).toBeCloseTo(7.75, 9)
-    expect(dropped.rotation).toBe(0)
+    expect(dropped.footprint.rotation).toBe(0)
+    expect(dropped.over).toEqual([])
   })
 
-  it('refuses a drop on top of a room already there', () => {
+  it('names the room a drop landed over instead of refusing the drop', () => {
     const sheet = sheetOf([neighbour('Diwaniya', box(8, 8, 5, 5))], [])
-    expect(dropFootprint([10, 10], { width: 4, depth: 4 }, sheet).ok).toBe(false)
+    const dropped = landOver(droppedAt([10, 10], { width: 4, depth: 4 }), sheet)
+    expect(dropped.over.map((other) => other.id)).toEqual(['Diwaniya'])
   })
 
   it('shifts a drop at the plot edge back inside', () => {
-    const dropped = settled(dropFootprint([19, 3], { width: 6, depth: 4 }, alone(plot)))
-    const bounds = boundingBox(outlineOf(dropped))
+    const dropped = landOver(droppedAt([19, 3], { width: 6, depth: 4 }), alone(plot))
+    const bounds = boundingBox(outlineOf(dropped.footprint))
     expect(bounds.left + bounds.width).toBeLessThanOrEqual(20 + 1e-6)
   })
 })
@@ -288,6 +310,27 @@ function anyOverlap(rooms: ReadonlyMap<string, Footprint>): string | null {
   return null
 }
 
+/** A pair of rooms that meet along a wall, looked for from a different room each time. */
+function aSharedWall(
+  rooms: ReadonlyMap<string, Footprint>,
+  random: () => number,
+): { a: Neighbour; b: Neighbour; wall: SharedWall } | null {
+  const entries = [...rooms.entries()]
+  const start = Math.floor(random() * entries.length)
+  for (let i = 0; i < entries.length; i++) {
+    const first = entries[(start + i) % entries.length]
+    if (!first) continue
+    for (const second of entries) {
+      if (second[0] === first[0]) continue
+      const wall = sharedWalls(outlineOf(first[1]), outlineOf(second[1]), WALL_TOLERANCE)[0]
+      if (wall) {
+        return { a: neighbour(first[0], first[1]), b: neighbour(second[0], second[1]), wall }
+      }
+    }
+  }
+  return null
+}
+
 describe('what a run of gestures leaves behind', () => {
   it('never leaves two footprints on one storey overlapping, over a thousand gestures', () => {
     const random = seeded(20260911)
@@ -295,26 +338,28 @@ describe('what a run of gestures leaves behind', () => {
     const ids = [...rooms.keys()]
     let accepted = 0
     let carves = 0
+    let putBacks = 0
+    let walls = 0
     for (let turn = 0; turn < 1000; turn++) {
       const id = ids[Math.floor(random() * ids.length)] ?? 'room-0'
       const from = rooms.get(id)
       if (!from) continue
       const sheet = sheetWithout(rooms, id, turn % 3 === 0)
       const pick = random()
-      if (pick < 0.45) {
+      if (pick < 0.4) {
         const delta: Point = [(random() - 0.5) * 14, (random() - 0.5) * 14]
         const attempt = moveFootprint(from, delta, sheet)
         if (attempt.ok) {
           rooms.set(id, attempt.value)
           accepted++
         }
-      } else if (pick < 0.65) {
+      } else if (pick < 0.6) {
         const attempt = rotateFootprint(from, random() * 360, sheet)
         if (attempt.ok) {
           rooms.set(id, attempt.value)
           accepted++
         }
-      } else if (pick < 0.9) {
+      } else if (pick < 0.8) {
         const handle = HANDLES[Math.floor(random() * HANDLES.length)] ?? HANDLES[0]
         const at: Point = [random() * 20, random() * 25]
         const attempt = handle
@@ -324,22 +369,41 @@ describe('what a run of gestures leaves behind', () => {
           rooms.set(id, attempt.value)
           accepted++
         }
-      } else {
-        // The carve of the brief: a room dropped with Alt held is the cutter, and a room coming
-        // off the tray is a rectangle.
+      } else if (pick < 0.92) {
+        // A room off the tray let go over its neighbours: the prompt is answered with the carve
+        // where one is offered, and with Put back, which changes nothing, where it is not.
         const at: Point = [random() * 20, random() * 25]
-        const cutter = dropFootprint(at, { width: 2, depth: 3 }, sheet, true)
-        const carved = cutter.ok ? carveWith(cutter.value, sheet) : null
-        if (cutter.ok && carved?.ok) {
-          rooms.set(id, cutter.value)
-          for (const piece of carved.value) rooms.set(piece.id, piece.footprint)
-          if (carved.value.length > 0) carves++
+        const landing = landOver(droppedAt(at, { width: 2, depth: 3 }), sheet)
+        if (landing.over.length === 0) {
+          rooms.set(id, landing.footprint)
+          accepted++
+        } else {
+          const carved = carveWith(landing.footprint, sheet)
+          if (carved.ok) {
+            rooms.set(id, landing.footprint)
+            for (const piece of carved.value) rooms.set(piece.id, piece.footprint)
+            carves++
+          } else {
+            putBacks++
+          }
+        }
+      } else {
+        const pair = aSharedWall(rooms, random)
+        const attempt = pair
+          ? moveSharedWall(pair.a, pair.b, pair.wall, (random() - 0.5) * 6)
+          : { ok: false as const, reason: 'no wall' }
+        if (attempt.ok && attempt.value.distance !== 0) {
+          rooms.set(attempt.value.a.id, attempt.value.a.footprint)
+          rooms.set(attempt.value.b.id, attempt.value.b.footprint)
+          walls++
         }
       }
       expect(anyOverlap(rooms)).toBeNull()
     }
-    expect(accepted).toBeGreaterThan(300)
+    expect(accepted).toBeGreaterThan(250)
     expect(carves).toBeGreaterThan(0)
+    expect(putBacks).toBeGreaterThan(0)
+    expect(walls).toBeGreaterThan(0)
   })
 })
 
@@ -409,5 +473,247 @@ describe('the graph under a run of gestures', () => {
     expect(footprintOf(store.getState(), a)).not.toEqual(before)
     expect(store.undo()).toBe(true)
     expect(footprintOf(store.getState(), a)).toEqual(before)
+  })
+})
+
+function shifted(attempt: Attempt<WallShift>): WallShift {
+  if (!attempt.ok) throw new Error(attempt.reason)
+  return attempt.value
+}
+
+function wallBetween(a: Footprint, b: Footprint): SharedWall {
+  const wall = sharedWalls(outlineOf(a), outlineOf(b), WALL_TOLERANCE)[0]
+  if (!wall) throw new Error('these two rooms share no wall')
+  return wall
+}
+
+describe('moving the wall two rooms share', () => {
+  const left = neighbour('Kitchen', box(0, 0, 4, 4))
+  const right = neighbour('Dining Room', box(4, 0, 4, 4))
+  const wall = wallBetween(left.footprint, right.footprint)
+
+  it('reads the normal from the first room across the wall into the second', () => {
+    const into = wallNormal(wall, left.footprint, right.footprint)
+    const back = wallNormal(wall, right.footprint, left.footprint)
+    expect(into[0]).toBeCloseTo(1, 9)
+    expect(into[1]).toBeCloseTo(0, 9)
+    expect(back[0]).toBeCloseTo(-1, 9)
+    expect(back[1]).toBeCloseTo(0, 9)
+  })
+
+  it('adds a strip to one room, takes the same strip off the other, and conserves the area', () => {
+    const shift = shifted(moveSharedWall(left, right, wall, 0.5))
+    expect(shift.distance).toBeCloseTo(0.5, 9)
+    expect(shift.a.area).toBeCloseTo(18, 6)
+    expect(shift.b.area).toBeCloseTo(14, 6)
+    expect(Math.abs(shift.a.area + shift.b.area - 32)).toBeLessThan(1e-6)
+    expect(boundingBox(outlineOf(shift.a.footprint)).width).toBeCloseTo(4.5, 9)
+    expect(boundingBox(outlineOf(shift.b.footprint)).left).toBeCloseTo(4.5, 9)
+  })
+
+  it('takes from the first room when the wall is pushed the other way', () => {
+    const shift = shifted(moveSharedWall(left, right, wall, -0.75))
+    expect(shift.a.area).toBeCloseTo(13, 6)
+    expect(shift.b.area).toBeCloseTo(19, 6)
+    expect(Math.abs(shift.a.area + shift.b.area - 32)).toBeLessThan(1e-6)
+  })
+
+  it('travels in whole grid steps, so a wall on the grid stays on it', () => {
+    expect(shifted(moveSharedWall(left, right, wall, 0.31)).distance).toBeCloseTo(0.25, 9)
+    expect(shifted(moveSharedWall(left, right, wall, 0.04)).distance).toBe(0)
+  })
+
+  it('keeps both rotations and moves the wall a turned pair share', () => {
+    const north: Neighbour = neighbour('Kitchen', box(0, 0, 4, 2, 90))
+    const south: Neighbour = neighbour('Dining Room', box(0, 4, 4, 2, 90))
+    const between = wallBetween(north.footprint, south.footprint)
+    const shift = shifted(moveSharedWall(north, south, between, 0.25))
+    expect(shift.a.footprint.rotation).toBe(90)
+    expect(shift.b.footprint.rotation).toBe(90)
+    expect(shift.a.area).toBeCloseTo(8.5, 6)
+    expect(shift.b.area).toBeCloseTo(7.5, 6)
+    const grown = boundingBox(outlineOf(shift.a.footprint))
+    expect(grown.depth).toBeCloseTo(4.25, 9)
+    expect(grown.width).toBeCloseTo(2, 9)
+  })
+
+  it('stops where the room it moves into would go under the smallest its kind admits', () => {
+    const small = neighbour('Dining Room', box(4, 0, 4, 4), false, { proportion: 1, minArea: 12 })
+    expect(shifted(moveSharedWall(left, small, wall, 2)).distance).toBeCloseTo(1, 9)
+    const narrow = neighbour('Dining Room', box(4, 0, 4, 4), false, { proportion: 1, minWidth: 3 })
+    expect(shifted(moveSharedWall(left, narrow, wall, 2)).distance).toBeCloseTo(1, 9)
+  })
+
+  it('stops before it takes the last of a room, and before it comes off the wall', () => {
+    const shift = shifted(moveSharedWall(left, right, wall, 6))
+    expect(shift.distance).toBeCloseTo(3.75, 9)
+    expect(shift.b.area).toBeCloseTo(1, 6)
+  })
+
+  it('stops where the strip would run out past the room it is moving into', () => {
+    const short = neighbour('Dining Room', box(4, 0, 4, 1))
+    const between = wallBetween(left.footprint, short.footprint)
+    // Their wall is one metre of the kitchen's four, and the strip may only take what is there.
+    expect(shifted(moveSharedWall(left, short, between, 0.5)).distance).toBeCloseTo(0.5, 9)
+    expect(shifted(moveSharedWall(left, short, between, -0.5)).distance).toBeCloseTo(-0.5, 9)
+  })
+
+  it('refuses to cut a room in two rather than stopping short', () => {
+    const hall = neighbour('Hallway', box(0, -2, 4, 2))
+    const bedroom = neighbour('Bedroom', {
+      polygon: [
+        [0, 0],
+        [4, 0],
+        [4, 3],
+        [2.5, 3],
+        [2.5, 1],
+        [1.5, 1],
+        [1.5, 3],
+        [0, 3],
+      ],
+      rotation: 0,
+    })
+    const between = wallBetween(hall.footprint, bedroom.footprint)
+    const attempt = moveSharedWall(hall, bedroom, between, 1.5)
+    expect(attempt.ok).toBe(false)
+    expect(attempt.ok ? '' : attempt.reason).toContain('cut in two')
+  })
+
+  it('refuses to move a wall a pinned room stands on', () => {
+    const held = neighbour('Dining Room', box(4, 0, 4, 4), true)
+    const attempt = moveSharedWall(left, held, wall, 0.5)
+    expect(attempt.ok).toBe(false)
+    expect(attempt.ok ? '' : attempt.reason).toContain('pinned')
+  })
+})
+
+describe('restoring a room to the rectangle its kind opens at', () => {
+  const carved: Footprint = {
+    polygon: [
+      [0, 0],
+      [6, 0],
+      [6, 4],
+      [3, 4],
+      [3, 2],
+      [0, 2],
+    ],
+    rotation: 30,
+  }
+
+  it('draws the rectangle about the centre the room stands on and keeps its turn', () => {
+    const back = restoredTo(carved, { width: 5, depth: 4 })
+    const bounds = boundingBox(back.polygon)
+    expect(bounds.left + bounds.width / 2).toBeCloseTo(3, 9)
+    expect(bounds.top + bounds.depth / 2).toBeCloseTo(2, 9)
+    expect(back.rotation).toBe(30)
+    expect(area(back.polygon)).toBeCloseTo(20, 9)
+  })
+
+  it('names the neighbour the rectangle would reach into rather than refusing', () => {
+    const sheet = sheetOf([neighbour('Kitchen', box(5, 0, 4, 4))], [])
+    const landing = landOver(restoredTo(box(0, 0, 4, 4), { width: 7, depth: 4 }), sheet)
+    expect(landing.over.map((other) => other.id)).toEqual(['Kitchen'])
+    expect(carveRefusal(landing, sheet)).toBeNull()
+  })
+
+  it('says why beforehand where the rectangle would carve a neighbour it may not carve', () => {
+    const small: RoomSizes = { proportion: 1, minArea: 15 }
+    const sheet = sheetOf([neighbour('Guest WC', box(5, 0, 4, 4), false, small)], [])
+    const landing = landOver(restoredTo(box(0, 0, 4, 4), { width: 7, depth: 4 }), sheet)
+    expect(carveRefusal(landing, sheet)).toBe('Guest WC would be left under its smallest 15 m²')
+  })
+})
+
+describe('putting back the outline a room had before its last carve', () => {
+  const before = box(0, 0, 4, 4)
+  const cutter = box(3, 3, 2, 2)
+  const bitten = carveWith(cutter, sheetOf([neighbour('Bedroom', before)], []))
+
+  it('takes a bite out of the room to begin with', () => {
+    expect(bitten.ok).toBe(true)
+    expect(area((bitten.ok ? bitten.value[0]?.footprint.polygon : []) ?? [])).toBeCloseTo(15, 9)
+  })
+
+  it('names the room standing in the bite while it is still there', () => {
+    const sheet = sheetOf([neighbour('Guest WC', cutter)], [])
+    expect(landOver(before, sheet).over.map((other) => other.id)).toEqual(['Guest WC'])
+  })
+
+  it('lands cleanly once the room that cut it has gone elsewhere', () => {
+    const sheet = sheetOf([neighbour('Guest WC', box(10, 10, 2, 2))], [])
+    const landing = landOver(before, sheet)
+    expect(landing.over).toEqual([])
+    expect(area(outlineOf(landing.footprint))).toBeCloseTo(16, 9)
+    expect(carveRefusal(landing, sheet)).toBeNull()
+  })
+
+  it('says why beforehand where going back would carve the room standing in the bite', () => {
+    const small: RoomSizes = { proportion: 1, minArea: 3.5 }
+    const sheet = sheetOf([neighbour('Guest WC', cutter, false, small)], [])
+    expect(carveRefusal(landOver(before, sheet), sheet)).toBe(
+      'Guest WC would be left under its smallest 3.5 m²',
+    )
+  })
+})
+
+function projectWithThreeRooms(): {
+  store: ReturnType<typeof createStore>
+  a: string
+  b: string
+  c: string
+} {
+  const store = createStore(undefined, { newId: createIdGenerator(11) })
+  const a = store.actions.addRoom({ type: 'bedroom', name: 'Bedroom', targetArea: 16 })
+  const b = store.actions.addRoom({ type: 'kitchen', name: 'Kitchen', targetArea: 16 })
+  const c = store.actions.addRoom({ type: 'guest-wc', name: 'Guest WC', targetArea: 4 })
+  if (!a.ok || !b.ok || !c.ok) throw new Error('the rooms were refused')
+  store.actions.place(a.value, box(0.5, 0.5, 4, 4))
+  store.actions.place(b.value, box(4.5, 0.5, 4, 4))
+  return { store, a: a.value, b: b.value, c: c.value }
+}
+
+describe('a room let go over its neighbours', () => {
+  it('carves both rooms it landed over, in one step to undo', () => {
+    const { store, a, b, c } = projectWithThreeRooms()
+    const sheet = sheetOf(
+      [
+        neighbour('Bedroom', footprintOf(store.getState(), a)),
+        neighbour('Kitchen', footprintOf(store.getState(), b)),
+      ].map((other, index) => ({ ...other, id: index === 0 ? a : b })),
+      [],
+    )
+    const landing = landOver(droppedAt([4.5, 2.5], { width: 2, depth: 2 }), sheet)
+    expect(landing.over).toHaveLength(2)
+    const carved = carveWith(landing.footprint, sheet)
+    expect(carved.ok).toBe(true)
+    if (!carved.ok) return
+    store.transaction(() => {
+      store.actions.place(c, landing.footprint)
+      for (const piece of carved.value) store.actions.place(piece.id, piece.footprint)
+    })
+    expect(area(outlineOf(footprintOf(store.getState(), a)))).toBeCloseTo(14, 6)
+    expect(area(outlineOf(footprintOf(store.getState(), b)))).toBeCloseTo(14, 6)
+    expect(store.undo()).toBe(true)
+    expect(area(outlineOf(footprintOf(store.getState(), a)))).toBeCloseTo(16, 6)
+    expect(area(outlineOf(footprintOf(store.getState(), b)))).toBeCloseTo(16, 6)
+    expect(store.getState().rooms.find((room) => room.id === c)?.footprint).toBeUndefined()
+  })
+
+  it('writes nothing down until the drop is answered, and Put back leaves it where it began', () => {
+    const { store, a, b } = projectWithThreeRooms()
+    const began = footprintOf(store.getState(), a)
+    const sheet = sheetOf([neighbour(b, footprintOf(store.getState(), b))], [])
+    const slid = moveFootprint(began, [0, 1], sheet)
+    expect(slid.ok).toBe(true)
+    if (slid.ok) store.actions.place(a, slid.value, 'preview')
+    const landing = landOver(movedTo(began, [3, 0]), sheet)
+    expect(landing.over.map((other) => other.id)).toEqual([b])
+    store.actions.place(a, began, 'preview')
+    expect(footprintOf(store.getState(), a)).toEqual(began)
+    // No step was recorded for the drag: one undo reaches past it to the last thing committed,
+    // which is the kitchen being placed.
+    expect(store.undo()).toBe(true)
+    expect(footprintOf(store.getState(), a)).toEqual(began)
+    expect(store.getState().rooms.find((room) => room.id === b)?.footprint).toBeUndefined()
   })
 })

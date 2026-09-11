@@ -4,6 +4,24 @@ import type { Point, Polygon } from './types'
 /** A run of wall two polygons hold in common, one end to the other. */
 export type SharedWall = { readonly from: Point; readonly to: Point }
 
+/** How far apart two walls may lie and still be read as the one wall, in metres. */
+export const WALL_TOLERANCE = 0.05
+
+export function wallLength(wall: SharedWall): number {
+  return Math.hypot(wall.to[0] - wall.from[0], wall.to[1] - wall.from[1])
+}
+
+export function wallMidpoint(wall: SharedWall): Point {
+  return [(wall.from[0] + wall.to[0]) / 2, (wall.from[1] + wall.to[1]) / 2]
+}
+
+/** The unit direction along the wall; a wall of no length is read as running east. */
+export function wallDirection(wall: SharedWall): Point {
+  const run = wallLength(wall)
+  if (run < 1e-9) return [1, 0]
+  return [(wall.to[0] - wall.from[0]) / run, (wall.to[1] - wall.from[1]) / run]
+}
+
 /**
  * Every run along which an edge of `a` and an edge of `b` lie on the same line within
  * `tolerance` and overlap in extent. A shared wall is a fact about the drawing and nothing

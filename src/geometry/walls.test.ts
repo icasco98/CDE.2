@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { outlineOf } from './footprint'
 import { rectangleToPolygon } from './polygon'
-import { outwardWalls, sharedWalls } from './walls'
+import {
+  outwardWalls,
+  sharedWalls,
+  wallDirection,
+  wallLength,
+  wallMidpoint,
+  WALL_TOLERANCE,
+} from './walls'
 import type { Footprint, Polygon } from './types'
 
 const room = (left: number, top: number, width: number, depth: number): Polygon =>
@@ -99,5 +106,24 @@ describe('outward walls', () => {
         [4, 3],
       ]),
     ).toHaveLength(3)
+  })
+})
+
+describe('reading one shared wall', () => {
+  const wall = { from: [4, 1] as const, to: [4, 4] as const }
+
+  it('measures its run, its middle and the way it points', () => {
+    expect(wallLength(wall)).toBeCloseTo(3, 9)
+    expect(wallMidpoint(wall)).toEqual([4, 2.5])
+    expect(wallDirection(wall)).toEqual([0, 1])
+  })
+
+  it('reads a wall of no length as running east rather than nowhere', () => {
+    expect(wallDirection({ from: [2, 2], to: [2, 2] })).toEqual([1, 0])
+  })
+
+  it('holds two walls five centimetres apart to be the one wall', () => {
+    expect(sharedWalls(room(0, 0, 4, 4), room(4.04, 1, 3, 3), WALL_TOLERANCE)).toHaveLength(1)
+    expect(sharedWalls(room(0, 0, 4, 4), room(4.2, 1, 3, 3), WALL_TOLERANCE)).toHaveLength(0)
   })
 })

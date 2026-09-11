@@ -1,5 +1,6 @@
 import { GRID_M, area, boundingBox, type Footprint } from '../../geometry'
 import { byPlotBand, freeProportion, plotBandFor, type RoomType } from '../../rulebook'
+import { metres2 } from '../requirements/format'
 
 /** Width against depth for a kind whose table row leaves the proportion free. */
 export const defaultProportion = 1.25
@@ -68,10 +69,23 @@ export function offTarget(liveArea: number, targetArea: number): boolean {
   return Math.abs(liveArea - targetArea) > targetArea * OFF_TARGET
 }
 
-/** Below what the kind admits: too little floor, or a side shorter than the Municipality allows. */
-export function belowMinimum(footprint: Footprint, sizes: RoomSizes): boolean {
-  if (sizes.minArea !== undefined && area(footprint.polygon) < sizes.minArea) return true
-  if (sizes.minWidth === undefined) return false
+/**
+ * Below what the kind admits, and which of the two it is: too little floor, or a side shorter
+ * than the Municipality allows. The words come back rather than a bare false so a refusal can
+ * say what it is refusing.
+ */
+export function underMinimum(footprint: Footprint, sizes: RoomSizes): string | null {
+  if (sizes.minArea !== undefined && area(footprint.polygon) < sizes.minArea) {
+    return `under its smallest ${metres2(sizes.minArea)} m²`
+  }
+  if (sizes.minWidth === undefined) return null
   const bounds = boundingBox(footprint.polygon)
-  return Math.min(bounds.width, bounds.depth) < sizes.minWidth
+  if (Math.min(bounds.width, bounds.depth) < sizes.minWidth) {
+    return `narrower than the ${metres2(sizes.minWidth)} m the Municipality allows`
+  }
+  return null
+}
+
+export function belowMinimum(footprint: Footprint, sizes: RoomSizes): boolean {
+  return underMinimum(footprint, sizes) !== null
 }

@@ -20,26 +20,38 @@ import {
   type Camera,
 } from '../camera'
 import { defaultProportion, startingRectangle } from './defaults'
-import { edgeMarks, proposalsFrom } from './doors'
+import { edgeMarks, proposalsFrom, wallPairs, type WallPair } from './doors'
 import { extentOf, pointerAt } from './frame'
 import {
   angleTo,
+  carveRefusal,
   carveWith,
-  dropFootprint,
+  droppedAt,
+  landOver,
   moveFootprint,
+  movedTo,
+  moveSharedWall,
   resizeFootprint,
+  restoredTo,
   rotateFootprint,
   sheetOf,
   snapAngle,
+  wallNormal,
   type Attempt,
+  type Landing,
+  type Neighbour,
   type Sheet,
+  type Size,
+  type WallShift,
 } from './gestures'
 import {
+  Ask,
   Door,
   DropGhost,
   Ghosts,
   Handles,
   NorthArrow,
+  PendingRoom,
   PlotSheet,
   Proposal,
   RoomShape,
@@ -47,8 +59,9 @@ import {
   Storeys,
   Tension,
   Tray,
+  WallHandle,
 } from './parts'
-import type { ZoningViewProps } from './types'
+import type { Placement, ZoningViewProps } from './types'
 import './zoning.css'
 
 type Placed = Room & { readonly footprint: Footprint }
@@ -58,6 +71,8 @@ const DRAG_PX = 3
 
 /** Where the north arrow and the scale bar sit in from the corner of what is drawn, in pixels. */
 const FURNITURE_PX = 26
+
+const HINT = 'Drag a room to move it. Drop it on another to carve. Drag a shared wall to move it.'
 
 /** A gesture that reshapes one footprint, as against a drop or a grab that is going nowhere. */
 type Grip =
@@ -74,8 +89,19 @@ type Grip =
 /** Two fingers on the sheet: the metre under their middle, how far apart they began, and the scale they began at. */
 type Pinch = { readonly grabbed: Point; readonly span: number; readonly scale: number }
 
+/** The wall between two rooms, taken hold of at the metre the hand grabbed it by. */
+type WallGrip = {
+  readonly kind: 'wall'
+  readonly a: Neighbour
+  readonly b: Neighbour
+  readonly pair: WallPair
+  readonly normal: Point
+  readonly grabbed: Point
+}
+
 type Gesture =
   | Grip
+  | WallGrip
   | { readonly kind: 'drop'; readonly id: string; readonly at: Point }
   | { readonly kind: 'held'; readonly name: string }
   /** The sheet slid under the hand: the metre grabbed, where the hand started, and whether a click here lets the selection go. */
@@ -88,6 +114,31 @@ type Gesture =
   | (Pinch & { readonly kind: 'pinch' })
   | null
 
+/**
+ * A room let go over its neighbours. It is held here and nowhere else until the person answers:
+ * the store hears nothing of a drop that has not been settled one way or the other.
+ */
+type Asked = {
+  readonly id: string
+  readonly name: string
+  readonly targetArea: number
+  readonly footprint: Footprint
+  /** Every room it lies over, as they stood when it landed. */
+  readonly over: readonly Neighbour[]
+  readonly carve: Attempt<readonly Placement[]>
+  readonly at: readonly [number, number]
+  /** Whether answering uses up the outline remembered for this room, as undoing a carve does. */
+  readonly forgets: boolean
+}
+
+/** What a button on the selected room would do, and the sentence standing in its way. */
+type Offer = { readonly landing: Landing; readonly refusal: string | null }
+
+/** The same sentence on the button and in the message it says, so nothing is hidden in a tooltip. */
+function heldBack(name: string, doing: string, refusal: string): string {
+  return `${name} cannot ${doing}: ${refusal}; move it first.`
+}
+
 const emptySheet: Sheet = { others: [], outlines: [], boundary: [] }
 
 function isPlaced(room: Room): room is Placed {
@@ -99,23 +150,35 @@ function centreOf(footprint: Footprint): Point {
   return [bounds.left + bounds.width / 2, bounds.top + bounds.depth / 2]
 }
 
+function keyOf(pair: WallPair): string {
+  return `${pair.a}:${pair.b}`
+}
+
 /** A wheel notch, whether the wheel counts in pixels or in lines; a trackpad pinch counts in pixels. */
 function notchesOf(event: WheelEvent): number {
   return event.deltaMode === 0 ? event.deltaY / 100 : event.deltaY / 3
 }
 
 export function ZoningView(props: ZoningViewProps) {
-  const { rooms, edges, storeys, plot, sizes, selected } = props
-  const { onPlace, onCarve, onUnplace, onPin, onConnect, onDisconnect, onSelect, onRefuse } = props
+  const { projectId, rooms, edges, storeys, plot, sizes, selected } = props
+  const { onPlace, onPlaceAll, onUnplace, onPin, onConnect, onDisconnect, onSelect, onRefuse } =
+    props
   const svgRef = useRef<SVGSVGElement>(null)
   const sheetRef = useRef<Sheet>(emptySheet)
   /** Whether the drag has done anything yet, so an abandoned one puts back only what it moved and a press that never moved is a click. */
   const movedRef = useRef(false)
+  /** The last wall the hand settled on, kept out of state so a pointer move does not draw twice. */
+  const wallRef = useRef<Attempt<WallShift> | null>(null)
   /** Every pointer down on the sheet, so a second finger becomes a pinch instead of a second grab. */
   const touchesRef = useRef(new Map<number, Point>())
   /** Space turns any drag into a pan, so a room under the hand is slid past rather than picked up. */
   const spaceRef = useRef(false)
   const [gesture, setGesture] = useState<Gesture>(null)
+  const [asked, setAsked] = useState<Asked | null>(null)
+  const [hovered, setHovered] = useState<string | null>(null)
+  const [hoveredWall, setHoveredWall] = useState<string | null>(null)
+  /** What each room's outline was before its last carve. View memory: the store keeps no such thing. */
+  const [beforeCarve, setBeforeCarve] = useState<ReadonlyMap<string, Footprint>>(new Map())
   const [storey, setStorey] = useState(0)
   const [camera, setCamera] = useState<Camera>(fitCamera)
   const [box, setBox] = useState({ width: 0, height: 0 })
@@ -150,7 +213,8 @@ export function ZoningView(props: ZoningViewProps) {
       ),
     [standing, edges, storey, plot],
   )
-  const proposals = useMemo(() => proposalsFrom(standing, edges, storey), [standing, edges, storey])
+  const pairs = useMemo(() => wallPairs(standing), [standing])
+  const proposals = useMemo(() => proposalsFrom(pairs, edges, storey), [pairs, edges, storey])
   const extent = useMemo(
     () =>
       extentOf(
@@ -169,33 +233,61 @@ export function ZoningView(props: ZoningViewProps) {
     selectedRoom !== undefined &&
     isPlaced(selectedRoom) &&
     here.some((r) => r.id === selectedRoom.id)
+  const remembered = selected === null ? undefined : beforeCarve.get(selected)
 
   const at = (event: { clientX: number; clientY: number }): Point => {
     const svg = svgRef.current
     return svg ? pointerAt(svg, event.clientX, event.clientY) : [0, 0]
   }
 
+  const neighbourOf = (room: Placed): Neighbour => ({
+    id: room.id,
+    name: room.name,
+    footprint: room.footprint,
+    pinned: room.pinned,
+    sizes: sizes.get(room.type) ?? { proportion: defaultProportion },
+  })
+
   const sheetFor = (skip: string | null): Sheet =>
-    sheetOf(
-      placed
-        .filter((room) => room.id !== skip)
-        .map((room) => ({
-          id: room.id,
-          name: room.name,
-          footprint: room.footprint,
-          pinned: room.pinned,
-        })),
-      plot.on ? plot.polygon : [],
-    )
+    sheetOf(placed.filter((room) => room.id !== skip).map(neighbourOf), plot.on ? plot.polygon : [])
 
   const proportionFor = (room: Room): number =>
     sizes.get(room.type)?.proportion ?? defaultProportion
 
-  function attemptFor(grip: Grip, pointer: Point, alt: boolean, free: boolean): Attempt<Footprint> {
+  const sizeFor = (room: Room): Size => startingRectangle(room.targetArea, proportionFor(room))
+
+  /** Where a point on the sheet falls on the screen, in pixels: a prompt stands on its own room. */
+  function onScreen(point: Point): Point {
+    const screen = svgRef.current?.getScreenCTM()
+    if (!screen) return point
+    const at = new DOMPoint(point[0], point[1]).matrixTransform(screen)
+    return [at.x, at.y]
+  }
+
+  /**
+   * What a button would leave the selected room with, and why it would be refused. Worked out
+   * while the hand is still, so a button says up front that it cannot do what it offers, and the
+   * pointer path is never charged for it.
+   */
+  function offerOf(footprint: Footprint | undefined): Offer | null {
+    if (!footprint || !grabbable || !selectedRoom || gesture !== null) return null
+    const sheet = sheetFor(selectedRoom.id)
+    const landing = landOver(footprint, sheet)
+    return { landing, refusal: carveRefusal(landing, sheet) }
+  }
+
+  const restoreOffer = offerOf(
+    selectedRoom && isPlaced(selectedRoom)
+      ? restoredTo(selectedRoom.footprint, sizeFor(selectedRoom))
+      : undefined,
+  )
+  const undoOffer = offerOf(remembered)
+
+  function attemptFor(grip: Grip, pointer: Point, free: boolean): Attempt<Footprint> {
     const sheet = sheetRef.current
     if (grip.kind === 'move') {
       const delta: Point = [pointer[0] - grip.at[0], pointer[1] - grip.at[1]]
-      return moveFootprint(grip.from, delta, sheet, alt)
+      return moveFootprint(grip.from, delta, sheet)
     }
     if (grip.kind === 'rotate') {
       return rotateFootprint(
@@ -207,24 +299,59 @@ export function ZoningView(props: ZoningViewProps) {
     return resizeFootprint(grip.from, grip.sx, grip.sy, pointer, sheet)
   }
 
-  /** Places the room, or carves every room it lies over, as one step to undo. */
-  function settle(
+  function forget(id: string): void {
+    setBeforeCarve((memory) => {
+      if (!memory.has(id)) return memory
+      const next = new Map(memory)
+      next.delete(id)
+      return next
+    })
+  }
+
+  /**
+   * A landing over other rooms is neither refused nor written: the room is drawn where it came to
+   * rest and the person is asked what they meant by it.
+   */
+  function ask(
     room: Room,
-    footprint: Footprint,
-    carving: boolean,
-    from: Footprint | null,
+    landing: Landing,
+    put: Footprint | null,
+    where: Point,
+    forgets = false,
   ): void {
-    if (!carving) {
-      onPlace(room.id, footprint, 'commit')
+    if (landing.over.length === 0) {
+      onPlace(room.id, landing.footprint, 'commit')
+      if (forgets) forget(room.id)
       return
     }
-    const carved = carveWith(footprint, sheetRef.current)
-    if (!carved.ok) {
-      onRefuse(`${room.name} cannot carve here: ${carved.reason}.`)
-      if (from && movedRef.current) onPlace(room.id, from, 'commit')
-      return
-    }
-    onCarve([{ id: room.id, footprint }, ...carved.value])
+    if (put && movedRef.current) onPlace(room.id, put, 'preview')
+    setAsked({
+      id: room.id,
+      name: room.name,
+      targetArea: room.targetArea,
+      footprint: landing.footprint,
+      over: landing.over,
+      carve: carveWith(landing.footprint, sheetRef.current),
+      at: [where[0], where[1]],
+      forgets,
+    })
+  }
+
+  /** The carve the prompt offered: the room stays where it landed and every room under it gives way. */
+  function carveHere(): void {
+    if (!asked || !asked.carve.ok) return
+    const cut = asked.carve.value
+    setBeforeCarve((memory) => {
+      const next = new Map(memory)
+      if (asked.forgets) next.delete(asked.id)
+      for (const piece of cut) {
+        const was = asked.over.find((other) => other.id === piece.id)
+        if (was) next.set(piece.id, was.footprint)
+      }
+      return next
+    })
+    onPlaceAll([{ id: asked.id, footprint: asked.footprint }, ...cut])
+    setAsked(null)
   }
 
   function insideExtent(pointer: Point): boolean {
@@ -246,6 +373,43 @@ export function ZoningView(props: ZoningViewProps) {
     const middle = pointerAt(svg, (first[0] + second[0]) / 2, (first[1] + second[1]) / 2)
     const factor = (pinch.scale * span) / (pinch.span * camera.scale)
     setCamera(panTo(extent, zoomAbout(extent, camera, middle, factor), pinch.grabbed, middle))
+  }
+
+  /** The wall follows the hand along its normal, both rooms showing their live areas as it goes. */
+  function dragWall(grip: WallGrip, pointer: Point): void {
+    const travel =
+      (pointer[0] - grip.grabbed[0]) * grip.normal[0] +
+      (pointer[1] - grip.grabbed[1]) * grip.normal[1]
+    const attempt = moveSharedWall(grip.a, grip.b, grip.pair.wall, travel)
+    wallRef.current = attempt
+    if (!attempt.ok) return
+    onPlace(grip.a.id, attempt.value.a.footprint, 'preview')
+    onPlace(grip.b.id, attempt.value.b.footprint, 'preview')
+    movedRef.current = true
+  }
+
+  function settleWall(grip: WallGrip): void {
+    const attempt = wallRef.current
+    wallRef.current = null
+    const putBack = (): void => {
+      if (!movedRef.current) return
+      onPlace(grip.a.id, grip.a.footprint, 'preview')
+      onPlace(grip.b.id, grip.b.footprint, 'preview')
+    }
+    if (!attempt) return
+    if (!attempt.ok) {
+      putBack()
+      onRefuse(`That wall stays where it is: ${attempt.reason}.`)
+      return
+    }
+    if (attempt.value.distance === 0) {
+      putBack()
+      return
+    }
+    onPlaceAll([
+      { id: attempt.value.a.id, footprint: attempt.value.a.footprint },
+      { id: attempt.value.b.id, footprint: attempt.value.b.footprint },
+    ])
   }
 
   function movePointer(event: PointerEvent): void {
@@ -270,11 +434,15 @@ export function ZoningView(props: ZoningViewProps) {
       return
     }
     const pointer = at(event)
+    if (gesture.kind === 'wall') {
+      dragWall(gesture, pointer)
+      return
+    }
     if (gesture.kind === 'drop') {
       setGesture({ ...gesture, at: pointer })
       return
     }
-    const attempt = attemptFor(gesture, pointer, event.altKey, event.shiftKey)
+    const attempt = attemptFor(gesture, pointer, event.shiftKey)
     if (!attempt.ok) return
     onPlace(gesture.id, attempt.value, 'preview')
     movedRef.current = true
@@ -290,27 +458,32 @@ export function ZoningView(props: ZoningViewProps) {
       if (gesture.clears && !movedRef.current) onSelect(null)
       return
     }
+    if (gesture.kind === 'wall') {
+      settleWall(gesture)
+      return
+    }
     const room = rooms.find((entry) => entry.id === gesture.id)
     if (!room) return
     const pointer = at(event)
+    const where: Point = [event.clientX, event.clientY]
     if (gesture.kind === 'drop') {
       if (!insideExtent(pointer)) return
-      const size = startingRectangle(room.targetArea, proportionFor(room))
-      const dropped = dropFootprint(pointer, size, sheetRef.current, event.altKey)
-      if (!dropped.ok) {
-        onRefuse(`${room.name} cannot go there: ${dropped.reason}.`)
-        return
-      }
-      settle(room, dropped.value, event.altKey, null)
+      ask(room, landOver(droppedAt(pointer, sizeFor(room)), sheetRef.current), null, where)
       return
     }
-    const attempt = attemptFor(gesture, pointer, event.altKey, event.shiftKey)
-    if (!attempt.ok) {
+    const attempt = attemptFor(gesture, pointer, event.shiftKey)
+    if (attempt.ok) {
+      onPlace(room.id, attempt.value, 'commit')
+      return
+    }
+    if (gesture.kind !== 'move') {
       onRefuse(`${room.name} stays where it was: ${attempt.reason}.`)
       if (movedRef.current) onPlace(room.id, gesture.from, 'commit')
       return
     }
-    settle(room, attempt.value, gesture.kind === 'move' && event.altKey, gesture.from)
+    // The room would slide no further, so it stays where the hand left it and asks what was meant.
+    const delta: Point = [pointer[0] - gesture.at[0], pointer[1] - gesture.at[1]]
+    ask(room, landOver(movedTo(gesture.from, delta), sheetRef.current), gesture.from, where)
   }
 
   /** The sheet takes the wheel whole, so the page never scrolls under it; a trackpad pinch arrives here with `ctrlKey` and zooms the same way. */
@@ -333,6 +506,7 @@ export function ZoningView(props: ZoningViewProps) {
     (event: ReactPointerEvent, id: string) => live.current.grab(event, id),
     [],
   )
+  const onHoverRoom = useCallback((id: string | null) => setHovered(id), [])
 
   useEffect(() => {
     if (!dragging) return
@@ -355,6 +529,27 @@ export function ZoningView(props: ZoningViewProps) {
     return () => svg.removeEventListener('wheel', wheel)
   }, [])
 
+  /** Escape, or a press on anything but the prompt, is the same answer as Put back. */
+  useEffect(() => {
+    if (!asked) return
+    const outside = (event: PointerEvent): void => {
+      const target = event.target
+      if (target instanceof Element && target.closest('[data-ask]')) return
+      setAsked(null)
+    }
+    const key = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      setAsked(null)
+    }
+    window.addEventListener('pointerdown', outside, true)
+    window.addEventListener('keydown', key)
+    return () => {
+      window.removeEventListener('pointerdown', outside, true)
+      window.removeEventListener('keydown', key)
+    }
+  }, [asked])
+
   useEffect(() => {
     const down = (event: KeyboardEvent): void => {
       if (event.key === ' ') spaceRef.current = true
@@ -374,6 +569,26 @@ export function ZoningView(props: ZoningViewProps) {
       window.removeEventListener('blur', letGo)
     }
   }, [])
+
+  /** A room back in the tray or gone from the project has no carve left to undo. */
+  useEffect(() => {
+    setBeforeCarve((memory) => {
+      let dropped = false
+      const next = new Map(memory)
+      for (const id of memory.keys()) {
+        if (rooms.some((room) => room.id === id && room.footprint !== undefined)) continue
+        next.delete(id)
+        dropped = true
+      }
+      return dropped ? next : memory
+    })
+  }, [rooms])
+
+  /** Another project is another set of rooms: what these were before a carve means nothing there. */
+  useEffect(() => {
+    setBeforeCarve(new Map())
+    setAsked(null)
+  }, [projectId])
 
   /** The sheet is measured rather than guessed, because a mark's size on the screen is a size in its box. */
   useEffect(() => {
@@ -453,6 +668,33 @@ export function ZoningView(props: ZoningViewProps) {
     setGesture({ kind: 'move', id, from: room.footprint, at: at(event) })
   }
 
+  function grabWall(event: ReactPointerEvent, pair: WallPair): void {
+    event.stopPropagation()
+    if (panningWith(event)) {
+      grabSheet(event, false)
+      return
+    }
+    svgRef.current?.focus({ preventScroll: true })
+    const a = placed.find((room) => room.id === pair.a)
+    const b = placed.find((room) => room.id === pair.b)
+    if (!a || !b) return
+    const held = a.pinned ? a : b.pinned ? b : null
+    if (held) {
+      onRefuse(`${held.name} is pinned.`)
+      return
+    }
+    wallRef.current = null
+    movedRef.current = false
+    setGesture({
+      kind: 'wall',
+      a: neighbourOf(a),
+      b: neighbourOf(b),
+      pair,
+      normal: wallNormal(pair.wall, a.footprint, b.footprint),
+      grabbed: at(event),
+    })
+  }
+
   function grabTray(event: ReactPointerEvent, room: Room): void {
     event.preventDefault()
     svgRef.current?.focus({ preventScroll: true })
@@ -477,15 +719,51 @@ export function ZoningView(props: ZoningViewProps) {
     else onPlace(selectedRoom.id, attempt.value, 'commit')
   }
 
+  /** A button that reshapes the selected room, with the prompt standing on the room itself. */
+  function reshape(room: Placed, offer: Offer | null, doing: string): void {
+    if (!offer) return
+    if (room.pinned) {
+      onRefuse(`${room.name} is pinned.`)
+      return
+    }
+    if (offer.refusal) {
+      onRefuse(heldBack(room.name, doing, offer.refusal))
+      return
+    }
+    sheetRef.current = sheetFor(room.id)
+    movedRef.current = false
+    ask(room, offer.landing, room.footprint, onScreen(centreOf(offer.landing.footprint)), true)
+  }
+
+  /** The room put back to the rectangle its kind opens at, about the centre it stands on now. */
+  function restore(): void {
+    if (!selectedRoom || !isPlaced(selectedRoom)) return
+    reshape(selectedRoom, restoreOffer, 'be restored')
+  }
+
+  /** The outline the room had before the last thing that cut it, if it will stand there now. */
+  function undoCarve(): void {
+    if (!selectedRoom || !isPlaced(selectedRoom)) return
+    reshape(selectedRoom, undoOffer, 'go back')
+  }
+
   /** The keys zoom about the middle of what is drawn, which is the one point no hand is on. */
   function zoomBy(factor: number): void {
     const middle: Point = [shown.minX + shown.width / 2, shown.minY + shown.height / 2]
     setCamera(zoomAbout(extent, camera, middle, factor))
   }
 
-  function dropSize(): { readonly width: number; readonly depth: number } {
+  function dropSize(): Size {
     const room = gesture?.kind === 'drop' ? rooms.find((entry) => entry.id === gesture.id) : null
-    return room ? startingRectangle(room.targetArea, proportionFor(room)) : { width: 1, depth: 1 }
+    return room ? sizeFor(room) : { width: 1, depth: 1 }
+  }
+
+  /** On the room picked, so a click finds the gesture, and under the pointer, so a sweep does too. */
+  function wallShown(pair: WallPair): boolean {
+    if (gesture?.kind === 'wall') return keyOf(gesture.pair) === keyOf(pair)
+    if (hoveredWall === keyOf(pair)) return true
+    if (selected === pair.a || selected === pair.b) return true
+    return hovered === pair.a || hovered === pair.b
   }
 
   return (
@@ -495,6 +773,33 @@ export function ZoningView(props: ZoningViewProps) {
         <button type="button" onClick={turn} disabled={!grabbable}>
           Rotate 90°
         </button>
+        <button
+          type="button"
+          onClick={restore}
+          disabled={!grabbable}
+          aria-disabled={restoreOffer?.refusal ? true : undefined}
+          title={
+            restoreOffer?.refusal && selectedRoom
+              ? heldBack(selectedRoom.name, 'be restored', restoreOffer.refusal)
+              : undefined
+          }
+        >
+          Restore shape
+        </button>
+        {remembered && grabbable && (
+          <button
+            type="button"
+            onClick={undoCarve}
+            aria-disabled={undoOffer?.refusal ? true : undefined}
+            title={
+              undoOffer?.refusal && selectedRoom
+                ? heldBack(selectedRoom.name, 'go back', undoOffer.refusal)
+                : undefined
+            }
+          >
+            Undo carve
+          </button>
+        )}
         <button
           type="button"
           disabled={!selectedRoom}
@@ -520,8 +825,9 @@ export function ZoningView(props: ZoningViewProps) {
           Fit
         </button>
       </div>
+      <p className="zoning-hint">{HINT}</p>
       <div className="zoning-body">
-        <Tray rooms={tray} onGrab={grabTray} />
+        <Tray rooms={tray.filter((room) => room.id !== asked?.id)} onGrab={grabTray} />
         <svg
           ref={svgRef}
           className={gesture?.kind === 'pan' ? 'zoning-sheet zoning-panning' : 'zoning-sheet'}
@@ -576,13 +882,35 @@ export function ZoningView(props: ZoningViewProps) {
           {marks.tensions.map((mark) => (
             <Tension key={mark.edgeId} mark={mark} />
           ))}
-          {placed.map((room) => (
-            <RoomShape
-              key={room.id}
-              room={room}
-              sizes={sizes.get(room.type)}
-              selected={room.id === selected}
-              onGrab={onGrabRoom}
+          {placed
+            .filter((room) => room.id !== asked?.id)
+            .map((room) => (
+              <RoomShape
+                key={room.id}
+                room={room}
+                sizes={sizes.get(room.type)}
+                selected={room.id === selected}
+                onGrab={onGrabRoom}
+                onHover={onHoverRoom}
+              />
+            ))}
+          {asked && (
+            <PendingRoom
+              id={asked.id}
+              name={asked.name}
+              targetArea={asked.targetArea}
+              footprint={asked.footprint}
+            />
+          )}
+          {/* Drawn under the door marks and the proposals, which keep the middle of the wall. */}
+          {pairs.map((pair) => (
+            <WallHandle
+              key={keyOf(pair)}
+              pair={pair}
+              perPixel={perPixel}
+              shown={wallShown(pair)}
+              onGrab={(event) => grabWall(event, pair)}
+              onHover={(over) => setHoveredWall(over ? keyOf(pair) : null)}
             />
           ))}
           {marks.doors.map((mark) => (
@@ -664,6 +992,18 @@ export function ZoningView(props: ZoningViewProps) {
           />
         </svg>
       </div>
+      {asked && (
+        <Ask
+          prompt={{
+            name: asked.name,
+            over: asked.over.map((other) => other.name),
+            reason: asked.carve.ok ? null : asked.carve.reason,
+            at: asked.at,
+          }}
+          onCarve={carveHere}
+          onPutBack={() => setAsked(null)}
+        />
+      )}
     </div>
   )
 }
