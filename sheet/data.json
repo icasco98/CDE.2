@@ -1,9 +1,9 @@
 {
-  "revision": 13,
+  "revision": 14,
   "date": "11 Sep 2026",
   "session": "Session 3",
   "repo": "https://github.com/icasco98/CDE.2",
-  "headline": "F1 merged: rebuilds follow the storeys, rooms bring their companions. F2 is still building.",
+  "headline": "F2 merged: zoom, delete, visible linking, bands as storeys, a legend. F3 live forces is being built.",
   "decide": [],
   "yours": [
     {
@@ -29,10 +29,17 @@
   ],
   "agents": [
     {
+      "task": "F3",
+      "name": "Live forces and weights",
+      "model": "Opus",
+      "stage": 1
+    },
+    {
       "task": "F2",
       "name": "Bubbles rework",
       "model": "Opus",
-      "stage": 1
+      "stage": 4,
+      "pr": 33
     },
     {
       "task": "F1",
@@ -40,32 +47,19 @@
       "model": "Opus",
       "stage": 4,
       "pr": 31
-    },
-    {
-      "task": "A7",
-      "name": "Massing",
-      "model": "Opus",
-      "stage": 4,
-      "pr": 23
-    },
-    {
-      "task": "A12",
-      "name": "Zoom and pan",
-      "model": "Opus",
-      "stage": 4,
-      "pr": 24
     }
   ],
   "stages": ["Briefed", "Building", "Review", "Your merge", "Merged"],
   "done": [
     "All four stages merged: requirements, bubbles, zoning, massing (#19, #23, #24).",
-    "Double-click start scripts for Windows and Mac (#27).",
-    "Owner's first test: comments on requirements and bubbles became F1, F2, F3 (#28).",
-    "F1 merged: default storey and companion per kind, master-on-ground option, stairs span every storey (#31). F2 building.",
-    "Briefs and the sheet builder kept in the repository (#18). Hourly updates scheduled."
+    "Owner's first test became F1, F2, F3 (#28).",
+    "F1 merged: default storey and companion per kind, master-on-ground, stairs span every storey (#31).",
+    "F2 merged: zoom and pan, delete, Link button, bands assign storeys, storey filter, legend (#33).",
+    "F3 started: live simulation, Spread, weights beside the diagram.",
+    "Double-click start scripts (#27). Hourly updates scheduled."
   ],
   "next": [
-    "Review F1 and F2; start F3 when F2 merges.",
+    "Review F3 in the running app.",
     "Owner's comments on zoning and massing.",
     "A8 export, then A9 the usability run (needs O3 and O5)."
   ]
