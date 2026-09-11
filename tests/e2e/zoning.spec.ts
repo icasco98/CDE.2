@@ -132,6 +132,9 @@ test('a drop on top of another room is refused and said out loud', async ({ page
   await expect(page.locator('[data-room]')).toHaveCount(1)
   await expect(page.locator('.messages')).toContainText('Dining Room')
   await expect(page.locator('[data-tray]').filter({ hasText: /^Guest WC/ })).toHaveCount(1)
+  await place(page, 'Guest WC', 8, 8)
+  await place(page, 'Guest WC', 8, 8)
+  await expect(page.locator('.messages li')).toHaveCount(1)
 })
 
 test('a pinned room refuses to be moved', async ({ page }) => {

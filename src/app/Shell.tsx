@@ -33,7 +33,7 @@ export function Shell() {
       if (read.ok) session.actions.load(read.value)
       else
         read.problems.forEach((problem) =>
-          session.say(`${file.name} cannot be opened: ${problem.message}`),
+          session.warn(`${file.name} cannot be opened: ${problem.message}`),
         )
     })
   }
