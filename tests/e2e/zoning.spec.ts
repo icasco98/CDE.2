@@ -441,3 +441,22 @@ test('drawing the sheet closer does not draw the rooms again', async ({ page }) 
   )
   expect(changes).toBe(0)
 })
+
+test('a stair added to a two-storey program stands on both storeys at one place', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Add storey' }).click()
+  await page.getByLabel('Kind to add').selectOption('stair')
+  await page.getByRole('button', { name: 'Add room' }).click()
+  await page.getByRole('button', { name: 'Zoning' }).click()
+  await expect(page.locator('svg.zoning-sheet')).toBeVisible()
+
+  await place(page, 'Stair', 6, 6)
+  const onGround = await pointsOf(page, 'Stair')
+  expect(onGround).not.toBeNull()
+
+  await page.getByRole('button', { name: 'First', exact: true }).click()
+  await expect(roomNamed(page, 'Stair')).toHaveCount(1)
+  expect(await pointsOf(page, 'Stair')).toBe(onGround)
+})

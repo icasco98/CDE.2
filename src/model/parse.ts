@@ -143,6 +143,7 @@ export function parseProject(document: Document): Result<Project> {
       maid: flag(raw.maid, `${at}.maid`),
       driver: flag(raw.driver, `${at}.driver`),
       womensReception: flag(raw.womensReception, `${at}.womensReception`),
+      masterOnGround: flag(raw.masterOnGround, `${at}.masterOnGround`),
     }
   }
 

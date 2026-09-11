@@ -119,6 +119,24 @@ describe('storeys', () => {
     expect(store.actions.removeStorey().ok).toBe(true)
     expect(store.getState().storeys).toBe(1)
   })
+
+  it('grows a stair standing on the ground onto every storey the house gains', () => {
+    store.actions.addStorey()
+    const stair = addRoom('stair', { storeysSpanned: 2 })
+    const spanOf = (id: string): number | undefined =>
+      store.getState().rooms.find((room) => room.id === id)?.storeysSpanned
+    store.actions.addStorey()
+    expect(spanOf(stair)).toBe(3)
+    expect(store.actions.removeStorey().ok).toBe(true)
+    expect(spanOf(stair)).toBe(2)
+  })
+
+  it('leaves a room that is not a stair on the storey it stands on', () => {
+    store.actions.addStorey()
+    const bedroom = addRoom('bedroom')
+    store.actions.addStorey()
+    expect(store.getState().rooms.find((room) => room.id === bedroom)?.storeysSpanned).toBe(1)
+  })
 })
 
 describe('storey heights', () => {

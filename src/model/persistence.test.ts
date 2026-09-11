@@ -170,6 +170,24 @@ describe('the project file', () => {
     expect(back.ok && back.value.heights).toEqual([4.2, 3])
   })
 
+  it('gives a household written before the question a master bedroom upstairs', () => {
+    const project = furnished()
+    const document = {
+      ...project,
+      version: 4,
+      household: { ...startingHousehold, masterOnGround: undefined },
+    }
+    const back = deserialize(JSON.stringify(document))
+    expect(back.ok && back.value.household).toEqual({ ...startingHousehold, masterOnGround: false })
+    expect(back.ok && back.value.version).toBe(PROJECT_VERSION)
+  })
+
+  it('leaves the answer of a household that already carries one', () => {
+    const project = { ...furnished(), household: { ...startingHousehold, masterOnGround: true } }
+    const back = deserialize(JSON.stringify({ ...project, version: 4 }))
+    expect(back.ok && back.value.household.masterOnGround).toBe(true)
+  })
+
   it('refuses a version it cannot migrate and one from a newer tool', () => {
     const project = furnished()
     expect(deserialize(JSON.stringify({ ...project, version: 0 }))).toMatchObject({

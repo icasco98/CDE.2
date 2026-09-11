@@ -22,12 +22,13 @@ export function HouseholdSection({ project }: { project: Project }) {
         const removed = session.actions.removeRoom(room.id)
         if (!removed.ok) return removed
       }
-      for (const room of defaultProgram(area(project.plot.polygon), household)) {
+      for (const room of defaultProgram(area(project.plot.polygon), household, project.storeys)) {
         const added = session.actions.addRoom({
           type: room.type,
           name: room.name,
           targetArea: room.targetArea,
-          storey: 0,
+          storey: room.storey,
+          storeysSpanned: room.storeysSpanned,
         })
         if (!added.ok) return added
       }
@@ -66,6 +67,11 @@ export function HouseholdSection({ project }: { project: Project }) {
           label="Women's reception"
           checked={household.womensReception}
           onChange={(womensReception) => change({ womensReception })}
+        />
+        <CheckField
+          label="Master bedroom on the ground floor"
+          checked={household.masterOnGround}
+          onChange={(masterOnGround) => change({ masterOnGround })}
         />
       </div>
       <div className="row">

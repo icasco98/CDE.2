@@ -5,11 +5,12 @@ import { defaultProgram } from './program'
 import { proposedConnections, type Proposal, type ProposalRoom } from './proposals'
 
 /** The starting household on the starting plot: three bedrooms, two cars, no maid, no driver. */
-function startingProject(): Project {
+function startingProject(storeys = 1): Project {
   const store = createStore(undefined, { newId: createIdGenerator(7) })
+  for (let level = 1; level < storeys; level++) store.actions.addStorey()
   const project = store.getState()
-  for (const room of defaultProgram(area(project.plot.polygon), project.household))
-    store.actions.addRoom({ ...room, storey: 0 })
+  for (const room of defaultProgram(area(project.plot.polygon), project.household, storeys))
+    store.actions.addRoom(room)
   return store.getState()
 }
 
@@ -55,11 +56,25 @@ describe('the reference case: the starting household on the starting plot', () =
     for (const suite of suites) expect(at(suite.b)).toBe(at(suite.a) + 1)
   })
 
+  it('gives each ensuite of a two-storey rebuild the door to its own bedroom upstairs', () => {
+    const project = startingProject(2)
+    const suites = proposedConnections(project.rooms, project.edges).filter(
+      (proposal) => proposal.rowId === 'D19' || proposal.rowId === 'D21',
+    )
+    const nameOf = (id: string): string => project.rooms.find((room) => room.id === id)?.name ?? id
+    expect(suites.every((suite) => suite.storey === 1)).toBe(true)
+    expect(suites.map((suite) => `${nameOf(suite.a)} to ${nameOf(suite.b)}`)).toEqual([
+      'Master Bedroom to Ensuite, Master Bedroom',
+      'Bedroom 1 to Ensuite, Bedroom 1',
+      'Bedroom 2 to Ensuite, Bedroom 2',
+    ])
+  })
+
   it('proposes nothing a second time once every proposal is accepted', () => {
     const store = createStore(undefined, { newId: createIdGenerator(7) })
     const first = store.getState()
-    for (const room of defaultProgram(area(first.plot.polygon), first.household))
-      store.actions.addRoom({ ...room, storey: 0 })
+    for (const room of defaultProgram(area(first.plot.polygon), first.household, 1))
+      store.actions.addRoom(room)
     const project = store.getState()
     for (const proposal of proposedConnections(project.rooms, project.edges))
       expect(store.actions.connect(proposal).ok).toBe(true)

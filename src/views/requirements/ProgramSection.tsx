@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { area } from '../../geometry'
 import type { Project } from '../../model'
-import { categoryLabels, roomTypeById, typesByCategory, typicalArea } from '../../rulebook'
+import { categoryLabels, typesByCategory } from '../../rulebook'
 import { session } from '../../app/session'
+import { addRoomWithCompanion } from './addRoom'
 import { Section } from './fields'
 import { metres2, storeyLabel } from './format'
 import { ProgramRow } from './ProgramRow'
@@ -14,17 +15,7 @@ export function ProgramSection({ project }: { project: Project }) {
   const plotArea = area(project.plot.polygon)
 
   const addRoom = (): void => {
-    const type = roomTypeById(kind)
-    setProblem(
-      refusalOf(
-        session.actions.addRoom({
-          type: kind,
-          name: type?.label ?? kind,
-          targetArea: typicalArea(kind, plotArea),
-          storey: 0,
-        }),
-      ),
-    )
+    setProblem(refusalOf(addRoomWithCompanion(session, kind, plotArea, project.storeys)))
   }
 
   const perStorey = Array.from({ length: project.storeys }, (_, storey) =>

@@ -21,10 +21,14 @@ import {
   type Plot,
   type Project,
   type Result,
+  type Room,
   type WallHint,
   type Weights,
 } from './types'
 import type { Footprint } from '../geometry/types'
+// The table, not the store, says which kinds stand on every storey. The import reaches past the
+// rulebook's index because that index imports the model back.
+import { spansAllStoreys } from '../rulebook/sizes'
 
 /** A drag previews as it moves and records one undo step when it is let go. */
 export type Commit = 'preview' | 'commit'
@@ -57,6 +61,15 @@ function storeysOf(project: Project, endpoint: Endpoint): readonly number[] {
 function sharedStorey(project: Project, a: Endpoint, b: Endpoint): number | undefined {
   const onB = storeysOf(project, b)
   return storeysOf(project, a).find((storey) => onB.includes(storey))
+}
+
+/** A stair or a lift stands on every storey it serves, so it grows and shrinks with the house. */
+function spanningEveryStorey(rooms: readonly Room[], storeys: number): readonly Room[] {
+  return rooms.map((room) =>
+    spansAllStoreys(room.type) && room.storey === 0 && room.storeysSpanned !== storeys
+      ? { ...room, storeysSpanned: storeys }
+      : room,
+  )
 }
 
 export function createActions(context: Context) {
@@ -187,8 +200,14 @@ export function createActions(context: Context) {
     addStorey(): Result {
       const project = state()
       const top = project.heights[project.heights.length - 1] ?? STARTING_HEIGHT_M
+      const storeys = project.storeys + 1
       return settle(
-        { ...project, storeys: project.storeys + 1, heights: [...project.heights, top] },
+        {
+          ...project,
+          storeys,
+          heights: [...project.heights, top],
+          rooms: spanningEveryStorey(project.rooms, storeys),
+        },
         'aside',
       )
     },
@@ -213,15 +232,19 @@ export function createActions(context: Context) {
       const top = project.storeys - 1
       if (top < 1)
         return refused({ code: 'last-storey', message: 'a project has one storey at least' })
+      const rooms = spanningEveryStorey(project.rooms, top)
       const inUse =
-        project.rooms.some((room) => occupiedStoreys(room).includes(top)) ||
+        rooms.some((room) => occupiedStoreys(room).includes(top)) ||
         project.edges.some((edge) => edge.storey === top)
       if (inUse)
         return refused({
           code: 'storey-in-use',
           message: `storey ${top} still holds rooms or edges`,
         })
-      return settle({ ...project, storeys: top, heights: project.heights.slice(0, top) }, 'aside')
+      return settle(
+        { ...project, storeys: top, heights: project.heights.slice(0, top), rooms },
+        'aside',
+      )
     },
 
     addActor(input: { name: string; role: string }): Result<string> {

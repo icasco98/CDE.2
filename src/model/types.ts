@@ -3,7 +3,7 @@ import type { Footprint, Point, Polygon } from '../geometry/types'
 export const EXTERIOR = 'EXTERIOR'
 
 /** The document format; a bump needs a migration in persistence.ts. */
-export const PROJECT_VERSION = 4
+export const PROJECT_VERSION = 5
 
 /** The three families of forces the tool balances, named in rulebook/forces.md. */
 export const families = ['userRequirements', 'siteConstraints', 'environmentalFactors'] as const
@@ -37,6 +37,8 @@ export type Household = {
   readonly maid: boolean
   readonly driver: boolean
   readonly womensReception: boolean
+  /** The master bedroom keeps to the ground floor, a common Kuwaiti arrangement for parents. */
+  readonly masterOnGround: boolean
 }
 
 export type Room = {
