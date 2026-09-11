@@ -1,0 +1,159 @@
+import { describe, expect, it } from 'vitest'
+import {
+  createState,
+  defaultLayout,
+  layoutFor,
+  SPREAD_SECONDS,
+  type Body,
+  type LayoutConfig,
+  type SimulationRoom,
+} from '../../bubbles'
+import type { Commit } from '../../model'
+import { createRun, type Frames } from './run'
+
+/** A hand-driven `requestAnimationFrame`: it counts what was asked for and runs it when told to. */
+function fakeFrames() {
+  let next = 1
+  const queued = new Map<number, () => void>()
+  const frames: Frames = {
+    request(run) {
+      const handle = next++
+      queued.set(handle, run)
+      return handle
+    },
+    cancel(handle) {
+      queued.delete(handle)
+    },
+  }
+  return {
+    frames,
+    /** How many frames are waiting to run; nought is a tab that costs nothing. */
+    waiting: () => queued.size,
+    asked: () => next - 1,
+    /** Runs the frames that are waiting, up to a bound, and says how many really ran. */
+    run(limit: number): number {
+      let ran = 0
+      while (ran < limit && queued.size > 0) {
+        const [handle, work] = [...queued.entries()][0]!
+        queued.delete(handle)
+        work()
+        ran++
+      }
+      return ran
+    },
+  }
+}
+
+function room(id: string, extra: Partial<SimulationRoom> = {}): SimulationRoom {
+  return { id, storey: 0, storeysSpanned: 1, targetArea: 24, pinned: false, ...extra }
+}
+
+function start(rooms: readonly SimulationRoom[], layout: LayoutConfig = defaultLayout) {
+  const clock = fakeFrames()
+  const moves: { id: string; x: number; y: number; commit: Commit }[] = []
+  const status: boolean[] = []
+  const run = createRun({
+    frames: clock.frames,
+    state: createState(rooms, [], 1),
+    layout: () => layout,
+    report: (bodies: readonly Body[], commit: Commit) =>
+      bodies.forEach((body, index) =>
+        moves.push({
+          id: body.id,
+          x: body.x,
+          y: body.y,
+          commit: commit === 'commit' && index === bodies.length - 1 ? 'commit' : 'preview',
+        }),
+      ),
+    watch: (moving) => status.push(moving),
+  })
+  return { run, clock, moves, status }
+}
+
+describe('the frame loop', () => {
+  it('asks for no frame at all while the picture is resting', () => {
+    const { run, clock, moves } = start([room('a', { bubble: { x: 0, y: 6 } })])
+    run.wake()
+    clock.run(40)
+    expect(clock.waiting()).toBe(0)
+    // Three quiet frames to be sure, and not one bubble told to move.
+    expect(clock.asked()).toBe(3)
+    expect(moves).toEqual([])
+  })
+
+  it('runs while the picture moves, then asks for nothing and records no step of its own', () => {
+    const rooms = [room('a', { bubble: { x: -18, y: 6 } }), room('b', { bubble: { x: 18, y: 6 } })]
+    const { run, clock, moves, status } = start(rooms)
+    run.wake()
+    const frames = clock.run(400)
+    expect(frames).toBeGreaterThan(3)
+    expect(clock.waiting()).toBe(0)
+    expect(moves.length).toBeGreaterThan(0)
+    expect(moves.every((move) => move.commit === 'preview')).toBe(true)
+    expect(status).toEqual([true, false])
+  })
+
+  it('carries a bubble to the hand and answers with the others in the same frame', () => {
+    const rooms = [
+      room('a', { bubble: { x: -6, y: 6 }, pinned: true }),
+      room('b', { bubble: { x: 6, y: 6 } }),
+    ]
+    const { run, clock, moves } = start(rooms)
+    run.hold('a', { x: 4, y: 6 })
+    clock.run(1)
+    const held = moves.filter((move) => move.id === 'a')
+    const other = moves.filter((move) => move.id === 'b')
+    expect(held[0]).toMatchObject({ x: 4, y: 6, commit: 'preview' })
+    expect(other).toHaveLength(1)
+    expect(other[0]!.x).toBeGreaterThan(6)
+  })
+
+  it('records where a drag landed only once the cloud it disturbed has stopped', () => {
+    const rooms = [
+      room('a', { bubble: { x: -6, y: 6 }, pinned: true }),
+      room('b', { bubble: { x: 6, y: 6 } }),
+    ]
+    const { run, clock } = start(rooms)
+    let landed = 0
+    run.hold('a', { x: 4, y: 6 })
+    clock.run(2)
+    run.release(() => landed++)
+    expect(landed).toBe(0)
+    clock.run(400)
+    expect(landed).toBe(1)
+    expect(clock.waiting()).toBe(0)
+  })
+
+  it('settles to rest at once when it is told to, and asks for no frame after', () => {
+    const rooms = [room('a', { bubble: { x: -18, y: 6 } }), room('b', { bubble: { x: 18, y: 6 } })]
+    const { run, clock, moves } = start(rooms)
+    run.settleNow()
+    expect(clock.waiting()).toBe(0)
+    expect(moves[moves.length - 1]!.commit).toBe('commit')
+  })
+})
+
+describe('spread', () => {
+  it('holds for one second of simulation time and then is over', () => {
+    const layout = layoutFor(0.5)
+    const frames = SPREAD_SECONDS / layout.timeStep
+    const rooms = [room('a', { bubble: { x: -6, y: 6 } }), room('b', { bubble: { x: 6, y: 6 } })]
+    const { run, clock } = start(rooms, layout)
+    run.spread()
+    expect(run.spreading()).toBe(true)
+    clock.run(frames - 1)
+    expect(run.spreading()).toBe(true)
+    clock.run(1)
+    expect(run.spreading()).toBe(false)
+  })
+
+  it('keeps the run going until the cloud it opened has settled again', () => {
+    const rooms = [room('a', { bubble: { x: -6, y: 6 } }), room('b', { bubble: { x: 6, y: 6 } })]
+    const { run, clock, moves } = start(rooms)
+    run.spread()
+    const ran = clock.run(600)
+    expect(ran).toBeGreaterThan(SPREAD_SECONDS / defaultLayout.timeStep)
+    expect(clock.waiting()).toBe(0)
+    expect(moves.length).toBeGreaterThan(0)
+  })
+})

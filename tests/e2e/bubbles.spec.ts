@@ -2,14 +2,20 @@ import { expect, test, type Locator, type Page } from '@playwright/test'
 
 const page_ = '/playground/bubbles.html'
 
+/** The forces run while the tab is open, so nothing on the sheet is measured until it stops. */
+async function resting(page: Page) {
+  await expect(page.locator('.bubbles-status')).toHaveText('Resting', { timeout: 30000 })
+}
+
 async function open(page: Page) {
   await page.goto(page_)
   await expect(page.locator('[data-bubble]')).toHaveCount(12)
+  await resting(page)
 }
 
 async function settle(page: Page) {
-  await page.getByRole('button', { name: 'Settle' }).click()
-  await expect(page.locator('.bubbles-status')).toHaveText('Settled', { timeout: 30000 })
+  await page.getByRole('button', { name: 'Settle now' }).click()
+  await resting(page)
 }
 
 function positions(page: Page) {
@@ -63,6 +69,7 @@ test('a dragged bubble follows the hand and is held in place', async ({ page }) 
   const id = await bubble.getAttribute('data-bubble')
   const before = await centre(bubble)
   await drag(page, before, { x: before.x + 120, y: before.y - 60 })
+  await resting(page)
   const after = await centre(bubble)
   expect(Math.hypot(after.x - before.x, after.y - before.y)).toBeGreaterThan(80)
   await expect(page.locator(`[data-room="${id}"] .pin-mark`)).toBeVisible()

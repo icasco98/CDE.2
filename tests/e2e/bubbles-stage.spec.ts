@@ -1,10 +1,16 @@
 import { expect, test, type Page } from '@playwright/test'
 
+/** The forces run while the tab is open, so nothing on the sheet is measured until it stops. */
+async function resting(page: Page) {
+  await expect(page.locator('.bubbles-status')).toHaveText('Resting', { timeout: 30000 })
+}
+
 async function openBubbles(page: Page) {
   await page.goto('/')
   await page.getByRole('button', { name: /rebuild program from household/i }).click()
   await page.getByRole('button', { name: 'Bubbles' }).click()
   await expect(page.locator('svg g[data-room]').first()).toBeVisible()
+  await resting(page)
 }
 
 /** A mark can sit under a later proposal's thread, so the one clicked is one that is really on top. */
@@ -31,8 +37,8 @@ test('the program from the requirements screen appears as bubbles and settles', 
   await openBubbles(page)
   const bubbles = page.locator('svg g[data-room]')
   expect(await bubbles.count()).toBeGreaterThanOrEqual(12)
-  await page.getByRole('button', { name: 'Settle' }).click()
-  await expect(page.getByText('Settled', { exact: true })).toBeVisible({ timeout: 15000 })
+  await page.getByRole('button', { name: 'Settle now' }).click()
+  await expect(page.getByText('Resting', { exact: true })).toBeVisible({ timeout: 15000 })
 })
 
 test('a proposed connection becomes an edge when it is clicked', async ({ page }) => {
@@ -82,6 +88,7 @@ async function openTwoStoreys(page: Page) {
   await page.getByRole('button', { name: 'Add storey' }).click()
   await page.getByRole('button', { name: 'Bubbles' }).click()
   await expect(page.locator('.band-label')).toHaveText(['Ground', 'First'])
+  await resting(page)
 }
 
 /** Each storey's band as it is drawn, in metres down the sheet, storey 0 first. */
@@ -166,10 +173,10 @@ async function drag(page: Page, from: { x: number; y: number }, to: { x: number;
   await page.mouse.up()
 }
 
-/** Settles the picture, so the bubbles are spread out rather than piled on one another. */
+/** Settles the picture at once, so the bubbles stand still while a gesture is aimed at one. */
 async function settle(page: Page) {
-  await page.getByRole('button', { name: 'Settle' }).click()
-  await expect(page.getByText('Settled', { exact: true })).toBeVisible({ timeout: 30000 })
+  await page.getByRole('button', { name: 'Settle now' }).click()
+  await resting(page)
 }
 
 /** A click that lands on the bubble itself, wherever on it that happens to be. */
@@ -209,6 +216,7 @@ test('a bubble dropped in the First band puts the room upstairs in the program',
   const kitchen = await bubbleAt(page, 'Kitchen')
   const to = await onSheet(page, kitchen.sheet.x, first.top + first.height / 2 - kitchen.grabbed.y)
   await drag(page, kitchen.screen, to)
+  await resting(page)
   await page.getByRole('button', { name: 'Requirements' }).click()
   expect(await storeyOf(page, 'Kitchen')).toBe('First')
 })
@@ -226,6 +234,7 @@ test('a bubble let go at the very edge of the First band stays on the Ground', a
     first.top + first.height * 0.96 - kitchen.grabbed.y,
   )
   await drag(page, kitchen.screen, to)
+  await resting(page)
   expect((await bubbleAt(page, 'Kitchen')).sheet.y).toBeGreaterThan(ground.top)
   await page.getByRole('button', { name: 'Requirements' }).click()
   expect(await storeyOf(page, 'Kitchen')).toBe('Ground')
@@ -262,4 +271,152 @@ test('Delete takes a room and its links, and one undo brings both back', async (
   await page.keyboard.press('Control+z')
   await expect(page.locator('svg g[data-room]')).toHaveCount(rooms)
   await expect(page.locator('[data-edge]')).toHaveCount(1)
+})
+
+/** Every bubble as it is drawn on the screen: its middle and its radius, in pixels. */
+async function circlesOn(page: Page) {
+  return page.$$eval('[data-bubble]', (circles) =>
+    circles.map((circle) => {
+      const box = circle.getBoundingClientRect()
+      return {
+        id: circle.getAttribute('data-bubble') ?? '',
+        x: box.x + box.width / 2,
+        y: box.y + box.height / 2,
+        r: box.width / 2,
+      }
+    }),
+  )
+}
+
+/** The worst two circles overlap by, in pixels; nought or less is a sheet nothing rests on. */
+async function worstOverlap(page: Page): Promise<number> {
+  const circles = await circlesOn(page)
+  let worst = -Infinity
+  for (const [index, a] of circles.entries())
+    for (const b of circles.slice(index + 1))
+      worst = Math.max(worst, a.r + b.r - Math.hypot(a.x - b.x, a.y - b.y))
+  return worst
+}
+
+/** Where a bubble stands on the sheet, in metres, by the name of its room. */
+async function sheetPlaceOf(page: Page, name: string) {
+  const circle = roomNamed(page, name).locator('[data-bubble]')
+  const [x, y] = await Promise.all([circle.getAttribute('cx'), circle.getAttribute('cy')])
+  return { x: Number(x), y: Number(y) }
+}
+
+async function apart(page: Page, one: string, other: string): Promise<number> {
+  const a = await sheetPlaceOf(page, one)
+  const b = await sheetPlaceOf(page, other)
+  return Math.hypot(a.x - b.x, a.y - b.y)
+}
+
+test('a bubble dragged through the cloud parts it while the hand is still down', async ({
+  page,
+}) => {
+  await openBubbles(page)
+  const kitchen = await bubbleAt(page, 'Kitchen')
+  const circles = await circlesOn(page)
+  const held = circles.find(
+    (circle) => Math.hypot(circle.x - kitchen.screen.x, circle.y - kitchen.screen.y) < circle.r,
+  )
+  const nearest = circles
+    .filter((circle) => circle.id !== held?.id)
+    .sort(
+      (a, b) =>
+        Math.hypot(a.x - kitchen.screen.x, a.y - kitchen.screen.y) -
+        Math.hypot(b.x - kitchen.screen.x, b.y - kitchen.screen.y),
+    )[0]
+  if (!nearest) throw new Error('the kitchen has no neighbour')
+  const neighbour = page.locator(`[data-bubble="${nearest.id}"]`)
+  const before = await neighbour.getAttribute('cx')
+
+  await page.mouse.move(kitchen.screen.x, kitchen.screen.y)
+  await page.mouse.down()
+  await page.mouse.move(nearest.x, nearest.y, { steps: 8 })
+  // Still holding: the neighbour has to have answered the forces by now.
+  await expect(neighbour).not.toHaveAttribute('cx', before ?? '')
+  await page.mouse.up()
+})
+
+test('a bubble dropped on another slides clear, and nothing rests on anything', async ({
+  page,
+}) => {
+  await openBubbles(page)
+  const diwaniya = await bubbleAt(page, 'Diwaniya')
+  const kitchen = await bubbleAt(page, 'Kitchen')
+  await drag(page, kitchen.screen, diwaniya.screen)
+  await expect.poll(() => worstOverlap(page), { timeout: 1500 }).toBeLessThanOrEqual(1)
+})
+
+/**
+ * How far the bubbles stand from the middle of the cloud, in metres on the sheet. Pixels will not
+ * do: the sheet frames whatever is drawn, so a cloud that opens out is drawn no larger.
+ */
+async function reachOf(page: Page): Promise<number> {
+  return page.$$eval('[data-bubble]', (circles) => {
+    const at = circles.map((circle) => ({
+      x: Number(circle.getAttribute('cx')),
+      y: Number(circle.getAttribute('cy')),
+    }))
+    const middle = at.reduce(
+      (total, one) => ({ x: total.x + one.x / at.length, y: total.y + one.y / at.length }),
+      { x: 0, y: 0 },
+    )
+    return (
+      at.reduce((total, one) => total + Math.hypot(one.x - middle.x, one.y - middle.y), 0) /
+      at.length
+    )
+  })
+}
+
+test('Spread opens a tight cloud out and lets it settle again', async ({ page }) => {
+  await openBubbles(page)
+  const tight = await reachOf(page)
+  await page.getByRole('button', { name: 'Spread' }).click()
+  await expect.poll(() => reachOf(page), { timeout: 4000 }).toBeGreaterThan(tight * 1.5)
+  await expect(page.locator('.bubbles-status')).toHaveText('Resting', { timeout: 30000 })
+})
+
+test('the weights stand beside the diagram and the user requirements weight moves it', async ({
+  page,
+}) => {
+  await openBubbles(page)
+  const weight = page.getByRole('slider', { name: 'User requirements' })
+  await expect(weight).toBeVisible()
+  await expect(page.getByRole('slider', { name: 'Site constraints' })).toBeVisible()
+  await expect(page.getByText('acts in zoning').first()).toBeVisible()
+
+  await weight.fill('0')
+  await settle(page)
+  const low = await apart(page, 'Diwaniya', 'Master Bedroom')
+
+  await weight.fill('1')
+  await settle(page)
+  expect(await apart(page, 'Diwaniya', 'Master Bedroom')).toBeGreaterThan(low)
+})
+
+test('a weight moved on the Bubbles tab is still there after a reload', async ({ page }) => {
+  await openBubbles(page)
+  const site = page.getByRole('slider', { name: 'Site constraints' })
+  const before = await site.inputValue()
+  await site.focus()
+  await site.press('ArrowRight')
+  await site.press('ArrowRight')
+  const moved = await site.inputValue()
+  expect(moved).not.toBe(before)
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const saved = window.localStorage.getItem('cde.project')
+        return saved ? JSON.parse(saved).weights?.siteConstraints : undefined
+      }),
+    )
+    .toBe(Number(moved))
+
+  await page.reload()
+  await expect(page.getByRole('slider', { name: 'Site constraints' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Bubbles' }).click()
+  await expect(page.getByRole('slider', { name: 'Site constraints' })).toHaveValue(moved)
 })

@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BubblesView, type BubbleProposal } from '../src/views/bubbles'
 import type { Position } from '../src/bubbles'
-import type { Commit, EdgeKind, Result } from '../src/model'
-import { connectionSource, proposedConnections } from '../src/rulebook'
+import type { Commit, EdgeKind, Family, Result } from '../src/model'
+import { connectionSource, proposedConnections, roomTypeById } from '../src/rulebook'
 import { categoryOf, sampleStore } from './sample'
 import '../src/styles.css'
 
@@ -16,7 +16,12 @@ function Playground() {
   useEffect(() => store.subscribe(setProject), [])
 
   const rooms = useMemo(
-    () => project.rooms.map((room) => ({ ...room, category: categoryOf(room.type) })),
+    () =>
+      project.rooms.map((room) => ({
+        ...room,
+        category: categoryOf(room.type),
+        tier: roomTypeById(room.type)?.tier,
+      })),
     [project.rooms],
   )
 
@@ -49,6 +54,7 @@ function Playground() {
         proposals={proposals}
         storeys={project.storeys}
         plot={project.plot}
+        weights={project.weights}
         selected={selected}
         onMoveBubble={(id: string, at: Position, commit: Commit) =>
           store.actions.setBubble(id, at, commit)
@@ -83,6 +89,9 @@ function Playground() {
               if (!taken.ok) return taken
             }
           })
+        }
+        onSetWeight={(family: Family, weight: number) =>
+          store.actions.setWeights({ ...project.weights, [family]: weight })
         }
         onSelect={setSelected}
         onRefuse={(message: string) => setRefusal(message)}

@@ -8,6 +8,8 @@ export type SimulationRoom = {
   readonly targetArea: number
   readonly pinned: boolean
   readonly bubble?: Position
+  /** The room-type table's privacy tier, where the program has one; without it the room is unaffected. */
+  readonly tier?: string
 }
 
 /** An edge reduced to the pair it joins; ids that name no room, EXTERIOR among them, are dropped. */
@@ -17,6 +19,8 @@ export type LayoutConfig = {
   readonly springStiffness: number
   readonly restGap: number
   readonly repulsion: number
+  /** What the repulsion between two rooms of different privacy tiers is multiplied by. */
+  readonly tierRepulsion: number
   readonly spread: number
   readonly bandPull: number
   readonly centrePull: number
@@ -33,6 +37,8 @@ export const defaultLayout: LayoutConfig = {
   restGap: 1.5,
   /** Twenty times the springs, so a wanted link never buys itself an overlap. */
   repulsion: 120,
+  /** One: the tiers part no harder than anything else until the user-requirements weight says so. */
+  tierRepulsion: 1,
   /** A breeze, not a force: enough to open the cloud out, too weak to undo a link. */
   spread: 2,
   /** Storeys must read at a glance, so the vertical pull outranks the springs. */
@@ -49,6 +55,43 @@ export const defaultLayout: LayoutConfig = {
   maxIterations: 600,
 }
 
+/** A second of simulation time: how long a Spread holds before the cloud is let settle again. */
+export const SPREAD_SECONDS = 1
+
+/**
+ * How many steps running the picture must read still before it is called at rest: a contact takes
+ * all the speed out of a bubble for the one frame it is corrected in, while the forces behind it
+ * are still pressing, so a single quiet frame is not enough to stop on.
+ */
+export const STILL_FRAMES = 3
+
+/**
+ * The user-requirements weight on the simulation: a house whose owner's own wishes count for more
+ * gathers what belongs together harder and parts the public rooms from the private ones harder.
+ */
+export function layoutFor(weight: number): LayoutConfig {
+  const w = Number.isFinite(weight) ? Math.min(1, Math.max(0, weight)) : 0.5
+  return {
+    ...defaultLayout,
+    springStiffness: defaultLayout.springStiffness * (0.5 + w),
+    tierRepulsion: 1 + w,
+  }
+}
+
+/**
+ * Spread is the same layout with the repulsion tripled. Repulsion here is two things, the push and
+ * the air two bubbles keep, and tripling only the push would move nothing in a cloud already packed
+ * rim to rim, so the gap goes with it and the cloud opens out before it is let settle again.
+ */
+export function spreadLayout(base: LayoutConfig): LayoutConfig {
+  return {
+    ...base,
+    repulsion: base.repulsion * 3,
+    spread: base.spread * 3,
+    restGap: base.restGap * 3,
+  }
+}
+
 export type Body = {
   readonly id: string
   readonly x: number
@@ -59,6 +102,7 @@ export type Body = {
   readonly storey: number
   readonly storeysSpanned: number
   readonly pinned: boolean
+  readonly tier?: string
 }
 
 export type Link = { readonly a: number; readonly b: number }
@@ -156,6 +200,7 @@ export function createState(
       storey: room.storey,
       storeysSpanned: span,
       pinned: room.pinned,
+      ...(room.tier === undefined ? {} : { tier: room.tier }),
     }
   })
   const at = new Map(bodies.map((body, index) => [body.id, index]))
@@ -188,6 +233,80 @@ function apart(dx: number, dy: number, seed: number): readonly [number, number, 
 
 function massOf(body: Body): number {
   return Math.max(body.radius, 0.5)
+}
+
+/**
+ * A pair at a time, so a bubble wedged between two others is only cleared of both after a few goes
+ * round; eight is past the worst a villa's program reaches and bounds the frame either way.
+ */
+const CORRECTION_PASSES = 8
+
+/** An overlap this small is a rounding error, not a bubble resting on another. */
+const CLEARED = 1e-9
+
+/** The share of a correction is by area, and π cancels in the ratio, so the radius squared stands for it. */
+function areaOf(body: Body): number {
+  return body.radius * body.radius
+}
+
+/** How much of a correction the first body takes: none when it is pinned, all when the other is. */
+function shareOf(a: Body, b: Body): number {
+  return a.pinned ? 0 : b.pinned ? 1 : areaOf(b) / (areaOf(a) + areaOf(b))
+}
+
+/** A room with no tier, or an exempt one such as a bathroom, stands outside the privacy gradient. */
+function tiersApart(a: Body, b: Body): boolean {
+  if (!a.tier || !b.tier || a.tier === 'exempt' || b.tier === 'exempt') return false
+  return a.tier !== b.tier
+}
+
+/**
+ * How far apart two bubbles are kept: their radii and the rest gap, and between two different
+ * privacy tiers the gap as well as the push is scaled, because in a cloud packed rim to rim a
+ * stronger push alone moves nothing and only the air kept shows on the sheet.
+ */
+function clearOf(a: Body, b: Body, config: LayoutConfig): number {
+  const factor = tiersApart(a, b) ? config.tierRepulsion : 1
+  return a.radius + b.radius + config.restGap * factor
+}
+
+/**
+ * The positional correction, after the forces have moved everything: two bodies nearer than the sum
+ * of their radii and the rest gap are put back to that distance along the line between their
+ * centres, the move split by inverse area so the larger room gives way less. A pinned body takes
+ * none of it, because pinned is the person's hand; two pinned bodies left on each other stay.
+ */
+function separate(work: readonly Work[], config: LayoutConfig): void {
+  const from = work.map((w) => ({ x: w.x, y: w.y }))
+  for (let pass = 0; pass < CORRECTION_PASSES; pass++) {
+    let clear = true
+    for (let i = 0; i < work.length; i++) {
+      const a = work[i]
+      if (!a) continue
+      for (let j = i + 1; j < work.length; j++) {
+        const b = work[j]
+        if (!b || (a.body.pinned && b.body.pinned)) continue
+        const [ux, uy, distance] = apart(b.x - a.x, b.y - a.y, i + j)
+        const overlap = clearOf(a.body, b.body, config) - distance
+        if (overlap <= CLEARED) continue
+        clear = false
+        const share = shareOf(a.body, b.body)
+        a.x -= ux * overlap * share
+        a.y -= uy * overlap * share
+        b.x += ux * overlap * (1 - share)
+        b.y += uy * overlap * (1 - share)
+      }
+    }
+    if (clear) break
+  }
+  // The correction is the last word on where a bubble went, so its speed is made to say the same:
+  // a bubble the forces drove into its neighbour and the correction put back has not moved at all.
+  for (const [index, w] of work.entries()) {
+    const was = from[index]
+    if (!was || w.body.pinned) continue
+    w.vx += (w.x - was.x) / config.timeStep
+    w.vy += (w.y - was.y) / config.timeStep
+  }
 }
 
 export function step(
@@ -225,13 +344,14 @@ export function step(
     for (let j = i + 1; j < count; j++) {
       const b = work[j]
       if (!b) continue
-      const clear = a.body.radius + b.body.radius + config.restGap
+      const clear = clearOf(a.body, b.body, config)
       const [ux, uy, distance] = apart(b.x - a.x, b.y - a.y, i + j)
       const overlap = clear - distance
       // A soft collision below contact, and a bounded inverse-square breeze above it that spreads the cloud.
       const push =
-        (overlap > 0 ? config.repulsion * overlap : 0) +
-        (config.spread * clear * clear) / Math.max(distance, clear) ** 2
+        (tiersApart(a.body, b.body) ? config.tierRepulsion : 1) *
+        ((overlap > 0 ? config.repulsion * overlap : 0) +
+          (config.spread * clear * clear) / Math.max(distance, clear) ** 2)
       a.fx -= push * ux
       a.fy -= push * uy
       b.fx += push * ux
@@ -240,9 +360,8 @@ export function step(
   }
 
   const interval = config.timeStep
-  let energy = 0
-  const bodies = work.map((w) => {
-    if (w.body.pinned) return w.body
+  for (const w of work) {
+    if (w.body.pinned) continue
     const mass = massOf(w.body)
     const target = bandCentreOf(
       w.body.storey,
@@ -252,21 +371,34 @@ export function step(
     )
     w.fy += config.bandPull * (target - w.y)
     w.fx += config.centrePull * -w.x
-    const vx = (w.vx + (w.fx / mass) * interval) * config.damping
-    const vy = (w.vy + (w.fy / mass) * interval) * config.damping
-    energy += 0.5 * mass * (vx * vx + vy * vy)
-    return { ...w.body, x: w.x + vx * interval, y: w.y + vy * interval, vx, vy }
-  })
+    w.vx = (w.vx + (w.fx / mass) * interval) * config.damping
+    w.vy = (w.vy + (w.fy / mass) * interval) * config.damping
+  }
 
+  for (const w of work) {
+    if (w.body.pinned) continue
+    w.x += w.vx * interval
+    w.y += w.vy * interval
+  }
+
+  separate(work, config)
+
+  let energy = 0
+  for (const w of work) energy += 0.5 * massOf(w.body) * (w.vx * w.vx + w.vy * w.vy)
+
+  const bodies = work.map((w) =>
+    w.body.pinned ? w.body : { ...w.body, x: w.x, y: w.y, vx: w.vx, vy: w.vy },
+  )
   return { ...state, bodies, energy: energy / count }
 }
 
 export function settle(state: SimulationState, config: LayoutConfig = defaultLayout): Settlement {
   let current = state
+  let still = 0
   for (let i = 1; i <= config.maxIterations; i++) {
     current = step(current, config)
-    if (current.energy < config.energyThreshold)
-      return { state: current, iterations: i, settled: true }
+    still = current.energy < config.energyThreshold ? still + 1 : 0
+    if (still >= STILL_FRAMES) return { state: current, iterations: i, settled: true }
   }
   return { state: current, iterations: config.maxIterations, settled: false }
 }

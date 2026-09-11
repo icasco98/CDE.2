@@ -1,6 +1,17 @@
 export { capacityMessage, storeyCapacity, storeyLabel } from './capacity'
 export type { StoreyCapacity } from './capacity'
-export { bandOf, createState, defaultLayout, radiusOf, settle, step } from './simulation'
+export {
+  bandOf,
+  createState,
+  defaultLayout,
+  layoutFor,
+  radiusOf,
+  settle,
+  SPREAD_SECONDS,
+  spreadLayout,
+  step,
+  STILL_FRAMES,
+} from './simulation'
 export type {
   Band,
   Body,

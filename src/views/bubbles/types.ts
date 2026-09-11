@@ -1,4 +1,4 @@
-import type { Commit, EdgeKind, Plot } from '../../model'
+import type { Commit, EdgeKind, Family, Plot, Weights } from '../../model'
 import type { Position } from '../../bubbles'
 
 export type BubbleRoom = {
@@ -11,6 +11,8 @@ export type BubbleRoom = {
   readonly bubble?: Position
   /** From the room-type table where the program has one; without it every bubble takes the neutral fill. */
   readonly category?: string
+  /** The room-type table's privacy tier, which the forces read when the user-requirements weight is up. */
+  readonly tier?: string
 }
 
 export type BubbleLink = {
@@ -38,6 +40,8 @@ export type BubblesViewProps = {
   readonly proposals: readonly BubbleProposal[]
   readonly storeys: number
   readonly plot: Plot
+  /** The three families of forces, on the sheet beside the diagram they change. */
+  readonly weights: Weights
   /** A room id, an edge id, or nothing. */
   readonly selected: string | null
   readonly onMoveBubble: (id: string, at: Position, commit: Commit) => void
@@ -55,6 +59,7 @@ export type BubblesViewProps = {
   readonly onAccept: (proposal: BubbleProposal) => void
   /** Every proposal at once, as one step to undo. */
   readonly onAcceptAll: () => void
+  readonly onSetWeight: (family: Family, weight: number) => void
   readonly onSelect: (id: string | null) => void
   /** A gesture the model will not have, said in the view's own words. */
   readonly onRefuse: (message: string) => void

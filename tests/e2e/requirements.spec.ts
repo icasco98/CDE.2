@@ -31,13 +31,8 @@ test('a person enters a plot, a household and a program, and it is still there a
   const rooms = rowsOf(page)
   expect(await rooms.count()).toBeGreaterThanOrEqual(12)
 
-  const siteSlider = page.getByRole('slider', { name: 'Site constraints' })
-  const initialSiteWeight = await siteSlider.inputValue()
-  await siteSlider.focus()
-  await siteSlider.press('ArrowRight')
-  await siteSlider.press('ArrowRight')
-  const movedSiteWeight = await siteSlider.inputValue()
-  expect(movedSiteWeight).not.toBe(initialSiteWeight)
+  // The three weights stand beside the diagram they change, on the Bubbles tab, not here.
+  await expect(page.getByRole('slider', { name: 'Site constraints' })).toHaveCount(0)
 
   const diwaniya = rooms.nth(1)
   await expect(diwaniya.getByLabel('Room name')).toHaveValue('Diwaniya')
@@ -70,7 +65,6 @@ test('a person enters a plot, a household and a program, and it is still there a
   await expect(rowsOf(page)).toHaveCount(before)
   await expect(rowsOf(page).nth(1).getByLabel('Target area')).toHaveValue('8')
   await expect(rowsOf(page).nth(0).getByLabel('Storey')).toHaveValue('1')
-  await expect(page.getByRole('slider', { name: 'Site constraints' })).toHaveValue(movedSiteWeight)
 })
 
 test('a person saves the project to a file that reads back with the same rooms', async ({
