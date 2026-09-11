@@ -1,0 +1,245 @@
+.massing {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  height: 100%;
+  min-height: 0;
+}
+
+.massing-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.massing-views {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.massing-views button {
+  font: inherit;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid #b7b1a5;
+  border-radius: 999px;
+  background: #fffdf9;
+  color: inherit;
+  cursor: pointer;
+}
+
+.massing-views button[aria-pressed='true'] {
+  background: #1f1d1a;
+  border-color: #1f1d1a;
+  color: #faf8f4;
+}
+
+.massing-body {
+  display: flex;
+  gap: 0.75rem;
+  /* A definite height, so the drawing letterboxes inside it rather than growing to its own shape. */
+  height: 65vh;
+  min-height: 320px;
+}
+
+.massing-sheet {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  background: #faf8f4;
+  border: 1px solid #e2ddd3;
+  border-radius: 4px;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+
+.massing-side {
+  width: 17rem;
+  flex: none;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.massing-side h3 {
+  margin: 0 0 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/*
+ * Every mark is scoped to this sheet: the zoning and bubbles sheets carry marks of the same names,
+ * and one stylesheet must not paint another's.
+ */
+.massing-sheet .plot {
+  fill: #f2eee5;
+  stroke: #c9c2b4;
+  stroke-width: 0.09;
+}
+
+.massing-sheet .plot-off {
+  fill: none;
+  stroke-width: 0.05;
+  stroke-dasharray: 0.5 0.4;
+}
+
+.massing-sheet .street {
+  fill: none;
+  stroke: #4a453d;
+  stroke-width: 0.34;
+  stroke-linecap: square;
+}
+
+.massing-sheet .north-stem,
+.massing-sheet .scale-reference polyline {
+  fill: none;
+  stroke: #6d6862;
+  stroke-width: 0.08;
+}
+
+.massing-sheet .north-head {
+  fill: #6d6862;
+  stroke: none;
+}
+
+.massing-sheet .ground-label {
+  fill: #6d6862;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+
+.massing-sheet .prism {
+  cursor: pointer;
+}
+
+.massing-sheet .face-top {
+  fill: #f0eadd;
+  stroke: #6f6a62;
+  stroke-width: 0.06;
+  stroke-linejoin: round;
+}
+
+.massing-sheet .face-wall {
+  fill: #ded6c6;
+  stroke: #6f6a62;
+  stroke-width: 0.06;
+  stroke-linejoin: round;
+}
+
+/* A wall is toned by the compass point it faces, so the south front reads apart from the north back. */
+.massing-sheet .face-south {
+  fill: #cec4b1;
+}
+
+.massing-sheet .face-north {
+  fill: #e8e1d3;
+}
+
+.massing-sheet .prism-selected .face-top,
+.massing-sheet .prism-selected .face-wall {
+  stroke: #2f6f8f;
+  stroke-width: 0.16;
+}
+
+.massing-sheet .prism-selected .face-top {
+  fill: #d9e7ee;
+}
+
+.massing-heights ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.massing-heights li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.massing-heights .height-name {
+  width: 4.5rem;
+}
+
+.massing-heights input {
+  width: 4rem;
+  font: inherit;
+}
+
+.massing-heights .height-unit {
+  color: #6d6862;
+}
+
+.height-total {
+  margin: 0.35rem 0 0;
+  color: #6d6862;
+}
+
+.massing-side .warning {
+  margin: 0.35rem 0 0;
+  color: #a5442c;
+}
+
+.massing-numbers dl {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.massing-numbers .number {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.massing-numbers dt {
+  color: #6d6862;
+}
+
+.massing-numbers dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.massing-numbers .against {
+  margin: 0.35rem 0 0;
+  color: #6d6862;
+}
+
+.massing-storeys {
+  border-collapse: collapse;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+.massing-storeys th,
+.massing-storeys td {
+  text-align: right;
+  padding: 0.1rem 0.2rem;
+  border-bottom: 1px solid #e2ddd3;
+}
+
+.massing-storeys th[scope='row'],
+.massing-storeys thead th:first-child {
+  text-align: left;
+  font-weight: 400;
+}
+
+.massing-storeys thead th {
+  color: #6d6862;
+  font-weight: 400;
+}
+
+.massing-unplaced {
+  margin: 0;
+  color: #6d6862;
+}
