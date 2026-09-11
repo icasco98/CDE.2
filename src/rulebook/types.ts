@@ -21,6 +21,12 @@ export type LegalFloor = {
   readonly note?: string
 }
 
+/**
+ * Where a kind opens when the program is rebuilt. `any` suits either floor, `all` stands on every
+ * storey at once, which is what a stair and a lift do, and `top` is the roof.
+ */
+export type DefaultStorey = 'ground' | 'upper' | 'any' | 'all' | 'top'
+
 export type RoomTypeFlags = {
   readonly circulation?: true
   readonly auxiliary?: true
@@ -38,6 +44,9 @@ export type RoomType = {
   readonly proportion: Band | typeof freeProportion
   readonly category: RoomCategory
   readonly tier: RoomTier
+  readonly defaultStorey: DefaultStorey
+  /** The kind this one brings with it, such as a bedroom's ensuite; it takes the room's storey. */
+  readonly companion?: string
   readonly flags: RoomTypeFlags
   readonly basis: string
   /** Everything the table says about the kind that is not one of the flags. */
