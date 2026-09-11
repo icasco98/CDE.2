@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { rectangleToPolygon } from '../../geometry'
-import { extentOf, pointsOf, viewBoxOf } from './frame'
+import { extentOf, pointsOf } from './frame'
 
 const plot = rectangleToPolygon({ left: 0, top: 0, width: 20, depth: 25 })
 
@@ -16,10 +16,6 @@ describe('the sheet extent', () => {
 
   it('falls back to a plot-sized sheet where there is nothing to draw', () => {
     expect(extentOf([], [])).toEqual({ minX: -2.5, minY: -2.5, width: 25, height: 30 })
-  })
-
-  it('reads out as a viewBox in metres', () => {
-    expect(viewBoxOf(extentOf(plot, []))).toBe('-2.5 -2.5 25 30')
   })
 })
 

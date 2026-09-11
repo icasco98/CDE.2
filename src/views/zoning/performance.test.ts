@@ -1,5 +1,13 @@
 import { expect, it } from 'vitest'
-import { rectangleToPolygon, type Footprint, type Point, type Polygon } from '../../geometry'
+import {
+  outlineOf,
+  rectangleToPolygon,
+  type Footprint,
+  type Point,
+  type Polygon,
+} from '../../geometry'
+import { fitCamera, metresPerPixel, viewBoxOf, zoomAbout, ZOOM_STEP } from './camera'
+import { extentOf } from './frame'
 import { moveFootprint, sheetOf, type Neighbour, type Sheet } from './gestures'
 
 const plot: Polygon = rectangleToPolygon({ left: 0, top: 0, width: 34, depth: 30 })
@@ -62,4 +70,29 @@ it('runs a pointer move that is refused just as fast', () => {
     }
   })
   expect(took / 20).toBeLessThan(2)
+})
+
+/**
+ * The whole of what a wheel notch runs: the extent, the door marks and the proposals are memoised
+ * on the rooms and are not touched by a camera, and a room group's props do not carry the camera
+ * either, so nothing but this arithmetic and one viewBox stands between the notch and the screen.
+ */
+it('answers a wheel notch over thirty placed rooms in under 4 ms', () => {
+  const extent = extentOf(
+    plot,
+    storeyOfThirty().map((room) => outlineOf(room.footprint)),
+  )
+  const box = { width: 1100, height: 460 }
+  let closest = 1
+  const took = milliseconds(() => {
+    let camera = fitCamera
+    for (let notch = 0; notch < 20; notch++) {
+      camera = zoomAbout(extent, camera, [12 + notch * 0.1, 9], ZOOM_STEP)
+      viewBoxOf(extent, camera)
+      metresPerPixel(extent, camera, box)
+    }
+    closest = camera.scale
+  })
+  expect(closest).toBeGreaterThan(1)
+  expect(took / 20).toBeLessThan(4)
 })
