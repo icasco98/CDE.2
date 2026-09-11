@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { checkProject } from './invariants'
-import { startingHousehold } from './project'
+import { STARTING_HEIGHT_M, startingHousehold } from './project'
 import { EXTERIOR, PROJECT_VERSION, type Edge, type Project, type Room } from './types'
 
 const room = (id: string, extra: Partial<Room> = {}): Room => ({
@@ -27,6 +27,7 @@ const project = (rooms: readonly Room[], edges: readonly Edge[] = [], storeys = 
   id: 'project',
   name: 'test',
   storeys,
+  heights: Array.from({ length: storeys }, () => STARTING_HEIGHT_M),
   plot: { on: false, polygon: [], north: 0, street: [] },
   household: startingHousehold,
   rooms,
@@ -147,6 +148,22 @@ describe('a room stands within the project', () => {
     expect(codes(project([room('a', { storey: 1, storeysSpanned: 2 })], [], 2))).toEqual([
       'storey-range',
     ])
+  })
+})
+
+describe('a height for every storey', () => {
+  it('passes when there is one positive height per storey', () => {
+    expect(codes(project([], [], 3))).toEqual([])
+  })
+
+  it('fails when the heights and the storeys do not agree', () => {
+    expect(codes({ ...project([], [], 2), heights: [3.5] })).toEqual(['heights-count'])
+    expect(codes({ ...project([], [], 2), heights: [3.5, 3.5, 3.5] })).toEqual(['heights-count'])
+  })
+
+  it('fails on a height that is not a positive number of metres', () => {
+    expect(codes({ ...project([], [], 2), heights: [3.5, 0] })).toEqual(['height-size'])
+    expect(codes({ ...project([], [], 2), heights: [-1, 3.5] })).toEqual(['height-size'])
   })
 })
 

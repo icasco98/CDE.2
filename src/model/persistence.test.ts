@@ -156,6 +156,20 @@ describe('the project file', () => {
     expect(back.ok && back.value.version).toBe(PROJECT_VERSION)
   })
 
+  it('gives a document written before heights 3.5 m for every storey', () => {
+    const document: Record<string, unknown> = { ...furnished(), storeys: 3, version: 3 }
+    delete document.heights
+    const back = deserialize(JSON.stringify(document))
+    expect(back.ok && back.value.heights).toEqual([3.5, 3.5, 3.5])
+    expect(back.ok && back.value.version).toBe(PROJECT_VERSION)
+  })
+
+  it('leaves the heights of a document that already carries them', () => {
+    const project = { ...furnished(), storeys: 2, heights: [4.2, 3] }
+    const back = deserialize(JSON.stringify(project))
+    expect(back.ok && back.value.heights).toEqual([4.2, 3])
+  })
+
   it('refuses a version it cannot migrate and one from a newer tool', () => {
     const project = furnished()
     expect(deserialize(JSON.stringify({ ...project, version: 0 }))).toMatchObject({
