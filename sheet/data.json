@@ -1,9 +1,9 @@
 {
-  "revision": 15,
+  "revision": 16,
   "date": "11 Sep 2026",
   "session": "Session 3",
   "repo": "https://github.com/icasco98/CDE.2",
-  "headline": "Your fix list is done: F1, F2 and F3 merged. The tool waits for your zoning and massing comments.",
+  "headline": "F4 is being built: a stair bubble on every floor it serves, moving as one, with a span control.",
   "decide": [],
   "yours": [
     {
@@ -29,6 +29,12 @@
   ],
   "agents": [
     {
+      "task": "F4",
+      "name": "Stair on every floor",
+      "model": "Opus",
+      "stage": 1
+    },
+    {
       "task": "F3",
       "name": "Live forces and weights",
       "model": "Opus",
@@ -41,13 +47,6 @@
       "model": "Opus",
       "stage": 4,
       "pr": 33
-    },
-    {
-      "task": "F1",
-      "name": "Storeys and companions",
-      "model": "Opus",
-      "stage": 4,
-      "pr": 31
     }
   ],
   "stages": ["Briefed", "Building", "Review", "Your merge", "Merged"],
@@ -56,11 +55,12 @@
     "F1 merged: default storey and companion per kind, master-on-ground, stairs span every storey (#31).",
     "F2 merged: zoom and pan, delete, Link button, bands assign storeys, storey filter, legend (#33).",
     "F3 merged: live simulation, drag holds only while held, no piles, Spread, weights beside the diagram (#35).",
+    "F4 started from your second test: stair twins per floor and a Spans control.",
     "Double-click start scripts (#27). Hourly updates scheduled."
   ],
   "next": [
-    "Owner tests requirements and bubbles again, then zoning and massing; comments become the next fix list.",
-    "A8 export on the owner's word.",
-    "A9 usability run (needs O3 the known house and O5 the fresh brief)."
+    "Review F4 in the running app.",
+    "Owner's comments on zoning and massing.",
+    "A8 export, then A9 the usability run (needs O3 and O5)."
   ]
 }
