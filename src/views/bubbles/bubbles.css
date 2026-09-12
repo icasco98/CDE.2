@@ -1,5 +1,3 @@
-@import '../stage.css';
-
 /* The tab takes the stage's height, not its diagram's: what the lines above leave is what it gets. */
 .bubbles {
   display: flex;

@@ -1,5 +1,3 @@
-@import '../stage.css';
-
 /* The tab takes the stage's height, not its drawings': what the bars leave is what the halves get. */
 .plan {
   display: flex;
