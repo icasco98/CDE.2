@@ -1,15 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Body } from '../../bubbles'
 import { rectangleToPolygon } from '../../geometry'
-import {
-  bodyAt,
-  extentOf,
-  holds,
-  labelSize,
-  nameFits,
-  nearestOutside,
-  shortMark,
-} from './frame'
+import { bodyAt, extentOf, holds, labelSize, nameFits, nearestOutside, shortMark } from './frame'
 
 const plot = rectangleToPolygon({ left: 0, top: 0, width: 20, depth: 25 })
 
