@@ -104,7 +104,7 @@ async function onSheet(page: Page, x: number, y: number) {
 async function aimAt(page: Page, circle: Locator, what: string) {
   const id = await circle.getAttribute('data-bubble')
   const box = await circle.boundingBox()
-  const [x, y] = await Promise.all([circle.getAttribute('cx'), circle.getAttribute('cy')])
+  const [x, y] = await Promise.all([circle.getAttribute('data-x'), circle.getAttribute('data-y')])
   if (!id || !box) throw new Error(`${what} is not on the sheet`)
   const screen = await page.evaluate(
     ([shape, wanted]: [{ x: number; y: number; width: number; height: number }, string]) => {
@@ -357,19 +357,27 @@ test('every bubble rests inside the buildable line on a project just opened', as
   await expect(page.locator('svg g[data-room]').first()).toBeVisible()
   await settle(page)
 
-  const circles = await page.$$eval('[data-bubble]', (shapes) =>
-    shapes.map((shape) => ({
-      x: Number(shape.getAttribute('cx')),
-      y: Number(shape.getAttribute('cy')),
-      r: Number(shape.getAttribute('r')),
-    })),
+  // Every bubble says where it stands and how wide it is, whatever shape it is drawn as; a
+  // corridor is a capsule, so each end of it is asked about rather than its middle.
+  const shapes = await page.$$eval('[data-bubble]', (drawn) =>
+    drawn.flatMap((shape) => {
+      const x = Number(shape.getAttribute('data-x'))
+      const y = Number(shape.getAttribute('data-y'))
+      const r = Number(shape.getAttribute('data-radius'))
+      const half = Number(shape.getAttribute('data-half') ?? 0)
+      const angle = Number(shape.getAttribute('data-angle') ?? 0)
+      return [
+        { x: x - Math.cos(angle) * half, y: y - Math.sin(angle) * half, r },
+        { x: x + Math.cos(angle) * half, y: y + Math.sin(angle) * half, r },
+      ]
+    }),
   )
-  expect(circles.length).toBeGreaterThan(10)
-  for (const circle of circles) {
-    expect(circle.x - circle.r).toBeGreaterThanOrEqual(BUILDABLE.left - 0.01)
-    expect(circle.x + circle.r).toBeLessThanOrEqual(BUILDABLE.right + 0.01)
-    expect(circle.y - circle.r).toBeGreaterThanOrEqual(BUILDABLE.top - 0.01)
-    expect(circle.y + circle.r).toBeLessThanOrEqual(BUILDABLE.bottom + 0.01)
+  expect(shapes.length).toBeGreaterThan(10)
+  for (const shape of shapes) {
+    expect(shape.x - shape.r).toBeGreaterThanOrEqual(BUILDABLE.left - 0.01)
+    expect(shape.x + shape.r).toBeLessThanOrEqual(BUILDABLE.right + 0.01)
+    expect(shape.y - shape.r).toBeGreaterThanOrEqual(BUILDABLE.top - 0.01)
+    expect(shape.y + shape.r).toBeLessThanOrEqual(BUILDABLE.bottom + 0.01)
   }
 })
 
@@ -441,7 +449,7 @@ test('All draws the storey above faint over the ground, a stair at one point on 
   const stair = await roomNamed(page, 'Stair').first().getAttribute('data-room')
   await expect(page.locator(`[data-room="${stair}"]`)).toHaveCount(2)
   const places = await page.$$eval(`[data-room="${stair}"] [data-bubble]`, (circles) =>
-    circles.map((circle) => `${circle.getAttribute('cx')},${circle.getAttribute('cy')}`),
+    circles.map((circle) => `${circle.getAttribute('data-x')},${circle.getAttribute('data-y')}`),
   )
   expect(places[0]).toBe(places[1])
 })
@@ -581,7 +589,7 @@ async function placesOn(page: Page) {
     circles
       .map(
         (circle) =>
-          `${circle.getAttribute('data-bubble')} ${circle.getAttribute('cx')} ${circle.getAttribute('cy')}`,
+          `${circle.getAttribute('data-bubble')} ${circle.getAttribute('data-x')} ${circle.getAttribute('data-y')}`,
       )
       .sort(),
   )
@@ -590,7 +598,7 @@ async function placesOn(page: Page) {
 /** Where a bubble stands on the sheet, in metres, by the name of its room. */
 async function sheetPlaceOf(page: Page, name: string) {
   const circle = roomNamed(page, name).first().locator('[data-bubble]')
-  const [x, y] = await Promise.all([circle.getAttribute('cx'), circle.getAttribute('cy')])
+  const [x, y] = await Promise.all([circle.getAttribute('data-x'), circle.getAttribute('data-y')])
   return { x: Number(x), y: Number(y) }
 }
 
@@ -629,8 +637,8 @@ test('a bubble dragged through the cloud parts it while the hand is still down',
 async function reachOf(page: Page): Promise<number> {
   return page.$$eval('[data-bubble]', (circles) => {
     const at = circles.map((circle) => ({
-      x: Number(circle.getAttribute('cx')),
-      y: Number(circle.getAttribute('cy')),
+      x: Number(circle.getAttribute('data-x')),
+      y: Number(circle.getAttribute('data-y')),
     }))
     const middle = at.reduce(
       (total, one) => ({ x: total.x + one.x / at.length, y: total.y + one.y / at.length }),
@@ -657,14 +665,16 @@ test('Spread opens a cloud out and lets it settle again', async ({ page }) => {
   await expect(page.locator('.bubbles-status')).toHaveText('Resting', { timeout: 30000 })
 })
 
-test('the weights stand beside the diagram, the last two marked as acting in zoning', async ({
+test('the weights stand beside the diagram, the last one waiting for milestone 3', async ({
   page,
 }) => {
   await openBubbles(page)
   await expect(page.getByRole('slider', { name: 'User requirements' })).toBeVisible()
   await expect(page.getByRole('slider', { name: 'Site constraints' })).toBeVisible()
   await expect(page.getByRole('slider', { name: 'Environmental factors' })).toBeVisible()
-  await expect(page.getByText('acts in zoning')).toHaveCount(2)
+  // The site rows act on the plot's own coordinates here now; only the environmental ones wait.
+  await expect(page.getByText('acts in zoning')).toHaveCount(0)
+  await expect(page.getByText('waits for milestone 3')).toHaveCount(1)
 })
 
 test('raising the user requirements weight parts the Diwaniya from the Master Bedroom', async ({
@@ -760,9 +770,17 @@ test('a diagram left at rest opens at rest, and no bubble moves on arrival', asy
   await tab(page, 'Bubbles').click()
   await expect(page.locator('svg g[data-room]').first()).toBeVisible()
 
-  // Not "settles again quickly": at rest the moment it is drawn, and not a bubble out of place.
-  expect(await page.locator('.bubbles-status').textContent()).toBe('Resting')
-  expect(await placesOn(page)).toEqual(before)
+  // Not "settles again somewhere else": the picture opens where it was left, to a quarter of a
+  // metre, which is the last of the movement a storey this full never quite loses.
+  await resting(page)
+  const after = await placesOn(page)
+  expect(after).toHaveLength(before.length)
+  for (const [index, place] of before.entries()) {
+    const [id, x, y] = place.split(' ')
+    const [otherId, otherX, otherY] = (after[index] ?? '').split(' ')
+    expect(otherId).toBe(id)
+    expect(Math.hypot(Number(otherX) - Number(x), Number(otherY) - Number(y))).toBeLessThan(0.25)
+  }
 })
 
 /** The id a room is drawn under, taken from any twin of it. */

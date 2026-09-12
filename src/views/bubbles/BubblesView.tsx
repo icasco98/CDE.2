@@ -608,6 +608,22 @@ export function BubblesView(props: BubblesViewProps) {
         >
           <PlotSheet plot={plot} />
           <BuildableLine polygon={inside.polygon} />
+          {drawn.map(({ body, storey }) => {
+            const room = named.get(body.id)
+            const label = labels.get(body.id)
+            return room && label ? (
+              <Bubble
+                key={`${body.id}:${storey}`}
+                body={body}
+                room={room}
+                twin={storey}
+                label={label}
+                selected={body.id === selected || linking?.from === body.id}
+                dimmed={storey !== active}
+                handlers={handlers}
+              />
+            ) : null
+          })}
           {edges.map((edge) => {
             if (only !== null && edge.storey !== only) return null
             const ends = endsOf(edge)
@@ -642,22 +658,6 @@ export function BubblesView(props: BubblesViewProps) {
                 />
               ) : null
             })()}
-          {drawn.map(({ body, storey }) => {
-            const room = named.get(body.id)
-            const label = labels.get(body.id)
-            return room && label ? (
-              <Bubble
-                key={`${body.id}:${storey}`}
-                body={body}
-                room={room}
-                twin={storey}
-                label={label}
-                selected={body.id === selected || linking?.from === body.id}
-                dimmed={storey !== active}
-                handlers={handlers}
-              />
-            ) : null
-          })}
           <NorthArrow
             north={plot.north}
             at={[shown.minX + shown.width - FURNITURE_PX * perPixel, shown.minY + 44 * perPixel]}
@@ -673,16 +673,21 @@ export function BubblesView(props: BubblesViewProps) {
         </svg>
         <div className="bubbles-side">
           <WeightsPanel weights={weights} onSetWeight={onSetWeight} />
+          {/* Beside the sheet with the legend, so a list that grows never pushes the drawing
+              off the bottom of the page. */}
+          {readings.size > 0 && (
+            <section className="bubbles-tension">
+              <h2>Links not made</h2>
+              <ul>
+                {[...readings].map(([id, reason]) => (
+                  <li key={id}>{reason}</li>
+                ))}
+              </ul>
+            </section>
+          )}
           <Legend />
         </div>
       </div>
-      {readings.size > 0 && (
-        <ul className="bubbles-tension">
-          {[...readings].map(([id, reason]) => (
-            <li key={id}>{reason}</li>
-          ))}
-        </ul>
-      )}
       <dl className="bubbles-fit">
         {fits
           .filter((fit) => only === null || fit.storey === only)

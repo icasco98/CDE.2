@@ -97,6 +97,7 @@ export const Bubble = memo(function Bubble(props: BubbleProps) {
         <rect
           {...standsAt(body)}
           data-half={body.half}
+          data-angle={body.angle}
           x={at.x - body.half - body.radius}
           y={at.y - body.radius}
           width={2 * (body.half + body.radius)}
@@ -212,11 +213,13 @@ export const Link = memo(function Link(props: LinkProps) {
       ) : props.title ? (
         <title>{props.title}</title>
       ) : null}
+      {/* The grip takes the middle third of the run, because a linked pair now stands rim to rim
+          and a grip the whole length of it would lie across both bubbles' own middles. */}
       <line
-        x1={from.x}
-        y1={from.y}
-        x2={to.x}
-        y2={to.y}
+        x1={from.x + (to.x - from.x) / 3}
+        y1={from.y + (to.y - from.y) / 3}
+        x2={to.x - (to.x - from.x) / 3}
+        y2={to.y - (to.y - from.y) / 3}
         className="link-grip"
         onPointerDown={select}
       />

@@ -1,6 +1,6 @@
 import { forcesOn } from '../rulebook'
 import { gapBetween, nearestOnSegment, type Placed } from './capsule'
-import { restBetween, shareAStorey, TOUCHING, type Body, type SimulationState } from './simulation'
+import { shareAStorey, TOUCHING, type Body, type SimulationState } from './simulation'
 
 /** What a link is doing: closed and touching, or open with a reason it has not closed. */
 export type LinkReading = { readonly realized: boolean; readonly reason?: string }
@@ -112,9 +112,4 @@ export function readLink(
     realized: false,
     reason: `${nameFor(one.id)} and ${nameFor(other.id)} have not come together; there is no room between them for the door.`,
   }
-}
-
-/** How far a linked pair still has to come to touch, for the correction to know what to work on. */
-export function shortBy(a: Body, b: Body): number {
-  return gapBetween(placedOf(a), placedOf(b), 0).distance - restBetween(a, b)
 }

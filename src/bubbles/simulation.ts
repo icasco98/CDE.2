@@ -3,7 +3,7 @@ import type { Family, Weights } from '../model'
 import { companionOwners, forces, kerbFor, type ForceField, type ForceRoom } from '../rulebook'
 import { CORRIDOR_R, corridorHalf, gapBetween, type Placed } from './capsule'
 import { canonicalStart } from './start'
-import { CLEARED, holdInside, type Ground } from './ground'
+import { CLEARED, holdInside, putInside, type Buildable, type Ground } from './ground'
 
 export type Position = { readonly x: number; readonly y: number }
 
@@ -33,6 +33,8 @@ export type LayoutConfig = {
   readonly repulsion: number
   readonly spread: number
   readonly centrePull: number
+  /** Air added to a link's rest length; nought, except for the second a Spread blows. */
+  readonly linkAir: number
   /** What a force of full strength at full weight moves a room at, in metres per second squared. */
   readonly pull: number
   readonly damping: number
@@ -61,6 +63,7 @@ export const defaultLayout: LayoutConfig = {
    * a room no row acts on onto the floor, and light enough that a row of full strength wins.
    */
   centrePull: 0.4,
+  linkAir: 0,
   /** A strong row at full weight walks a room the depth of a villa against the gather above. */
   pull: 8,
   /** Near critical for a link on a room-sized mass: settles in a couple of seconds without ringing. */
@@ -77,8 +80,12 @@ export const defaultLayout: LayoutConfig = {
 /** How far past contact two bubbles still feel each other, as a multiple of the air they keep. */
 const BREEZE_REACH = 3
 
-/** A second of simulation time: how long a Spread holds before the cloud is let settle again. */
-export const SPREAD_SECONDS = 1
+/**
+ * How long a Spread holds before the cloud is let settle again, in seconds of simulation time.
+ * Three, because the rows of the rulebook gather a villa's rooms back as fast as a breeze opens
+ * them, and a gesture nobody sees is a gesture nobody believes.
+ */
+export const SPREAD_SECONDS = 3
 
 /**
  * How many steps running the picture must read still before it is called at rest: a contact takes
@@ -172,12 +179,15 @@ export function spreadLayout(base: LayoutConfig): LayoutConfig {
   return {
     ...base,
     repulsion: base.repulsion * 3,
-    spread: base.spread * 3,
+    spread: base.spread * 6,
     restGap: base.restGap * 3,
+    // The air a linked pair keeps goes with it, or a cloud held together by its links could not
+    // open at all: a link rests at touching, and nothing but this ever lets it stretch.
+    linkAir: base.restGap * 3,
     // The gather onto the middle of the floor and the rulebook's own rows are what a breeze has to
-    // open the cloud against, so both are let out for the second it blows and put back after it.
-    centrePull: base.centrePull / 3,
-    pull: base.pull / 3,
+    // open the cloud against, so both are let go for the second it blows and taken up again after.
+    centrePull: base.centrePull / 5,
+    pull: 0,
   }
 }
 
@@ -361,8 +371,11 @@ export function createState(
   const anchored = new Set(
     corridors.filter((corridor) => corridor.anchor !== undefined).map((corridor) => corridor.body),
   )
+  // Which way a corridor lies is not stored: it is read off where the room it starts from and the
+  // rooms it serves are standing, so a picture drawn from the store lies the way it settled.
+  const turned = turnedFrom(bodies, corridors)
   return {
-    bodies: bodies.map((body, index) => (anchored.has(index) ? { ...body, anchored: true } : body)),
+    bodies: turned.map((body, index) => (anchored.has(index) ? { ...body, anchored: true } : body)),
     links,
     corridors,
     companions: companionsIn(rooms, edges, at),
@@ -405,6 +418,35 @@ function corridorsOf(bodies: readonly Body[], links: readonly Link[]): readonly 
     })
   }
   return out
+}
+
+/** Every corridor turned toward the rooms it serves, from where the bodies are standing now. */
+function turnedFrom(bodies: readonly Body[], corridors: readonly Corridor[]): readonly Body[] {
+  const angles = new Map<number, number>()
+  for (const corridor of corridors) {
+    const body = bodies[corridor.body]
+    if (!body) continue
+    let x = 0
+    let y = 0
+    let counted = 0
+    for (const other of corridor.served) {
+      const served = bodies[other]
+      if (!served) continue
+      x += served.x
+      y += served.y
+      counted += 1
+    }
+    if (counted === 0) continue
+    const anchor = corridor.anchor === undefined ? undefined : bodies[corridor.anchor]
+    const from = anchor ?? body
+    const run = Math.hypot(x / counted - from.x, y / counted - from.y)
+    if (run < 1e-9) continue
+    angles.set(corridor.body, Math.atan2(y / counted - from.y, x / counted - from.x))
+  }
+  return bodies.map((body, index) => {
+    const angle = angles.get(index)
+    return angle === undefined ? body : { ...body, angle }
+  })
 }
 
 /** The auxiliary rooms each room owns, as pairs of bodies, read by the rulebook's companion rule. */
@@ -497,9 +539,12 @@ function onKerb(w: Work): void {
 /**
  * The corridor turned and set down: its near end on the room it starts from, its length pointing
  * at the middle of the rooms it serves. A corridor is the one bubble whose direction is not the
- * forces' to choose, because what a corridor is for is reaching the doors off it.
+ * forces' to choose, because what a corridor is for is reaching the doors off it. Where the way it
+ * wants to lie would take its far end off the floor, it is turned toward the middle until it fits,
+ * because the buildable line is a wall and the rooms it serves are not going anywhere either.
  */
-function alongTheRooms(work: readonly Work[], corridor: Corridor, middle: Point): void {
+function alongTheRooms(work: readonly Work[], corridor: Corridor, inside: Buildable): void {
+  const middle = inside.middle
   const w = work[corridor.body]
   if (!w) return
   let toX = 0
@@ -519,11 +564,34 @@ function alongTheRooms(work: readonly Work[], corridor: Corridor, middle: Point)
   const uy = aim[1] - from[1]
   const run = Math.hypot(ux, uy)
   if (run < 1e-9) return
-  w.angle = Math.atan2(uy, ux)
-  if (!anchor) return
+  if (!anchor) {
+    w.angle = Math.atan2(uy, ux)
+    return
+  }
   const reach = restBetween(anchor.body, w.body) + w.body.half
-  w.x = from[0] + (ux / run) * reach
-  w.y = from[1] + (uy / run) * reach
+  const toMiddle = Math.atan2(middle[1] - from[1], middle[0] - from[0])
+  const wanted = Math.atan2(uy, ux)
+  for (let turn = 0; turn <= TURNS; turn++) {
+    // Turned from the way it wants to lie toward the middle of the floor, a step at a time.
+    const share = turn / TURNS
+    const angle = wanted + share * (((toMiddle - wanted + 3 * Math.PI) % (2 * Math.PI)) - Math.PI)
+    const x = from[0] + Math.cos(angle) * reach
+    const y = from[1] + Math.sin(angle) * reach
+    const end: Point = [x + Math.cos(angle) * w.body.half, y + Math.sin(angle) * w.body.half]
+    w.angle = angle
+    w.x = x
+    w.y = y
+    if (turn === TURNS || pointInside(inside, end, w.body.radius)) return
+  }
+}
+
+/** How many steps a corridor is given to turn from where it wants to lie toward the middle. */
+const TURNS = 12
+
+/** Whether a point is inside the line with room to spare, which is where a corridor's end must be. */
+function pointInside(inside: Buildable, at: Point, radius: number): boolean {
+  const held = putInside(inside, at, radius)
+  return Math.hypot(held[0] - at[0], held[1] - at[1]) < 1e-6
 }
 
 /** A companion set back on its owner's perimeter, free to slide round it and never to leave it. */
@@ -553,7 +621,7 @@ function pairKey(a: number, b: number): number {
  * the kerb the walled rooms stand on, the corridor's anchor, the companions on their owners'
  * perimeters, and the buildable line, which is never traded.
  */
-function project(work: readonly Work[], state: SimulationState): void {
+function project(work: readonly Work[], state: SimulationState, air: number): void {
   const from = work.map((w) => ({ x: w.x, y: w.y }))
   const inside = state.ground.inside
   const holds = inside.sides.length >= 3
@@ -598,7 +666,7 @@ function project(work: readonly Work[], state: SimulationState): void {
       const b = work[link.b]
       if (!a || !b || (a.body.pinned && b.body.pinned)) continue
       const gap = gapBetween(placedOf(a), placedOf(b), link.a + link.b)
-      const rest = restBetween(a.body, b.body)
+      const rest = restBetween(a.body, b.body) + air
       // Only closing, and only a link that is really open: a pair the springs hold a hair's
       // breadth apart is touching, and pulling it closed every frame would leave the picture
       // shuffling for ever between the spring and the projection.
@@ -632,13 +700,14 @@ function project(work: readonly Work[], state: SimulationState): void {
       }
     }
     for (const w of work) onKerb(w)
-    for (const corridor of state.corridors) alongTheRooms(work, corridor, inside.middle)
+    for (const corridor of state.corridors) alongTheRooms(work, corridor, inside)
     for (const companion of state.companions) onOwner(work, companion)
     if (holds)
       for (const w of work) {
-        const [x, y] = holdInside(inside, placedOf(w), w.body.radius)
-        w.x = x
-        w.y = y
+        const held = holdInside(inside, placedOf(w), w.body.radius)
+        w.x = held.at[0]
+        w.y = held.at[1]
+        w.angle = held.angle
       }
     if (!pulled && !pushed) break
   }
@@ -714,7 +783,8 @@ export function step(
     const b = work[link.b]
     if (!a || !b) continue
     const gap = gapBetween(placedOf(a), placedOf(b), link.a + link.b)
-    const pull = config.springStiffness * (gap.distance - restBetween(a.body, b.body))
+    const pull =
+      config.springStiffness * (gap.distance - restBetween(a.body, b.body) - config.linkAir)
     a.fx += pull * gap.ux
     a.fy += pull * gap.uy
     b.fx -= pull * gap.ux
@@ -794,7 +864,7 @@ export function step(
     w.y += w.vy * interval
   }
 
-  project(work, state)
+  project(work, state, config.linkAir)
 
   // What a bubble did is where it ended up: one held still between its neighbours has speed and
   // goes nowhere, and the picture is at rest when nothing goes anywhere.

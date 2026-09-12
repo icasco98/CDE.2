@@ -7,11 +7,13 @@ import type { Point } from '../geometry'
  */
 
 /**
- * Half of a corridor's width in the physics. The Municipality's minimum room sizes give a corridor
- * inside the unit 1.20 m clear, and the room-type table carries that as the hallway's legal floor,
- * so the capsule is 1.20 m across and its segment carries the rest of the area as length.
+ * Half of a corridor's width in the physics. The room-type table gives a hallway 1.5 to 1.8 m
+ * wide over the Municipality's 1.20 m clear minimum, and the circulation rule's own ceiling is
+ * worked out at 1.8 m over about 17 m, so the capsule is 1.8 m across and its segment carries the
+ * rest of the area as length. Narrower than that and a villa's ground-floor corridor comes out
+ * longer than the plot is deep.
  */
-export const CORRIDOR_R = 0.6
+export const CORRIDOR_R = 0.9
 
 /**
  * How far a corridor of this area reaches from its middle to one end. A capsule of radius r and

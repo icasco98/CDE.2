@@ -25,7 +25,7 @@ const ROUNDS = 3
 /** Places round a body the walk tries, which is one every ten degrees. */
 const STATIONS = 36
 
-/** A short run after a walk: long enough for the neighbours to answer, short enough to feel at once. */
+/** A short run after a walk: long enough for the neighbours to answer, short enough to hold it. */
 const AFTER_WALK = 120
 
 function withBody(state: SimulationState, index: number, at: Point): SimulationState {
@@ -158,7 +158,11 @@ export function correctContacts(
     fewest = open
     best = current
   }
-  return { state: best, corrected: best === state ? 0 : corrected }
+  // A picture handed back still moving goes on moving when the tab is opened again, so whatever
+  // is handed back is run to rest first. A link the run opens again is one the walk could not
+  // hold, and the picture says so with a line of tension rather than by never standing still.
+  const rested = settle(best, config).state
+  return { state: rested, corrected: best === state ? 0 : corrected }
 }
 
 /** How many of a picture's links have not closed. */

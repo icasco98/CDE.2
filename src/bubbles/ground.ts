@@ -86,6 +86,9 @@ export function groundOf(plot: Plot, site: Site): Ground {
 /** Twice round the sides squares a bubble up in a corner; a third go is the margin. */
 const SIDE_PASSES = 3
 
+/** How many goes a corridor's two ends are given to come inside the line between them. */
+const ENDS_PASSES = 24
+
 /** An overlap this small is a rounding error, not a bubble resting on another. */
 export const CLEARED = 1e-9
 
@@ -129,15 +132,64 @@ export function putInside(inside: Buildable, at: Point, radius: number): Point {
   return [x, y]
 }
 
-/**
- * A whole body held inside the line: a disc by its own centre, a corridor by each of its ends, and
- * the move a corridor makes is the mean of what its two ends ask, so it slides in rather than turns.
- */
-export function holdInside(inside: Buildable, placed: Placed, radius: number): Point {
-  if (placed.half < 1e-9) return putInside(inside, [placed.x, placed.y], radius)
-  const dx = Math.cos(placed.angle) * placed.half
-  const dy = Math.sin(placed.angle) * placed.half
-  const one = putInside(inside, [placed.x - dx, placed.y - dy], radius)
-  const other = putInside(inside, [placed.x + dx, placed.y + dy], radius)
-  return [(one[0] + other[0]) / 2, (one[1] + other[1]) / 2]
+/** Where a body came to lie once the line had its say: a place, and the way it lies there. */
+export type Held = { readonly at: Point; readonly angle: number }
+
+/** The two ends of a segment lying this way about this point. */
+function endsAt(at: Point, angle: number, half: number): readonly [Point, Point] {
+  const dx = Math.cos(angle) * half
+  const dy = Math.sin(angle) * half
+  return [
+    [at[0] - dx, at[1] - dy],
+    [at[0] + dx, at[1] + dy],
+  ]
 }
+
+/** A capsule slid in by the mean of what its two ends ask, over and over. */
+function slideIn(inside: Buildable, at: Point, angle: number, half: number, radius: number): Point {
+  let here = at
+  for (let pass = 0; pass < ENDS_PASSES; pass++) {
+    const [one, other] = endsAt(here, angle, half)
+    const first = putInside(inside, one, radius)
+    const second = putInside(inside, other, radius)
+    const next: Point = [(first[0] + second[0]) / 2, (first[1] + second[1]) / 2]
+    const by = Math.hypot(next[0] - here[0], next[1] - here[1])
+    here = next
+    if (by < CLEARED) break
+  }
+  return here
+}
+
+function endsAreIn(inside: Buildable, at: Point, angle: number, half: number, radius: number) {
+  return endsAt(at, angle, half).every((end) => {
+    const held = putInside(inside, end, radius)
+    return Math.hypot(held[0] - end[0], held[1] - end[1]) < 1e-6
+  })
+}
+
+/** How far a corridor is turned each time the line asks it to lie another way, in radians. */
+const A_TURN = Math.PI / 12
+
+/**
+ * A whole body held inside the line: a disc by its own centre, a corridor by both of its ends. A
+ * corridor is first slid in; where the way it lies leaves an end off the floor whatever it does,
+ * it is turned, a step at a time either way, until it lies along ground it has. The buildable line
+ * is a wall, so a corridor gives up its direction to it rather than hang over the boundary.
+ */
+export function holdInside(inside: Buildable, placed: Placed, radius: number): Held {
+  if (placed.half < 1e-9)
+    return { at: putInside(inside, [placed.x, placed.y], radius), angle: placed.angle }
+  const first = slideIn(inside, [placed.x, placed.y], placed.angle, placed.half, radius)
+  if (endsAreIn(inside, first, placed.angle, placed.half, radius))
+    return { at: first, angle: placed.angle }
+  for (let turn = 1; turn <= TURNS_IN; turn++)
+    for (const way of [1, -1]) {
+      const angle = placed.angle + way * turn * A_TURN
+      const at = slideIn(inside, [placed.x, placed.y], angle, placed.half, radius)
+      if (endsAreIn(inside, at, angle, placed.half, radius)) return { at, angle }
+    }
+  return { at: first, angle: placed.angle }
+}
+
+/** Half a turn each way, a twelfth at a time, which is every way a corridor could lie. */
+const TURNS_IN = 6

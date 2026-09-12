@@ -25,7 +25,7 @@ function positions(page: Page) {
   return page.$$eval('[data-bubble]', (circles) =>
     circles.map(
       (circle) =>
-        `${circle.getAttribute('data-bubble')} ${circle.getAttribute('cx')} ${circle.getAttribute('cy')}`,
+        `${circle.getAttribute('data-bubble')} ${circle.getAttribute('data-x')} ${circle.getAttribute('data-y')}`,
     ),
   )
 }
@@ -81,7 +81,7 @@ test('settles to the same picture from two fresh loads', async ({ page }) => {
 /** Where a bubble stands on the sheet, in metres, so a camera that moves does not read as a drag. */
 async function placeOf(page: Page, id: string) {
   const circle = page.locator(`[data-bubble="${id}"]`)
-  const [x, y] = await Promise.all([circle.getAttribute('cx'), circle.getAttribute('cy')])
+  const [x, y] = await Promise.all([circle.getAttribute('data-x'), circle.getAttribute('data-y')])
   return { x: Number(x), y: Number(y) }
 }
 

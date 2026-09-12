@@ -71,18 +71,18 @@ describe('the correction after the picture rests', () => {
   })
 
   it('takes a room across the corridor to reach what is on the other side of it', () => {
-    // The corridor lies across the floor, with the crowd on one side of it and the room that is
-    // linked to something on the other side standing among them.
+    // A corridor held across the floor with a room at its far end to point it, the crowd on one
+    // side of it, and the room that is linked to something on the other side standing among them.
     const rooms = [
-      room('entry', 8, { kind: 'entry-foyer', bubble: { x: 10, y: 21.4 } }),
-      room('hall', 30, { kind: 'hallway', bubble: { x: 10, y: 14 } }),
-      room('near', 24, { pinned: true, kind: 'formal-living', bubble: { x: 10, y: 8 } }),
-      room('crowd1', 20, { pinned: true, kind: 'dining-room', bubble: { x: 5, y: 19 } }),
-      room('crowd2', 20, { pinned: true, kind: 'kitchen', bubble: { x: 16, y: 19 } }),
+      room('hall', 30, { pinned: true, kind: 'hallway', bubble: { x: 10, y: 14 } }),
+      room('end', 16, { pinned: true, kind: 'room-other', bubble: { x: 17, y: 14 } }),
+      room('near', 24, { pinned: true, kind: 'formal-living', bubble: { x: 8, y: 7 } }),
+      room('crowd1', 20, { pinned: true, kind: 'dining-room', bubble: { x: 5, y: 20 } }),
+      room('crowd2', 20, { pinned: true, kind: 'kitchen', bubble: { x: 15, y: 20 } }),
       room('far', 14, { kind: 'office-study', bubble: { x: 10, y: 20 } }),
     ]
     const links: SimulationEdge[] = [
-      { a: 'entry', b: 'hall', storey: 0 },
+      { a: 'hall', b: 'end', storey: 0 },
       { a: 'near', b: 'far', storey: 0 },
     ]
     const drawn = createState(rooms, links, ground)

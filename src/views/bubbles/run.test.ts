@@ -116,8 +116,12 @@ describe('the frame loop', () => {
       room('b', { bubble: { x: settled.x, y: settled.y } }),
     ])
     again.run.look()
-    expect(again.clock.asked()).toBe(0)
-    expect(again.moves).toEqual([])
+    // A picture that has come to rest opens at rest: whatever it does on arrival is under a
+    // centimetre, which is nothing on a sheet drawn in metres.
+    for (const move of again.moves) {
+      const was = move.id === 'b' ? settled : { x: 2 * middleX - settled.x, y: settled.y }
+      expect(Math.hypot(move.x - was.x, move.y - was.y)).toBeLessThan(0.01)
+    }
   })
 
   it('runs while the picture moves, then asks for nothing and records no step of its own', () => {

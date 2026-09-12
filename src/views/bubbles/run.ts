@@ -138,7 +138,10 @@ export function createRun(parts: RunParts): Run {
       // Only when the picture has stopped: a link that has not closed is walked round to a free
       // wall and the cloud let settle again, and only then is the picture called at rest.
       const fixed = correctContacts(next, parts.layout())
-      if (fixed.corrected > 0) stepped = true
+      // Whatever the correction leaves is what the store is told, or the tab would be opened again
+      // on the places the picture had before it and set off moving from them. A hair's breadth is
+      // not a move: a picture already at rest is left alone and nothing is recorded.
+      if (fixed.state.bodies.some((body, index) => moved(body, next.bodies[index]))) stepped = true
       state = fixed.state
       finish(state, false)
       return false
@@ -209,9 +212,8 @@ export function createRun(parts: RunParts): Run {
       spreadingFrames = 0
       const out = settle(underHand(), parts.layout())
       const fixed = correctContacts(out.state, parts.layout())
+      if (out.iterations > STILL_FRAMES || fixed.corrected > 0) stepped = true
       state = letGo(fixed.state)
-      if (fixed.corrected > 0) stepped = true
-      if (out.iterations > STILL_FRAMES) stepped = true
       finish(state, true)
       announce(false)
     },
@@ -221,6 +223,15 @@ export function createRun(parts: RunParts): Run {
       announce(false)
     },
   }
+}
+
+/** Whether a bubble really went anywhere, in metres; below this it stood still. */
+const A_HAIR = 1e-4
+
+function moved(body: Body, was: Body | undefined): boolean {
+  return (
+    was !== undefined && (Math.abs(body.x - was.x) > A_HAIR || Math.abs(body.y - was.y) > A_HAIR)
+  )
 }
 
 function heldInPlace(state: SimulationState, id: string): boolean {

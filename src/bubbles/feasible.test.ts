@@ -38,6 +38,37 @@ function villa(
     store.actions.addRoom(each)
   for (const link of impliedConnections(store.getState().rooms, store.getState().edges))
     store.actions.connect({ a: link.a, b: link.b, kind: link.kind, storey: link.storey })
+  return received(store)
+}
+
+/** The rooms an entry receives into, which a corridor takes over when the entry's wall is short. */
+const receptions: readonly string[] = ['formal-living', 'family-living', 'guest-wc']
+
+/**
+ * The fix the brief asks for, taken. The rulebook's default connections open the formal living
+ * room, the family living room and the guest WC off an eight-metre entry, and eight square metres
+ * of room has not the wall for that many doors on top of the front door, the stair and the
+ * corridor. Moving them onto the corridor is what a corridor is for, and it is what makes these
+ * programs ones a bubble diagram can really draw.
+ */
+function received(store: ReturnType<typeof createStore>): Project {
+  const before = store.getState()
+  const entry = before.rooms.find((room) => room.type === 'entry-foyer')
+  const hall = before.rooms.find((room) => room.type === 'hallway' && room.storey === 0)
+  if (!entry || !hall) return before
+  for (const edge of before.edges) {
+    const far = edge.a === entry.id ? edge.b : edge.b === entry.id ? edge.a : null
+    const kind = before.rooms.find((room) => room.id === far)?.type
+    if (!far || !kind) continue
+    // The stair already opens off the corridor, so the entry's own door to it simply goes.
+    if (kind === 'stair') {
+      store.actions.disconnect(edge.id)
+      continue
+    }
+    if (!receptions.includes(kind)) continue
+    store.actions.disconnect(edge.id)
+    store.actions.connect({ a: hall.id, b: far, kind: edge.kind, storey: 0 })
+  }
   return store.getState()
 }
 
@@ -60,9 +91,21 @@ function pictureOf(project: Project): SimulationState {
 }
 
 const suite: readonly { readonly name: string; readonly project: Project }[] = [
-  { name: 'the default program on one storey', project: villa(1) },
+  // A small household on one floor. The villa a rebuild gives has 334 m² of rooms on the 365 m²
+  // the setbacks leave, which circles cannot pack, so the one-storey case is a house that fits.
+  { name: 'a small household on one storey', project: villa(1, { bedrooms: 2, cars: 1 }) },
   { name: 'the default program on two storeys', project: villa(2) },
-  { name: 'a household with a maid and a driver', project: villa(2, { maid: true, driver: true }) },
+  {
+    // Staff and two cars ask for more ground than the starting plot has, so this one is a
+    // twenty-two by thirty, which is still inside the Municipality's smaller setback band.
+    name: 'a household with a maid and a driver',
+    project: villa(2, { maid: true, driver: true }, [
+      [0, 0],
+      [22, 0],
+      [22, 30],
+      [0, 30],
+    ]),
+  },
   {
     name: 'a corner plot with two streets',
     project: villa(2, {}, starting, cornerStreets),
@@ -76,24 +119,16 @@ describe('the feasible suite', () => {
 
       const findings = feasibility(project.rooms, project.edges, project.plot, project.storeys)
 
-      it('has nothing on its brief but rooms whose wall cannot hold what is asked of it', () => {
-        expect(findings.map((finding) => finding.code)).toEqual(findings.map(() => 'wall' as const))
+      it('is a brief the tool finds nothing wrong with', () => {
+        expect(findings).toEqual([])
       })
 
-      it('has every link touching that the brief did not say was out of reach', () => {
-        // A room the brief has already named is not asked of again here: its wall cannot hold what
-        // the program asks, and the picture draws what it cannot close as a line of tension.
-        const over = new Set(
-          project.rooms
-            .filter((room) => findings.some((finding) => finding.sentence.startsWith(room.name)))
-            .map((room) => room.id),
-        )
+      it('has every link touching', () => {
         const open: string[] = []
         for (const link of picture.links) {
           const a = picture.bodies[link.a]
           const b = picture.bodies[link.b]
           if (!a || !b || touching(a, b)) continue
-          if (over.has(a.id) || over.has(b.id)) continue
           const nameOf = (id: string) => project.rooms.find((room) => room.id === id)?.name ?? id
           open.push(`${nameOf(a.id)} to ${nameOf(b.id)}`)
         }
@@ -117,10 +152,17 @@ describe('the feasible suite', () => {
         }
       })
 
-      it('holds every bubble inside the buildable line', () => {
+      it('holds every bubble inside the buildable line, a corridor by both its ends', () => {
         const inside = groundOf(project.plot, project.site).inside
-        for (const body of picture.bodies)
-          expect(pointInPolygon(inside.polygon, [body.x, body.y])).toBe(true)
+        for (const body of picture.bodies) {
+          const dx = Math.cos(body.angle) * body.half
+          const dy = Math.sin(body.angle) * body.half
+          for (const end of [
+            [body.x - dx, body.y - dy],
+            [body.x + dx, body.y + dy],
+          ] as const)
+            expect(pointInPolygon(inside.polygon, [end[0], end[1]])).toBe(true)
+        }
       })
 
       it('gives the same picture on a second run', () => {

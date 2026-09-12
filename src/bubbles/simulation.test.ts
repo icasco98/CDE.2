@@ -447,12 +447,14 @@ describe('the privacy gradient and the weights', () => {
 })
 
 describe('spread', () => {
-  it('triples the push between bubbles and the air they keep', () => {
+  it('opens the push, the air two bubbles keep and the breeze, and lets the rows go', () => {
     const opened = spreadLayout(defaultLayout)
     expect(opened.repulsion).toBe(defaultLayout.repulsion * 3)
-    expect(opened.spread).toBe(defaultLayout.spread * 3)
+    expect(opened.spread).toBe(defaultLayout.spread * 6)
     expect(opened.restGap).toBe(defaultLayout.restGap * 3)
+    // The links still hold: a breeze opens a cloud out, it does not undo what belongs together.
     expect(opened.springStiffness).toBe(defaultLayout.springStiffness)
+    expect(opened.pull).toBe(0)
   })
 
   it('opens a settled cloud out and lets it settle again', () => {
