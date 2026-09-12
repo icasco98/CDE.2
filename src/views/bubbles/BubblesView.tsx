@@ -30,7 +30,17 @@ import {
 } from '../camera'
 import { BuildableLine, NorthArrow, PlotSheet, ScaleBar } from '../parts'
 import { useSheetCamera } from '../sheetCamera'
-import { asPoint, bodyAt, extentOf, holds, nameFits, nearestOutside, pointerAt } from './frame'
+import {
+  asPoint,
+  bodyAt,
+  extentOf,
+  holds,
+  labelFor,
+  nearestOutside,
+  pointerAt,
+  shortMarks,
+  type BubbleLabel,
+} from './frame'
 import { Bubble, Legend, Link } from './parts'
 import { useSettling } from './useSettling'
 import { WeightsPanel, weightOf } from './WeightsPanel'
@@ -88,7 +98,7 @@ export function BubblesView(props: BubblesViewProps) {
   /** The user-requirements weight is a force, so a slider moved is a new layout for the simulation. */
   const layout = useMemo(() => layoutFor(weightOf(weights, 'userRequirements')), [weights])
   /** The Municipality setbacks: the wall the bubbles are held inside, and the line that is drawn. */
-  const inside = useMemo(() => buildableOf(buildableArea(plot), plot.on), [plot])
+  const inside = useMemo(() => buildableOf(buildableArea(plot)), [plot])
   const { moving, settleNow, spread, hold, release } = useSettling(
     rooms,
     edges,
@@ -131,6 +141,36 @@ export function BubblesView(props: BubblesViewProps) {
   // on a polygon, and the fit line is read again every time a bubble moves.
   const floorM2 = useMemo(() => area(inside.polygon), [inside])
   const fits = useMemo(() => storeyFits(rooms, floorM2, levels), [rooms, floorM2, levels])
+  /** The initials a bubble too small for its name falls back on, no two rooms wearing the same. */
+  const marks = useMemo(() => shortMarks(rooms.map((room) => room.name)), [rooms])
+  /**
+   * What every bubble says, measured against its own circle at the scale the sheet is drawn at.
+   * It is worked out here rather than in the bubble, so a pan hands each one the label it already
+   * had and redraws nothing; only a zoom, a resize or a change to the rooms makes new labels.
+   */
+  const labels = useMemo(() => {
+    const said = new Map<string, BubbleLabel>()
+    for (const body of bodies) {
+      const room = named.get(body.id)
+      if (!room) continue
+      const span = Math.max(1, Math.trunc(body.storeysSpanned))
+      // A room drawn on more than one storey must say so, or two circles read as two rooms.
+      const reaches =
+        span > 1
+          ? { span: `${storeyLabel(body.storey)} to ${storeyLabel(body.storey + span - 1)}` }
+          : {}
+      said.set(
+        body.id,
+        labelFor(
+          { name: room.name, area: `${Math.round(room.targetArea)} m²`, ...reaches },
+          marks.get(room.name) ?? '',
+          body.radius,
+          perPixel,
+        ),
+      )
+    }
+    return said
+  }, [bodies, named, marks, perPixel])
 
   const at = useCallback((event: { clientX: number; clientY: number }): Position => {
     const svg = svgRef.current
@@ -587,13 +627,14 @@ export function BubblesView(props: BubblesViewProps) {
             })()}
           {drawn.map(({ body, storey }) => {
             const room = named.get(body.id)
-            return room ? (
+            const label = labels.get(body.id)
+            return room && label ? (
               <Bubble
                 key={`${body.id}:${storey}`}
                 body={body}
                 room={room}
                 twin={storey}
-                fits={nameFits(room.name, body.radius, perPixel)}
+                label={label}
                 selected={body.id === selected || linking?.from === body.id}
                 dimmed={storey !== active}
                 handlers={handlers}

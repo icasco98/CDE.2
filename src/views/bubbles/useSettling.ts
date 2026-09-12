@@ -36,7 +36,7 @@ function shapeOf(
   )
   const links = edges.map((edge) => `${edge.a}-${edge.b}`)
   // The ground the bubbles are held on is part of the picture: a plot resized is a new one.
-  const ground = `${inside.binds}:${inside.polygon.map((corner) => corner.join(':')).join(' ')}`
+  const ground = inside.polygon.map((corner) => corner.join(':')).join(' ')
   return `${ground}|${program.join(',')}|${links.join(',')}`
 }
 

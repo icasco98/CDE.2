@@ -26,7 +26,8 @@ export type Snapshot = {
 
 /** The plot a project opens on, wound as `rectangleToPolygon` winds one: side 0 north, side 2 south. */
 export const startingPlot: Plot = {
-  on: false,
+  // A house is drawn on a plot from the first frame, so the boundary binds until a person says not.
+  on: true,
   polygon: [
     [0, 0],
     [20, 0],

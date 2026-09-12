@@ -113,3 +113,39 @@ export function defaultProgram(
   }
   return laid
 }
+
+/** A room as the companion rule reads one: which room it is and what kind it is. */
+export type CompanionRoom = { readonly id: string; readonly type: string }
+
+/** An edge as the companion rule reads one: the pair it joins, whatever kind of opening it is. */
+export type CompanionEdge = { readonly a: string; readonly b: string }
+
+/**
+ * The auxiliary rooms a room owns: the ensuite and the dressing room of a bedroom, the WC of a
+ * diwaniya, the bathroom of a maid's room. A companion is recognised by the company it keeps
+ * rather than by its name: it is an auxiliary kind, it is joined to this room, and it is joined
+ * to no other room at all. A bathroom off the corridor serves the house and stays where it is;
+ * a bedroom's own is part of the bedroom and goes wherever the bedroom goes.
+ */
+export function companionsOf(
+  rooms: readonly CompanionRoom[],
+  edges: readonly CompanionEdge[],
+  id: string,
+): readonly string[] {
+  const known = new Set(rooms.map((room) => room.id))
+  const owned: string[] = []
+  for (const room of rooms) {
+    if (room.id === id) continue
+    if (!roomTypeById(room.type)?.flags.auxiliary) continue
+    let toIt = false
+    let elsewhere = false
+    for (const edge of edges) {
+      const far = edge.a === room.id ? edge.b : edge.b === room.id ? edge.a : null
+      if (far === null) continue
+      if (far === id) toIt = true
+      else if (known.has(far)) elsewhere = true
+    }
+    if (toIt && !elsewhere) owned.push(room.id)
+  }
+  return owned
+}

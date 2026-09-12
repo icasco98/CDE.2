@@ -382,21 +382,18 @@ test('each storey is drawn on its own, with the one below as a ghost', async ({ 
   await page.goto('/')
   await page.getByRole('button', { name: /rebuild program from household/i }).click()
   await page.getByRole('button', { name: 'Add storey' }).click()
-  // An office is a kind the default connections say nothing about, so it is free to change floors.
-  await page.getByLabel('Kind to add').selectOption({ label: 'Office / Study' })
-  await page.getByRole('button', { name: 'Add room', exact: true }).click()
-  const office = page
+  const kitchen = page
     .locator('table.program tbody tr')
-    .filter({ has: page.getByLabel('Room name').and(page.locator('[value="Office / Study"]')) })
-  await office.getByLabel('Storey').selectOption({ label: 'First' })
+    .filter({ has: page.getByLabel('Room name').and(page.locator('[value="Kitchen"]')) })
+  await kitchen.getByLabel('Storey').selectOption({ label: 'First' })
   await openSheet(page)
-  await expect(page.locator('[data-tray]').filter({ hasText: /^Office/ })).toHaveCount(0)
+  await expect(page.locator('[data-tray]').filter({ hasText: /^Kitchen/ })).toHaveCount(0)
   await place(page, 'Dining Room', 8, 8)
   await expect(page.locator('[data-room]')).toHaveCount(1)
   await page.getByRole('button', { name: 'First', exact: true }).click()
   await expect(page.locator('[data-room]')).toHaveCount(0)
   await expect(page.locator('.ghost')).toHaveCount(1)
-  await expect(page.locator('[data-tray]').filter({ hasText: /^Office/ })).toHaveCount(1)
+  await expect(page.locator('[data-tray]').filter({ hasText: /^Kitchen/ })).toHaveCount(1)
 })
 
 test('a room picked in the bubbles is the room picked in the zoning', async ({ page }) => {

@@ -161,28 +161,29 @@
   vector-effect: non-scaling-stroke;
 }
 
-/* The categories of the room-type table, and the neutral fill for a room outside it. */
-.bubbles-sheet .category-reception {
+/* The categories of the room-type table, and the neutral fill for a room outside it. The tab is
+   named rather than the sheet, so the legend beside it paints its swatches from the same rules. */
+.bubbles .category-reception {
   fill: #d7a6a1;
 }
 
-.bubbles-sheet .category-shared {
+.bubbles .category-shared {
   fill: #e2c48f;
 }
 
-.bubbles-sheet .category-private {
+.bubbles .category-private {
   fill: #a9c2d2;
 }
 
-.bubbles-sheet .category-service {
+.bubbles .category-service {
   fill: #c4bfb2;
 }
 
-.bubbles-sheet .category-open {
+.bubbles .category-open {
   fill: #b9cbb0;
 }
 
-.bubbles-sheet .category-none {
+.bubbles .category-none {
   fill: #d6d9d3;
 }
 
@@ -222,15 +223,13 @@
 }
 
 /*
- * The bubble's own label size in metres, held to a band of screen pixels: a name never balloons
- * when the sheet is drawn close, and never disappears when the whole diagram is in view.
+ * The bubble's own label size, in metres of the sheet. The view sets it, holding it to a band of
+ * eight to fourteen screen pixels, so a name never balloons when the sheet is drawn close and
+ * never disappears when the whole diagram is in view — and so the rows it measured to fit inside
+ * the circle are drawn at the size they were measured at.
  */
 .bubbles-sheet .bubble {
-  font-size: clamp(
-    calc(var(--per-px) * 8px),
-    calc(var(--label-m) * 1px),
-    calc(var(--per-px) * 14px)
-  );
+  font-size: calc(var(--label-m) * 1px);
 }
 
 .bubbles-sheet .bubble text {
@@ -256,7 +255,7 @@
   font-style: italic;
 }
 
-/* A storey the filter is not showing is still drawn, greyed, and takes no pointer. */
+/* A storey the group is not working on is drawn faint and takes no pointer. */
 .bubbles-sheet .bubble-dimmed,
 .bubbles-sheet .link-dimmed {
   opacity: 0.35;

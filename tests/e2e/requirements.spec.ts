@@ -48,13 +48,8 @@ test('a person enters a plot, a household and a program, and it is still there a
   await expect(diwaniya.getByText('Below the legal floor of 10 m²')).toBeVisible()
 
   await page.getByRole('button', { name: 'Add storey' }).click()
-  // An edge joins two rooms on one storey, so a room the rulebook has linked stays where its
-  // links are: an office, which the default connections say nothing about, is free to go up.
-  await page.getByLabel('Kind to add').selectOption({ label: 'Office / Study' })
-  await page.getByRole('button', { name: 'Add room', exact: true }).click()
-  const office = rowNamed(page, 'Office / Study')
-  await office.getByLabel('Storey').selectOption({ label: 'First' })
-  await expect(office.getByLabel('Storey')).toHaveValue('1')
+  await rooms.nth(0).getByLabel('Storey').selectOption({ label: 'First' })
+  await expect(rooms.nth(0).getByLabel('Storey')).toHaveValue('1')
 
   await expect
     .poll(() =>
@@ -75,7 +70,7 @@ test('a person enters a plot, a household and a program, and it is still there a
   await expect(page.getByRole('checkbox', { name: 'Driver', exact: true })).toBeChecked()
   await expect(rowsOf(page)).toHaveCount(before)
   await expect(rowNamed(page, 'Diwaniya').getByLabel('Target area')).toHaveValue('8')
-  await expect(rowNamed(page, 'Office / Study').getByLabel('Storey')).toHaveValue('1')
+  await expect(rowsOf(page).nth(0).getByLabel('Storey')).toHaveValue('1')
 })
 
 test('a person saves the project to a file that reads back with the same rooms', async ({

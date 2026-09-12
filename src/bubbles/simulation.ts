@@ -134,8 +134,6 @@ export type Side = { readonly from: Point; readonly to: Point; readonly inward: 
  */
 export type Buildable = {
   readonly polygon: Polygon
-  /** Whether it holds the bubbles in: a plot that does not bind is drawn and constrains nothing. */
-  readonly binds: boolean
   readonly sides: readonly Side[]
   readonly middle: Point
   /** The largest bubble the floor holds at its middle; a bigger one rests there rather than jam. */
@@ -212,10 +210,11 @@ function nearestSide(
 }
 
 /**
- * The buildable line read once for the whole run. A polygon of fewer than three corners is a plot
- * the setbacks swallowed whole, and holds nothing in.
+ * The buildable line read once for the whole run. The setbacks are the Municipality's, so the line
+ * holds the bubbles in whatever the plot's own boundary is set to do with footprints; a polygon of
+ * fewer than three corners is a plot the setbacks swallowed whole, and holds nothing in.
  */
-export function buildableOf(polygon: Polygon, binds = true): Buildable {
+export function buildableOf(polygon: Polygon): Buildable {
   const sides: Side[] = []
   const outward = signedArea(polygon) >= 0 ? 1 : -1
   for (let i = 0; i < polygon.length; i++) {
@@ -233,10 +232,9 @@ export function buildableOf(polygon: Polygon, binds = true): Buildable {
   }
   const enough = polygon.length >= 3
   const middle: Point = enough ? centroid(polygon) : [0, 0]
-  if (!enough) return { polygon, binds: false, sides: [], middle, deepest: 0 }
+  if (!enough) return { polygon, sides: [], middle, deepest: 0 }
   return {
     polygon,
-    binds,
     sides,
     middle,
     deepest: nearestSide(sides, middle, middle[0], middle[1]).away,
@@ -417,7 +415,7 @@ const SIDE_PASSES = 3
  */
 function correct(work: readonly Work[], inside: Buildable): void {
   const from = work.map((w) => ({ x: w.x, y: w.y }))
-  const holds = inside.binds && inside.sides.length >= 3
+  const holds = inside.sides.length >= 3
   const wants: Demand[] = work.map(() => ({ dx: 0, dy: 0, asked: 0 }))
   for (let pass = 0; pass < CORRECTION_PASSES; pass++) {
     for (const want of wants) {

@@ -39,6 +39,27 @@ async function openWithStair(page: Page, storeys: number) {
   await resting(page)
 }
 
+/**
+ * A villa of two storeys with the parents downstairs, so the master bedroom stands on the ground
+ * with the corridor it opens off, and the corridor upstairs is there for it to find.
+ */
+async function openUpstairsMaster(page: Page) {
+  await page.goto('/')
+  await bindPlot(page)
+  await page.getByRole('button', { name: 'Add storey' }).click()
+  await page.getByLabel('Master bedroom on the ground floor').check()
+  await page.getByRole('button', { name: /rebuild program from household/i }).click()
+  await tab(page, 'Bubbles').click()
+  await expect(page.locator('svg g[data-room]').first()).toBeVisible()
+  await resting(page)
+}
+
+/** A plot far larger than the program needs, so the forces rather than the setbacks decide. */
+async function roomToSpare(page: Page) {
+  await page.getByLabel('Width (m)').fill('40')
+  await page.getByLabel('Depth (m)').fill('40')
+}
+
 /** A room by its name, which the bubble carries: a small one draws its initials, not its name. */
 function roomNamed(page: Page, name: string) {
   return page.locator(`[data-room][data-name="${name}"]`)
@@ -327,6 +348,45 @@ test('a bubble dragged past the buildable line comes to rest inside it', async (
   expect(Number(y)).toBeGreaterThanOrEqual(BUILDABLE.top + radius - 0.01)
 })
 
+test('every bubble rests inside the buildable line on a project just opened', async ({ page }) => {
+  // Nothing is ticked and nothing is dragged: the setbacks are the Municipality's, so the line
+  // holds the bubbles from the first frame, on a plot the person has not said anything about.
+  await page.goto('/')
+  await page.getByRole('button', { name: /rebuild program from household/i }).click()
+  await tab(page, 'Bubbles').click()
+  await expect(page.locator('svg g[data-room]').first()).toBeVisible()
+  await settle(page)
+
+  const circles = await page.$$eval('[data-bubble]', (shapes) =>
+    shapes.map((shape) => ({
+      x: Number(shape.getAttribute('cx')),
+      y: Number(shape.getAttribute('cy')),
+      r: Number(shape.getAttribute('r')),
+    })),
+  )
+  expect(circles.length).toBeGreaterThan(10)
+  for (const circle of circles) {
+    expect(circle.x - circle.r).toBeGreaterThanOrEqual(BUILDABLE.left - 0.01)
+    expect(circle.x + circle.r).toBeLessThanOrEqual(BUILDABLE.right + 0.01)
+    expect(circle.y - circle.r).toBeGreaterThanOrEqual(BUILDABLE.top - 0.01)
+    expect(circle.y + circle.r).toBeLessThanOrEqual(BUILDABLE.bottom + 0.01)
+  }
+})
+
+test('the legend paints each category in the fill its bubbles wear', async ({ page }) => {
+  await openBubbles(page)
+  const fillOf = (selector: string) => page.$eval(selector, (mark) => getComputedStyle(mark).fill)
+  for (const category of ['reception', 'shared', 'private', 'service']) {
+    const swatch = await fillOf(`.legend .legend-swatch.category-${category}`)
+    expect(swatch).not.toBe('rgb(0, 0, 0)')
+    expect(swatch).toBe(await fillOf(`svg.bubbles-sheet .bubble-shape.category-${category}`))
+  }
+  // The mark for a room held in place is its own, and not a category's.
+  const pin = await fillOf('.legend .pin-mark')
+  expect(pin).not.toBe('rgb(0, 0, 0)')
+  expect(pin).toBe(await fillOf('svg.bubbles-sheet .pin-mark, .legend .pin-mark'))
+})
+
 test('the legend stands beside the sheet and covers no bubble', async ({ page }) => {
   await openBubbles(page)
   await settle(page)
@@ -402,6 +462,22 @@ test('the storey group draws one storey at a time on the one plot', async ({ pag
   await expect(page.locator(`[data-room="${stair}"][data-twin="0"]`)).toHaveCount(1)
 })
 
+test('a name goes on two lines rather than giving way to initials', async ({ page }) => {
+  await openBubbles(page)
+  await settle(page)
+  // A 24 m² dining room is about 95 px across at a fit on this plot, which is room enough for
+  // its name broken at the space, so it is not asked to wear "DR".
+  const dining = roomNamed(page, 'Dining Room')
+  await expect(dining.locator('.bubble-name')).toHaveText(['Dining', 'Room'])
+  await expect(dining.locator('.bubble-mark')).toHaveCount(0)
+  // No two rooms wear the same initials, whatever else is on the plot.
+  const marks = await page.$$eval('.bubble-mark', (texts) =>
+    texts.map((text) => text.textContent ?? ''),
+  )
+  expect(marks.length).toBeGreaterThan(0)
+  expect(new Set(marks).size).toBe(marks.length)
+})
+
 test('a room too small for its name wears its initials and says the name on hover', async ({
   page,
 }) => {
@@ -418,22 +494,43 @@ test('a room too small for its name wears its initials and says the name on hove
   await expect(full).toBeVisible()
 })
 
-test('a room let go of its links is sent upstairs by the button on the bubble', async ({
-  page,
-}) => {
-  await openWithStair(page, 2)
+test('a room sent upstairs takes what belongs with it and leaves the rest', async ({ page }) => {
+  await openUpstairsMaster(page)
   await settle(page)
-  // An edge joins two rooms on one storey, so a room can only leave the floor its links are on:
-  // here the guest WC's one door, which the rulebook gave it from the entry, goes first.
-  for (const id of await edgesOfRoom(page, 'Guest WC')) await unlink(page, id)
-  // A link taken out is a pull taken off, so the cloud answers before a bubble is aimed at.
+  await expect.poll(() => linkedPairs(page)).toContain('Ground Hallway to Master Bedroom')
+
+  await selectBubble(page, 'Master Bedroom')
+  await page.getByRole('button', { name: 'To First' }).click()
   await resting(page)
 
-  await selectBubble(page, 'Guest WC')
+  // The suite goes up whole: the ensuite is the master bedroom's own and moves with it.
+  await page.getByRole('button', { name: 'Requirements' }).click()
+  expect(await storeyOf(page, 'Master Bedroom')).toBe('First')
+  expect(await storeyOf(page, 'Ensuite, Master Bedroom')).toBe('First')
+
+  const pairs = await linkedPairs(page)
+  // The corridor it opened off is on the floor it has left, so that door goes; the corridor
+  // upstairs is what the rulebook wants a bedroom on that floor to open off, so that door comes.
+  expect(pairs).not.toContain('Ground Hallway to Master Bedroom')
+  expect(pairs).toContain('First Hallway to Master Bedroom')
+  expect(pairs).toContain('Ensuite, Master Bedroom to Master Bedroom')
+})
+
+test('the whole move is one step to undo', async ({ page }) => {
+  await openUpstairsMaster(page)
+  await settle(page)
+  const before = await linkedPairs(page)
+
+  await selectBubble(page, 'Master Bedroom')
   await page.getByRole('button', { name: 'To First' }).click()
   await resting(page)
   await page.getByRole('button', { name: 'Requirements' }).click()
-  expect(await storeyOf(page, 'Guest WC')).toBe('First')
+  expect(await storeyOf(page, 'Master Bedroom')).toBe('First')
+
+  await page.getByRole('button', { name: 'Undo' }).click()
+  expect(await storeyOf(page, 'Master Bedroom')).toBe('Ground')
+  expect(await storeyOf(page, 'Ensuite, Master Bedroom')).toBe('Ground')
+  await expect.poll(() => linkedPairs(page)).toEqual(before)
 })
 
 test('a stair will not change floors that way', async ({ page }) => {
@@ -452,14 +549,15 @@ test('a stair will not change floors that way', async ({ page }) => {
   ).toHaveValue('0')
 })
 
-test('a linked room says why it cannot go upstairs', async ({ page }) => {
-  await openWithStair(page, 2)
-  await settle(page)
-  await selectBubble(page, 'Dining Room')
-  await page.getByRole('button', { name: 'To First' }).click()
-  await expect(page.locator('.messages')).toContainText('Unlink it to move it')
+test('a room sent upstairs from the program moves the same way', async ({ page }) => {
+  await openUpstairsMaster(page)
   await page.getByRole('button', { name: 'Requirements' }).click()
-  expect(await storeyOf(page, 'Dining Room')).toBe('Ground')
+  const master = page
+    .locator('table.program tbody tr')
+    .filter({ has: page.getByLabel('Room name').and(page.locator('[value="Master Bedroom"]')) })
+  await master.getByLabel('Storey').selectOption({ label: 'First' })
+  expect(await storeyOf(page, 'Ensuite, Master Bedroom')).toBe('First')
+  await expect.poll(() => linkedPairs(page)).toContain('First Hallway to Master Bedroom')
 })
 
 test('Delete takes a room and its links, and one undo brings both back', async ({ page }) => {
@@ -546,8 +644,10 @@ async function reachOf(page: Page): Promise<number> {
 }
 
 test('Spread opens a cloud out and lets it settle again', async ({ page }) => {
-  // On a plot that does not bind, so the breeze has somewhere to open the cloud out to.
+  // On a plot with room to spare, so the breeze has somewhere to open the cloud out to: the
+  // buildable line always holds the bubbles, and a plot the program fills holds them where they are.
   await page.goto('/')
+  await roomToSpare(page)
   await page.getByRole('button', { name: /rebuild program from household/i }).click()
   await tab(page, 'Bubbles').click()
   await resting(page)
@@ -570,9 +670,10 @@ test('the weights stand beside the diagram, the last two marked as acting in zon
 test('raising the user requirements weight parts the Diwaniya from the Master Bedroom', async ({
   page,
 }) => {
-  // On a plot that does not bind: the gradient is read on the air between two rooms, and a plot
-  // this program fills would hold them apart by its own walls.
+  // On a plot with room to spare: the gradient is read on the air between two rooms, and a plot
+  // the program fills would hold them apart by its own walls whatever the weight said.
   await page.goto('/')
+  await roomToSpare(page)
   await page.getByRole('button', { name: /rebuild program from household/i }).click()
   await tab(page, 'Bubbles').click()
   await resting(page)

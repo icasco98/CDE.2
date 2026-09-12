@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Household } from '../model'
-import { defaultProgram, type ProgramRoom } from './program'
+import { companionsOf, defaultProgram, type ProgramRoom } from './program'
 
 const small: Household = {
   familySize: 4,
@@ -201,5 +201,36 @@ describe('the hallways the program lays out', () => {
       'Ground Hallway',
       'First Hallway',
     ])
+  })
+})
+
+describe('the rooms a room owns', () => {
+  const rooms = [
+    { id: 'master', type: 'master-bedroom' },
+    { id: 'ensuite', type: 'ensuite-bathroom' },
+    { id: 'dressing', type: 'dressing-room' },
+    { id: 'hallway', type: 'hallway' },
+    { id: 'shared', type: 'bathroom' },
+    { id: 'kitchen', type: 'kitchen' },
+  ]
+  const edges = [
+    { a: 'master', b: 'ensuite' },
+    { a: 'master', b: 'dressing' },
+    { a: 'hallway', b: 'master' },
+    { a: 'hallway', b: 'shared' },
+  ]
+
+  it('takes the auxiliary rooms that open off it and nothing else', () => {
+    expect(companionsOf(rooms, edges, 'master')).toEqual(['ensuite', 'dressing'])
+  })
+
+  it('leaves a bathroom that serves the house where it is', () => {
+    // The shared bathroom opens off the corridor, so it belongs to the floor and not to a room.
+    expect(companionsOf(rooms, edges, 'hallway')).toEqual(['shared'])
+    expect(companionsOf(rooms, [...edges, { a: 'kitchen', b: 'shared' }], 'hallway')).toEqual([])
+  })
+
+  it('owns nothing where nothing auxiliary opens off it', () => {
+    expect(companionsOf(rooms, edges, 'kitchen')).toEqual([])
   })
 })

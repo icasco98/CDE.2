@@ -1,11 +1,12 @@
 import { useMemo } from 'react'
 import { connectDefaults, removedLinks } from '../../app/defaultLinks'
 import { selection, useSelection } from '../../app/selection'
+import { sendToStorey } from '../../app/sendToStorey'
 import { session } from '../../app/session'
 import { useProject } from '../../app/useProject'
 import type { Position } from '../../bubbles'
 import { EXTERIOR, type Commit, type EdgeKind, type Family, type Result } from '../../model'
-import { circulationPerStorey, connectionSource, roomTypeById, storeyLabel } from '../../rulebook'
+import { circulationPerStorey, connectionSource, roomTypeById } from '../../rulebook'
 import { addHallway } from './addHallway'
 import { BubblesView } from './BubblesView'
 
@@ -56,22 +57,6 @@ export function BubblesStage() {
       selection.select(null)
   }
 
-  /**
-   * A room changes the storey it stands on, unless a link it holds would be left joining two
-   * rooms on different floors. An edge is between two rooms on one storey, so the link is named
-   * rather than the rule it would break.
-   */
-  const sendTo = (id: string, storey: number): void => {
-    const result = session.actions.setStorey(id, storey)
-    if (result.ok) return
-    const room = project.rooms.find((each) => each.id === id)
-    if (room && result.problems.some((problem) => problem.code === 'edge-storey'))
-      session.say(
-        `${room.name} is linked to a room on ${storeyLabel(room.storey)}, so it stays there. Unlink it to move it.`,
-      )
-    else report(result)
-  }
-
   /** A link taken out is a link this house does not want, so the rulebook is not to offer it again. */
   const disconnect = (edgeId: string): void => {
     const edge = project.edges.find((each) => each.id === edgeId)
@@ -93,7 +78,7 @@ export function BubblesStage() {
         session.actions.setBubble(id, at, commit)
       }
       onDropBubble={(id: string, at: Position) => report(session.actions.setBubble(id, at))}
-      onSetStorey={sendTo}
+      onSetStorey={(id: string, storey: number) => report(sendToStorey(session, id, storey))}
       onPin={(id: string, pinned: boolean) =>
         report(pinned ? session.actions.pin(id) : session.actions.unpin(id))
       }

@@ -182,14 +182,13 @@ describe('the buildable line as a wall', () => {
     expect(Math.hypot(body.x - floor.middle[0], body.y - floor.middle[1])).toBeLessThan(0.5)
   })
 
-  it('holds nothing in on a plot that does not bind', () => {
+  it('puts a bubble back inside in the one frame it is let go outside', () => {
     const rooms = [room('shed', 20, 0, { bubble: { x: 60, y: 4 } })]
-    // One frame: the wall puts a bubble back inside at once, while the pull to the middle is a
-    // force like any other and has barely begun to move it.
-    const loose = step(createState(rooms, [], buildableOf(FLOOR, false)), defaultLayout)
+    // The wall is positional, so one frame is the whole of it; the pull to the middle is a force
+    // like any other and would have barely begun to move the bubble.
     const held = step(createState(rooms, [], floor), defaultLayout)
-    expect(loose.bodies[0]!.x).toBeGreaterThan(50)
     expect(held.bodies[0]!.x).toBeLessThan(18.5)
+    expect(pointInPolygon(FLOOR, [held.bodies[0]!.x, held.bodies[0]!.y])).toBe(true)
   })
 })
 

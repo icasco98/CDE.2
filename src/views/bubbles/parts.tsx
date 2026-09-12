@@ -4,10 +4,10 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react'
-import { storeyLabel, categoryLabels } from '../../rulebook'
+import { categoryLabels } from '../../rulebook'
 import type { Position } from '../../bubbles'
 import type { Body } from '../../bubbles'
-import { categoryClass, labelSize, shortMark } from './frame'
+import { categoryClass, LINE, type BubbleLabel } from './frame'
 import type { BubbleRoom } from './types'
 
 /*
@@ -30,11 +30,6 @@ function onRim(at: Position, radius: number, toTheLeft: boolean): Position {
   return { x: at.x + (toTheLeft ? -away : away), y: at.y - away }
 }
 
-/** The storeys a stair reaches, in the words the program labels them with. */
-function spanMark(storey: number, span: number): string {
-  return `${storeyLabel(storey)} to ${storeyLabel(storey + span - 1)}`
-}
-
 export type BubbleHandlers = {
   readonly onGrab: (event: ReactPointerEvent, body: Body) => void
   readonly onReach: (event: ReactPointerEvent, body: Body) => void
@@ -49,35 +44,35 @@ type BubbleProps = {
   /** On a storey that is not the one being worked on: drawn faint and out of the pointer's reach. */
   readonly dimmed: boolean
   /**
-   * Whether the name goes inside the circle at the scale the sheet is drawn at. It is worked out
-   * by the view rather than from the zoom, so most notches of a wheel redraw no bubble at all.
+   * What the bubble says and how large, measured against the circle by the view rather than
+   * guessed from the zoom. The same label object is handed back while the scale holds, so a pan
+   * redraws no bubble at all.
    */
-  readonly fits: boolean
+  readonly label: BubbleLabel
   readonly handlers: BubbleHandlers
 }
 
-/** Memoised on the body, the twin and whether its name fits, so a pan draws no bubble again. */
+/** Memoised on the body, the twin and the label, so a pan draws no bubble again. */
 export const Bubble = memo(function Bubble(props: BubbleProps) {
-  const { body, room, twin, handlers } = props
-  const span = Math.max(1, Math.trunc(body.storeysSpanned))
+  const { body, room, twin, label, handlers } = props
   const at = { x: body.x, y: body.y }
   const rim = onRim(at, body.radius, false)
   const held = onRim(at, body.radius, true)
-  const label = labelSize(body.radius)
-  // A name that would run over its own rim is dropped for its initials, and told in full on hover
-  // and while the room is selected: two labels never lie across each other.
-  const fits = props.fits
+  // A name that will not go inside its own rim on one line or two is dropped for the room's
+  // initials, and told in full on hover and while the room is selected: two labels never lie
+  // across each other.
+  const rows = label.rows
   const classes = ['bubble']
   if (props.selected) classes.push('bubble-selected')
   if (props.dimmed) classes.push('bubble-dimmed')
-  if (!fits) classes.push('bubble-short')
+  if (label.short) classes.push('bubble-short')
   return (
     <g
       data-room={body.id}
       data-name={room.name}
       data-twin={twin}
       className={classes.join(' ')}
-      style={{ '--label-m': String(label) } as CSSProperties}
+      style={{ '--label-m': String(label.size) } as CSSProperties}
     >
       <circle
         data-bubble={body.id}
@@ -89,30 +84,22 @@ export const Bubble = memo(function Bubble(props: BubbleProps) {
       >
         <title>{`${room.name}, ${Math.round(room.targetArea)} m²`}</title>
       </circle>
-      {fits ? (
-        <>
-          <text x={at.x} y={at.y} dy={span > 1 ? '-0.85em' : '-0.35em'} className="bubble-name">
-            {room.name}
-          </text>
-          <text x={at.x} y={at.y} dy={span > 1 ? '0.45em' : '0.95em'} className="bubble-area">
-            {Math.round(room.targetArea)} m²
-          </text>
-          {/* A room drawn twice must say so on the bubble itself, or two circles read as two rooms. */}
-          {span > 1 && (
-            <text x={at.x} y={at.y} dy="1.85em" className="bubble-span">
-              {spanMark(body.storey, span)}
-            </text>
-          )}
-        </>
-      ) : (
-        <>
-          <text x={at.x} y={at.y} className="bubble-mark">
-            {shortMark(room.name)}
-          </text>
-          <text x={at.x} y={at.y - body.radius} dy="-0.5em" className="bubble-full">
-            {room.name}
-          </text>
-        </>
+      {/* The stack sits about the middle of the circle, a line of its own cap height apart, so
+          the name reads at the widest part of the bubble whatever else is said under it. */}
+      {rows.map((row, index) => (
+        <text
+          key={row.kind + index}
+          x={at.x}
+          y={at.y + (index - (rows.length - 1) / 2) * label.size * LINE}
+          className={`bubble-${row.kind}`}
+        >
+          {row.text}
+        </text>
+      ))}
+      {label.short && (
+        <text x={at.x} y={at.y - body.radius} dy="-0.5em" className="bubble-full">
+          {room.name}
+        </text>
       )}
       {room.pinned && (
         <circle cx={held.x} cy={held.y} r={Math.max(0.45, body.radius * 0.16)} className="pin-mark">

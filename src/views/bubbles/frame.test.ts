@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Body } from '../../bubbles'
 import { rectangleToPolygon } from '../../geometry'
-import { bodyAt, extentOf, holds, labelSize, nameFits, nearestOutside, shortMark } from './frame'
+import { bodyAt, extentOf, holds, labelFor, labelSize, nearestOutside, shortMarks } from './frame'
 
 const plot = rectangleToPolygon({ left: 0, top: 0, width: 20, depth: 25 })
 
@@ -52,14 +52,39 @@ describe('where a link to the outside leaves the plot', () => {
 })
 
 describe('a name inside its own bubble', () => {
-  it('fits a short name in a large bubble and not a long one in a small bubble', () => {
-    expect(nameFits('Kitchen', 3, 0.03)).toBe(true)
-    expect(nameFits('Master Bedroom', 0.9, 0.03)).toBe(false)
+  const said = (radius: number, perPixel: number, name: string, mark = 'X') =>
+    labelFor({ name, area: '24 m²' }, mark, radius, perPixel).rows.map((row) => row.text)
+
+  it('says a short name and its area in a large bubble', () => {
+    expect(said(3, 0.03, 'Kitchen')).toEqual(['Kitchen', '24 m²'])
   })
 
-  it('fits the same name once the sheet is drawn closer', () => {
-    expect(nameFits('Guest WC', 1.4, 0.05)).toBe(false)
-    expect(nameFits('Guest WC', 1.4, 0.01)).toBe(true)
+  it('says a two-word name whole in a 24 m² bubble at fit zoom', () => {
+    // A 24 m² room is 2.76 m across the radius, and about 95 px at a fit on a 20 by 25 plot.
+    expect(said(2.76, 0.058, 'Dining Room')).toEqual(['Dining Room', '24 m²'])
+  })
+
+  it('breaks a name at its space rather than giving up on it', () => {
+    expect(said(2, 0.058, 'Dining Room')).toEqual(['Dining', 'Room', '24 m²'])
+  })
+
+  it('falls back on the room mark when neither one line nor two will go', () => {
+    expect(said(0.9, 0.03, 'Master Bedroom', 'MB')).toEqual(['MB'])
+    expect(labelFor({ name: 'Master Bedroom', area: '24 m²' }, 'MB', 0.9, 0.03).short).toBe(true)
+  })
+
+  it('draws the area only when there is room for it under the name', () => {
+    expect(said(2.2, 0.04, 'Master Bedroom')).toEqual(['Master Bedroom'])
+  })
+
+  it('says the storeys a stair reaches last of all, and only where they fit', () => {
+    const rows = labelFor(
+      { name: 'Stair', area: '6 m²', span: 'Ground to First' },
+      'S',
+      3,
+      0.02,
+    ).rows
+    expect(rows.map((row) => row.kind)).toEqual(['name', 'area', 'span'])
   })
 
   it('shrinks a label with its bubble, between a whole metre and half of one', () => {
@@ -68,9 +93,16 @@ describe('a name inside its own bubble', () => {
     expect(labelSize(0.5)).toBe(0.55)
   })
 
-  it('gives the initials of a name of several words, and the first letters of one', () => {
-    expect(shortMark('Master Bedroom')).toBe('MB')
-    expect(shortMark('Kitchen')).toBe('Kit')
-    expect(shortMark('Women’s Reception Room')).toBe('WRR')
+  it('gives one letter a word, and never the same mark to two rooms', () => {
+    const marks = shortMarks(['Master Bedroom', 'Kitchen', 'Formal Living', 'Family Living'])
+    expect(marks.get('Master Bedroom')).toBe('MB')
+    expect(marks.get('Kitchen')).toBe('K')
+    expect(marks.get('Formal Living')).toBe('FoL')
+    expect(marks.get('Family Living')).toBe('FaL')
+  })
+
+  it('keeps taking letters until the clash is gone', () => {
+    const marks = shortMarks(['Store', 'Stair', 'Study'])
+    expect(new Set(marks.values()).size).toBe(3)
   })
 })

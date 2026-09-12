@@ -58,7 +58,7 @@ function diagram(
   const state = createState(
     project.rooms.map((room) => ({ ...room, tier: roomTypeById(room.type)?.tier })),
     project.edges.filter((edge) => edge.a !== EXTERIOR && edge.b !== EXTERIOR),
-    buildableOf(buildableArea(project.plot), project.plot.on),
+    buildableOf(buildableArea(project.plot)),
   )
   for (const body of settle(state).state.bodies)
     store.actions.setBubble(body.id, { x: body.x, y: body.y })
