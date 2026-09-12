@@ -1,4 +1,4 @@
-export { EXTERIOR, PROJECT_VERSION, families, refused } from './types'
+export { EXTERIOR, PROJECT_VERSION, families, ok, refused } from './types'
 export { startingSite } from './project'
 export type {
   Actor,

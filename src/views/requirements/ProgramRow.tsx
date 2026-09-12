@@ -106,7 +106,11 @@ export function ProgramRow({ room, storeys }: { room: Room; storeys: number }) {
             onChange={(event) =>
               // A room takes its companions up with it and leaves behind what it can no longer
               // hold, whether it is sent from the program or from the bubble on the sheet.
-              setProblem(refusalOf(sendToStorey(session, room.id, Number(event.target.value))))
+              {
+                const moved = sendToStorey(session, room.id, Number(event.target.value))
+                if (moved.ok) moved.value.forEach((sentence) => session.say(sentence))
+                setProblem(refusalOf(moved))
+              }
             }
           >
             {Array.from({ length: storeys }, (_, storey) => (

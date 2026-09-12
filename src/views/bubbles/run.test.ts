@@ -137,17 +137,17 @@ describe('the frame loop', () => {
 
   it('carries a bubble to the hand and answers with the others in the same frame', () => {
     const rooms = [
-      room('a', { bubble: { x: -6, y: 6 }, pinned: true }),
-      room('b', { bubble: { x: 6, y: 6 } }),
+      room('a', { bubble: { x: middleX - 6, y: middleY }, pinned: true }),
+      room('b', { bubble: { x: middleX + 2, y: middleY } }),
     ]
     const { run, clock, moves } = start(rooms)
-    run.hold('a', { x: 4, y: 6 })
+    run.hold('a', { x: middleX - 1, y: middleY })
     clock.run(1)
     const held = moves.filter((move) => move.id === 'a')
     const other = moves.filter((move) => move.id === 'b')
-    expect(held[0]).toMatchObject({ x: 4, y: 6, commit: 'preview' })
+    expect(held[0]).toMatchObject({ x: middleX - 1, y: middleY, commit: 'preview' })
     expect(other).toHaveLength(1)
-    expect(other[0]!.x).toBeGreaterThan(6)
+    expect(other[0]!.x).toBeGreaterThan(middleX + 2)
   })
 
   it('records where a drag landed only once the cloud it disturbed has stopped', () => {
@@ -164,16 +164,22 @@ describe('the frame loop', () => {
   })
 
   it('holds the dragged bubble against the forces and lets it go again on release', () => {
-    const rooms = [room('a', { bubble: { x: -6, y: 6 } }), room('b', { bubble: { x: 6, y: 6 } })]
+    const rooms = [
+      room('a', { bubble: { x: middleX - 6, y: middleY } }),
+      room('b', { bubble: { x: middleX + 2, y: middleY } }),
+    ]
     const { run, clock, moves } = start(rooms)
-    run.hold('a', { x: 4, y: 6 })
+    run.hold('a', { x: middleX, y: middleY })
     clock.run(6)
     // Held on the far side of its neighbour, it stays there and the neighbour is the one that gives way.
-    expect(moves.filter((move) => move.id === 'a').at(-1)).toMatchObject({ x: 4, y: 6 })
-    expect(moves.filter((move) => move.id === 'b').at(-1)!.x).toBeGreaterThan(6)
+    expect(moves.filter((move) => move.id === 'a').at(-1)).toMatchObject({
+      x: middleX,
+      y: middleY,
+    })
+    expect(moves.filter((move) => move.id === 'b').at(-1)!.x).toBeGreaterThan(middleX + 2)
     run.release(null)
     clock.run(400)
-    expect(moves.filter((move) => move.id === 'a').at(-1)!.x).not.toBe(4)
+    expect(moves.filter((move) => move.id === 'a').at(-1)!.x).not.toBe(middleX)
   })
 
   it('calls a picture that cannot come to rest rested once it stops getting stiller', () => {

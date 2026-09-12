@@ -94,9 +94,9 @@ function meetingOf(one: PlotSide, other: PlotSide): Point | undefined {
 }
 
 /**
- * The plot read into the sides the forces pull toward. The service street is the longest of the
- * sides the plot marks: on a corner plot the villa addresses the longer frontage and the shorter
- * one is the side street the service entrance goes on.
+ * The plot read into the sides the forces pull toward. The service street is the first of the
+ * sides the plot marks, going round the boundary: on a corner plot that is the frontage the villa
+ * addresses, and the other is the side street the service entrance goes on.
  */
 export function sidesOf(plot: PlotShape): PlotSides {
   const walls = outwardWalls(plot.polygon)
@@ -125,9 +125,7 @@ export function sidesOf(plot: PlotShape): PlotSides {
     })
   }
   const street = every.filter((side) => side.street)
-  const service = [...street].sort(
-    (one, other) => other.length - one.length || one.index - other.index,
-  )[0]
+  const service = [...street].sort((one, other) => one.index - other.index)[0]
   if (!service) return { every, street, sides: every }
   // The back is the side that faces the service street across the floor, which on any plot is the
   // one whose way in points most nearly the other way.

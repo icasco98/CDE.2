@@ -250,6 +250,20 @@ describe('the project file', () => {
     expect(back.value.version).toBe(PROJECT_VERSION)
   })
 
+  it('gives a project written before the two site questions the answers a villa gives', () => {
+    const project: Record<string, unknown> = { ...furnished(), version: 6 }
+    delete project.site
+    const back = deserialize(JSON.stringify(project))
+    expect(back.ok && back.value.site).toEqual({ diwaniyaAtCorner: false, garden: 'rear' })
+    expect(back.ok && back.value.version).toBe(PROJECT_VERSION)
+  })
+
+  it('leaves the answers of a project that already carries them', () => {
+    const project = { ...furnished(), site: { diwaniyaAtCorner: true, garden: 'side' as const } }
+    const back = deserialize(JSON.stringify({ ...project, version: 6 }))
+    expect(back.ok && back.value.site).toEqual({ diwaniyaAtCorner: true, garden: 'side' })
+  })
+
   it('leaves a version 5 project with no bubbles exactly as it was', () => {
     const project = furnished()
     const rooms = project.rooms.map((room) => {

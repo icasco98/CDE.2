@@ -199,6 +199,8 @@ export type Body = {
   readonly tier?: string
   /** The kerb this body stands against and slides along, where its kind is one of the walled three. */
   readonly kerb?: readonly [Point, Point]
+  /** A corridor whose near end is held on a room: where it lies is not the pairs' to say. */
+  readonly anchored?: true
 }
 
 /** A link between two bodies. Both stand on the one plot, so its storey changes no arithmetic. */
@@ -355,10 +357,14 @@ export function createState(
     if (a === undefined || b === undefined || a === b) continue
     links.push({ a, b })
   }
+  const corridors = corridorsOf(bodies, links)
+  const anchored = new Set(
+    corridors.filter((corridor) => corridor.anchor !== undefined).map((corridor) => corridor.body),
+  )
   return {
-    bodies,
+    bodies: bodies.map((body, index) => (anchored.has(index) ? { ...body, anchored: true } : body)),
     links,
-    corridors: corridorsOf(bodies, links),
+    corridors,
     companions: companionsIn(rooms, edges, at),
     ground,
     energy: Infinity,
@@ -437,9 +443,16 @@ function areaOf(body: Body): number {
   return body.radius * body.radius
 }
 
-/** How much of a correction the first body takes: none when it is pinned, all when the other is. */
+/** Whether a body goes nowhere at a pair's asking: the person's hand, or a corridor's own anchor. */
+function fixed(body: Body): boolean {
+  return body.pinned || body.anchored === true
+}
+
+/** How much of a correction the first body takes: none when it is held, all when the other is. */
 function shareOf(a: Body, b: Body): number {
-  return a.pinned ? 0 : b.pinned ? 1 : areaOf(b) / (areaOf(a) + areaOf(b))
+  if (fixed(a)) return 0
+  if (fixed(b)) return 1
+  return areaOf(b) / (areaOf(a) + areaOf(b))
 }
 
 /**
@@ -792,8 +805,11 @@ export function step(
     energy += 0.5 * massOf(w.body) * (dx * dx + dy * dy)
   }
 
+  // A pinned body is the person's hand or their hold, and no force moves it; a wall still does,
+  // so what is written back is whatever the projection left, and a body it never touched is
+  // handed back as it came.
   const bodies = work.map((w) =>
-    w.body.pinned && w.angle === w.body.angle
+    w.x === w.body.x && w.y === w.body.y && w.angle === w.body.angle && w.body.pinned
       ? w.body
       : { ...w.body, x: w.x, y: w.y, angle: w.angle, vx: w.vx, vy: w.vy },
   )

@@ -349,6 +349,47 @@ describe('the correction after the forces', () => {
   })
 })
 
+describe('the constraints projected after the forces', () => {
+  it('closes a link in the one frame it is open in, and opens an overlap past the quarter', () => {
+    const rooms = [
+      room('a', 30, 0, { bubble: { x: 6, y: 12 } }),
+      room('b', 30, 0, { bubble: { x: 16, y: 12 } }),
+    ]
+    const rest = radiusOf(30) * 2
+    const wall = rest - 0.6 * radiusOf(30)
+    // Two frames: each takes nearly all of what is left, and a link open by four metres is closed
+    // before the springs behind it have moved either room a hand's breadth.
+    let closed = createState(rooms, [{ a: 'a', b: 'b', storey: 0 }], floor)
+    for (let frame = 0; frame < 2; frame++) closed = step(closed, defaultLayout)
+    const [one, other] = closed.bodies
+    expect(Math.hypot(one!.x - other!.x, one!.y - other!.y)).toBeLessThanOrEqual(rest + TOUCHING)
+
+    const over = [
+      room('a', 30, 0, { bubble: { x: 10, y: 12 } }),
+      room('b', 30, 0, { bubble: { x: 10.5, y: 12 } }),
+    ]
+    const parted = step(createState(over, [{ a: 'a', b: 'b', storey: 0 }], floor), defaultLayout)
+    const [left, right] = parted.bodies
+    expect(Math.hypot(left!.x - right!.x, left!.y - right!.y)).toBeGreaterThanOrEqual(wall - 1e-6)
+  })
+
+  it('holds a companion on its owner’s perimeter rather than letting it settle alone', () => {
+    const rooms = [
+      room('bedroom', 28, 0, { kind: 'bedroom', bubble: { x: 10, y: 12 } }),
+      room('ensuite', 6, 0, { kind: 'ensuite-bathroom', bubble: { x: 3, y: 4 } }),
+    ]
+    const out = settle(
+      createState(rooms, [{ a: 'bedroom', b: 'ensuite', storey: 0 }], floor),
+      defaultLayout,
+    )
+    const [owner, companion] = out.state.bodies
+    expect(Math.hypot(owner!.x - companion!.x, owner!.y - companion!.y)).toBeCloseTo(
+      owner!.radius + companion!.radius,
+      1,
+    )
+  })
+})
+
 describe('the privacy gradient and the weights', () => {
   /** Two rooms of a size on the starting plot, each with a tier for U2 to read. */
   function twoRooms(first: string, second: string) {

@@ -1,3 +1,4 @@
+import { weightOf } from '../../bubbles'
 import { families, type Family, type Weights } from '../../model'
 
 const labels: Readonly<Record<Family, string>> = {
@@ -6,17 +7,9 @@ const labels: Readonly<Record<Family, string>> = {
   environmentalFactors: 'Environmental factors',
 }
 
-/** Where a family's forces are felt; the bubbles answer only to the first of the three. */
+/** The site rows act on the plot's own coordinates here; the environmental ones are not written yet. */
 const notes: Readonly<Partial<Record<Family, string>>> = {
-  siteConstraints: 'acts in zoning',
-  environmentalFactors: 'acts in zoning',
-}
-
-/** A weight nobody has set sits in the middle, so an untouched project pulls no way in particular. */
-const middle = 0.5
-
-export function weightOf(weights: Weights, family: Family): number {
-  return weights[family] ?? middle
+  environmentalFactors: 'waits for milestone 3',
 }
 
 /** The three families beside the diagram they change, so a slider and its answer are read together. */

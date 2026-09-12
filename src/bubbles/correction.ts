@@ -93,7 +93,15 @@ function walkRound(
   for (let station = 0; station < STATIONS; station++) {
     const turn = (station * 2 * Math.PI) / STATIONS
     const angle = was + (station % 2 === 0 ? turn : -turn)
-    const wanted: Point = [anchor.x + Math.cos(angle) * reach, anchor.y + Math.sin(angle) * reach]
+    const ux = Math.cos(angle)
+    const uy = Math.sin(angle)
+    // A corridor is touched along its sides, so the spot is measured from the end of its segment
+    // that lies this way rather than from its middle.
+    const along = Math.sign(ux * Math.cos(anchor.angle) + uy * Math.sin(anchor.angle)) * anchor.half
+    const wanted: Point = [
+      anchor.x + Math.cos(anchor.angle) * along + ux * reach,
+      anchor.y + Math.sin(anchor.angle) * along + uy * reach,
+    ]
     const at = putInside(state.ground.inside, wanted, body.radius)
     // A spot the line pushed the room off is not that spot at all.
     let cost = Math.hypot(at[0] - wanted[0], at[1] - wanted[1]) * 4
@@ -121,7 +129,11 @@ export function correctContacts(
 ): { readonly state: SimulationState; readonly corrected: number } {
   let current = state
   let corrected = 0
-  for (let round = 0; round < ROUNDS; round++) {
+  // The arrangement with the fewest links left open, which is what the person is shown: a walk
+  // that closed one and a settle that opened another again is not an improvement to keep.
+  let best = current
+  let fewest = stillOpen(current)
+  for (let round = 0; round < ROUNDS && fewest > 0; round++) {
     let moved = false
     for (const link of current.links) {
       const a = current.bodies[link.a]
@@ -141,8 +153,21 @@ export function correctContacts(
     }
     if (!moved) break
     current = settle(current, { ...config, maxIterations: AFTER_WALK }).state
+    const open = stillOpen(current)
+    if (open >= fewest) continue
+    fewest = open
+    best = current
   }
-  return { state: current, corrected }
+  return { state: best, corrected: best === state ? 0 : corrected }
+}
+
+/** How many of a picture's links have not closed. */
+function stillOpen(state: SimulationState): number {
+  return state.links.filter((link) => {
+    const a = state.bodies[link.a]
+    const b = state.bodies[link.b]
+    return a !== undefined && b !== undefined && !touching(a, b)
+  }).length
 }
 
 /**

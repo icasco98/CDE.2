@@ -6,8 +6,12 @@ import type { Point } from '../geometry'
  * is the same arithmetic with a segment of no length.
  */
 
-/** A corridor's half-width in the physics: the Municipality's 1.20 m clear, taken as a radius. */
-export const CORRIDOR_R = 1.2
+/**
+ * Half of a corridor's width in the physics. The Municipality's minimum room sizes give a corridor
+ * inside the unit 1.20 m clear, and the room-type table carries that as the hallway's legal floor,
+ * so the capsule is 1.20 m across and its segment carries the rest of the area as length.
+ */
+export const CORRIDOR_R = 0.6
 
 /**
  * How far a corridor of this area reaches from its middle to one end. A capsule of radius r and

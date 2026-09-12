@@ -79,7 +79,12 @@ export function BubblesStage() {
         session.actions.setBubble(id, at, commit)
       }
       onDropBubble={(id: string, at: Position) => report(session.actions.setBubble(id, at))}
-      onSetStorey={(id: string, storey: number) => report(sendToStorey(session, id, storey))}
+      onSetStorey={(id: string, storey: number) => {
+        // A door the move could not hold is said out loud and fades, as every refusal does.
+        const moved = sendToStorey(session, id, storey)
+        if (moved.ok) moved.value.forEach((sentence) => session.say(sentence))
+        return report(moved)
+      }}
       onPin={(id: string, pinned: boolean) =>
         report(pinned ? session.actions.pin(id) : session.actions.unpin(id))
       }
