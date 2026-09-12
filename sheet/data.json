@@ -1,9 +1,9 @@
 {
-  "revision": 23,
+  "revision": 24,
   "date": "11 Sep 2026",
   "session": "Session 3",
   "repo": "https://github.com/icasco98/CDE.2",
-  "headline": "G2 lay out from bubbles and G4 joins and alignment merged. G3 one Plan tab is being built; G5 follows.",
+  "headline": "G3 merged: one Plan tab with the sheet beside the massing. G5 draw tool is the last of the run.",
   "decide": [],
   "yours": [
     {
@@ -29,10 +29,17 @@
   ],
   "agents": [
     {
+      "task": "G5",
+      "name": "Draw tool",
+      "model": "Opus",
+      "stage": 1
+    },
+    {
       "task": "G3",
       "name": "One Plan tab",
       "model": "Opus",
-      "stage": 1
+      "stage": 4,
+      "pr": 52
     },
     {
       "task": "G2",
@@ -40,25 +47,17 @@
       "model": "Opus",
       "stage": 4,
       "pr": 49
-    },
-    {
-      "task": "G4",
-      "name": "Joins and alignment",
-      "model": "Opus",
-      "stage": 4,
-      "pr": 50
     }
   ],
   "stages": ["Briefed", "Building", "Review", "Your merge", "Merged"],
   "done": [
-    "All four stages merged; F1 to F4, G0 and G1 from your tests merged; A8 export merged (#47).",
-    "G2 merged: Lay out from bubbles places every storey from the diagram in one undo step (#49).",
-    "G4 merged: open-plan rooms draw as one space; Align to north and Align to plot (#50).",
-    "G3 started; G5 queued.",
+    "All four stages merged; F1 to F4, G0, G1, G2, G4 from your tests merged; A8 export merged.",
+    "G3 merged: one Plan tab, editing in the massing, orbit about the building, Plan view, door kind on the sheet (#52).",
+    "G5 started: polygons, vertex editing, arcs and circles with true arcs in the DXF.",
     "Double-click start scripts (#27)."
   ],
   "next": [
-    "Review G3, merge, then G5 draw tool.",
+    "Review G5, merge; then the run is complete and the tool waits for your test.",
     "A9 usability run (needs O3 the known house and O5 the fresh brief).",
     "Milestone 2 waits on O4 walls and the forces revisit."
   ]
