@@ -131,6 +131,28 @@ test('a circle of radius 2.5 m measures 19.6 m² and exports as a true arc', asy
   expect(drawing.split('0\nARC\n')).toHaveLength(2)
 })
 
+test('a click on the Circle tool gives the room its target area, and a drag still gives the dragged radius', async ({
+  page,
+}) => {
+  await openZoning(page)
+  await tool(page, 'Circle', 'Guest WC')
+  await clickSheet(page, 10, 12)
+  // sqrt(3 m² / π) is 0.98 m, which the 0.05 m step for a click lands on 1.00 m: π m², not 3.
+  await expect(roomNamed(page, 'Guest WC')).toHaveAttribute('data-area', '3.14')
+  await expect(page.getByText('3.1 of 3 m²')).toBeVisible()
+
+  await tool(page, 'Circle', 'Kitchen')
+  // Well clear of the Guest WC's own circle, so the drop lands with no room to ask about.
+  const centre = await onSheet(page, 15, 20)
+  const rim = await onSheet(page, 17.5, 20)
+  await page.mouse.move(centre.x, centre.y)
+  await page.mouse.down()
+  await page.mouse.move((centre.x + rim.x) / 2, centre.y)
+  await page.mouse.move(rim.x, rim.y)
+  await page.mouse.up()
+  await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-area', '19.63')
+})
+
 test('a shape whose walls cross itself is refused with a sentence', async ({ page }) => {
   await openZoning(page)
   await tool(page, 'Draw', 'Kitchen')
