@@ -46,6 +46,23 @@ for help. No solver, no findings, no analysis.
 | P6 | **Refusals out of the way.** Fading messages sit over the drawing's corner instead of pushing it down the page. | G0 | Three refusals in a row move nothing on the page. | done, PR #59 |
 | P7 | **Storey count under undo.** Storeys join the undo snapshot with heights, so adding a storey and stretching a stair revert together. | F1, A7 | One undo after Add storey restores both the count and the stair. | done, PR #58 |
 
+### Bubbles on the plot (proposed, not approved)
+
+The owner's review of the run found that "Lay out from bubbles" invents
+positions from nothing and that bubbles floating on a blank page tell
+the designer nothing. The fix is the tool's original thesis: the bubble
+diagram is drawn on the plot, the site and environmental forces act
+there, and the zones are the bubbles morphed in place. Each task starts
+only on the owner's word. If approved, A9 waits on B4.
+
+| # | Task | Depends on | Done when | Status |
+|---|---|---|---|---|
+| B0 | **Decisions before B1.** Three decisions written to DECISIONS.md and MODEL.md: bubbles are drawn at true area and may overlap softly, the morph resolves the overlap (or drawn at a fixed fraction of true area, the owner chooses); one plot per storey replaces the stacked bands, All shows the upper storey as a ghost over the ground; a bubble's position is stored in plot metres, the same frame as a footprint. | – | The three decisions are numbered in DECISIONS.md; MODEL.md says where a bubble is. | proposed |
+| B1 | **The plot under the bubbles.** The bubble sheet draws the plot, the buildable line from the Municipality setbacks, north and the street sides at the zoning scale, through the shared camera. One plot per storey. Bubbles are held inside the buildable line. Labels never overlap, the legend stands outside the sheet, door and open links read differently. | B0, F2, G3 | The bubbles and the sheet show the same plot at the same scale under the same camera. A bubble dragged past the buildable line comes back. The legend covers no bubble. | proposed |
+| B2 | **Site and environmental forces act.** S1 to S6 and E1 to E6 from forces.md given coordinates on the plot: garage and diwaniya to the street sides, bedrooms and living away from the west sun and toward the north, service to the back, every bubble inside the buildable line. The two sliders act here; the "acts in zoning" label goes. The owner's O7 corrections are applied on the way. | B1, O7 | Raising the site weight moves the garage to a street edge in the test. Raising the environmental weight moves a bedroom off the west edge. The defaults put the default program where a Kuwaiti villa puts it, judged by the owner on the known house. | proposed |
+| B3 | **The hallway as an ellipse.** A hallway bubble is an elongated ellipse of its area, long axis along the rooms it serves, turning under the forces; a stair stays a circle. | B1 | The ellipse lies along its served rooms after settling; its drawn area equals its target. | proposed |
+| B4 | **The morph.** "Lay out from bubbles" is replaced: each circle inflates in place into a rectangle of its area on the nearest grid, the ellipse into a corridor, links into doors, then the G4 joins and alignment tidy the walls, all inside the buildable line. Drawn as an animation of about a second with the camera held; the store changes once, at the end, so one undo returns to the bubbles. | B2, B3, G4 | The default program morphs with no two rooms overlapping and every room's centre within 1 m of its bubble. Undo brings the bubbles back. The animation runs in the Playwright test without a frame that draws a room outside the plot. | proposed |
+
 ### Owner tasks
 
 | # | Task | Needed by | Status |
