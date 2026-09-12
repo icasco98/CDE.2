@@ -21,3 +21,9 @@ export function inWords(count: number): string {
 export function metresIn(value: number): string {
   return String(Math.round(value * 10) / 10)
 }
+
+/** Names read as a person says them: one, two joined by "and", more by commas and an "and". */
+export function listedNames(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? 'nothing'
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+}

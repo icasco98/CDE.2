@@ -520,3 +520,120 @@
   color: inherit;
   cursor: pointer;
 }
+
+/*
+ * The proposal. Everything a morph draws is dashed and unfilled, because none of it is written
+ * down yet: a zone, the doors it would hang, the links it could not close, and the floor it takes
+ * past the buildable line.
+ */
+.zoning-sheet .zone {
+  fill: #2f6f8f;
+  fill-opacity: 0.1;
+  stroke: #2f6f8f;
+  stroke-width: 2px;
+  stroke-dasharray: 7 5;
+}
+
+.zoning-sheet .morph text {
+  text-anchor: middle;
+  dominant-baseline: middle;
+  fill: #2b2822;
+  font-size: calc(var(--per-px) * 12px);
+  paint-order: stroke;
+  stroke: #faf8f4;
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.zoning-sheet .zone-area {
+  font-size: calc(var(--per-px) * 10px);
+  fill: #6d6862;
+}
+
+.zoning-sheet .zone-door {
+  stroke: #2f6f8f;
+  stroke-width: 4px;
+  stroke-linecap: round;
+}
+
+.zoning-sheet .zone-tension {
+  stroke: #b1652f;
+  stroke-width: 2px;
+  stroke-dasharray: 8 5;
+}
+
+/* The links resolve a moment after the zones have opened, so the plan is read before its doors. */
+.zoning-sheet .zone-door,
+.zoning-sheet .zone-tension {
+  animation: zone-mark 900ms ease-out both;
+}
+
+@keyframes zone-mark {
+  from {
+    opacity: 0;
+  }
+  60% {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zoning-sheet .zone-door,
+  .zoning-sheet .zone-tension {
+    animation: none;
+  }
+}
+
+/* What the storey takes past the buildable line: hatched, because it is floor the plot has not got. */
+.zoning-sheet .spill {
+  fill: url(#morph-spill);
+  stroke: #a5442c;
+  stroke-width: 1.5px;
+  stroke-dasharray: 4 3;
+  pointer-events: none;
+}
+
+.zoning-sheet .spill-line {
+  stroke: #a5442c;
+  stroke-width: 1px;
+}
+
+/* What the proposal says in words: the fit, the links it left open, and the findings. */
+.zoning-report {
+  margin: 0;
+  flex: none;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.1rem 0.6rem;
+  color: #4a453d;
+  font-size: 0.9rem;
+}
+
+.zoning-report > div {
+  display: contents;
+}
+
+.zoning-report dt {
+  font-weight: 600;
+}
+
+.zoning-report dd {
+  margin: 0;
+}
+
+.zoning-report .fit-over dd,
+.zoning-report .fit-over dt {
+  color: #a5442c;
+}
+
+/* The question a morph asks before it takes the place of a storey somebody has already drawn. */
+.zoning-replace {
+  position: static;
+  transform: none;
+  margin: 0 0 0 auto;
+  max-width: none;
+}

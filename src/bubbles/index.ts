@@ -3,6 +3,8 @@ export type { Buildable, Ground } from './ground'
 export { CORRIDOR_R, corridorHalf, endsOf } from './capsule'
 export { correctContacts } from './correction'
 export { canonicalStart } from './start'
+export { frontageOf } from './frontage'
+export type { Stretch } from './frontage'
 export { readLink, touching } from './tension'
 export type { LinkReading } from './tension'
 export {

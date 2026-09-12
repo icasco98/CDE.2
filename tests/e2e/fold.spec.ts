@@ -27,7 +27,8 @@ test('nothing on the Plan tab is below the fold on a 1280 by 720 window', async 
   await page.setViewportSize({ width: 1280, height: 720 })
   await twoStoreys(page)
   await openBoth(page)
-  await page.getByRole('button', { name: 'Lay out from bubbles' }).click()
+  await page.getByRole('button', { name: 'Morph' }).click()
+  await page.getByRole('button', { name: 'Accept' }).click()
   await expect(page.locator('svg.zoning-sheet [data-room]').first()).toBeVisible()
 
   const fold = await belowTheFold(page, ['svg.zoning-sheet', 'svg.massing-sheet'])

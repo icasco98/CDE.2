@@ -1,6 +1,7 @@
 import type { Footprint } from '../../geometry'
 import type { Commit, Edge, EdgeKind, Endpoint, Plot, Room } from '../../model'
 import type { RoomSizes } from './defaults'
+import type { Proposal } from './morph'
 
 /** A room and the footprint one gesture leaves it with. */
 export type Placement = { readonly id: string; readonly footprint: Footprint }
@@ -30,8 +31,14 @@ export type ZoningViewProps = {
   /** Changes a connection between a door and an opening in place; the edge keeps its identity. */
   readonly onSetEdgeKind: (edgeId: string, kind: EdgeKind) => void
   readonly onRefuse: (reason: string) => void
-  /** Puts every room still in the tray where its bubble says, on every storey, in one step. */
-  readonly onLayOut: () => void
-  /** How many rooms are still in the tray, which is what that button has to work on. */
-  readonly unplacedCount: number
+  /** Divides the storey among its bubbles and offers the result; nothing is written by it. */
+  readonly onMorph: () => void
+  /** Places every zone of the proposal in one step, and writes where its doors go. */
+  readonly onAccept: () => void
+  /** Drops the proposal and writes nothing. */
+  readonly onBack: () => void
+  /** The proposal standing over the sheet, or nothing when there is none. */
+  readonly proposal: Proposal | null
+  /** How many rooms a morph would replace, while that is being asked; nothing when it is not. */
+  readonly asking: number | null
 }

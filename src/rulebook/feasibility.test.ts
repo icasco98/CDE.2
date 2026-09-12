@@ -60,6 +60,27 @@ describe('the brief checked before a bubble moves', () => {
     )
   })
 
+  it('says when the frontage will not hold a garage bay beside the rooms with street doors', () => {
+    const narrow = {
+      ...plot,
+      polygon: [
+        [0, 0],
+        [10, 0],
+        [10, 25],
+        [0, 25],
+      ] as const,
+    }
+    const rooms = [
+      room('entry', 'entry-foyer', 8, 'Entry'),
+      room('service', 'service-entrance', 6, 'Service Entrance'),
+      room('bay', 'garage', 18, 'Garage bay 1'),
+    ]
+    const found = feasibility(rooms, [], { ...narrow, polygon: [...narrow.polygon] }, 1)
+    expect(found.filter((each) => each.code === 'run').map((each) => each.sentence)).toEqual([
+      'Garage bay 1 has no straight run to the street; the frontage has no room left for it. Move a room to another storey, or give the garage fewer bays.',
+    ])
+  })
+
   it('says when a room is asked to touch more rooms than its wall can hold', () => {
     const rooms = [
       room('wc', 'diwaniya-wc', 5, 'Diwaniya WC'),

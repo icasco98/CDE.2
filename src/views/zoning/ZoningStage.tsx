@@ -1,11 +1,19 @@
+import { useState } from 'react'
 import { removedLinks } from '../../app/defaultLinks'
 import { selection, useSelection } from '../../app/selection'
 import { session } from '../../app/session'
 import { useProject } from '../../app/useProject'
-import { GRID_M, type Footprint } from '../../geometry'
-import type { Commit, EdgeKind, Endpoint, Project, Result } from '../../model'
+import type { Footprint, Point } from '../../geometry'
+import {
+  occupiedStoreys,
+  type Commit,
+  type EdgeKind,
+  type Endpoint,
+  type Result,
+} from '../../model'
+import { partitionStorey } from '../../zoning'
 import type { RoomSizes } from './defaults'
-import { layOut } from './layout'
+import type { Proposal } from './morph'
 import type { Placement } from './types'
 import { ZoningView } from './ZoningView'
 
@@ -13,39 +21,14 @@ function report(result: Result<unknown>): void {
   if (!result.ok) result.problems.forEach((problem) => session.say(problem.message))
 }
 
-/** What one press of the button comes to: the whole plan, and a sentence for each storey refused. */
-type Plan = { readonly placements: readonly Placement[]; readonly refusals: readonly string[] }
-
 /**
- * Every storey laid out in turn, the lowest first, each from the rooms the one below has just put
- * down, so a stair is placed once on the storey it starts from and stands on the rest. The button
- * lays out the whole house rather than the storey in view; a storey with no room to spare is left
- * alone and says why.
+ * What Morph is in the middle of. The proposal is view state from the press to the Accept: the
+ * store hears nothing of it until then, and Back leaves the store exactly as it was.
  */
-function planFrom(project: Project, sizes: ReadonlyMap<string, RoomSizes>): Plan {
-  let rooms = project.rooms
-  const placements: Placement[] = []
-  const refusals: string[] = []
-  for (let storey = 0; storey < project.storeys; storey++) {
-    const laid = layOut(rooms, project.edges, project.plot, storey, sizes, GRID_M)
-    if (!laid.ok) {
-      refusals.push(laid.reason)
-      continue
-    }
-    placements.push(...laid.value.placements)
-    // A room the storey had no place for stays in the tray, and the sheet says which rooms in the
-    // one sentence: a floor is drawn as far as it goes rather than left undrawn for one room.
-    if (laid.value.missed) refusals.push(laid.value.missed)
-    const at = new Map(
-      laid.value.placements.map((placement) => [placement.id, placement.footprint]),
-    )
-    rooms = rooms.map((room) => {
-      const footprint = at.get(room.id)
-      return footprint ? { ...room, footprint } : room
-    })
-  }
-  return { placements, refusals }
-}
+type Morphing =
+  | { readonly kind: 'asking'; readonly placed: number }
+  | { readonly kind: 'shown'; readonly proposal: Proposal }
+  | null
 
 /** The zoning view over the app's one store: every callback is a store action, refusals are said out loud. */
 export function ZoningStage(props: {
@@ -55,7 +38,8 @@ export function ZoningStage(props: {
 }) {
   const project = useProject()
   const selected = useSelection()
-  const { sizes } = props
+  const { sizes, storey } = props
+  const [morphing, setMorphing] = useState<Morphing>(null)
 
   const placeAll = (placements: readonly Placement[]): void =>
     report(
@@ -67,13 +51,45 @@ export function ZoningStage(props: {
       }),
     )
 
-  const unplaced = project.rooms.filter((room) => room.footprint === undefined)
+  const morph = (): void => {
+    const made = partitionStorey(project, storey)
+    const from = new Map<string, Point>()
+    for (const room of project.rooms)
+      if (room.bubble) from.set(room.id, [room.bubble.x, room.bubble.y])
+    setMorphing({ kind: 'shown', proposal: { storey, made, from } })
+  }
 
-  const layOutAll = (): void => {
-    const plan = planFrom(project, sizes)
-    // One transaction for the whole house, so a plan a person does not like goes with one undo.
-    if (plan.placements.length > 0) placeAll(plan.placements)
-    plan.refusals.forEach((refusal) => session.say(refusal))
+  const onMorph = (): void => {
+    const placed = project.rooms.filter(
+      (room) => room.footprint && occupiedStoreys(room).includes(storey),
+    ).length
+    // A storey already drawn is asked about first: what the morph would take the place of is the
+    // person's own work, and nothing of it goes until they have said so.
+    if (placed > 0) setMorphing({ kind: 'asking', placed })
+    else morph()
+  }
+
+  const accept = (): void => {
+    if (morphing?.kind === 'asking') {
+      morph()
+      return
+    }
+    if (morphing?.kind !== 'shown') return
+    const { made } = morphing.proposal
+    // One transaction for the whole storey, so one undo returns it to the bubbles it came from.
+    report(
+      session.transaction(() => {
+        for (const zone of made.zones) {
+          const placed = session.actions.place(zone.id, { polygon: zone.polygon, rotation: 0 })
+          if (!placed.ok) return placed
+        }
+        for (const door of made.doors) {
+          const hinted = session.actions.setEdgeHint(door.linkId, { at: door.at })
+          if (!hinted.ok) return hinted
+        }
+      }),
+    )
+    setMorphing(null)
   }
 
   return (
@@ -82,7 +98,7 @@ export function ZoningStage(props: {
       rooms={project.rooms}
       edges={project.edges}
       storeys={project.storeys}
-      storey={props.storey}
+      storey={storey}
       plot={project.plot}
       sizes={sizes}
       selected={selected}
@@ -94,8 +110,8 @@ export function ZoningStage(props: {
       onPin={(id: string, pinned: boolean) =>
         report(pinned ? session.actions.pin(id) : session.actions.unpin(id))
       }
-      onConnect={(a: Endpoint, b: Endpoint, storey: number) =>
-        report(session.actions.connect({ a, b, kind: 'door', storey }))
+      onConnect={(a: Endpoint, b: Endpoint, on: number) =>
+        report(session.actions.connect({ a, b, kind: 'door', storey: on }))
       }
       onDisconnect={(edgeId: string) => {
         // A link taken out here is out of this house, so the rulebook does not offer it again.
@@ -109,8 +125,11 @@ export function ZoningStage(props: {
         report(session.actions.setEdgeKind(edgeId, kind))
       }
       onRefuse={session.say}
-      onLayOut={layOutAll}
-      unplacedCount={unplaced.length}
+      onMorph={onMorph}
+      onAccept={accept}
+      onBack={() => setMorphing(null)}
+      proposal={morphing?.kind === 'shown' ? morphing.proposal : null}
+      asking={morphing?.kind === 'asking' ? morphing.placed : null}
     />
   )
 }
