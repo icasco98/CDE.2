@@ -83,3 +83,41 @@ A reversal is a new entry, never an edit.
     and there is no WebGL and no 3D library. Four fixed view
     directions and a horizontal orbit are enough to read a mass. A
     true 3D viewer, if ever wanted, arrives with IFC in milestone 5.
+
+17. **The bubbles sit on the plot.** The bubble sheet draws the plot,
+    the buildable line from the Municipality setbacks, north and the
+    street sides at the zoning scale through the shared camera. A
+    bubble's position is in plot metres, the frame a footprint uses,
+    so a bubble and the zone it becomes are the same point. One plot
+    per storey, chosen by tab; All shows the upper storey's bubbles
+    faint over the ground. The stacked bands go. The site and
+    environmental forces act here, on coordinates, which is the only
+    place they can.
+
+18. **Bubbles at true area, overlapping up to a quarter.** A bubble
+    is drawn at its target area. Two bubbles may overlap by up to a
+    quarter of the smaller one's area, the slack between packed
+    circles and packed rectangles, and never wholly; the repulsion is
+    soft inside that quarter and a wall beyond it. While settling,
+    bubbles are held inside the buildable line. A hallway is an
+    ellipse of its area, long axis along the rooms it serves; a stair
+    stays a circle, and its twins settle to the same spot on every
+    storey.
+
+19. **The morph is a proposal, deterministic, and may spill.** The
+    zones are the bubbles inflated in place: each circle into a
+    rectangle of its area within the proportion range of its kind,
+    the ellipse into a corridor, links into doors, then joins and
+    alignment. The same bubbles always give the same plan. The result
+    is shown dashed with Accept and Back to bubbles; Accept commits
+    the store once, so one undo returns to the bubbles; Back plays
+    the morph in reverse and writes nothing. Slivers left between
+    rooms go to the rooms up to the top of their range, the rest to
+    circulation. A plan that does not fit is never refused: rooms
+    past the buildable line are drawn hatched outside it with the
+    overflow in m², the rooms with slack above the bottom of their
+    range are offered for reduction one click each, and when every
+    room at its minimum still does not fit the sheet says the storey's
+    program is too big for the plot by that much. The tool never
+    shrinks a room on its own. The same fit line stands on the
+    Requirements totals, before a bubble is drawn.
