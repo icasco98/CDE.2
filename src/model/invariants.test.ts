@@ -173,3 +173,49 @@ it('says what is wrong in a sentence', () => {
   )
   expect(violations[0]?.message).toContain('storey 0')
 })
+
+describe('the arcs a footprint remembers', () => {
+  const square = [
+    [0, 0],
+    [4, 0],
+    [4, 4],
+    [0, 4],
+  ] as const
+
+  it('passes an arc whose vertices lie on its circle', () => {
+    const quarter = room('a', {
+      footprint: {
+        polygon: [
+          [0, 0],
+          [2, 0],
+          [0, 2],
+        ],
+        rotation: 0,
+        arcs: [{ from: 1, to: 2, centre: [0, 0], radius: 2, clockwise: true }],
+      },
+    })
+    expect(codes(project([quarter]))).toEqual([])
+  })
+
+  it('refuses an arc whose vertices stand off its circle', () => {
+    const wrong = room('a', {
+      footprint: {
+        polygon: square,
+        rotation: 0,
+        arcs: [{ from: 0, to: 1, centre: [2, 2], radius: 2, clockwise: true }],
+      },
+    })
+    expect(codes(project([wrong]))).toEqual(['arc-off-circle'])
+  })
+
+  it('refuses an arc on a vertex the polygon does not have', () => {
+    const missing = room('a', {
+      footprint: {
+        polygon: square,
+        rotation: 0,
+        arcs: [{ from: 0, to: 9, centre: [2, 2], radius: 2, clockwise: true }],
+      },
+    })
+    expect(codes(project([missing]))).toEqual(['arc-range'])
+  })
+})

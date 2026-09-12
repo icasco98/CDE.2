@@ -1,5 +1,5 @@
 import { boundingBox } from './polygon'
-import type { Footprint, Point, Polygon } from './types'
+import type { Arc, Footprint, Point, Polygon } from './types'
 
 /** The frame a footprint's own polygon is written in: the centre it turns about, and that turn. */
 export type Frame = {
@@ -60,9 +60,19 @@ export function outlineOf(footprint: Footprint): Polygon {
 
 export function translateFootprint(footprint: Footprint, delta: Point): Footprint {
   if (!delta[0] && !delta[1]) return footprint
+  const arcs = footprint.arcs
   return {
     polygon: footprint.polygon.map((p): Point => [p[0] + delta[0], p[1] + delta[1]]),
     rotation: footprint.rotation,
+    // An arc is written in the polygon's own frame, so the frame travels with the polygon.
+    ...(arcs === undefined
+      ? {}
+      : {
+          arcs: arcs.map((arc): Arc => ({
+            ...arc,
+            centre: [arc.centre[0] + delta[0], arc.centre[1] + delta[1]],
+          })),
+        }),
   }
 }
 
@@ -78,6 +88,8 @@ export function anchorPointOf(footprint: Footprint, sx: Handle, sy: Handle): Poi
  * The footprint scaled to `width` by `depth`, with the handle at `(sx, sy)` held exactly at
  * `anchor` on the sheet. Solving for the new centre from the held point, rather than carrying
  * the old one forward, is what keeps that point from drifting once the footprint is turned.
+ * A stretched circle is no longer a circle, so any arcs are dropped rather than left standing
+ * for a curve the room no longer has.
  */
 export function resizeFromAnchor(
   footprint: Footprint,
@@ -106,9 +118,15 @@ export function resizeFromAnchor(
 /**
  * A polygon written in `previous`'s frame, stored as a footprint of its own. Its bounding box
  * has moved, and a footprint turns about that box, so it is shifted to sit where the turn about
- * the old centre put it.
+ * the old centre put it. Arcs are carried through: they are written in the same frame and are
+ * shifted with the polygon.
  */
-export function placeInFrame(polygon: Polygon, previous: Frame, rotation: number): Footprint {
+export function placeInFrame(
+  polygon: Polygon,
+  previous: Frame,
+  rotation: number,
+  arcs?: readonly Arc[],
+): Footprint {
   const bounds = boundingBox(polygon)
   const dx = previous.cx - (bounds.left + bounds.width / 2)
   const dy = previous.cy - (bounds.top + bounds.depth / 2)
@@ -116,5 +134,5 @@ export function placeInFrame(polygon: Polygon, previous: Frame, rotation: number
     dx - (dx * previous.cos - dy * previous.sin),
     dy - (dx * previous.sin + dy * previous.cos),
   ]
-  return translateFootprint({ polygon, rotation }, shift)
+  return translateFootprint({ polygon, rotation, ...(arcs === undefined ? {} : { arcs }) }, shift)
 }

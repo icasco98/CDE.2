@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { rectangleToPolygon, type Point, type Polygon } from '../geometry'
+import { arcPoints, rectangleToPolygon, type Point, type Polygon } from '../geometry'
 import { PROJECT_VERSION, type Project, type Room } from '../model'
 import { startingHousehold, startingPlot } from '../model/project'
 import { dxfOf, writeDxf } from './dxf'
@@ -207,4 +207,76 @@ it('draws a door as a line across the opening on the storey’s door layer', () 
   // middle, which is y 22.55 to 23.45 once the drawing is turned y up.
   expect(pointOf(door)).toEqual([5, 23.45])
   expect([Number(valueOf(door, 11)), Number(valueOf(door, 21))]).toEqual([5, 22.55])
+})
+
+describe('a room with a curved wall', () => {
+  /** The reference circle: 5 m across, standing with its centre at (10, 12) on the sheet. */
+  const centre: Point = [10, 12]
+  const radius = 2.5
+  const ring = arcPoints(centre, radius, 0, 0, true).slice(0, -1)
+  const diwaniya: Room = {
+    ...room('Diwaniya', ring),
+    footprint: {
+      polygon: ring,
+      rotation: 0,
+      arcs: [{ from: 0, to: 0, centre, radius, clockwise: true }],
+    },
+  }
+  const items = itemsIn(dxfOf(project({ rooms: [diwaniya] })), 'ENTITIES')
+
+  it('writes one ARC on the room’s layer at the right centre and radius', () => {
+    const arcs = items.filter((item) => item.type === 'ARC' && valueOf(item, 8) === 'S0-ROOMS')
+    expect(arcs).toHaveLength(1)
+    const arc = arcs[0] as Item
+    // The sheet runs y down and the plot is 25 m deep, so the centre lands at (10, 13) y up.
+    expect(pointOf(arc)).toEqual([10, 13])
+    expect(Number(valueOf(arc, 40))).toBe(2.5)
+    expect(Number(valueOf(arc, 50))).toBe(0)
+    expect(Number(valueOf(arc, 51))).toBe(360)
+  })
+
+  it('leaves no polyline on the room’s layer, the whole wall being the arc', () => {
+    expect(items.filter((i) => i.type === 'POLYLINE' && valueOf(i, 8) === 'S0-ROOMS')).toHaveLength(
+      0,
+    )
+    expect(valueOf(items.find((i) => valueOf(i, 8) === 'S0-TEXT') as Item, 1)).toBe(
+      'Diwaniya 19.6 m2',
+    )
+  })
+
+  it('splits a bay off the straight runs, which between them cover the rest of the wall', () => {
+    // A half-round bay on the east wall of an 8 by 3 m room: it leaves the wall at (14, 8.5),
+    // bulges east through (15.5, 10) and comes back to it at (14, 11.5).
+    const bay = arcPoints([14, 10], 1.5, -Math.PI / 2, Math.PI / 2, true).slice(1, -1)
+    const polygon: Polygon = [[6, 8.5], [14, 8.5], ...bay, [14, 11.5], [6, 11.5]]
+    const bayRoom: Room = {
+      ...room('Majlis', polygon),
+      footprint: {
+        polygon,
+        rotation: 0,
+        arcs: [{ from: 1, to: bay.length + 2, centre: [14, 10], radius: 1.5, clockwise: true }],
+      },
+    }
+    const drawn = itemsIn(dxfOf(project({ rooms: [bayRoom] })), 'ENTITIES')
+    const arcs = drawn.filter((item) => item.type === 'ARC' && valueOf(item, 8) === 'S0-ROOMS')
+    expect(arcs).toHaveLength(1)
+    expect(Number(valueOf(arcs[0] as Item, 40))).toBe(1.5)
+    // DXF sweeps counterclockwise in its own y-up space, so the ends come back the other way
+    // round: from the south end of the bay, through the east where it bulges, to the north end.
+    expect(Number(valueOf(arcs[0] as Item, 50))).toBe(270)
+    expect(Number(valueOf(arcs[0] as Item, 51))).toBe(90)
+    const runs = drawn.filter((i) => i.type === 'POLYLINE' && valueOf(i, 8) === 'S0-ROOMS')
+    expect(runs).toHaveLength(1)
+    // The arc carries every wall of the bay, so the three straight walls of the room are left,
+    // and they are written as one open run with the four corners that carry them.
+    const opens = drawn.findIndex((i) => i.type === 'POLYLINE' && valueOf(i, 8) === 'S0-ROOMS')
+    const ends = drawn.findIndex((item, index) => index > opens && item.type === 'SEQEND')
+    expect(drawn.slice(opens + 1, ends).map(pointOf)).toEqual([
+      [14, 13.5],
+      [6, 13.5],
+      [6, 16.5],
+      [14, 16.5],
+    ])
+    expect(valueOf(runs[0] as Item, 70)).toBe('0')
+  })
 })

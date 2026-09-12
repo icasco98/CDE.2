@@ -81,6 +81,42 @@ describe('the project file', () => {
     expect(back.ok && back.value).toEqual(project)
   })
 
+  it('round trips a room with a curved wall, at the version it already stood on', () => {
+    const project = furnished()
+    const first = project.rooms[0]
+    if (!first?.footprint) throw new Error('the furnished project has no placed room')
+    const curved: Project = {
+      ...project,
+      rooms: project.rooms.map((room) =>
+        room.id === first.id
+          ? {
+              ...room,
+              footprint: {
+                polygon: [
+                  [0, 0],
+                  [2, 0],
+                  [0, 2],
+                ],
+                rotation: 0,
+                arcs: [{ from: 1, to: 2, centre: [0, 0], radius: 2, clockwise: true }],
+              },
+            }
+          : room,
+      ),
+    }
+    const back = deserialize(serialize(curved))
+    expect(back.ok && back.value).toEqual(curved)
+    expect(JSON.parse(serialize(curved)).version).toBe(PROJECT_VERSION)
+  })
+
+  it('reads a file written before rooms could curve', () => {
+    const project = furnished()
+    const back = deserialize(serialize(project))
+    expect(back.ok && back.value.rooms.every((room) => room.footprint?.arcs === undefined)).toBe(
+      true,
+    )
+  })
+
   it('carries the version', () => {
     expect(JSON.parse(serialize(furnished())).version).toBe(PROJECT_VERSION)
   })

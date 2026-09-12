@@ -4,6 +4,7 @@ import {
   frameOf,
   localToSheetPoint,
   outlineOf,
+  placeInFrame,
   resizeFromAnchor,
   sheetToLocalPoint,
   sheetToLocalPolygon,
@@ -160,5 +161,32 @@ describe('resizing about an anchor', () => {
       [8, 0],
       [0, 6],
     ])
+  })
+})
+
+describe('what a change to a footprint does to the arcs it remembers', () => {
+  const curved: Footprint = {
+    polygon: [
+      [0, 0],
+      [4, 0],
+      [4, 3],
+      [0, 3],
+    ],
+    rotation: 0,
+    arcs: [{ from: 1, to: 2, centre: [4, 1.5], radius: 1.5, clockwise: true }],
+  }
+
+  it('carries them along with a move, centres and all', () => {
+    const moved = translateFootprint(curved, [2, 5])
+    expect(moved.arcs).toEqual([{ from: 1, to: 2, centre: [6, 6.5], radius: 1.5, clockwise: true }])
+  })
+
+  it('leaves them behind on a resize, which no longer holds their circle', () => {
+    expect(resizeFromAnchor(curved, [0, 0], -1, -1, 8, 6).arcs).toBeUndefined()
+  })
+
+  it('carries them through a polygon rewritten in the same frame', () => {
+    const placed = placeInFrame(curved.polygon, frameOf(curved), 0, curved.arcs)
+    expect(placed.arcs).toEqual(curved.arcs)
   })
 })

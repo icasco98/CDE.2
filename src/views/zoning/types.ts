@@ -30,4 +30,8 @@ export type ZoningViewProps = {
   /** Changes a connection between a door and an opening in place; the edge keeps its identity. */
   readonly onSetEdgeKind: (edgeId: string, kind: EdgeKind) => void
   readonly onRefuse: (reason: string) => void
+  /** Puts every room still in the tray where its bubble says, on every storey, in one step. */
+  readonly onLayOut: () => void
+  /** How many rooms are still in the tray, which is what that button has to work on. */
+  readonly unplacedCount: number
 }

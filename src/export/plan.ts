@@ -1,4 +1,4 @@
-import { boundingBox, outlineOf, type Point, type Rect } from '../geometry'
+import { boundingBox, outlineOf, type Footprint, type Point, type Rect } from '../geometry'
 import { occupiedStoreys, type EdgeKind, type Project, type Room } from '../model'
 import { edgeMarks, type DoorMark, type Standing } from '../views/zoning/doors'
 
@@ -11,15 +11,15 @@ export function openingMetres(kind: EdgeKind): number {
   return kind === 'open' ? OPEN_M : DOOR_M
 }
 
-/** A room standing on the storey being drawn, and the room itself for its name and its area. */
-export type Placed = Standing & { readonly room: Room }
+/** A room standing on the storey being drawn, with the room for its name and the shape it stands as. */
+export type Placed = Standing & { readonly room: Room; readonly footprint: Footprint }
 
 export function standingOn(rooms: readonly Room[], storey: number): readonly Placed[] {
   const placed: Placed[] = []
   for (const room of rooms) {
     const footprint = room.footprint
     if (!footprint || !occupiedStoreys(room).includes(storey)) continue
-    placed.push({ id: room.id, outline: outlineOf(footprint), room })
+    placed.push({ id: room.id, outline: outlineOf(footprint), room, footprint })
   }
   return placed
 }

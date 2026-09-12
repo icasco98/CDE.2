@@ -1,4 +1,4 @@
-import type { Footprint, Point, Polygon } from '../geometry/types'
+import type { Arc, Footprint, Point, Polygon } from '../geometry/types'
 import { checkProject } from './invariants'
 import {
   ok,
@@ -62,11 +62,26 @@ export function parseProject(document: Document): Result<Project> {
   const polygon = (value: unknown, at: string): Polygon =>
     list(value, at).map((corner, i) => point(corner, `${at}[${i}]`))
 
+  const arc = (value: unknown, at: string): Arc => {
+    const raw = nested(value, at)
+    return {
+      from: count(raw.from, `${at}.from`),
+      to: count(raw.to, `${at}.to`),
+      centre: point(raw.centre, `${at}.centre`),
+      radius: count(raw.radius, `${at}.radius`),
+      clockwise: flag(raw.clockwise, `${at}.clockwise`),
+    }
+  }
+
   const footprint = (value: unknown, at: string): Footprint => {
     const raw = nested(value, at)
     return {
       polygon: polygon(raw.polygon, `${at}.polygon`),
       rotation: count(raw.rotation, `${at}.rotation`),
+      // A file written before rooms could curve carries no arcs and reads as it always did.
+      ...(raw.arcs === undefined
+        ? {}
+        : { arcs: list(raw.arcs, `${at}.arcs`).map((raw, i) => arc(raw, `${at}.arcs[${i}]`)) }),
     }
   }
 

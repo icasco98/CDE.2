@@ -6,15 +6,12 @@
   min-height: 0;
 }
 
-/* The one button that acts on the whole house stands on a bar of its own, above the view. */
-.zoning-lay-out {
-  margin-bottom: 0.5rem;
-}
-
 .zoning-bar {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  /* The bar carries enough buttons to wrap on a narrow tab, so its rows sit closer than its
+     buttons do and the sheet keeps its height. */
+  gap: 0.35rem 0.75rem;
   flex-wrap: wrap;
 }
 
@@ -458,4 +455,116 @@
   background: #e6e1d8;
   border-color: #cfc9be;
   color: #9a958c;
+}
+
+/* A tool takes every press on the sheet: the rooms under it are drawn, not aimed at. */
+.zoning-sheet.zoning-drawing {
+  cursor: crosshair;
+}
+
+.zoning-sheet.zoning-drawing .room-shape,
+.zoning-sheet.zoning-drawing .room-in-join,
+.zoning-sheet.zoning-drawing .join-shape,
+.zoning-sheet.zoning-drawing .wall-handle,
+.zoning-sheet.zoning-drawing .door,
+.zoning-sheet.zoning-drawing .vanished,
+.zoning-sheet.zoning-drawing .proposal {
+  pointer-events: none;
+}
+
+.zoning-sheet .drawing {
+  pointer-events: none;
+}
+
+.zoning-sheet .draw-run {
+  fill: #2f6f8f;
+  fill-opacity: 0.1;
+  stroke: #2f6f8f;
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
+
+.zoning-sheet .draw-close {
+  stroke: #2f6f8f;
+  stroke-width: 1.5px;
+  stroke-dasharray: 6 5;
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.zoning-sheet .draw-corner {
+  fill: #2f6f8f;
+  stroke: #fffdf9;
+  stroke-width: 1.5px;
+}
+
+.zoning-sheet .draw-first {
+  fill: #fffdf9;
+  stroke: #2f6f8f;
+  stroke-width: 2.5px;
+}
+
+.zoning-sheet .vertex-handle {
+  fill: #fffdf9;
+  stroke: #2f6f8f;
+  stroke-width: 1.5px;
+  cursor: pointer;
+}
+
+.zoning-sheet .vertex-picked {
+  fill: #2f6f8f;
+}
+
+.zoning-sheet .vertex-add {
+  fill: #fffdf9;
+  fill-opacity: 0.7;
+  stroke: #6d8f6f;
+  stroke-width: 1.5px;
+  cursor: pointer;
+}
+
+.zoning-sheet .vertex-plus {
+  stroke: #4a7a4c;
+  stroke-width: 2px;
+  fill: none;
+  pointer-events: none;
+}
+
+/* The room a tool is about to draw, asked for in the same place a drop is asked about. */
+.zoning-pick {
+  position: absolute;
+  z-index: 2;
+  margin: 0.5rem;
+  padding: 0.6rem 0.7rem;
+  background: #fffdf9;
+  border: 1px solid #b7b1a5;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgb(31 29 26 / 18%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.zoning-pick p {
+  margin: 0;
+}
+
+.zoning-pick ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  max-width: 22rem;
+}
+
+.zoning-pick button {
+  font: inherit;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid #b7b1a5;
+  border-radius: 999px;
+  background: #faf8f4;
+  color: inherit;
+  cursor: pointer;
 }

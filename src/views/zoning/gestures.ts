@@ -164,7 +164,7 @@ function clash(footprint: Footprint, sheet: Sheet): Neighbour | undefined {
 }
 
 /** Held inside the plot, then refused where it would lie over another room. */
-function land(footprint: Footprint, sheet: Sheet): Attempt<Footprint> {
+export function landFootprint(footprint: Footprint, sheet: Sheet): Attempt<Footprint> {
   const held = insideBoundary(footprint, sheet.boundary)
   const hit = clash(held, sheet)
   return hit ? refuse(`that would overlap ${hit.name}`) : settled(held)
@@ -182,7 +182,7 @@ export function landOver(footprint: Footprint, sheet: Sheet): Landing {
 
 /** Rooms are solid: a move slides along its neighbours and stops rather than lie over one. */
 export function moveFootprint(from: Footprint, delta: Point, sheet: Sheet): Attempt<Footprint> {
-  return land(toNeighbours(toGrid(translateFootprint(from, delta)), sheet), sheet)
+  return landFootprint(toNeighbours(toGrid(translateFootprint(from, delta)), sheet), sheet)
 }
 
 /** The same move with nothing to slide against: where the hand really let the room go. */
@@ -190,12 +190,13 @@ export function movedTo(from: Footprint, delta: Point): Footprint {
   return toGrid(translateFootprint(from, delta))
 }
 
+/** A turn leaves the polygon and its arcs alone: both are written in the frame that turns. */
 export function rotateFootprint(
   from: Footprint,
   degrees: number,
   sheet: Sheet,
 ): Attempt<Footprint> {
-  return land({ polygon: from.polygon, rotation: normaliseAngle(degrees) }, sheet)
+  return landFootprint({ ...from, rotation: normaliseAngle(degrees) }, sheet)
 }
 
 /**
@@ -293,7 +294,11 @@ export function carveRefusal(landing: Landing, sheet: Sheet): string | null {
   return carve.ok ? null : carve.reason
 }
 
-/** A room redrawn to an outline on the sheet, written in its own frame, so its rotation is kept. */
+/**
+ * A room redrawn to an outline on the sheet, written in its own frame, so its rotation is kept.
+ * The outline came out of the polygon booleans, so the walls it names are straight: any arcs the
+ * room carried no longer stand for its walls and are left behind.
+ */
 function reshape(footprint: Footprint, outline: Polygon): Footprint {
   const frame = frameOf(footprint)
   return placeInFrame(sheetToLocalPolygon(outline, frame), frame, footprint.rotation)

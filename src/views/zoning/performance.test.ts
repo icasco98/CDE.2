@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest'
 import {
+  exactArea,
   outlineOf,
   rectangleToPolygon,
   sharedWalls,
@@ -11,6 +12,7 @@ import {
 import type { Edge } from '../../model'
 import { fitCamera, metresPerPixel, viewBoxOf, zoomAbout, ZOOM_STEP } from '../camera'
 import { wallPairs } from './doors'
+import { circleFootprint, closesAt, drawnPolygon, type Corner } from './draw'
 import { extentOf } from './frame'
 import { moveFootprint, moveSharedWall, sheetOf, type Neighbour, type Sheet } from './gestures'
 import { joinsOf } from './joins'
@@ -155,6 +157,7 @@ it('joins thirty placed rooms across ten open edges in under 2 ms', () => {
     id: room.id,
     name: room.name,
     outline: outlineOf(room.footprint),
+    measure: exactArea(room.footprint),
   }))
   const edges: Edge[] = Array.from({ length: 10 }, (_unused, index) => ({
     id: `edge-${index}`,
@@ -169,4 +172,52 @@ it('joins thirty placed rooms across ten open edges in under 2 ms', () => {
   })
   expect(joins).toBe(10)
   expect(took).toBeLessThan(2)
+})
+
+/**
+ * What one pointer move of the draw tool runs: the corners put down so far walked into a polygon
+ * with the wall following the hand on the end of it, one of them bowed out into an arc, and the
+ * test that the next click would close the shape. The rooms already standing are not touched,
+ * because nothing is landed until the shape closes.
+ */
+it('answers one pointer move of the draw tool over thirty placed rooms in under 2 ms', () => {
+  const corners: Corner[] = [
+    { at: [1, 26] },
+    { at: [5, 26] },
+    { at: [5, 28], through: [6.5, 27] },
+    { at: [3, 29] },
+  ]
+  let walked = 0
+  const took = milliseconds(() => {
+    walked = 0
+    for (let step = 0; step < 20; step++) {
+      const at: Point = [1 + step * 0.05, 29 - step * 0.05]
+      walked += drawnPolygon([...corners, { at }]).polygon.length
+      closesAt(corners, at)
+    }
+  })
+  expect(walked).toBeGreaterThan(20 * corners.length)
+  expect(took / 20).toBeLessThan(2)
+})
+
+/** A circle is a fifty-sided room, so its landing is the heaviest one the sheet has to test. */
+it('lands a fifty-segment circle against thirty placed rooms in under 2 ms', () => {
+  // A sheet with room below the thirty for a 5 m circle to be dragged about clear of them all,
+  // so the whole of the landing is measured rather than the first neighbour it is refused by.
+  const clear = sheetOf(
+    storeyOfThirty(),
+    rectangleToPolygon({ left: 0, top: 0, width: 40, depth: 40 }),
+  )
+  const circle = circleFootprint([6, 33], 2.5)
+  expect(circle.polygon.length).toBeGreaterThanOrEqual(48)
+  let landed = 0
+  const took = milliseconds(() => {
+    landed = 0
+    for (let step = 0; step < 20; step++) {
+      const delta: Point = [step * 0.37, step * 0.11]
+      if (moveFootprint(circle, delta, clear).ok) landed++
+    }
+  })
+  expect(landed).toBeGreaterThan(0)
+  expect(took / 20).toBeLessThan(2)
 })

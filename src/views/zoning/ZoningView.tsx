@@ -7,7 +7,15 @@ import {
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
-import { boundingBox, outlineOf, type Footprint, type Handle, type Point } from '../../geometry'
+import {
+  boundingBox,
+  exactArea,
+  outlineOf,
+  snapPointToGrid,
+  type Footprint,
+  type Handle,
+  type Point,
+} from '../../geometry'
 import { occupiedStoreys, type Room } from '../../model'
 import {
   fitCamera,
@@ -23,6 +31,19 @@ import {
 } from '../camera'
 import { alignRooms, northAngle, plotAngle } from './align'
 import { defaultProportion, startingRectangle } from './defaults'
+import {
+  addedVertex,
+  circleFootprint,
+  closedFootprint,
+  closesAt,
+  drawnPolygon,
+  movedVertex,
+  removedVertex,
+  snapRadius,
+  SMALLEST_DRAWN_M2,
+  type Corner,
+} from './draw'
+import { CirclePreview, DrawPreview, PickRoom, VertexHandles } from './drawing'
 import { edgeMarks, proposalsFrom, vanishedWalls, wallPairs, type WallPair } from './doors'
 import { extentOf } from './frame'
 import { joinsOf, type Join } from './joins'
@@ -31,6 +52,7 @@ import {
   carveRefusal,
   carveWith,
   droppedAt,
+  landFootprint,
   landOver,
   moveFootprint,
   movedTo,
@@ -80,6 +102,14 @@ const FURNITURE_PX = 26
 
 const HINT = 'Drag a room to move it. Drop it on another to carve. Drag a shared wall to move it.'
 
+/** One line for each tool, so the sheet always says what the hand is in the middle of. */
+const HINTS = {
+  draw: 'Click the corners. Hold A and drag to bow a wall out into a curve. Enter, or the first corner, closes it; Escape cancels.',
+  circle: 'Click the centre and drag the radius out; it lands on quarter metres. Escape cancels.',
+  points:
+    'Drag a point to move it, + puts one in, Delete takes out the point you last held. Moving a point on a curve makes that curve straight.',
+} as const
+
 /** A gesture that reshapes one footprint, as against a drop or a grab that is going nowhere. */
 type Grip =
   | { readonly kind: 'move'; readonly id: string; readonly from: Footprint; readonly at: Point }
@@ -90,6 +120,12 @@ type Grip =
       readonly from: Footprint
       readonly sx: Handle
       readonly sy: Handle
+    }
+  | {
+      readonly kind: 'vertex'
+      readonly id: string
+      readonly from: Footprint
+      readonly index: number
     }
 
 /** Two fingers on the sheet: the metre under their middle, how far apart they began, and the scale they began at. */
@@ -137,6 +173,30 @@ type Asked = {
   readonly forgets: boolean
 }
 
+/**
+ * A tool the hand is in the middle of: a shape being walked corner by corner, a circle being
+ * pulled out of its centre, or the points of a room standing open to be moved. It is view state
+ * from first click to last: the store hears of it only when a shape closes.
+ */
+type Drawing =
+  | {
+      readonly kind: 'draw'
+      readonly roomId: string
+      readonly corners: readonly Corner[]
+      /** Where the pointer is, so the wall being drawn follows it. */
+      readonly at: Point | null
+      /** A wall being bowed out: the corner it reaches and the point it is dragged through. */
+      readonly bulge: { readonly to: Point; readonly through: Point } | null
+    }
+  | {
+      readonly kind: 'circle'
+      readonly roomId: string
+      readonly centre: Point | null
+      readonly radius: number
+    }
+  | { readonly kind: 'points'; readonly roomId: string; readonly picked: number | null }
+  | null
+
 /** What a button on the selected room would do, and the sentence standing in its way. */
 type Offer = { readonly landing: Landing; readonly refusal: string | null }
 
@@ -163,7 +223,7 @@ function keyOf(pair: WallPair): string {
 export function ZoningView(props: ZoningViewProps) {
   const { projectId, rooms, edges, storeys, storey, plot, sizes, selected } = props
   const { onPlace, onPlaceAll, onUnplace, onPin, onConnect, onDisconnect } = props
-  const { onSelect, onStorey, onSetEdgeKind, onRefuse } = props
+  const { onSelect, onStorey, onSetEdgeKind, onRefuse, onLayOut, unplacedCount } = props
   const svgRef = useRef<SVGSVGElement>(null)
   const sheetRef = useRef<Sheet>(emptySheet)
   /** Whether the drag has done anything yet, so an abandoned one puts back only what it moved and a press that never moved is a click. */
@@ -174,6 +234,8 @@ export function ZoningView(props: ZoningViewProps) {
   const touchesRef = useRef(new Map<number, Point>())
   /** Space turns any drag into a pan, so a room under the hand is slid past rather than picked up. */
   const spaceRef = useRef(false)
+  /** `A` held: the next wall the draw tool puts down is bowed out rather than run straight. */
+  const arcRef = useRef(false)
   const [gesture, setGesture] = useState<Gesture>(null)
   const [asked, setAsked] = useState<Asked | null>(null)
   const [hovered, setHovered] = useState<string | null>(null)
@@ -182,6 +244,9 @@ export function ZoningView(props: ZoningViewProps) {
   const [beforeCarve, setBeforeCarve] = useState<ReadonlyMap<string, Footprint>>(new Map())
   const [camera, setCamera] = useState<Camera>(fitCamera)
   const [box, setBox] = useState({ width: 0, height: 0 })
+  const [drawing, setDrawing] = useState<Drawing>(null)
+  /** Which tool is waiting on a room, when the hand pressed it with none picked. */
+  const [picking, setPicking] = useState<'draw' | 'circle' | null>(null)
 
   const here = useMemo(
     () => rooms.filter((room) => occupiedStoreys(room).includes(storey)),
@@ -206,6 +271,7 @@ export function ZoningView(props: ZoningViewProps) {
         id: room.id,
         name: room.name,
         outline: outlineOf(room.footprint),
+        measure: exactArea(room.footprint),
       })),
     [placed],
   )
@@ -323,6 +389,9 @@ export function ZoningView(props: ZoningViewProps) {
         sheet,
       )
     }
+    if (grip.kind === 'vertex') {
+      return landFootprint(movedVertex(grip.from, grip.index, pointer), sheet)
+    }
     return resizeFootprint(grip.from, grip.sx, grip.sy, pointer, sheet)
   }
 
@@ -439,6 +508,210 @@ export function ZoningView(props: ZoningViewProps) {
     ])
   }
 
+  /** The polygon the tool has walked so far, with the wall following the hand on the end of it. */
+  const drawRun =
+    drawing?.kind === 'draw'
+      ? drawnPolygon(
+          drawing.bulge
+            ? [...drawing.corners, { at: drawing.bulge.to, through: drawing.bulge.through }]
+            : drawing.at
+              ? [...drawing.corners, { at: drawing.at }]
+              : drawing.corners,
+        ).polygon
+      : []
+
+  function stopDrawing(): void {
+    setDrawing(null)
+    setPicking(null)
+  }
+
+  /** A shape the hand has closed lands like any other drop: clear, or asked about where it lies over. */
+  function placeDrawn(roomId: string, footprint: Footprint): void {
+    const room = rooms.find((entry) => entry.id === roomId)
+    if (!room) return
+    sheetRef.current = sheetFor(roomId)
+    movedRef.current = false
+    const landing = landOver(footprint, sheetRef.current)
+    ask(room, landing, null, onScreen(centreOf(landing.footprint)))
+  }
+
+  function closeDrawing(roomId: string, corners: readonly Corner[]): void {
+    const drawn = closedFootprint(corners)
+    stopDrawing()
+    if (!drawn.ok) {
+      onRefuse(`That shape is not a room: ${drawn.reason}.`)
+      return
+    }
+    placeDrawn(roomId, drawn.footprint)
+  }
+
+  /** A press on the sheet with a tool out: a corner goes down, or a circle's centre does. */
+  function drawDown(event: ReactPointerEvent): void {
+    if (!drawing) return
+    const pointer = at(event)
+    if (drawing.kind === 'circle') {
+      setDrawing({ ...drawing, centre: snapPointToGrid(pointer), radius: 0 })
+      return
+    }
+    if (drawing.kind !== 'draw') return
+    const corner = snapPointToGrid(pointer)
+    if (closesAt(drawing.corners, corner)) {
+      closeDrawing(drawing.roomId, drawing.corners)
+      return
+    }
+    // `A` held bows the wall that reaches this corner: the corner goes down and the hand then
+    // drags the point the wall is to pass through, so one gesture leaves one arc behind it.
+    if (arcRef.current && drawing.corners.length > 0) {
+      setDrawing({ ...drawing, bulge: { to: corner, through: corner }, at: corner })
+      return
+    }
+    setDrawing({ ...drawing, corners: [...drawing.corners, { at: corner }], at: corner })
+  }
+
+  function drawMove(event: ReactPointerEvent): void {
+    if (!drawing) return
+    const pointer = at(event)
+    if (drawing.kind === 'circle') {
+      const centre = drawing.centre
+      if (!centre) return
+      setDrawing({
+        ...drawing,
+        radius: snapRadius(Math.hypot(pointer[0] - centre[0], pointer[1] - centre[1])),
+      })
+      return
+    }
+    if (drawing.kind !== 'draw') return
+    // The bulge is read where the hand is rather than on the grid: a curve is aimed by eye.
+    if (drawing.bulge) {
+      setDrawing({ ...drawing, bulge: { ...drawing.bulge, through: pointer } })
+      return
+    }
+    setDrawing({ ...drawing, at: snapPointToGrid(pointer) })
+  }
+
+  function drawUp(): void {
+    if (!drawing) return
+    if (drawing.kind === 'circle') {
+      const centre = drawing.centre
+      if (!centre) return
+      if (drawing.radius <= 0) {
+        setDrawing({ ...drawing, centre: null })
+        return
+      }
+      const footprint = circleFootprint(centre, drawing.radius)
+      const roomId = drawing.roomId
+      stopDrawing()
+      if (exactArea(footprint) < SMALLEST_DRAWN_M2) {
+        onRefuse(`That circle is not a room: it covers less than ${SMALLEST_DRAWN_M2} m².`)
+        return
+      }
+      placeDrawn(roomId, footprint)
+      return
+    }
+    const bulge = drawing.kind === 'draw' ? drawing.bulge : null
+    if (drawing.kind !== 'draw' || !bulge) return
+    setDrawing({
+      ...drawing,
+      corners: [...drawing.corners, { at: bulge.to, through: bulge.through }],
+      at: bulge.to,
+      bulge: null,
+    })
+  }
+
+  function startTool(kind: 'draw' | 'circle', roomId: string): void {
+    setPicking(null)
+    setGesture(null)
+    onSelect(roomId)
+    svgRef.current?.focus({ preventScroll: true })
+    setDrawing(
+      kind === 'draw'
+        ? { kind, roomId, corners: [], at: null, bulge: null }
+        : { kind, roomId, centre: null, radius: 0 },
+    )
+  }
+
+  /**
+   * The room the tool draws: the one picked out of the tray, the only room left in it, or one
+   * asked for. A room already standing is not redrawn from under itself; it is unplaced first.
+   */
+  function openTool(kind: 'draw' | 'circle'): void {
+    if (drawing?.kind === kind) {
+      stopDrawing()
+      return
+    }
+    const chosen = tray.find((room) => room.id === selected) ?? (tray.length === 1 ? tray[0] : null)
+    if (chosen) {
+      startTool(kind, chosen.id)
+      return
+    }
+    if (tray.length === 0) {
+      onRefuse('Every room on this storey is placed; unplace one to draw it again.')
+      return
+    }
+    setPicking(kind)
+  }
+
+  function editPoints(): void {
+    if (drawing?.kind === 'points') {
+      stopDrawing()
+      return
+    }
+    if (!selectedRoom || !isPlaced(selectedRoom) || !grabbable) {
+      onRefuse('Pick a placed room to edit its points.')
+      return
+    }
+    svgRef.current?.focus({ preventScroll: true })
+    setDrawing({ kind: 'points', roomId: selectedRoom.id, picked: null })
+  }
+
+  function grabVertex(event: ReactPointerEvent, index: number): void {
+    event.stopPropagation()
+    if (panningWith(event)) {
+      grabSheet(event, false)
+      return
+    }
+    if (!selectedRoom || !isPlaced(selectedRoom)) return
+    setDrawing(drawing?.kind === 'points' ? { ...drawing, picked: index } : drawing)
+    begin(selectedRoom, (footprint) => ({
+      kind: 'vertex',
+      id: selectedRoom.id,
+      from: footprint,
+      index,
+    }))
+  }
+
+  /** One edit, one undo step: the room is written once the new outline is known to stand. */
+  function editVertices(room: Placed, footprint: Footprint | null): void {
+    if (room.pinned) {
+      onRefuse(`${room.name} is pinned.`)
+      return
+    }
+    if (!footprint) {
+      onRefuse(`${room.name} keeps its points: a room has at least three.`)
+      return
+    }
+    const attempt = landFootprint(footprint, sheetFor(room.id))
+    if (!attempt.ok) {
+      onRefuse(`${room.name} keeps its points: ${attempt.reason}.`)
+      return
+    }
+    onPlace(room.id, attempt.value, 'commit')
+  }
+
+  function addVertex(event: ReactPointerEvent, index: number): void {
+    event.stopPropagation()
+    if (!selectedRoom || !isPlaced(selectedRoom)) return
+    editVertices(selectedRoom, addedVertex(selectedRoom.footprint, index))
+  }
+
+  function dropVertex(): void {
+    if (drawing?.kind !== 'points' || drawing.picked === null) return
+    if (!selectedRoom || !isPlaced(selectedRoom)) return
+    const index = drawing.picked
+    setDrawing({ ...drawing, picked: null })
+    editVertices(selectedRoom, removedVertex(selectedRoom.footprint, index))
+  }
+
   function movePointer(event: PointerEvent): void {
     if (touchesRef.current.has(event.pointerId)) {
       touchesRef.current.set(event.pointerId, [event.clientX, event.clientY])
@@ -524,9 +797,18 @@ export function ZoningView(props: ZoningViewProps) {
     release: releasePointer,
     grab: grabRoom,
     wheel: wheelZoom,
+    drawUp,
   })
-  live.current = { move: movePointer, release: releasePointer, grab: grabRoom, wheel: wheelZoom }
+  live.current = {
+    move: movePointer,
+    release: releasePointer,
+    grab: grabRoom,
+    wheel: wheelZoom,
+    drawUp,
+  }
   const dragging = gesture !== null
+  /** Whether a shape or a circle is being drawn, which is when the sheet itself takes every press. */
+  const drawingOut = drawing !== null && drawing.kind !== 'points'
 
   /** Held steady through the ref, so a room's own group keeps its props and is not drawn again mid-drag. */
   const onGrabRoom = useCallback(
@@ -546,6 +828,19 @@ export function ZoningView(props: ZoningViewProps) {
       window.removeEventListener('pointerup', up)
     }
   }, [dragging])
+
+  /** A tool's press may be let go anywhere, so the release is taken from the window, not the sheet. */
+  useEffect(() => {
+    if (!drawingOut) return
+    const up = (): void => live.current.drawUp()
+    window.addEventListener('pointerup', up)
+    return () => window.removeEventListener('pointerup', up)
+  }, [drawingOut])
+
+  /** A tool belongs to the room it was opened on; picking another room puts it away. */
+  useEffect(() => {
+    setDrawing((out) => (out && selected !== out.roomId ? null : out))
+  }, [selected])
 
   /** Taken by hand rather than through React, whose own wheel listener cannot refuse the page its scroll. */
   useEffect(() => {
@@ -580,12 +875,15 @@ export function ZoningView(props: ZoningViewProps) {
   useEffect(() => {
     const down = (event: KeyboardEvent): void => {
       if (event.key === ' ') spaceRef.current = true
+      if (event.key.toLowerCase() === 'a') arcRef.current = true
     }
     const up = (event: KeyboardEvent): void => {
       if (event.key === ' ') spaceRef.current = false
+      if (event.key.toLowerCase() === 'a') arcRef.current = false
     }
     const letGo = (): void => {
       spaceRef.current = false
+      arcRef.current = false
     }
     window.addEventListener('keydown', down)
     window.addEventListener('keyup', up)
@@ -655,6 +953,10 @@ export function ZoningView(props: ZoningViewProps) {
   function grabSheet(event: ReactPointerEvent, clears: boolean): void {
     svgRef.current?.focus({ preventScroll: true })
     if (event.button !== 0 && event.button !== 1) return
+    if (drawingOut && event.button === 0) {
+      drawDown(event)
+      return
+    }
     // The middle button would otherwise start the browser's own scroll, which fights the pan.
     if (event.button === 1) event.preventDefault()
     movedRef.current = false
@@ -723,6 +1025,7 @@ export function ZoningView(props: ZoningViewProps) {
   }
 
   function grabTray(event: ReactPointerEvent, room: Room): void {
+    if (drawingOut) return
     event.preventDefault()
     svgRef.current?.focus({ preventScroll: true })
     onSelect(room.id)
@@ -823,8 +1126,42 @@ export function ZoningView(props: ZoningViewProps) {
     <div className="zoning">
       <div className="zoning-bar">
         <Storeys storeys={storeys} storey={storey} onStorey={onStorey} />
+        <button
+          type="button"
+          onClick={onLayOut}
+          disabled={unplacedCount === 0}
+          title={
+            unplacedCount === 0
+              ? 'Every room already stands on the sheet.'
+              : 'Puts every room still in the tray where its bubble says, on every storey.'
+          }
+        >
+          Lay out from bubbles
+        </button>
         <button type="button" onClick={turn} disabled={!grabbable}>
           Rotate 90°
+        </button>
+        <button
+          type="button"
+          aria-pressed={drawing?.kind === 'draw'}
+          onClick={() => openTool('draw')}
+        >
+          Draw
+        </button>
+        <button
+          type="button"
+          aria-pressed={drawing?.kind === 'circle'}
+          onClick={() => openTool('circle')}
+        >
+          Circle
+        </button>
+        <button
+          type="button"
+          disabled={!grabbable}
+          aria-pressed={drawing?.kind === 'points'}
+          onClick={editPoints}
+        >
+          Edit points
         </button>
         <button
           type="button"
@@ -898,12 +1235,18 @@ export function ZoningView(props: ZoningViewProps) {
           Fit
         </button>
       </div>
-      <p className="zoning-hint">{HINT}</p>
+      <p className="zoning-hint">{drawing ? HINTS[drawing.kind] : HINT}</p>
       <div className="zoning-body">
         <Tray rooms={tray.filter((room) => room.id !== asked?.id)} onGrab={grabTray} />
         <svg
           ref={svgRef}
-          className={gesture?.kind === 'pan' ? 'zoning-sheet zoning-panning' : 'zoning-sheet'}
+          className={[
+            'zoning-sheet',
+            gesture?.kind === 'pan' ? 'zoning-panning' : '',
+            drawingOut ? 'zoning-drawing' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
           viewBox={viewBoxOf(extent, camera)}
           preserveAspectRatio="xMidYMid meet"
           style={{ '--per-px': String(perPixel) } as CSSProperties}
@@ -918,7 +1261,26 @@ export function ZoningView(props: ZoningViewProps) {
             beginPinch()
           }}
           onPointerDown={(event) => grabSheet(event, true)}
+          onPointerMove={drawingOut ? drawMove : undefined}
           onKeyDown={(event) => {
+            if (drawing && event.key === 'Escape') {
+              event.preventDefault()
+              stopDrawing()
+              return
+            }
+            if (drawing?.kind === 'draw' && event.key === 'Enter') {
+              event.preventDefault()
+              closeDrawing(drawing.roomId, drawing.corners)
+              return
+            }
+            if (
+              drawing?.kind === 'points' &&
+              (event.key === 'Delete' || event.key === 'Backspace')
+            ) {
+              event.preventDefault()
+              dropVertex()
+              return
+            }
             if (event.key === 'Delete' || event.key === 'Backspace') {
               if (!selectedEdge) return
               event.preventDefault()
@@ -1027,38 +1389,42 @@ export function ZoningView(props: ZoningViewProps) {
               }}
             />
           ))}
-          {selectedRoom && isPlaced(selectedRoom) && grabbable && !selectedRoom.pinned && (
-            <Handles
-              footprint={selectedRoom.footprint}
-              perPixel={perPixel}
-              onRotate={(event) => {
-                event.stopPropagation()
-                if (panningWith(event)) {
-                  grabSheet(event, false)
-                  return
-                }
-                begin(selectedRoom, (footprint) => ({
-                  kind: 'rotate',
-                  id: selectedRoom.id,
-                  from: footprint,
-                }))
-              }}
-              onResize={(event, sx, sy) => {
-                event.stopPropagation()
-                if (panningWith(event)) {
-                  grabSheet(event, false)
-                  return
-                }
-                begin(selectedRoom, (footprint) => ({
-                  kind: 'resize',
-                  id: selectedRoom.id,
-                  from: footprint,
-                  sx,
-                  sy,
-                }))
-              }}
-            />
-          )}
+          {selectedRoom &&
+            isPlaced(selectedRoom) &&
+            grabbable &&
+            !selectedRoom.pinned &&
+            !drawing && (
+              <Handles
+                footprint={selectedRoom.footprint}
+                perPixel={perPixel}
+                onRotate={(event) => {
+                  event.stopPropagation()
+                  if (panningWith(event)) {
+                    grabSheet(event, false)
+                    return
+                  }
+                  begin(selectedRoom, (footprint) => ({
+                    kind: 'rotate',
+                    id: selectedRoom.id,
+                    from: footprint,
+                  }))
+                }}
+                onResize={(event, sx, sy) => {
+                  event.stopPropagation()
+                  if (panningWith(event)) {
+                    grabSheet(event, false)
+                    return
+                  }
+                  begin(selectedRoom, (footprint) => ({
+                    kind: 'resize',
+                    id: selectedRoom.id,
+                    from: footprint,
+                    sx,
+                    sy,
+                  }))
+                }}
+              />
+            )}
           {/* The marks are drawn over the handles: a proposal has one place to be clicked, where a room can still be resized by a corner. */}
           {proposals.map((mark) => (
             <Proposal
@@ -1076,6 +1442,26 @@ export function ZoningView(props: ZoningViewProps) {
             />
           ))}
           {gesture?.kind === 'drop' && <DropGhost at={gesture.at} size={dropSize()} />}
+          {drawing?.kind === 'draw' && (
+            <DrawPreview
+              run={drawRun}
+              corners={drawing.corners.map((corner) => corner.at)}
+              closing={drawing.at !== null && closesAt(drawing.corners, drawing.at)}
+              perPixel={perPixel}
+            />
+          )}
+          {drawing?.kind === 'circle' && drawing.centre && (
+            <CirclePreview centre={drawing.centre} radius={drawing.radius} />
+          )}
+          {drawing?.kind === 'points' && selectedRoom && isPlaced(selectedRoom) && (
+            <VertexHandles
+              footprint={selectedRoom.footprint}
+              perPixel={perPixel}
+              picked={drawing.picked}
+              onGrab={grabVertex}
+              onAdd={addVertex}
+            />
+          )}
           <NorthArrow
             north={plot.north}
             at={[shown.minX + shown.width - FURNITURE_PX * perPixel, shown.minY + 44 * perPixel]}
@@ -1090,6 +1476,13 @@ export function ZoningView(props: ZoningViewProps) {
           />
         </svg>
       </div>
+      {picking && (
+        <PickRoom
+          rooms={tray}
+          onPick={(id) => startTool(picking, id)}
+          onDrop={() => setPicking(null)}
+        />
+      )}
       {asked && (
         <Ask
           prompt={{

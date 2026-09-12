@@ -1,3 +1,4 @@
+import { arcRun } from '../geometry'
 import {
   EXTERIOR,
   type Edge,
@@ -110,6 +111,45 @@ export function checkFootprints(project: Project): readonly Violation[] {
     .map((room) => say('footprint-half', `room ${room.id} is neither placed nor unplaced`))
 }
 
+/** How far a vertex may sit off the circle its arc names, in metres. */
+const ARC_TOLERANCE = 1e-6
+
+/**
+ * An arc has to name vertices the polygon has, and those vertices have to lie on the circle it
+ * names: the polygon is what every calculation reads, so an arc that does not match it would
+ * make the exact area and the exported curve disagree with the room on the sheet.
+ */
+export function checkArcs(project: Project): readonly Violation[] {
+  const violations: Violation[] = []
+  for (const room of project.rooms) {
+    const footprint = room.footprint
+    if (!footprint?.arcs) continue
+    const vertices = footprint.polygon.length
+    for (const arc of footprint.arcs) {
+      const named = [arc.from, arc.to].every(
+        (index) => Number.isInteger(index) && index >= 0 && index < vertices,
+      )
+      if (!named || !Number.isFinite(arc.radius) || arc.radius <= 0) {
+        violations.push(
+          say('arc-range', `room ${room.id} has an arc on vertices its polygon does not have`),
+        )
+        continue
+      }
+      const off = arcRun(arc, vertices).some((index) => {
+        const at = footprint.polygon[index]
+        if (!at) return true
+        const reach = Math.hypot(at[0] - arc.centre[0], at[1] - arc.centre[1])
+        return Math.abs(reach - arc.radius) > ARC_TOLERANCE
+      })
+      if (off)
+        violations.push(
+          say('arc-off-circle', `room ${room.id} has an arc whose vertices are off its circle`),
+        )
+    }
+  }
+  return violations
+}
+
 export function checkRoomStoreys(project: Project): readonly Violation[] {
   const violations: Violation[] = []
   for (const room of project.rooms) {
@@ -147,6 +187,7 @@ const checks = [
   checkExteriorIsNotARoom,
   checkMainDoor,
   checkFootprints,
+  checkArcs,
   checkRoomStoreys,
   checkHeights,
 ]

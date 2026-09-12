@@ -1,4 +1,14 @@
-import { area, boundingBox, centroid, type Point } from '../geometry'
+import {
+  arcRun,
+  boundingBox,
+  centroid,
+  exactArea,
+  sheetArcs,
+  type Arc,
+  type Footprint,
+  type Point,
+  type Polygon,
+} from '../geometry'
 import type { Project } from '../model'
 import { contentBounds, doorsOn, openingMetres, round1, standingOn } from './plan'
 
@@ -243,6 +253,85 @@ function northEntities(at: Point, north: number): readonly Entity[] {
   ]
 }
 
+/** An angle in DXF's own space, in whole degrees of turn from east, never negative. */
+function degreesAt(centre: Point, at: Point): number {
+  const turn = (Math.atan2(at[1] - centre[1], at[0] - centre[0]) * 180) / Math.PI
+  return turn < 0 ? turn + 360 : turn
+}
+
+/**
+ * One remembered arc as an ARC entity. DXF sweeps an arc counterclockwise in its own y-up space,
+ * and the sheet's y runs down, so a wall drawn clockwise on the plan arrives the other way round
+ * and its two ends are written swapped. An arc that runs the whole way round is a closed circle.
+ */
+function arcEntity(arc: Arc, outline: Polygon, layer: string, at: (p: Point) => Point): Entity {
+  const centre = at(arc.centre)
+  const run = arcRun(arc, outline.length)
+  const first = run[0] ?? 0
+  const last = run[run.length - 1] ?? 0
+  const start = at(outline[first] ?? arc.centre)
+  const end = at(outline[last] ?? arc.centre)
+  const whole = first === last
+  return {
+    kind: 'arc',
+    layer,
+    centre,
+    radius: arc.radius,
+    fromDegrees: whole ? 0 : degreesAt(centre, arc.clockwise ? end : start),
+    toDegrees: whole ? 360 : degreesAt(centre, arc.clockwise ? start : end),
+  }
+}
+
+/**
+ * A room's outline split at the ends of its arcs: every remembered curve is written as one ARC
+ * and what is left between them as open polylines, all on the room's own layer, so AutoCAD shows
+ * a true curve rather than the fifty short chords the tool calculates with.
+ */
+function roomEntities(
+  footprint: Footprint,
+  outline: Polygon,
+  layer: string,
+  at: (p: Point) => Point,
+): readonly Entity[] {
+  const arcs = sheetArcs(footprint)
+  const corners = outline.length
+  if (arcs.length === 0 || corners < 3)
+    return [{ kind: 'polyline', layer, points: outline.map(at), closed: true }]
+  const curved = new Array<boolean>(corners).fill(false)
+  for (const arc of arcs) {
+    const run = arcRun(arc, corners)
+    for (let step = 0; step + 1 < run.length; step += 1) curved[run[step] ?? 0] = true
+  }
+  const entities: Entity[] = arcs.map((arc) => arcEntity(arc, outline, layer, at))
+  // The walk starts at the first straight wall whose neighbour behind it is curved, so a run that
+  // would otherwise be split by the end of the list is written as the one polyline it is.
+  const opens = curved.findIndex((wall, index) => !wall && curved[(index - 1 + corners) % corners])
+  if (opens < 0) return entities
+  const runs: number[][] = []
+  let run: number[] | null = null
+  for (let step = 0; step < corners; step += 1) {
+    const wall = (opens + step) % corners
+    if (curved[wall]) {
+      run = null
+      continue
+    }
+    if (!run) {
+      run = [wall]
+      runs.push(run)
+    }
+    run.push((wall + 1) % corners)
+  }
+  for (const straight of runs) {
+    entities.push({
+      kind: 'polyline',
+      layer,
+      points: straight.map((corner) => at(outline[corner] ?? [0, 0])),
+      closed: false,
+    })
+  }
+  return entities
+}
+
 function entitiesOf(project: Project): readonly Entity[] {
   const transform = transformFor(project)
   const entities: Entity[] = []
@@ -256,21 +345,16 @@ function entitiesOf(project: Project): readonly Entity[] {
   }
   for (let storey = 0; storey < Math.max(1, project.storeys); storey += 1) {
     const standing = standingOn(project.rooms, storey)
-    for (const { outline } of standing) {
-      entities.push({
-        kind: 'polyline',
-        layer: roomsLayer(storey),
-        points: outline.map(transform.at),
-        closed: true,
-      })
+    for (const { outline, footprint } of standing) {
+      entities.push(...roomEntities(footprint, outline, roomsLayer(storey), transform.at))
     }
-    for (const { outline, room } of standing) {
+    for (const { outline, room, footprint } of standing) {
       entities.push({
         kind: 'text',
         layer: textLayer(storey),
         at: transform.at(centroid(outline)),
         // ASCII only, so the file reads the same in every CAD program: "m2", not "m²".
-        text: `${room.name} ${round1(area(outline))} m2`,
+        text: `${room.name} ${round1(exactArea(footprint))} m2`,
         height: TEXT_HEIGHT_M,
       })
     }

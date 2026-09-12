@@ -8,9 +8,9 @@ import {
 import {
   GRID_M,
   anchorPointOf,
-  area,
   boundingBox,
   centroid,
+  exactArea,
   outlineOf,
   outwardWalls,
   ringsToPath,
@@ -291,7 +291,8 @@ export const RoomShape = memo(function RoomShape(props: RoomShapeProps) {
   const footprint = room.footprint
   if (!footprint) return null
   const outline = outlineOf(footprint)
-  const measure = area(outline)
+  // The exact area, so a room with a curved wall is measured by the curve and not by the chords.
+  const measure = exactArea(footprint)
   const middle = centroid(outline)
   const label = labelSize(footprint.polygon, room.name)
   const warn =
@@ -581,7 +582,7 @@ export function PendingRoom({
   footprint: Footprint
 }) {
   const outline = outlineOf(footprint)
-  const measure = area(outline)
+  const measure = exactArea(footprint)
   const middle = centroid(outline)
   return (
     <g

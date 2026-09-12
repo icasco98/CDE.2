@@ -71,49 +71,35 @@ export function ZoningStage(props: {
   }
 
   return (
-    <>
-      <div className="zoning-bar zoning-lay-out">
-        <button
-          type="button"
-          onClick={layOutAll}
-          disabled={unplaced.length === 0}
-          title={
-            unplaced.length === 0
-              ? 'Every room already stands on the sheet.'
-              : 'Puts every room still in the tray where its bubble says, on every storey.'
-          }
-        >
-          Lay out from bubbles
-        </button>
-      </div>
-      <ZoningView
-        projectId={project.id}
-        rooms={project.rooms}
-        edges={project.edges}
-        storeys={project.storeys}
-        storey={props.storey}
-        plot={project.plot}
-        sizes={sizes}
-        selected={selected}
-        onPlace={(id: string, footprint: Footprint, commit: Commit) =>
-          report(session.actions.place(id, footprint, commit))
-        }
-        onPlaceAll={placeAll}
-        onUnplace={(id: string) => report(session.actions.unplace(id))}
-        onPin={(id: string, pinned: boolean) =>
-          report(pinned ? session.actions.pin(id) : session.actions.unpin(id))
-        }
-        onConnect={(a: Endpoint, b: Endpoint, storey: number) =>
-          report(session.actions.connect({ a, b, kind: 'door', storey }))
-        }
-        onDisconnect={(edgeId: string) => report(session.actions.disconnect(edgeId))}
-        onSelect={selection.select}
-        onStorey={props.onStorey}
-        onSetEdgeKind={(edgeId: string, kind: EdgeKind) =>
-          report(session.actions.setEdgeKind(edgeId, kind))
-        }
-        onRefuse={session.say}
-      />
-    </>
+    <ZoningView
+      projectId={project.id}
+      rooms={project.rooms}
+      edges={project.edges}
+      storeys={project.storeys}
+      storey={props.storey}
+      plot={project.plot}
+      sizes={sizes}
+      selected={selected}
+      onPlace={(id: string, footprint: Footprint, commit: Commit) =>
+        report(session.actions.place(id, footprint, commit))
+      }
+      onPlaceAll={placeAll}
+      onUnplace={(id: string) => report(session.actions.unplace(id))}
+      onPin={(id: string, pinned: boolean) =>
+        report(pinned ? session.actions.pin(id) : session.actions.unpin(id))
+      }
+      onConnect={(a: Endpoint, b: Endpoint, storey: number) =>
+        report(session.actions.connect({ a, b, kind: 'door', storey }))
+      }
+      onDisconnect={(edgeId: string) => report(session.actions.disconnect(edgeId))}
+      onSelect={selection.select}
+      onStorey={props.onStorey}
+      onSetEdgeKind={(edgeId: string, kind: EdgeKind) =>
+        report(session.actions.setEdgeKind(edgeId, kind))
+      }
+      onRefuse={session.say}
+      onLayOut={layOutAll}
+      unplacedCount={unplaced.length}
+    />
   )
 }
