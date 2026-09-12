@@ -35,10 +35,43 @@ describe('a storey more or less', () => {
     expect(spanOf(stair)).toBe(1)
   })
 
-  it('reverts the storey and the stair together when the one undo is asked for', () => {
+  it('reverts the storey, its height and the stair together when the one undo is asked for', () => {
     const stair = add('stair')
     addStorey(store)
+    expect(store.getState()).toMatchObject({ storeys: 2, heights: [3.5, 3.5] })
     store.undo()
+    expect(spanOf(stair)).toBe(1)
+    expect(store.getState()).toMatchObject({ storeys: 1, heights: [3.5] })
+    store.redo()
+    expect(spanOf(stair)).toBe(2)
+    expect(store.getState()).toMatchObject({ storeys: 2, heights: [3.5, 3.5] })
+  })
+
+  it('puts the storey back, and the stair reaching it, when removing them is undone', () => {
+    const stair = add('stair')
+    addStorey(store)
+    expect(removeStorey(store).ok).toBe(true)
+    expect(store.getState()).toMatchObject({ storeys: 1, heights: [3.5] })
+    expect(spanOf(stair)).toBe(1)
+    store.undo()
+    expect(store.getState()).toMatchObject({ storeys: 2, heights: [3.5, 3.5] })
+    expect(spanOf(stair)).toBe(2)
+    store.redo()
+    expect(store.getState().storeys).toBe(1)
+    expect(spanOf(stair)).toBe(1)
+  })
+
+  it('walks back one storey at a time through two added one after the other', () => {
+    const stair = add('stair')
+    addStorey(store)
+    addStorey(store)
+    expect(store.getState().storeys).toBe(3)
+    expect(spanOf(stair)).toBe(3)
+    store.undo()
+    expect(store.getState().storeys).toBe(2)
+    expect(spanOf(stair)).toBe(2)
+    store.undo()
+    expect(store.getState().storeys).toBe(1)
     expect(spanOf(stair)).toBe(1)
   })
 
