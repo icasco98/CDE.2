@@ -14,6 +14,8 @@ export type PartitionRoom = {
   /** The room-type key, which the small-room rules and the garage run read. */
   readonly type: string
   readonly targetArea: number
+  /** The least floor the room-type table admits for the kind, where it carries one, in m². */
+  readonly minArea?: number
   /** Where the bubble stands, in plot metres. */
   readonly at: Point
   readonly radius: number

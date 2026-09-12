@@ -3,6 +3,7 @@ import { cellAt, cellCentre, gridOver, INSIDE, OFF, PAST, type Grid } from './gr
 import { doorOn, reachedFrom, runNeeded, sharedRuns, whyOpen } from './links'
 import { divide, settleAreas } from './reach'
 import { claimDrives, inContact, layContact, layCorridor, layKerb, relaxRun } from './seeds'
+import { squareCorridor, straighten } from './straighten'
 import { tidy } from './tidy'
 import { cellsOf, fillHoles, joinSeeds, keepOnePiece, outlineOfCells, zoneOfCells } from './zones'
 import {
@@ -38,7 +39,11 @@ function isCorridor(room: PartitionRoom): boolean {
  * that order throughout, so the same bubbles give the same zones, cell for cell.
  */
 export function partitionOf(input: PartitionInput): Partition {
-  const rooms = input.rooms
+  const at0 = new Map(input.rooms.map((room, index) => [room.id, index]))
+  const entry0 = input.rooms[at0.get(input.arrivals[0] ?? '') ?? -1]
+  const rooms = input.rooms.map((room) =>
+    isCorridor(room) ? squareCorridor(room, entry0?.at, input.street) : room,
+  )
   const grid = gridOver(input.plot, input.buildable)
   const division = openDivision(grid, rooms, input.buildable)
   const at = new Map(rooms.map((room, index) => [room.id, index]))
@@ -48,7 +53,7 @@ export function partitionOf(input: PartitionInput): Partition {
     if (isCorridor(room)) layCorridor(division, room, index, entry?.at)
   claimDrives(division, rooms, input.street, (room) => room.type === BAY)
   for (const [index, room] of rooms.entries()) layKerb(division, room, index)
-  seedContacts(division, rooms, input, at)
+  const seeded = seedContacts(division, rooms, input, at)
 
   const sites = rooms.flatMap((room, index) => (isCorridor(room) ? [] : [index]))
   divide(division, rooms, sites)
@@ -67,6 +72,7 @@ export function partitionOf(input: PartitionInput): Partition {
   // is an ordinary zone again, so the cells the hole-filling left it over its target can go.
   relaxRun(division)
   whole()
+  straighten(division, rooms, seeded, rooms.findIndex(isCorridor))
 
   const zones: Zone[] = []
   for (const [index, room] of rooms.entries()) {
@@ -229,16 +235,24 @@ function seedContacts(
   rooms: readonly PartitionRoom[],
   input: PartitionInput,
   at: ReadonlyMap<string, number>,
-): void {
+): readonly (readonly [number, number])[] {
+  // Whether two rooms touch is a fact about the bubble diagram the person left, so it is read off
+  // the bubbles as they stand; where the wall is laid is a fact about the plan, so it is laid
+  // against the corridor as the straightening turned it.
+  const given = input.rooms
   const seeded = new Set<string>()
+  const pairs: (readonly [number, number])[] = []
   const seed = (one: number, other: number): void => {
     const key = one < other ? `${one}|${other}` : `${other}|${one}`
     if (seeded.has(key)) return
     seeded.add(key)
     const a = rooms[one]
     const b = rooms[other]
-    if (!a || !b || !inContact(a, b)) return
+    const wasA = given[one]
+    const wasB = given[other]
+    if (!a || !b || !wasA || !wasB || !inContact(wasA, wasB)) return
     layContact(division, a, b, one, other)
+    pairs.push(one < other ? [one, other] : [other, one])
   }
   for (const link of input.links) {
     const a = at.get(link.a)
@@ -249,4 +263,5 @@ function seedContacts(
     const owner = room.owner === undefined ? undefined : at.get(room.owner)
     if (owner !== undefined && owner !== index) seed(index, owner)
   }
+  return pairs
 }

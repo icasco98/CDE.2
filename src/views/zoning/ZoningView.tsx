@@ -58,7 +58,7 @@ import { extentOf } from '../frame'
 import { BuildableLine, NorthArrow, PlotSheet, ScaleBar } from '../parts'
 import { useSheetCamera } from '../sheetCamera'
 import { joinsOf, type Join } from './joins'
-import { MorphZones } from './morph'
+import { MORPH_HINT, MorphZones } from './morph'
 import {
   angleTo,
   carveRefusal,
@@ -1302,7 +1302,9 @@ export function ZoningView(props: ZoningViewProps) {
           Fit
         </button>
       </div>
-      <p className="zoning-hint">{drawing ? HINTS[drawing.kind] : HINT}</p>
+      <p className="zoning-hint" data-hint={proposal?.first ? 'morph' : undefined}>
+        {proposal?.first ? MORPH_HINT : drawing ? HINTS[drawing.kind] : HINT}
+      </p>
       <div className="zoning-body">
         {showing && <Tray rooms={tray.filter((room) => room.id !== asked?.id)} onGrab={grabTray} />}
         <svg
