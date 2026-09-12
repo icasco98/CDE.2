@@ -1,7 +1,7 @@
 import { boundingBox, type Polygon } from '../geometry'
 import { buildableArea } from '../rulebook/setbacks'
 import { isDocument, parseProject, type Document } from './parse'
-import { STARTING_HEIGHT_M, startingHousehold } from './project'
+import { STARTING_HEIGHT_M, startingHousehold, startingSite } from './project'
 import type { Store } from './store'
 import { PROJECT_VERSION, ok, refused, type Project, type Result, type Violation } from './types'
 
@@ -118,6 +118,12 @@ function bubblesToPlotMetres(document: Document): Document {
   }
 }
 
+/** A project written before the client could answer S4 and S5 answers them the way a villa does. */
+function siteChoices(document: Document): Document {
+  const site = isDocument(document.site) ? document.site : {}
+  return { ...document, site: { ...startingSite, ...site } }
+}
+
 /** From the version keyed to the next one. */
 const migrations: ReadonlyMap<number, Migration> = new Map<number, Migration>([
   [1, (document) => ({ household: startingHousehold, ...document })],
@@ -125,6 +131,7 @@ const migrations: ReadonlyMap<number, Migration> = new Map<number, Migration>([
   [3, storeysToHeights],
   [4, householdMasterOnGround],
   [5, bubblesToPlotMetres],
+  [6, siteChoices],
 ])
 
 export function serialize(project: Project): string {

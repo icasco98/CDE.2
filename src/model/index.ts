@@ -1,4 +1,5 @@
 export { EXTERIOR, PROJECT_VERSION, families, refused } from './types'
+export { startingSite } from './project'
 export type {
   Actor,
   Bubble,
@@ -6,11 +7,13 @@ export type {
   EdgeKind,
   Endpoint,
   Family,
+  Garden,
   Household,
   Plot,
   Project,
   Result,
   Room,
+  Site,
   Violation,
   WallHint,
   Weights,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  buildableOf,
   createState,
+  groundOf,
   defaultLayout,
   layoutFor,
   SPREAD_SECONDS,
@@ -9,7 +9,7 @@ import {
   type LayoutConfig,
   type SimulationRoom,
 } from '../../bubbles'
-import type { Commit } from '../../model'
+import { startingSite, type Commit } from '../../model'
 import { createRun, type Frames } from './run'
 
 /** A hand-driven `requestAnimationFrame`: it counts what was asked for and runs it when told to. */
@@ -45,16 +45,24 @@ function fakeFrames() {
   }
 }
 
-/** The starting plot inside its setbacks, which is the floor these bubbles stand on. */
-const floor = buildableOf([
-  [1.5, 1.5],
-  [18.5, 1.5],
-  [18.5, 23],
-  [1.5, 23],
-])
+/** The starting plot with its setbacks, which is the floor these bubbles stand on. */
+const floor = groundOf(
+  {
+    on: true,
+    polygon: [
+      [0, 0],
+      [20, 0],
+      [20, 25],
+      [0, 25],
+    ],
+    north: 0,
+    street: [2],
+  },
+  startingSite,
+)
 
 /** The middle of that floor, which is where one bubble on its own comes to rest. */
-const [middleX, middleY] = floor.middle
+const [middleX, middleY] = floor.inside.middle
 
 function room(id: string, extra: Partial<SimulationRoom> = {}): SimulationRoom {
   return { id, storey: 0, storeysSpanned: 1, targetArea: 24, pinned: false, ...extra }
@@ -171,12 +179,20 @@ describe('the frame loop', () => {
   it('calls a picture that cannot come to rest rested once it stops getting stiller', () => {
     // Three rooms of 40 m² on a floor of 30: there is no arrangement that satisfies every wall,
     // so the last of the movement never goes, and the run must still stop asking for frames.
-    const tight = buildableOf([
-      [0, 0],
-      [6, 0],
-      [6, 5],
-      [0, 5],
-    ])
+    const tight = groundOf(
+      {
+        on: true,
+        polygon: [
+          [0, 0],
+          [9, 0],
+          [9, 8],
+          [0, 8],
+        ],
+        north: 0,
+        street: [],
+      },
+      startingSite,
+    )
     const clock = fakeFrames()
     const status: boolean[] = []
     const run = createRun({
@@ -211,7 +227,7 @@ describe('the frame loop', () => {
 
 describe('spread', () => {
   it('holds for one second of simulation time and then is over', () => {
-    const layout = layoutFor(0.5)
+    const layout = layoutFor({})
     const frames = SPREAD_SECONDS / layout.timeStep
     const rooms = [room('a', { bubble: { x: -6, y: 6 } }), room('b', { bubble: { x: 6, y: 6 } })]
     const { run, clock } = start(rooms, layout)

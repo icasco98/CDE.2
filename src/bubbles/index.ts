@@ -1,20 +1,30 @@
+export { buildableOf, groundOf } from './ground'
+export type { Buildable, Ground } from './ground'
+export { CORRIDOR_R, corridorHalf, endsOf } from './capsule'
+export { correctContacts } from './correction'
+export { readLink, touching } from './tension'
+export type { LinkReading } from './tension'
 export {
-  buildableOf,
   createState,
   defaultLayout,
   layoutFor,
+  radiusOf,
+  restBetween,
+  restWatch,
   settle,
+  shareAStorey,
   SPREAD_SECONDS,
   spreadLayout,
   step,
   STILL_FRAMES,
   twinsOf,
+  weightOf,
 } from './simulation'
 export type {
   Body,
-  Buildable,
   LayoutConfig,
   Position,
+  SimulationEdge,
   SimulationRoom,
   SimulationState,
 } from './simulation'

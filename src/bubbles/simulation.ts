@@ -1,11 +1,9 @@
-import {
-  boundingBox,
-  centroid,
-  pointInPolygon,
-  signedArea,
-  type Point,
-  type Polygon,
-} from '../geometry'
+import { boundingBox, type Point } from '../geometry'
+import type { Family, Weights } from '../model'
+import { companionOwners, forces, kerbFor, type ForceField, type ForceRoom } from '../rulebook'
+import { CORRIDOR_R, corridorHalf, gapBetween, type Placed } from './capsule'
+import { canonicalStart } from './start'
+import { CLEARED, holdInside, type Ground } from './ground'
 
 export type Position = { readonly x: number; readonly y: number }
 
@@ -17,6 +15,8 @@ export type SimulationRoom = {
   readonly targetArea: number
   readonly pinned: boolean
   readonly bubble?: Position
+  /** The room-type table's key, which the forces and the walls read; without it no row acts. */
+  readonly kind?: string
   /** The room-type table's privacy tier, where the program has one; without it the room is unaffected. */
   readonly tier?: string
 }
@@ -31,43 +31,51 @@ export type LayoutConfig = {
   readonly springStiffness: number
   readonly restGap: number
   readonly repulsion: number
-  /** What the repulsion between two rooms of different privacy tiers is multiplied by. */
-  readonly tierRepulsion: number
   readonly spread: number
   readonly centrePull: number
+  /** What a force of full strength at full weight moves a room at, in metres per second squared. */
+  readonly pull: number
   readonly damping: number
   readonly timeStep: number
   readonly energyThreshold: number
   readonly maxIterations: number
+  /** The person's weight on each family of forces; a family it does not name counts as a half. */
+  readonly weights: Weights
 }
 
 export const defaultLayout: LayoutConfig = {
   /** A wanted link pulls hard enough to gather a household and softly enough to lose to a collision. */
   springStiffness: 6,
-  /** The air a bubble keeps around itself: both a link's rest length and how far collision parts two circles. */
+  /** The air two bubbles with nothing between them keep; a linked pair keeps none, it touches. */
   restGap: 1.5,
   /**
-   * Ten times the springs: hard enough that a wanted link never buys itself an overlap, and soft
-   * enough to stay steady on a full storey. Above about eighty, a small bubble pressed between its
-   * neighbours and the buildable line rings from one to the other and the picture never rests; the
-   * overlap the model allows is held by the correction, not by this push.
+   * Soft, because the overlap the model allows is a wall the projection holds outright and this is
+   * only the air two strangers keep between them. A push much stiffer than the springs kicks a
+   * bubble pressed between its neighbours across the sheet and the picture never comes to rest.
    */
-  repulsion: 60,
-  /** One: the tiers part no harder than anything else until the user-requirements weight says so. */
-  tierRepulsion: 1,
+  repulsion: 8,
   /** A breeze, not a force: enough to open the cloud out, too weak to undo a link. */
   spread: 2,
-  /** Holds the cloud on the middle of the buildable area without bunching it. */
-  centrePull: 1.5,
+  /**
+   * Barely there beside the rulebook's rows, which now say where a room belongs: enough to gather
+   * a room no row acts on onto the floor, and light enough that a row of full strength wins.
+   */
+  centrePull: 0.4,
+  /** A strong row at full weight walks a room the depth of a villa against the gather above. */
+  pull: 8,
   /** Near critical for a link on a room-sized mass: settles in a couple of seconds without ringing. */
   damping: 0.9,
   /** Short enough that the stiffest force, collision, stays stable in a semi-implicit step. */
   timeStep: 0.1,
   /** The mean energy of movement per room; below it nothing moves far enough to see. */
-  energyThreshold: 1e-3,
-  /** Thirty rooms settle in about a hundred and sixty; the rest is headroom before the animation is cut off. */
-  maxIterations: 600,
+  energyThreshold: 3e-4,
+  /** A villa's program settles in about a hundred; the rest is headroom before a run is cut off. */
+  maxIterations: 1200,
+  weights: {},
 }
+
+/** How far past contact two bubbles still feel each other, as a multiple of the air they keep. */
+const BREEZE_REACH = 3
 
 /** A second of simulation time: how long a Spread holds before the cloud is let settle again. */
 export const SPREAD_SECONDS = 1
@@ -79,18 +87,79 @@ export const SPREAD_SECONDS = 1
  */
 export const STILL_FRAMES = 3
 
+/** How much stiller a picture must get over a spell of frames to count as still settling. */
+const IMPROVED = 0.8
+
 /**
- * The user-requirements weight on the simulation: a house whose owner's own wishes count for more
- * gathers what belongs together harder and parts the public rooms from the private ones harder.
- * The range is wide, a quarter of the pull to nearly twice it and a tier gap of one to three, so
- * that moving the slider is felt on the sheet rather than looked for.
+ * The spell a picture is given to get stiller in: a little over half a second at sixty frames a
+ * second, which reads as the cloud having stopped rather than as a cut. A storey with more rooms
+ * than its floor will hold has no arrangement that satisfies everything, and the last of the
+ * movement never quite goes; the picture is at rest when it stops getting stiller, as much as when
+ * it is still.
  */
-export function layoutFor(weight: number): LayoutConfig {
-  const w = Number.isFinite(weight) ? Math.min(1, Math.max(0, weight)) : 0.5
+const STUCK_FRAMES = 40
+
+/** One reading of whether a picture has come to rest, used by the whole run and by one settle. */
+export function restWatch() {
+  let still = 0
+  let stillest = Infinity
+  let since = 0
+  let smooth = Infinity
+  return {
+    /** Forget what the picture has done so far: something has changed and it must prove itself again. */
+    wake(): void {
+      still = 0
+      stillest = Infinity
+      since = 0
+      smooth = Infinity
+    },
+    /**
+     * Whether the picture is at rest after a frame of this much movement, read off a smoothed
+     * measure rather than the frame's own: a storey too full for its floor never quite stops, and
+     * the last of its movement is a shuffle between two arrangements whose frames are loud one
+     * after the other and quiet the next. What matters is whether the shuffle is getting smaller.
+     */
+    read(energy: number, threshold: number): boolean {
+      smooth = smooth === Infinity ? energy : smooth * (1 - SMOOTHING) + energy * SMOOTHING
+      still = smooth < threshold ? still + 1 : 0
+      since += 1
+      let stuck = false
+      if (since >= STUCK_FRAMES) {
+        stuck = smooth > stillest * IMPROVED
+        stillest = smooth
+        since = 0
+      }
+      return still >= STILL_FRAMES || stuck
+    },
+    /** Whether the last frame was quiet in itself, which is what a preview is recorded on. */
+    quiet: (): boolean => still > 0,
+  }
+}
+
+/** How much of a frame's own movement a smoothed reading takes: a fifth, which is a few frames. */
+const SMOOTHING = 0.2
+
+/** A weight nobody has set sits in the middle, so an untouched project pulls no way in particular. */
+const MIDDLE_WEIGHT = 0.5
+
+export function weightOf(weights: Weights, family: Family): number {
+  const set = weights[family]
+  return typeof set === 'number' && Number.isFinite(set)
+    ? Math.min(1, Math.max(0, set))
+    : MIDDLE_WEIGHT
+}
+
+/**
+ * The weights on the simulation. The user-requirements weight also gathers what belongs together
+ * harder, because a house whose owner's own wishes count for more holds its links tighter; beyond
+ * that each family's weight multiplies the strength of its own rows in `rulebook/forces.ts`.
+ */
+export function layoutFor(weights: Weights): LayoutConfig {
+  const user = weightOf(weights, 'userRequirements')
   return {
     ...defaultLayout,
-    springStiffness: defaultLayout.springStiffness * (0.25 + 1.5 * w),
-    tierRepulsion: 1 + 2 * w,
+    springStiffness: defaultLayout.springStiffness * (0.25 + 1.5 * user),
+    weights,
   }
 }
 
@@ -105,6 +174,10 @@ export function spreadLayout(base: LayoutConfig): LayoutConfig {
     repulsion: base.repulsion * 3,
     spread: base.spread * 3,
     restGap: base.restGap * 3,
+    // The gather onto the middle of the floor and the rulebook's own rows are what a breeze has to
+    // open the cloud against, so both are let out for the second it blows and put back after it.
+    centrePull: base.centrePull / 3,
+    pull: base.pull / 3,
   }
 }
 
@@ -115,35 +188,38 @@ export type Body = {
   readonly vx: number
   readonly vy: number
   readonly radius: number
+  /** How far the body's segment reaches from its middle: nought for a disc, a length for a corridor. */
+  readonly half: number
+  /** The way that segment lies, in radians; it says nothing while the half is nought. */
+  readonly angle: number
   readonly storey: number
   readonly storeysSpanned: number
   readonly pinned: boolean
+  readonly kind?: string
   readonly tier?: string
+  /** The kerb this body stands against and slides along, where its kind is one of the walled three. */
+  readonly kerb?: readonly [Point, Point]
 }
 
 /** A link between two bodies. Both stand on the one plot, so its storey changes no arithmetic. */
 export type Link = { readonly a: number; readonly b: number }
 
-/** One side of the buildable line, with the way into the floor from it. */
-export type Side = { readonly from: Point; readonly to: Point; readonly inward: Point }
-
-/**
- * The buildable line as a frame reads it: its sides one at a time with the way in from each, the
- * middle of the floor, and how deep the floor is at that middle, all worked out once when the
- * picture is built so that no frame ever measures the polygon again.
- */
-export type Buildable = {
-  readonly polygon: Polygon
-  readonly sides: readonly Side[]
-  readonly middle: Point
-  /** The largest bubble the floor holds at its middle; a bigger one rests there rather than jam. */
-  readonly deepest: number
+/** A corridor, the room it starts from, and the rooms it turns toward. */
+export type Corridor = {
+  readonly body: number
+  readonly anchor?: number
+  readonly served: readonly number[]
 }
+
+/** An auxiliary room and the room it is entered through, whose perimeter it rides. */
+export type Companion = { readonly body: number; readonly owner: number }
 
 export type SimulationState = {
   readonly bodies: readonly Body[]
   readonly links: readonly Link[]
-  readonly inside: Buildable
+  readonly corridors: readonly Corridor[]
+  readonly companions: readonly Companion[]
+  readonly ground: Ground
   /**
    * How much the picture moved in the last step, as a mean energy per room taken from how far each
    * bubble really went; Infinity before the first step.
@@ -180,145 +256,6 @@ export function shareAStorey(a: Standing, b: Standing): boolean {
   return a.storey <= top(b) && b.storey <= top(a)
 }
 
-function nearestOnSide(x: number, y: number, from: Point, to: Point): Point {
-  const dx = to[0] - from[0]
-  const dy = to[1] - from[1]
-  const run = dx * dx + dy * dy
-  if (run < 1e-12) return from
-  const along = Math.min(1, Math.max(0, ((x - from[0]) * dx + (y - from[1]) * dy) / run))
-  return [from[0] + dx * along, from[1] + dy * along]
-}
-
-/** How far the nearest side of the buildable line is from a point, and where on it. */
-function nearestSide(
-  sides: readonly Side[],
-  fallback: Point,
-  x: number,
-  y: number,
-): { readonly at: Point; readonly away: number } {
-  let at = fallback
-  let away = Infinity
-  for (const side of sides) {
-    const q = nearestOnSide(x, y, side.from, side.to)
-    const distance = Math.hypot(q[0] - x, q[1] - y)
-    if (distance < away) {
-      away = distance
-      at = q
-    }
-  }
-  return { at, away }
-}
-
-/**
- * The buildable line read once for the whole run. The setbacks are the Municipality's, so the line
- * holds the bubbles in whatever the plot's own boundary is set to do with footprints; a polygon of
- * fewer than three corners is a plot the setbacks swallowed whole, and holds nothing in.
- */
-export function buildableOf(polygon: Polygon): Buildable {
-  const sides: Side[] = []
-  const outward = signedArea(polygon) >= 0 ? 1 : -1
-  for (let i = 0; i < polygon.length; i++) {
-    const from = polygon[i]
-    const to = polygon[(i + 1) % polygon.length]
-    if (!from || !to) continue
-    const run = Math.hypot(to[0] - from[0], to[1] - from[1])
-    if (run < 1e-12) continue
-    // The way in, read from the ring's own winding, as the geometry reads a wall's outward normal.
-    const inward: Point = [
-      (-outward * (to[1] - from[1])) / run,
-      (outward * (to[0] - from[0])) / run,
-    ]
-    sides.push({ from, to, inward })
-  }
-  const enough = polygon.length >= 3
-  const middle: Point = enough ? centroid(polygon) : [0, 0]
-  if (!enough) return { polygon, sides: [], middle, deepest: 0 }
-  return {
-    polygon,
-    sides,
-    middle,
-    deepest: nearestSide(sides, middle, middle[0], middle[1]).away,
-  }
-}
-
-/** FNV-1a over the room id: a fixed starting place per room, and never Math.random. */
-function hash01(id: string, salt: number): number {
-  let hash = (0x811c9dc5 ^ salt) >>> 0
-  for (let i = 0; i < id.length; i++) {
-    hash ^= id.charCodeAt(i)
-    hash = Math.imul(hash, 0x01000193)
-  }
-  return ((hash >>> 0) % 100000) / 100000
-}
-
-const FALLBACK_PLOT: Polygon = [
-  [0, 0],
-  [20, 0],
-  [20, 25],
-  [0, 25],
-]
-
-export function createState(
-  rooms: readonly SimulationRoom[],
-  edges: readonly SimulationEdge[],
-  inside: Buildable,
-): SimulationState {
-  // A room the diagram has never placed opens inside the buildable area, at a place its own id
-  // fixes: the same program opens the same way twice, and never at random.
-  const box = boundingBox(inside.polygon.length >= 3 ? inside.polygon : FALLBACK_PLOT)
-  const bodies = rooms.map((room) => ({
-    id: room.id,
-    x: room.bubble ? room.bubble.x : box.left + box.width * (0.2 + hash01(room.id, 1) * 0.6),
-    y: room.bubble ? room.bubble.y : box.top + box.depth * (0.2 + hash01(room.id, 2) * 0.6),
-    vx: 0,
-    vy: 0,
-    radius: radiusOf(room.targetArea),
-    storey: room.storey,
-    storeysSpanned: spanOf(room.storeysSpanned),
-    pinned: room.pinned,
-    ...(room.tier === undefined ? {} : { tier: room.tier }),
-  }))
-  const at = new Map(bodies.map((body, index) => [body.id, index]))
-  const links: Link[] = []
-  for (const edge of edges) {
-    const a = at.get(edge.a)
-    const b = at.get(edge.b)
-    if (a === undefined || b === undefined || a === b) continue
-    links.push({ a, b })
-  }
-  return { bodies, links, inside, energy: Infinity }
-}
-
-type Work = {
-  readonly body: Body
-  x: number
-  y: number
-  vx: number
-  vy: number
-  fx: number
-  fy: number
-}
-
-/** Two circles exactly on top of each other need a direction to part along; their indices fix one. */
-function apart(dx: number, dy: number, seed: number): readonly [number, number, number] {
-  const distance = Math.sqrt(dx * dx + dy * dy)
-  if (distance > 1e-9) return [dx / distance, dy / distance, distance]
-  return [Math.cos(seed), Math.sin(seed), 0]
-}
-
-function massOf(body: Body): number {
-  return Math.max(body.radius, 0.5)
-}
-
-/**
- * A pair at a time, so a bubble wedged between two others is only cleared of both after a few goes
- * round; eight is past the worst a villa's program reaches and bounds the frame either way.
- */
-const CORRECTION_PASSES = 8
-
-/** An overlap this small is a rounding error, not a bubble resting on another. */
-const CLEARED = 1e-9
-
 /**
  * How far one bubble may lie over another, as a share of the smaller one's radius. The model
  * allows an overlap of up to a quarter of the smaller one's area and never more: six tenths of the
@@ -328,6 +265,172 @@ const CLEARED = 1e-9
  * room for has no arrangement without an overlap, and the picture must still come to rest.
  */
 const LIE_OVER = 0.6
+
+/** How far apart two bubbles may stand and still be read as touching, in metres. */
+export const TOUCHING = 0.1
+
+/**
+ * Where a link rests: touching, rim to rim. The overlap wall stands a little inside it, so the two
+ * are never both pressing on the same pair at once and the picture can come to rest between them.
+ */
+export function restBetween(
+  a: { readonly radius: number },
+  b: { readonly radius: number },
+): number {
+  return a.radius + b.radius
+}
+
+/** How close the overlap wall lets two bubbles come: touching, less the overlap the model allows. */
+export function closestBetween(
+  a: { readonly radius: number },
+  b: { readonly radius: number },
+): number {
+  return a.radius + b.radius - LIE_OVER * Math.min(a.radius, b.radius)
+}
+
+const FALLBACK_PLOT: Point[] = [
+  [0, 0],
+  [20, 0],
+  [20, 25],
+  [0, 25],
+]
+
+/** The kinds a corridor joins rather than leads to, which is what it may start from. */
+const anchorKinds: readonly string[] = ['entry-foyer', 'stair']
+
+/** The kerb line a walled kind stands against: its own boundary, moved in by the bubble's radius. */
+function kerbLineFor(
+  kind: string | undefined,
+  radius: number,
+  ground: Ground,
+): readonly [Point, Point] | undefined {
+  const side = kind === undefined ? undefined : kerbFor(kind, ground.sides)
+  if (!side) return undefined
+  // The bubble stands against the kerb, not astride it: its whole circle stays inside the line.
+  return [
+    [side.from[0] + side.inward[0] * radius, side.from[1] + side.inward[1] * radius],
+    [side.to[0] + side.inward[0] * radius, side.to[1] + side.inward[1] * radius],
+  ]
+}
+
+export function createState(
+  rooms: readonly SimulationRoom[],
+  edges: readonly SimulationEdge[],
+  ground: Ground,
+): SimulationState {
+  // A room the diagram has already placed opens where it was left; the first arrangement is only
+  // worked out when there is a room with nowhere to open, which is a program just rebuilt.
+  const opened = rooms.every((room) => room.bubble)
+    ? new Map<string, Position>()
+    : canonicalStart(rooms, edges, ground)
+  const box = boundingBox(ground.inside.polygon.length >= 3 ? ground.inside.polygon : FALLBACK_PLOT)
+  const middle = { x: box.left + box.width / 2, y: box.top + box.depth / 2 }
+  const bodies: Body[] = rooms.map((room) => {
+    const corridor = room.kind === 'hallway'
+    const radius = corridor ? CORRIDOR_R : radiusOf(room.targetArea)
+    const opening = room.bubble ?? opened.get(room.id) ?? middle
+    const kerb = corridor ? undefined : kerbLineFor(room.kind, radius, ground)
+    return {
+      id: room.id,
+      x: opening.x,
+      y: opening.y,
+      vx: 0,
+      vy: 0,
+      radius,
+      half: corridor ? corridorHalf(room.targetArea) : 0,
+      angle: 0,
+      storey: room.storey,
+      storeysSpanned: spanOf(room.storeysSpanned),
+      pinned: room.pinned,
+      ...(room.kind === undefined ? {} : { kind: room.kind }),
+      ...(room.tier === undefined ? {} : { tier: room.tier }),
+      ...(kerb === undefined ? {} : { kerb }),
+    }
+  })
+  const at = new Map(bodies.map((body, index) => [body.id, index]))
+  const links: Link[] = []
+  for (const edge of edges) {
+    const a = at.get(edge.a)
+    const b = at.get(edge.b)
+    if (a === undefined || b === undefined || a === b) continue
+    links.push({ a, b })
+  }
+  return {
+    bodies,
+    links,
+    corridors: corridorsOf(bodies, links),
+    companions: companionsIn(rooms, edges, at),
+    ground,
+    energy: Infinity,
+  }
+}
+
+/** Each corridor with the room it starts from and the rooms it turns toward. */
+function corridorsOf(bodies: readonly Body[], links: readonly Link[]): readonly Corridor[] {
+  const out: Corridor[] = []
+  for (const [index, body] of bodies.entries()) {
+    if (body.kind !== 'hallway') continue
+    const joined = links
+      .filter((link) => link.a === index || link.b === index)
+      .map((link) => (link.a === index ? link.b : link.a))
+    const onThisFloor = (other: number): boolean => {
+      const each = bodies[other]
+      return each !== undefined && shareAStorey(each, body)
+    }
+    const anchor =
+      joined.find(
+        (other) => anchorKinds.includes(bodies[other]?.kind ?? '') && onThisFloor(other),
+      ) ??
+      bodies.findIndex((each, other) => anchorKinds.includes(each.kind ?? '') && onThisFloor(other))
+    const started = anchor >= 0 ? anchor : undefined
+    const served = joined.filter((other) => other !== started)
+    // With nothing linked to it yet a corridor still has to lie somewhere, so it turns toward the
+    // rooms standing on its own floor until the links say otherwise.
+    const turnsTo =
+      served.length > 0
+        ? served
+        : bodies
+            .map((_each, other) => other)
+            .filter((other) => other !== index && other !== started && onThisFloor(other))
+    out.push({
+      body: index,
+      ...(started === undefined ? {} : { anchor: started }),
+      served: turnsTo,
+    })
+  }
+  return out
+}
+
+/** The auxiliary rooms each room owns, as pairs of bodies, read by the rulebook's companion rule. */
+function companionsIn(
+  rooms: readonly SimulationRoom[],
+  edges: readonly SimulationEdge[],
+  at: ReadonlyMap<string, number>,
+): readonly Companion[] {
+  const out: Companion[] = []
+  const withTypes = rooms.map((room) => ({ id: room.id, type: room.kind ?? '' }))
+  for (const [companion, ownerId] of companionOwners(withTypes, edges)) {
+    const body = at.get(companion)
+    const owner = at.get(ownerId)
+    if (body !== undefined && owner !== undefined) out.push({ body, owner })
+  }
+  return out
+}
+
+type Work = {
+  readonly body: Body
+  x: number
+  y: number
+  angle: number
+  vx: number
+  vy: number
+  fx: number
+  fy: number
+}
+
+function massOf(body: Body): number {
+  return Math.max(body.radius, 0.5)
+}
 
 /** The share of a correction is by area, and π cancels in the ratio, so the radius squared stands for it. */
 function areaOf(body: Body): number {
@@ -339,132 +442,196 @@ function shareOf(a: Body, b: Body): number {
   return a.pinned ? 0 : b.pinned ? 1 : areaOf(b) / (areaOf(a) + areaOf(b))
 }
 
-/** A room with no tier, or an exempt one such as a bathroom, stands outside the privacy gradient. */
-function tiersApart(a: Body, b: Body): boolean {
-  if (!a.tier || !b.tier || a.tier === 'exempt' || b.tier === 'exempt') return false
-  return a.tier !== b.tier
-}
-
 /**
- * How far apart two bubbles are kept: their radii and the rest gap, and between two different
- * privacy tiers the gap as well as the push is scaled, because in a cloud packed rim to rim a
- * stronger push alone moves nothing and only the air kept shows on the sheet.
- */
-function clearOf(a: Body, b: Body, config: LayoutConfig): number {
-  const factor = tiersApart(a, b) ? config.tierRepulsion : 1
-  return a.radius + b.radius + config.restGap * factor
-}
-
-/**
- * What one bubble is asked to do by the bubbles in its way: how far it should move, and how many
+ * What one bubble is asked to do by the bubbles around it: how far it should move, and how many
  * asked it. A bubble pressed on from several sides at once takes the mean of what they ask, so
  * that demands which cannot all be met balance instead of taking turns.
  */
 type Demand = { dx: number; dy: number; asked: number }
 
 /**
- * The bubble put back inside the buildable line, its whole circle within it and clear of every
- * side rather than of the nearest one, or a bubble in a corner would be pushed off one side into
- * the other. The line is a wall and is never traded: whatever the bubbles ask of each other, this
- * is done last and in full. A room too big for the floor comes to rest at the middle instead,
- * which is the one place a bubble wider than the ground it stands on can settle.
+ * The rounds of projection a frame takes. Three settles a linked pair against the bubbles round it
+ * without the picture ringing from one round to the next.
  */
-function holdInside(w: Work, inside: Buildable): void {
-  const radius = Math.min(w.body.radius, inside.deepest)
-  if (!pointInPolygon(inside.polygon, [w.x, w.y])) {
-    // Off the floor altogether: back to the nearest line and a radius in towards the middle.
-    const { at } = nearestSide(inside.sides, inside.middle, w.x, w.y)
-    const toX = inside.middle[0] - at[0]
-    const toY = inside.middle[1] - at[1]
-    const length = Math.hypot(toX, toY) || 1
-    w.x = at[0] + (toX / length) * radius
-    w.y = at[1] + (toY / length) * radius
-  }
-  for (let pass = 0; pass < SIDE_PASSES; pass++) {
-    let clear = true
-    for (const side of inside.sides) {
-      const q = nearestOnSide(w.x, w.y, side.from, side.to)
-      const dx = w.x - q[0]
-      const dy = w.y - q[1]
-      const away = Math.hypot(dx, dy)
-      if (away >= radius - CLEARED) continue
-      clear = false
-      // Standing on the line itself there is no direction to come back along; the side's own way
-      // in gives one, and past the end of a side it is the corner that pushes the bubble off.
-      const ux = away < 1e-9 ? side.inward[0] : dx / away
-      const uy = away < 1e-9 ? side.inward[1] : dy / away
-      w.x = q[0] + ux * radius
-      w.y = q[1] + uy * radius
-    }
-    if (clear) break
-  }
-}
-
-/** Twice round the sides squares a bubble up in a corner; a third go is the margin. */
-const SIDE_PASSES = 3
+const PROJECTION_ROUNDS = 3
 
 /**
- * The positional correction, after the forces have moved everything. Two bodies sharing a floor
- * and lying over each other by more than the model allows are parted along the line between their
- * centres, the move split by inverse area so the larger room gives way less, and every bubble is
- * asked to keep its whole circle inside the buildable line. Every demand on a bubble is gathered
- * before any of it is acted on and it moves by the mean of them, so that demands which cannot all
- * be met balance instead of taking turns and a storey too full for its floor still comes to rest.
- * A pinned body takes none of it, because pinned is the person's hand; two pinned bodies left on
- * each other stay.
+ * How much of what the pairs ask for is taken in one round. Short of the whole, because a bubble
+ * pressed by a link on one side and an overlap on the other is asked for two things at once and
+ * taking both in full leaves it shuffling between them for ever; three rounds of seven tenths
+ * still put a deep overlap right inside one frame.
  */
-function correct(work: readonly Work[], inside: Buildable): void {
+const RELAXATION = 0.7
+
+function placedOf(w: Work): Placed {
+  return { x: w.x, y: w.y, angle: w.angle, half: w.body.half }
+}
+
+/** A body put back on the kerb it stands against: along the line and nowhere off it. */
+function onKerb(w: Work): void {
+  const kerb = w.body.kerb
+  if (!kerb) return
+  const [from, to] = kerb
+  const dx = to[0] - from[0]
+  const dy = to[1] - from[1]
+  const run = dx * dx + dy * dy
+  if (run < 1e-12) return
+  const along = Math.min(1, Math.max(0, ((w.x - from[0]) * dx + (w.y - from[1]) * dy) / run))
+  w.x = from[0] + dx * along
+  w.y = from[1] + dy * along
+}
+
+/**
+ * The corridor turned and set down: its near end on the room it starts from, its length pointing
+ * at the middle of the rooms it serves. A corridor is the one bubble whose direction is not the
+ * forces' to choose, because what a corridor is for is reaching the doors off it.
+ */
+function alongTheRooms(work: readonly Work[], corridor: Corridor, middle: Point): void {
+  const w = work[corridor.body]
+  if (!w) return
+  let toX = 0
+  let toY = 0
+  let counted = 0
+  for (const other of corridor.served) {
+    const served = work[other]
+    if (!served) continue
+    toX += served.x
+    toY += served.y
+    counted += 1
+  }
+  const aim: Point = counted > 0 ? [toX / counted, toY / counted] : middle
+  const anchor = corridor.anchor === undefined ? undefined : work[corridor.anchor]
+  const from: Point = anchor ? [anchor.x, anchor.y] : [w.x, w.y]
+  const ux = aim[0] - from[0]
+  const uy = aim[1] - from[1]
+  const run = Math.hypot(ux, uy)
+  if (run < 1e-9) return
+  w.angle = Math.atan2(uy, ux)
+  if (!anchor) return
+  const reach = restBetween(anchor.body, w.body) + w.body.half
+  w.x = from[0] + (ux / run) * reach
+  w.y = from[1] + (uy / run) * reach
+}
+
+/** A companion set back on its owner's perimeter, free to slide round it and never to leave it. */
+function onOwner(work: readonly Work[], companion: Companion): void {
+  const w = work[companion.body]
+  const owner = work[companion.owner]
+  if (!w || !owner || w.body.pinned) return
+  const dx = w.x - owner.x
+  const dy = w.y - owner.y
+  const run = Math.hypot(dx, dy)
+  const reach = restBetween(owner.body, w.body)
+  if (run < 1e-9) {
+    w.x = owner.x + reach
+    return
+  }
+  w.x = owner.x + (dx / run) * reach
+  w.y = owner.y + (dy / run) * reach
+}
+
+function pairKey(a: number, b: number): number {
+  return a < b ? a * 100000 + b : b * 100000 + a
+}
+
+/**
+ * The constraints projected straight onto the picture after the forces have moved it: every linked
+ * pair pulled to touching, every overlap past the quarter pushed back, and then the walls in full —
+ * the kerb the walled rooms stand on, the corridor's anchor, the companions on their owners'
+ * perimeters, and the buildable line, which is never traded.
+ */
+function project(work: readonly Work[], state: SimulationState): void {
   const from = work.map((w) => ({ x: w.x, y: w.y }))
+  const inside = state.ground.inside
   const holds = inside.sides.length >= 3
   const wants: Demand[] = work.map(() => ({ dx: 0, dy: 0, asked: 0 }))
-  for (let pass = 0; pass < CORRECTION_PASSES; pass++) {
+
+  const ask = (i: number, j: number, closer: number, ux: number, uy: number): void => {
+    const a = work[i]
+    const b = work[j]
+    const wantA = wants[i]
+    const wantB = wants[j]
+    if (!a || !b || !wantA || !wantB) return
+    const share = shareOf(a.body, b.body)
+    wantA.dx -= ux * closer * share
+    wantA.dy -= uy * closer * share
+    wantA.asked += 1
+    wantB.dx += ux * closer * (1 - share)
+    wantB.dy += uy * closer * (1 - share)
+    wantB.asked += 1
+  }
+
+  /** What the pairs asked for, taken as a mean and short of the whole, and whether any asked. */
+  const take = (): boolean => {
+    let asked = false
+    for (const [index, w] of work.entries()) {
+      const want = wants[index]
+      if (!want || w.body.pinned || want.asked === 0) continue
+      asked = true
+      w.x += (want.dx / want.asked) * RELAXATION
+      w.y += (want.dy / want.asked) * RELAXATION
+    }
     for (const want of wants) {
       want.dx = 0
       want.dy = 0
       want.asked = 0
     }
+    return asked
+  }
+
+  for (let pass = 0; pass < PROJECTION_ROUNDS; pass++) {
+    for (const link of state.links) {
+      const a = work[link.a]
+      const b = work[link.b]
+      if (!a || !b || (a.body.pinned && b.body.pinned)) continue
+      const gap = gapBetween(placedOf(a), placedOf(b), link.a + link.b)
+      const rest = restBetween(a.body, b.body)
+      // Only closing, and only a link that is really open: a pair the springs hold a hair's
+      // breadth apart is touching, and pulling it closed every frame would leave the picture
+      // shuffling for ever between the spring and the projection.
+      if (gap.distance <= rest + TOUCHING) continue
+      // Closed to the edge of that breadth rather than through it, so the springs have nothing to
+      // push back out against and the pair settles instead of being closed again every frame.
+      ask(link.a, link.b, rest + TOUCHING / 2 - gap.distance, gap.ux, gap.uy)
+    }
+    const pulled = take()
+    // The overlap wall is stronger than the links, so it has the last word in every round: it is
+    // answered after them, on the places their pull has just left the bubbles in, and one pair at
+    // a time rather than as a mean, because a small room wedged between two large ones must come
+    // out somewhere and a mean of two opposite demands would leave it where it is.
+    let pushed = false
     for (let i = 0; i < work.length; i++) {
       const a = work[i]
-      const wantA = wants[i]
-      if (!a || !wantA) continue
+      if (!a) continue
       for (let j = i + 1; j < work.length; j++) {
         const b = work[j]
-        const wantB = wants[j]
-        if (!b || !wantB || (a.body.pinned && b.body.pinned)) continue
+        if (!b || (a.body.pinned && b.body.pinned)) continue
         if (!shareAStorey(a.body, b.body)) continue
-        const [ux, uy, distance] = apart(b.x - a.x, b.y - a.y, i + j)
-        // The wall is the overlap the model allows, not the air a link wants around a bubble: a
-        // correction that took that air as well would fight the spring holding the pair at exactly
-        // that distance, and the two would push each other about for ever instead of resting.
-        const closest =
-          a.body.radius + b.body.radius - LIE_OVER * Math.min(a.body.radius, b.body.radius)
-        const overlap = closest - distance
+        const gap = gapBetween(placedOf(a), placedOf(b), i + j)
+        const overlap = closestBetween(a.body, b.body) - gap.distance
         if (overlap <= CLEARED) continue
+        pushed = true
         const share = shareOf(a.body, b.body)
-        wantA.dx -= ux * overlap * share
-        wantA.dy -= uy * overlap * share
-        wantA.asked += 1
-        wantB.dx += ux * overlap * (1 - share)
-        wantB.dy += uy * overlap * (1 - share)
-        wantB.asked += 1
+        a.x -= gap.ux * overlap * share
+        a.y -= gap.uy * overlap * share
+        b.x += gap.ux * overlap * (1 - share)
+        b.y += gap.uy * overlap * (1 - share)
       }
     }
-    let clear = true
-    for (const [index, w] of work.entries()) {
-      const want = wants[index]
-      if (!want || w.body.pinned) continue
-      if (want.asked > 0) {
-        clear = false
-        w.x += want.dx / want.asked
-        w.y += want.dy / want.asked
+    for (const w of work) onKerb(w)
+    for (const corridor of state.corridors) alongTheRooms(work, corridor, inside.middle)
+    for (const companion of state.companions) onOwner(work, companion)
+    if (holds)
+      for (const w of work) {
+        const [x, y] = holdInside(inside, placedOf(w), w.body.radius)
+        w.x = x
+        w.y = y
       }
-      if (holds) holdInside(w, inside)
-    }
-    if (clear) break
+    if (!pulled && !pushed) break
   }
-  // A bubble the forces drove into its neighbour and the correction put back has not moved, so the
-  // correction takes that speed off it: exactly the part of it that pressed against the correction
-  // and nothing else. It never hands any back, or a bubble let go inside another would be thrown
+  // A bubble the forces drove into its neighbour and the projection put back has not moved, so the
+  // projection takes that speed off it: exactly the part of it that pressed against the wall and
+  // nothing else. It never hands any back, or a bubble let go inside another would be thrown
   // across the sheet instead of set down beside it.
   for (const [index, w] of work.entries()) {
     const was = from[index]
@@ -477,6 +644,32 @@ function correct(work: readonly Work[], inside: Buildable): void {
     if (into >= 0) continue
     w.vx -= (into * bx) / back
     w.vy -= (into * by) / back
+  }
+}
+
+/** Where the rooms of a kind stand on one floor, as one point, taken afresh every frame. */
+function fieldFor(work: readonly Work[], storey: number, ground: Ground): ForceField {
+  const known = new Map<string, Point | undefined>()
+  return {
+    sides: ground.sides,
+    site: ground.site,
+    where(kinds) {
+      const key = kinds.join(',')
+      if (known.has(key)) return known.get(key)
+      let x = 0
+      let y = 0
+      let counted = 0
+      for (const w of work) {
+        if (!w.body.kind || !kinds.includes(w.body.kind)) continue
+        if (!twinsOf(w.body).includes(storey)) continue
+        x += w.x
+        y += w.y
+        counted += 1
+      }
+      const found: Point | undefined = counted === 0 ? undefined : [x / counted, y / counted]
+      known.set(key, found)
+      return found
+    },
   }
 }
 
@@ -495,23 +688,24 @@ export function step(
     body,
     x: body.x,
     y: body.y,
+    angle: body.angle,
     vx: body.vx,
     vy: body.vy,
     fx: 0,
     fy: 0,
   }))
+  const linked = new Set(state.links.map((link) => pairKey(link.a, link.b)))
 
   for (const link of state.links) {
     const a = work[link.a]
     const b = work[link.b]
     if (!a || !b) continue
-    const [ux, uy, distance] = apart(b.x - a.x, b.y - a.y, link.a + link.b)
-    const rest = a.body.radius + b.body.radius + config.restGap
-    const pull = config.springStiffness * (distance - rest)
-    a.fx += pull * ux
-    a.fy += pull * uy
-    b.fx -= pull * ux
-    b.fy -= pull * uy
+    const gap = gapBetween(placedOf(a), placedOf(b), link.a + link.b)
+    const pull = config.springStiffness * (gap.distance - restBetween(a.body, b.body))
+    a.fx += pull * gap.ux
+    a.fy += pull * gap.uy
+    b.fx -= pull * gap.ux
+    b.fy -= pull * gap.uy
   }
 
   for (let i = 0; i < count; i++) {
@@ -520,31 +714,63 @@ export function step(
     for (let j = i + 1; j < count; j++) {
       const b = work[j]
       if (!b || !shareAStorey(a.body, b.body)) continue
-      const clear = clearOf(a.body, b.body, config)
-      const [ux, uy, distance] = apart(b.x - a.x, b.y - a.y, i + j)
-      const overlap = clear - distance
+      // A link says these two want to touch, so nothing pushes them apart but the overlap wall.
+      if (linked.has(pairKey(i, j))) continue
+      const clear = a.body.radius + b.body.radius + config.restGap
+      const gap = gapBetween(placedOf(a), placedOf(b), i + j)
+      const overlap = clear - gap.distance
       // A soft collision below contact, and a bounded inverse-square breeze above it that spreads
-      // the cloud. The correction puts a deep overlap right in one frame, so the collision is only
+      // the cloud. The projection puts a deep overlap right in one frame, so the collision is only
       // asked for the last gap of it; unasked, it flings a bubble let go inside another off the sheet.
+      // A breeze between neighbours, not between strangers across the sheet: it fades to nothing
+      // a few times contact away, and it fades rather than stopping, because a pair crossing a
+      // line where a push switched off would be handed a little energy on every crossing.
+      const reach = Math.max(0, 1 - gap.distance / (clear * BREEZE_REACH))
       const push =
-        (tiersApart(a.body, b.body) ? config.tierRepulsion : 1) *
-        ((overlap > 0 ? config.repulsion * Math.min(overlap, config.restGap) : 0) +
-          (config.spread * clear * clear) / Math.max(distance, clear) ** 2)
-      a.fx -= push * ux
-      a.fy -= push * uy
-      b.fx += push * ux
-      b.fy += push * uy
+        (overlap > 0 ? config.repulsion * Math.min(overlap, config.restGap) : 0) +
+        (config.spread * clear * clear * reach * reach) / Math.max(gap.distance, clear) ** 2
+      a.fx -= push * gap.ux
+      a.fy -= push * gap.uy
+      b.fx += push * gap.ux
+      b.fy += push * gap.uy
+    }
+  }
+
+  // The rulebook's rows, each on the rooms its own table names. A row is a preference, not a weight
+  // of stone, so it is scaled by the body's mass: every room answers a pull at the same rate,
+  // whatever its area, and a large room is not left behind by a small one.
+  const fields = new Map<number, ForceField>()
+  for (const w of work) {
+    if (w.body.pinned || !w.body.kind) continue
+    const room: ForceRoom = {
+      kind: w.body.kind,
+      ...(w.body.tier === undefined ? {} : { tier: w.body.tier }),
+    }
+    let field = fields.get(w.body.storey)
+    if (!field) {
+      field = fieldFor(work, w.body.storey, state.ground)
+      fields.set(w.body.storey, field)
+    }
+    for (const force of forces) {
+      if (!force.acts(room)) continue
+      const [ux, uy] = force.pull(room, [w.x, w.y], field)
+      if (ux === 0 && uy === 0) continue
+      const size =
+        config.pull * force.strength * weightOf(config.weights, force.family) * massOf(w.body)
+      w.fx += ux * size
+      w.fy += uy * size
     }
   }
 
   const interval = config.timeStep
-  const middle = state.inside.middle
+  const middle = state.ground.inside.middle
   for (const w of work) {
     if (w.body.pinned) continue
     const mass = massOf(w.body)
-    // The cloud is held on the middle of the floor it is being laid out on, not on the sheet's.
-    w.fx += config.centrePull * (middle[0] - w.x)
-    w.fy += config.centrePull * (middle[1] - w.y)
+    // The cloud is held on the middle of the floor it is being laid out on, not on the sheet's,
+    // and by its mass like the rows, so a large room is drawn in at the same rate as a small one.
+    w.fx += config.centrePull * (middle[0] - w.x) * mass
+    w.fy += config.centrePull * (middle[1] - w.y) * mass
     w.vx = (w.vx + (w.fx / mass) * interval) * config.damping
     w.vy = (w.vy + (w.fy / mass) * interval) * config.damping
   }
@@ -555,7 +781,7 @@ export function step(
     w.y += w.vy * interval
   }
 
-  correct(work, state.inside)
+  project(work, state)
 
   // What a bubble did is where it ended up: one held still between its neighbours has speed and
   // goes nowhere, and the picture is at rest when nothing goes anywhere.
@@ -567,18 +793,20 @@ export function step(
   }
 
   const bodies = work.map((w) =>
-    w.body.pinned ? w.body : { ...w.body, x: w.x, y: w.y, vx: w.vx, vy: w.vy },
+    w.body.pinned && w.angle === w.body.angle
+      ? w.body
+      : { ...w.body, x: w.x, y: w.y, angle: w.angle, vx: w.vx, vy: w.vy },
   )
   return { ...state, bodies, energy: energy / count }
 }
 
 export function settle(state: SimulationState, config: LayoutConfig = defaultLayout): Settlement {
   let current = state
-  let still = 0
+  const watch = restWatch()
   for (let i = 1; i <= config.maxIterations; i++) {
     current = step(current, config)
-    still = current.energy < config.energyThreshold ? still + 1 : 0
-    if (still >= STILL_FRAMES) return { state: current, iterations: i, settled: true }
+    if (watch.read(current.energy, config.energyThreshold))
+      return { state: current, iterations: i, settled: true }
   }
   return { state: current, iterations: config.maxIterations, settled: false }
 }

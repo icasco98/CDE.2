@@ -1,4 +1,6 @@
 import {
+  correctContacts,
+  restWatch,
   settle,
   SPREAD_SECONDS,
   spreadLayout,
@@ -21,15 +23,6 @@ export const browserFrames: Frames = {
   request: (run) => requestAnimationFrame(run),
   cancel: (handle) => cancelAnimationFrame(handle),
 }
-
-/** How much stiller a frame must be than the stillest so far to count as progress at all. */
-const IMPROVED = 0.97
-
-/**
- * How many frames without getting stiller are enough to call a picture rested: a little over half
- * a second at sixty frames a second, which reads as the cloud having stopped rather than as a cut.
- */
-const STUCK_FRAMES = 40
 
 /** What a drag leaves behind, told where the bubble came to rest once the cloud has stopped. */
 export type Landing = (rest: Position) => void
@@ -72,11 +65,8 @@ export function createRun(parts: RunParts): Run {
   let hand: Hand | null = null
   let landing: { readonly id: string; readonly tell: Landing } | null = null
   let spreadingFrames = 0
-  /** Quiet frames in a row; a contact goes quiet for one while the forces behind it still press. */
-  let still = 0
-  /** The stillest the picture has been since it was woken, and how long it has been no stiller. */
-  let stillest = Infinity
-  let stuck = 0
+  /** Whether the picture has come to rest, read the one way the whole tool reads it. */
+  const watch = restWatch()
   /** Whether anything has moved since the run last came to rest, so a still picture records no step. */
   let stepped = false
   let moving = false
@@ -141,19 +131,16 @@ export function createRun(parts: RunParts): Run {
     const next = letGo(step(underHand(), config))
     state = next
     if (spreadingFrames > 0) spreadingFrames -= 1
-    const quiet = next.energy < config.energyThreshold
-    still = quiet ? still + 1 : 0
-    if (!quiet) stepped = true
-    // A storey with more rooms than its floor will hold has no arrangement that satisfies
-    // everything, and the last of the movement never quite goes. The picture is at rest when it
-    // stops getting stiller, as much as when it is still.
-    if (next.energy < stillest * IMPROVED) {
-      stillest = next.energy
-      stuck = 0
-    } else stuck += 1
-    const resting = (still >= STILL_FRAMES || stuck >= STUCK_FRAMES) && spreadingFrames === 0
+    const stopped = watch.read(next.energy, config.energyThreshold)
+    if (!watch.quiet()) stepped = true
+    const resting = stopped && spreadingFrames === 0
     if (resting && !hand) {
-      finish(next, false)
+      // Only when the picture has stopped: a link that has not closed is walked round to a free
+      // wall and the cloud let settle again, and only then is the picture called at rest.
+      const fixed = correctContacts(next, parts.layout())
+      if (fixed.corrected > 0) stepped = true
+      state = fixed.state
+      finish(state, false)
       return false
     }
     if (stepped || hand) parts.report(loose(next), 'preview')
@@ -167,9 +154,7 @@ export function createRun(parts: RunParts): Run {
   }
 
   function wake(): void {
-    still = 0
-    stillest = Infinity
-    stuck = 0
+    watch.wake()
     if (handle !== 0) return
     announce(true)
     handle = parts.frames.request(tick)
@@ -180,9 +165,7 @@ export function createRun(parts: RunParts): Run {
    * and nothing is scheduled, so a project whose bubbles were left at rest opens at rest.
    */
   function look(): void {
-    still = 0
-    stillest = Infinity
-    stuck = 0
+    watch.wake()
     if (handle !== 0) return
     for (let taken = 0; taken < STILL_FRAMES; taken++)
       if (!advance()) {
@@ -225,8 +208,9 @@ export function createRun(parts: RunParts): Run {
       cancel()
       spreadingFrames = 0
       const out = settle(underHand(), parts.layout())
-      state = letGo(out.state)
-      still = STILL_FRAMES
+      const fixed = correctContacts(out.state, parts.layout())
+      state = letGo(fixed.state)
+      if (fixed.corrected > 0) stepped = true
       if (out.iterations > STILL_FRAMES) stepped = true
       finish(state, true)
       announce(false)

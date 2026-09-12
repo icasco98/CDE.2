@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   createState,
   defaultLayout,
-  type Buildable,
+  type Ground,
   type LayoutConfig,
   type Position,
 } from '../../bubbles'
@@ -28,35 +28,37 @@ type Report = (id: string, at: Position, commit: Commit) => void
 function shapeOf(
   rooms: readonly BubbleRoom[],
   edges: readonly BubbleLink[],
-  inside: Buildable,
+  ground: Ground,
 ): string {
   const program = rooms.map(
     (room) =>
       `${room.id}:${room.storey}:${room.storeysSpanned}:${room.targetArea}:${room.pinned}:${room.tier ?? ''}`,
   )
   const links = edges.map((edge) => `${edge.a}-${edge.b}`)
-  // The ground the bubbles are held on is part of the picture: a plot resized is a new one.
-  const ground = inside.polygon.map((corner) => corner.join(':')).join(' ')
-  return `${ground}|${program.join(',')}|${links.join(',')}`
+  // The ground the bubbles are held on is part of the picture: a plot resized, or the client's
+  // answer to one of the two site questions changed, is a new one.
+  const floor = ground.inside.polygon.map((corner) => corner.join(':')).join(' ')
+  const site = `${ground.site.diwaniyaAtCorner}:${ground.site.garden}`
+  return `${floor}|${site}|${program.join(',')}|${links.join(',')}`
 }
 
 export function useSettling(
   rooms: readonly BubbleRoom[],
   edges: readonly BubbleLink[],
-  inside: Buildable,
+  ground: Ground,
   onMoveBubble: Report,
   config: LayoutConfig = defaultLayout,
   frames: Frames = browserFrames,
 ): SettleControls {
   const [moving, setMoving] = useState(false)
-  const latest = useRef({ rooms, edges, inside, onMoveBubble, config })
-  latest.current = { rooms, edges, inside, onMoveBubble, config }
+  const latest = useRef({ rooms, edges, ground, onMoveBubble, config })
+  latest.current = { rooms, edges, ground, onMoveBubble, config }
 
   /** Every bubble moves as a preview and the last one commits, so a whole run is one step to undo. */
   const run = useRef(
     createRun({
       frames,
-      state: createState(rooms, edges, inside),
+      state: createState(rooms, edges, ground),
       layout: () => latest.current.config,
       report: (bodies, commit) =>
         bodies.forEach((body, index) => {
@@ -71,10 +73,10 @@ export function useSettling(
     }),
   ).current
 
-  const shape = shapeOf(rooms, edges, inside)
+  const shape = shapeOf(rooms, edges, ground)
   useEffect(() => {
     const program = latest.current
-    run.begin(createState(program.rooms, program.edges, program.inside))
+    run.begin(createState(program.rooms, program.edges, program.ground))
   }, [run, shape])
 
   /** A weight moved changes the forces, so the picture is asked to answer them. */

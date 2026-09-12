@@ -9,16 +9,17 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import {
-  buildableOf,
   createState,
+  groundOf,
   layoutFor,
+  readLink,
   twinsOf,
   type Body,
   type Position,
 } from '../../bubbles'
 import { area, type Point } from '../../geometry'
 import type { EdgeKind } from '../../model'
-import { buildableArea, fitSentence, storeyFits, storeyLabel } from '../../rulebook'
+import { fitSentence, storeyFits, storeyLabel } from '../../rulebook'
 import {
   fitCamera,
   metresPerPixel,
@@ -43,7 +44,7 @@ import {
 } from './frame'
 import { Bubble, Legend, Link } from './parts'
 import { useSettling } from './useSettling'
-import { WeightsPanel, weightOf } from './WeightsPanel'
+import { WeightsPanel } from './WeightsPanel'
 import { STAIR_STAYS, type BubblesViewProps } from './types'
 import './bubbles.css'
 
@@ -76,7 +77,7 @@ function notchesOf(event: WheelEvent): number {
 }
 
 export function BubblesView(props: BubblesViewProps) {
-  const { rooms, edges, storeys, circulation, plot, weights, selected } = props
+  const { rooms, edges, storeys, circulation, plot, site, weights, selected } = props
   const { onMoveBubble, onDropBubble, onSetStorey, onPin, onConnect, onDisconnect } = props
   const { onSetEdgeKind, onRemoveRoom, onAddHallway, onSetWeight, onSelect, onRefuse } = props
   const svgRef = useRef<SVGSVGElement>(null)
@@ -95,19 +96,20 @@ export function BubblesView(props: BubblesViewProps) {
   const [box, setBox] = useState({ width: 0, height: 0 })
   /** The storey being worked on, or nothing for all of them at once. */
   const [only, setOnly] = useState<number | null>(null)
-  /** The user-requirements weight is a force, so a slider moved is a new layout for the simulation. */
-  const layout = useMemo(() => layoutFor(weightOf(weights, 'userRequirements')), [weights])
-  /** The Municipality setbacks: the wall the bubbles are held inside, and the line that is drawn. */
-  const inside = useMemo(() => buildableOf(buildableArea(plot)), [plot])
+  /** Every weight is a force, so a slider moved is a new layout for the simulation. */
+  const layout = useMemo(() => layoutFor(weights), [weights])
+  /** The plot as the walls and the forces read it: the setbacks, the sides, the client's answers. */
+  const ground = useMemo(() => groundOf(plot, site), [plot, site])
+  const inside = ground.inside
   const { moving, settleNow, spread, hold, release } = useSettling(
     rooms,
     edges,
-    inside,
+    ground,
     onMoveBubble,
     layout,
   )
 
-  const state = useMemo(() => createState(rooms, edges, inside), [rooms, edges, inside])
+  const state = useMemo(() => createState(rooms, edges, ground), [rooms, edges, ground])
   const bodies = state.bodies
   const named = useMemo(() => new Map(rooms.map((room) => [room.id, room])), [rooms])
   const placed = useMemo(() => new Map(bodies.map((body) => [body.id, body])), [bodies])
@@ -140,6 +142,20 @@ export function BubblesView(props: BubblesViewProps) {
   // The floor is measured once per plot, not once per frame: the setbacks are a boolean operation
   // on a polygon, and the fit line is read again every time a bubble moves.
   const floorM2 = useMemo(() => area(inside.polygon), [inside])
+  /**
+   * What each link is doing. A link that has closed is drawn as a link; one that has not is drawn
+   * as a line of tension with the one thing standing in its way, said once here and once in the
+   * list under the sheet, so a missed link is never shrugged at.
+   */
+  const readings = useMemo(() => {
+    const nameFor = (id: string): string => named.get(id)?.name ?? id
+    const said = new Map<string, string>()
+    for (const edge of edges) {
+      const reading = readLink(state, edge.a, edge.b, nameFor)
+      if (reading && !reading.realized && reading.reason) said.set(edge.id, reading.reason)
+    }
+    return said
+  }, [edges, state, named])
   const fits = useMemo(() => storeyFits(rooms, floorM2, levels), [rooms, floorM2, levels])
   /** The initials a bubble too small for its name falls back on, no two rooms wearing the same. */
   const marks = useMemo(() => shortMarks(rooms.map((room) => room.name)), [rooms])
@@ -607,6 +623,7 @@ export function BubblesView(props: BubblesViewProps) {
                 selected={edge.id === selected}
                 dimmed={edge.storey !== active}
                 outside={ends.outside}
+                tension={readings.get(edge.id) ?? null}
                 {...(edge.source === undefined ? {} : { title: edge.source })}
                 onSelect={chooseLink}
               />
@@ -659,6 +676,13 @@ export function BubblesView(props: BubblesViewProps) {
           <Legend />
         </div>
       </div>
+      {readings.size > 0 && (
+        <ul className="bubbles-tension">
+          {[...readings].map(([id, reason]) => (
+            <li key={id}>{reason}</li>
+          ))}
+        </ul>
+      )}
       <dl className="bubbles-fit">
         {fits
           .filter((fit) => only === null || fit.storey === only)

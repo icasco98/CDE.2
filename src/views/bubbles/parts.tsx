@@ -41,7 +41,9 @@ type BubbleProps = {
   /** The storey this twin is drawn on; a stair is drawn once on every storey it reaches. */
   readonly twin: number
   readonly selected: boolean
-  /** On a storey that is not the one being worked on: drawn faint and out of the pointer's reach. */
+  /**
+   * On a storey that is not the one being worked on: drawn faint and out of the pointer's reach.
+   */
   readonly dimmed: boolean
   /**
    * What the bubble says and how large, measured against the circle by the view rather than
@@ -52,12 +54,29 @@ type BubbleProps = {
   readonly handlers: BubbleHandlers
 }
 
+/** Every bubble says where it stands and how wide it is, whatever shape it is drawn as. */
+function standsAt(body: Body) {
+  return {
+    'data-bubble': body.id,
+    'data-x': body.x,
+    'data-y': body.y,
+    'data-radius': body.radius,
+  }
+}
+
 /** Memoised on the body, the twin and the label, so a pan draws no bubble again. */
 export const Bubble = memo(function Bubble(props: BubbleProps) {
   const { body, room, twin, label, handlers } = props
+  const corridor = body.half > 0
   const at = { x: body.x, y: body.y }
-  const rim = onRim(at, body.radius, false)
-  const held = onRim(at, body.radius, true)
+  // A corridor's two marks sit at its far end rather than on a rim it does not have.
+  const along = { x: Math.cos(body.angle) * body.half, y: Math.sin(body.angle) * body.half }
+  const rim = corridor ? { x: at.x + along.x, y: at.y + along.y } : onRim(at, body.radius, false)
+  const held = corridor ? { x: at.x - along.x, y: at.y - along.y } : onRim(at, body.radius, true)
+  const turn = (body.angle * 180) / Math.PI
+  // A label runs along the corridor and stays the right way up, so a corridor pointing back down
+  // the plot is read without turning the head.
+  const upright = Math.abs(((turn + 180) % 360) - 180) > 90 ? turn + 180 : turn
   // A name that will not go inside its own rim on one line or two is dropped for the room's
   // initials, and told in full on hover and while the room is selected: two labels never lie
   // across each other.
@@ -74,28 +93,47 @@ export const Bubble = memo(function Bubble(props: BubbleProps) {
       className={classes.join(' ')}
       style={{ '--label-m': String(label.size) } as CSSProperties}
     >
-      <circle
-        data-bubble={body.id}
-        cx={at.x}
-        cy={at.y}
-        r={body.radius}
-        className={`bubble-shape ${categoryClass(room.category)}`}
-        onPointerDown={(event) => handlers.onGrab(event, body)}
-      >
-        <title>{`${room.name}, ${Math.round(room.targetArea)} m²`}</title>
-      </circle>
-      {/* The stack sits about the middle of the circle, a line of its own cap height apart, so
-          the name reads at the widest part of the bubble whatever else is said under it. */}
-      {rows.map((row, index) => (
-        <text
-          key={row.kind + index}
-          x={at.x}
-          y={at.y + (index - (rows.length - 1) / 2) * label.size * LINE}
-          className={`bubble-${row.kind}`}
+      {corridor ? (
+        <rect
+          {...standsAt(body)}
+          data-half={body.half}
+          x={at.x - body.half - body.radius}
+          y={at.y - body.radius}
+          width={2 * (body.half + body.radius)}
+          height={2 * body.radius}
+          rx={body.radius}
+          transform={`rotate(${turn} ${at.x} ${at.y})`}
+          className={`bubble-shape ${categoryClass(room.category)}`}
+          onPointerDown={(event) => handlers.onGrab(event, body)}
         >
-          {row.text}
-        </text>
-      ))}
+          <title>{`${room.name}, ${Math.round(room.targetArea)} m²`}</title>
+        </rect>
+      ) : (
+        <circle
+          {...standsAt(body)}
+          cx={at.x}
+          cy={at.y}
+          r={body.radius}
+          className={`bubble-shape ${categoryClass(room.category)}`}
+          onPointerDown={(event) => handlers.onGrab(event, body)}
+        >
+          <title>{`${room.name}, ${Math.round(room.targetArea)} m²`}</title>
+        </circle>
+      )}
+      {/* The stack sits about the middle of the shape, a line of its own cap height apart, so
+          the name reads at the widest part of the bubble whatever else is said under it. */}
+      <g transform={corridor ? `rotate(${upright} ${at.x} ${at.y})` : undefined}>
+        {rows.map((row, index) => (
+          <text
+            key={row.kind + index}
+            x={at.x}
+            y={at.y + (index - (rows.length - 1) / 2) * label.size * LINE}
+            className={`bubble-${row.kind}`}
+          >
+            {row.text}
+          </text>
+        ))}
+      </g>
       {label.short && (
         <text x={at.x} y={at.y - body.radius} dy="-0.5em" className="bubble-full">
           {room.name}
@@ -133,6 +171,8 @@ type LinkProps = {
   readonly title?: string
   /** Whether the far end is the outside: the front door's square is drawn there. */
   readonly outside: boolean
+  /** Why the link has not closed, where it has not; a closed link says nothing. */
+  readonly tension?: string | null
   readonly onSelect: (event: ReactPointerEvent, id: string) => void
 }
 
@@ -161,9 +201,17 @@ export const Link = memo(function Link(props: LinkProps) {
       data-edge={props.id}
       data-kind={props.kind}
       data-storey={props.storey}
-      className={props.dimmed ? 'link-group link-dimmed' : 'link-group'}
+      data-tension={props.tension ? '' : undefined}
+      className={['link-group', props.dimmed ? 'link-dimmed' : '', props.tension ? 'link-open' : '']
+        .filter(Boolean)
+        .join(' ')}
     >
-      {props.title ? <title>{props.title}</title> : null}
+      {/* A link that has not closed says what is in the way; one that has says why it was wanted. */}
+      {props.tension ? (
+        <title>{props.tension}</title>
+      ) : props.title ? (
+        <title>{props.title}</title>
+      ) : null}
       <line
         x1={from.x}
         y1={from.y}

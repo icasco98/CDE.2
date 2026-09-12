@@ -19,7 +19,7 @@ export function BubblesStage() {
     () =>
       project.rooms.map((room) => {
         const kind = roomTypeById(room.type)
-        return { ...room, category: kind?.category, tier: kind?.tier }
+        return { ...room, kind: room.type, category: kind?.category, tier: kind?.tier }
       }),
     [project.rooms],
   )
@@ -72,6 +72,7 @@ export function BubblesStage() {
       storeys={project.storeys}
       circulation={circulation}
       plot={project.plot}
+      site={project.site}
       weights={project.weights}
       selected={selected}
       onMoveBubble={(id: string, at: Position, commit: Commit) =>

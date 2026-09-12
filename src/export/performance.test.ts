@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
 import { rectangleToPolygon } from '../geometry'
 import { PROJECT_VERSION, type Edge, type Project, type Room } from '../model'
-import { startingHousehold } from '../model/project'
+import { startingHousehold, startingSite } from '../model/project'
 import { dxfOf } from './dxf'
 import { pdfOf } from './sheet'
 
@@ -47,6 +47,7 @@ function house(): Project {
       north: 0,
       street: [2],
     },
+    site: startingSite,
     household: startingHousehold,
     rooms,
     edges,

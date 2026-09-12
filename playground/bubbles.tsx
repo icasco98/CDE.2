@@ -19,6 +19,7 @@ function Playground() {
     () =>
       project.rooms.map((room) => ({
         ...room,
+        kind: room.type,
         category: categoryOf(room.type),
         tier: roomTypeById(room.type)?.tier,
       })),
@@ -44,6 +45,7 @@ function Playground() {
         storeys={project.storeys}
         circulation={circulationPerStorey(project.rooms, project.storeys)}
         plot={project.plot}
+        site={project.site}
         weights={project.weights}
         selected={selected}
         onMoveBubble={(id: string, at: Position, commit: Commit) =>

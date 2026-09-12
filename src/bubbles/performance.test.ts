@@ -1,12 +1,7 @@
 import { expect, it } from 'vitest'
-import {
-  buildableOf,
-  createState,
-  defaultLayout,
-  layoutFor,
-  step,
-  type SimulationEdge,
-} from './simulation'
+import { startingSite } from '../model'
+import { createState, defaultLayout, layoutFor, step, type SimulationEdge } from './simulation'
+import { groundOf } from './ground'
 
 /**
  * Thirty rooms over three storeys and thirty links, the size a villa's program runs to, with three
@@ -24,13 +19,21 @@ const rooms = Array.from({ length: 30 }, (_unused, index) => ({
   bubble: { x: 3 + (index % 6) * 2.5, y: 3 + Math.floor(index / 6) * 3.5 },
 }))
 
-/** The starting plot inside its setbacks: the floor thirty rooms are crowded onto. */
-const floor = buildableOf([
-  [1.5, 1.5],
-  [18.5, 1.5],
-  [18.5, 23],
-  [1.5, 23],
-])
+/** The starting plot with its setbacks: the floor thirty rooms are crowded onto. */
+const floor = groundOf(
+  {
+    on: true,
+    polygon: [
+      [0, 0],
+      [20, 0],
+      [20, 25],
+      [0, 25],
+    ],
+    north: 0,
+    street: [2],
+  },
+  startingSite,
+)
 
 const edges: SimulationEdge[] = Array.from({ length: 30 }, (_unused, index) => ({
   a: `room-${index}`,
@@ -55,7 +58,7 @@ function milliseconds(work: () => void): number {
  * pair, which is the whole of what stands between a hand on a bubble and the next picture.
  */
 it('takes one frame of thirty bubbles and thirty links in under a millisecond', () => {
-  const layout = layoutFor(1)
+  const layout = layoutFor({ userRequirements: 1, siteConstraints: 1 })
   let state = createState(rooms, edges, floor)
   const took = milliseconds(() => {
     for (let frame = 0; frame < 20; frame++) state = step(state, layout)
