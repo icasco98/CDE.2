@@ -286,6 +286,16 @@ table.program td input[type='number'] {
   margin: 0;
 }
 
+/* The fit against the buildable area, in the same words the bubbles sheet says it in. */
+.totals .fit {
+  color: #6b655c;
+  font-size: 0.8rem;
+}
+
+.totals .fit-over .fit {
+  color: #8a3f2a;
+}
+
 /* Fixed over the corner rather than in flow, so a refusal never pushes the drawing down the
    page; pointer-events stay off the empty stack so it never steals a gesture on the sheet
    beneath it, and come back on each line so its Dismiss button and click-to-close still work. */

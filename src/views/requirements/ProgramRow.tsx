@@ -3,7 +3,7 @@ import type { Room } from '../../model'
 import { categoryLabels, roomTypeById, spansAllStoreys, typesByCategory } from '../../rulebook'
 import { session } from '../../app/session'
 import { NumberInput } from './fields'
-import { storeyLabel } from './format'
+import { storeyLabel } from '../../rulebook'
 import { refusalOf } from './refusals'
 import { spanBetween, startsFor, topAfterStart, topOf, topsFor } from './spans'
 

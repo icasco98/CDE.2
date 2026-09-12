@@ -288,11 +288,16 @@ export const defaultConnections: readonly DefaultConnection[] = [
   },
 ]
 
-const byId: ReadonlyMap<string, DefaultConnection> = new Map(
-  defaultConnections.map((row) => [row.id, row]),
-)
-
-/** Why the rulebook proposes this connection, for the person looking at the proposal. */
-export function connectionSource(rowId: string): string {
-  return byId.get(rowId)?.source ?? ''
+/**
+ * Why the rulebook wanted a connection between two kinds of room, for the person looking at the
+ * link it made. An edge is a pair of rooms and a kind, never a row of a table, so the row is
+ * found again from the two kinds; a link the designer drew by hand answers with nothing.
+ */
+export function connectionSource(from: string, to: string, kind: EdgeKind): string {
+  const row = defaultConnections.find(
+    (each) =>
+      each.kind === kind &&
+      ((each.from === from && each.to === to) || (each.from === to && each.to === from)),
+  )
+  return row?.source ?? ''
 }

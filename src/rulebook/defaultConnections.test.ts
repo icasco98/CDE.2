@@ -83,11 +83,13 @@ describe('the table stays inside the model', () => {
 })
 
 describe('the source a person is shown', () => {
-  it('is the row the proposal came from', () => {
-    expect(connectionSource('D2')).toContain('its own street door')
+  it('is the row the two kinds came from, either way round', () => {
+    expect(connectionSource(EXTERIOR, 'diwaniya', 'door')).toContain('its own street door')
+    expect(connectionSource('diwaniya', EXTERIOR, 'door')).toContain('its own street door')
   })
 
-  it('is empty for a row that is not in the table', () => {
-    expect(connectionSource('D999')).toBe('')
+  it('is empty for a pair the table says nothing about, and for another kind of edge', () => {
+    expect(connectionSource('kitchen', 'master-bedroom', 'door')).toBe('')
+    expect(connectionSource(EXTERIOR, 'diwaniya', 'open')).toBe('')
   })
 })

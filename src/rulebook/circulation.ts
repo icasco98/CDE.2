@@ -1,4 +1,4 @@
-import { storeyLabel } from '../bubbles'
+import { storeyLabel } from './fit'
 import { roomTypes } from './roomTypes'
 import { roomTypeById } from './sizes'
 

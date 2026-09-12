@@ -236,12 +236,10 @@ test('a storey chosen in either half is the storey the other half shows', async 
 
 test('the storey in view is lit in the massing and the others stand back', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: /rebuild program from household/i }).click()
+  // Two storeys before the rebuild, so the program lays the bedrooms upstairs itself: a room the
+  // rulebook has linked cannot change floors afterwards without losing the link.
   await page.getByRole('button', { name: 'Add storey' }).click()
-  const upstairs = page
-    .locator('table.program tbody tr')
-    .filter({ has: page.getByLabel('Room name').and(page.locator('[value="Bedroom 1"]')) })
-  await upstairs.getByLabel('Storey').selectOption({ label: 'First' })
+  await page.getByRole('button', { name: /rebuild program from household/i }).click()
   await openSheet(page)
   await place(page, 'Kitchen', 5, 5.125)
   await page.getByRole('button', { name: 'First', exact: true }).click()
@@ -325,7 +323,8 @@ test('a door is opened and closed again from the sheet, and an open edge is pick
 }) => {
   await openTwoRooms(page)
   await page.getByRole('button', { name: 'Sheet', exact: true }).click()
-  await page.locator('[data-proposal]').click()
+  // The rulebook gave these two a door when the program was rebuilt, so the sheet carries one
+  // already: this test is about picking it and turning it into an opening.
   await expect(page.locator('[data-edge][data-door="door"]')).toHaveCount(1)
 
   // Nothing picked, so the room's own handles are not standing over the wall the door is on; the

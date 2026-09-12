@@ -338,28 +338,31 @@ test('a pinned room refuses to be moved', async ({ page }) => {
   expect(await pointsOf(page, 'Kitchen')).toBe(before)
 })
 
-test('a proposed door is accepted with a click and disconnected with Delete', async ({ page }) => {
+test('a door is disconnected with Delete and proposed again with a click', async ({ page }) => {
   await openZoning(page)
   await place(page, 'Kitchen', 5, 5.125)
   await place(page, 'Dining Room', 10.75, 5)
-  await expect(page.locator('[data-proposal]')).toHaveCount(1)
-  await expect(page.locator('[data-edge]')).toHaveCount(0)
-  await page.locator('[data-proposal]').click()
+  // The rulebook's own door between these two came with the program, so the wall carries one
+  // already and nothing is offered.
   await expect(page.locator('[data-edge]')).toHaveCount(1)
   await expect(page.locator('[data-proposal]')).toHaveCount(0)
+
   await clickSheet(page, 17, 1.5)
   await clickSheet(page, 7.75, 5.125)
   await expect(page.locator('.door-selected')).toHaveCount(1)
   await page.keyboard.press('Delete')
   await expect(page.locator('[data-edge]')).toHaveCount(0)
   await expect(page.locator('[data-proposal]')).toHaveCount(1)
+
+  await page.locator('[data-proposal]').click()
+  await expect(page.locator('[data-edge]')).toHaveCount(1)
+  await expect(page.locator('[data-proposal]')).toHaveCount(0)
 })
 
 test('an edge whose rooms share no wall is drawn as a tension', async ({ page }) => {
   await openZoning(page)
   await place(page, 'Kitchen', 5, 5.125)
   await place(page, 'Dining Room', 10.75, 5)
-  await page.locator('[data-proposal]').click()
   await expect(page.locator('[data-edge]')).toHaveCount(1)
   await drag(page, await onSheet(page, 10.75, 5), await onSheet(page, 15, 18))
   await expect(page.locator('[data-tension]')).toHaveCount(1)
@@ -379,18 +382,21 @@ test('each storey is drawn on its own, with the one below as a ghost', async ({ 
   await page.goto('/')
   await page.getByRole('button', { name: /rebuild program from household/i }).click()
   await page.getByRole('button', { name: 'Add storey' }).click()
-  const kitchen = page
+  // An office is a kind the default connections say nothing about, so it is free to change floors.
+  await page.getByLabel('Kind to add').selectOption({ label: 'Office / Study' })
+  await page.getByRole('button', { name: 'Add room', exact: true }).click()
+  const office = page
     .locator('table.program tbody tr')
-    .filter({ has: page.getByLabel('Room name').and(page.locator('[value="Kitchen"]')) })
-  await kitchen.getByLabel('Storey').selectOption({ label: 'First' })
+    .filter({ has: page.getByLabel('Room name').and(page.locator('[value="Office / Study"]')) })
+  await office.getByLabel('Storey').selectOption({ label: 'First' })
   await openSheet(page)
-  await expect(page.locator('[data-tray]').filter({ hasText: /^Kitchen/ })).toHaveCount(0)
+  await expect(page.locator('[data-tray]').filter({ hasText: /^Office/ })).toHaveCount(0)
   await place(page, 'Dining Room', 8, 8)
   await expect(page.locator('[data-room]')).toHaveCount(1)
   await page.getByRole('button', { name: 'First', exact: true }).click()
   await expect(page.locator('[data-room]')).toHaveCount(0)
   await expect(page.locator('.ghost')).toHaveCount(1)
-  await expect(page.locator('[data-tray]').filter({ hasText: /^Kitchen/ })).toHaveCount(1)
+  await expect(page.locator('[data-tray]').filter({ hasText: /^Office/ })).toHaveCount(1)
 })
 
 test('a room picked in the bubbles is the room picked in the zoning', async ({ page }) => {
@@ -556,8 +562,7 @@ async function everyGesture(page: Page): Promise<Record<string, unknown>> {
   await place(page, 'Kitchen', 8, 7.625)
   await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-area', '20.63')
   await place(page, 'Dining Room', 8, 11.5)
-  await expect(page.locator('[data-proposal]')).toHaveCount(1)
-  await page.locator('[data-proposal]').click()
+  // The rulebook's door between the kitchen and the dining room came with the program.
   await expect(page.locator('[data-edge]')).toHaveCount(1)
   // Grabbed above its middle: the Dining Room's rotation handle stands a fixed number of pixels
   // clear of its wall, which on a shorter sheet is a metre or more up into the Kitchen.
@@ -654,13 +659,11 @@ test('a stair added to a two-storey program stands on both storeys at one place'
   expect(await pointsOf(page, 'Stair')).toBe(onGround)
 })
 
-/** The zoning with the rulebook's default connections taken, which is where an open edge comes from. */
+/** The zoning of a rebuilt program, which carries the rulebook's default connections as edges. */
 async function openZoningConnected(page: Page): Promise<void> {
   await page.goto('/')
   await page.getByRole('button', { name: /rebuild program from household/i }).click()
   await page.getByLabel('Hold rooms inside the plot').check()
-  await page.getByRole('button', { name: 'Bubbles' }).click()
-  await page.getByRole('button', { name: 'Accept all proposals' }).click()
   await openSheet(page)
 }
 

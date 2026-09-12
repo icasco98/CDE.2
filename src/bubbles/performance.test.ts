@@ -1,9 +1,16 @@
 import { expect, it } from 'vitest'
-import { createState, defaultLayout, layoutFor, step, type SimulationEdge } from './simulation'
+import {
+  buildableOf,
+  createState,
+  defaultLayout,
+  layoutFor,
+  step,
+  type SimulationEdge,
+} from './simulation'
 
 /**
  * Thirty rooms over three storeys and thirty links, the size a villa's program runs to, with three
- * of them stairs through every storey: nine twins where a plain program has three.
+ * of them stairs standing through every storey.
  */
 const spanning = new Set([4, 13, 22])
 
@@ -14,8 +21,16 @@ const rooms = Array.from({ length: 30 }, (_unused, index) => ({
   targetArea: 8 + (index % 7) * 6,
   pinned: index % 11 === 0,
   tier: ['public', 'semi-public', 'private', 'exempt'][index % 4],
-  bubble: { x: (index % 6) * 6 - 15, y: 4 + Math.floor(index / 6) * 5 },
+  bubble: { x: 3 + (index % 6) * 2.5, y: 3 + Math.floor(index / 6) * 3.5 },
 }))
+
+/** The starting plot inside its setbacks: the floor thirty rooms are crowded onto. */
+const floor = buildableOf([
+  [1.5, 1.5],
+  [18.5, 1.5],
+  [18.5, 23],
+  [1.5, 23],
+])
 
 const edges: SimulationEdge[] = Array.from({ length: 30 }, (_unused, index) => ({
   a: `room-${index}`,
@@ -41,7 +56,7 @@ function milliseconds(work: () => void): number {
  */
 it('takes one frame of thirty bubbles and thirty links in under a millisecond', () => {
   const layout = layoutFor(1)
-  let state = createState(rooms, edges, 3)
+  let state = createState(rooms, edges, floor)
   const took = milliseconds(() => {
     for (let frame = 0; frame < 20; frame++) state = step(state, layout)
   })
@@ -50,7 +65,7 @@ it('takes one frame of thirty bubbles and thirty links in under a millisecond', 
 })
 
 it('takes a frame of the same program under the plain layout in under a millisecond', () => {
-  let state = createState(rooms, edges, 3)
+  let state = createState(rooms, edges, floor)
   const took = milliseconds(() => {
     for (let frame = 0; frame < 20; frame++) state = step(state, defaultLayout)
   })

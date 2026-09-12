@@ -119,58 +119,6 @@
   vector-effect: non-scaling-stroke;
 }
 
-.zoning-sheet .grid-line {
-  fill: none;
-  stroke: #ddd6c8;
-  stroke-width: 0.5px;
-}
-
-.zoning-sheet .plot {
-  stroke: #6f6a62;
-  stroke-width: 2px;
-}
-
-/* The plot is drawn for reference when it does not bind, so it is thin and broken. */
-.zoning-sheet .plot-off {
-  stroke-width: 1px;
-  stroke-dasharray: 8 6;
-}
-
-.zoning-sheet .street {
-  stroke: #4a453d;
-  stroke-width: 5px;
-  stroke-linecap: square;
-}
-
-.zoning-sheet .street-label,
-.zoning-sheet .north text,
-.zoning-sheet .scale-bar text {
-  fill: #6d6862;
-  text-anchor: middle;
-  dominant-baseline: middle;
-  pointer-events: none;
-}
-
-/* The arrow and the bar are drawn in pixels inside a counter-scaled group, so their type is too. */
-.zoning-sheet .north text,
-.zoning-sheet .scale-bar text {
-  font-size: 12px;
-}
-
-.zoning-sheet .street-label {
-  font-size: calc(var(--per-px) * 11px);
-}
-
-.zoning-sheet .north line,
-.zoning-sheet .scale-bar line {
-  stroke: #6d6862;
-  stroke-width: 1.5px;
-}
-
-.zoning-sheet .north polygon {
-  fill: #6d6862;
-}
-
 .zoning-sheet .ghost {
   fill: none;
   stroke: #c9c2b4;

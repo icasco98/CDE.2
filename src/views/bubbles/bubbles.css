@@ -10,7 +10,7 @@
 /* Every line above the diagram keeps the height it reads at; the diagram takes what they leave. */
 .bubbles-bar,
 .bubbles-hint,
-.bubbles-warning,
+.bubbles-fit,
 .bubbles-nudge {
   flex: none;
 }
@@ -66,11 +66,6 @@
   color: #6d6862;
 }
 
-.bubbles-warning {
-  margin: 0;
-  color: #8a3f2a;
-}
-
 /* The rule's own line, with the button that answers it on the same line so the two read as one. */
 .bubbles-nudge {
   display: flex;
@@ -80,7 +75,7 @@
   color: #6d6862;
 }
 
-/* The sheet and the weights side by side, so a slider and what it does to the diagram are read together. */
+/* The sheet and the side column side by side, so a slider, the legend and the diagram are read together. */
 .bubbles-body {
   display: flex;
   align-items: stretch;
@@ -91,13 +86,21 @@
   min-height: 320px;
 }
 
-/* The panel scrolls inside its own edge, so a long list of weights never lengthens the tab. */
-.weights-panel {
+/* The column beside the sheet, scrolling inside its own edge so neither the weights nor the
+   legend ever lengthens the tab. */
+.bubbles-side {
   flex: none;
   width: 14rem;
-  box-sizing: border-box;
   min-height: 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.weights-panel,
+.bubbles .legend {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -158,27 +161,6 @@
   vector-effect: non-scaling-stroke;
 }
 
-.bubbles-sheet .band-even {
-  fill: #f3efe6;
-}
-
-.bubbles-sheet .band-odd {
-  fill: #ece7db;
-}
-
-/* The line between two bands is the storey boundary; the name below it is that band's storey. */
-.bubbles-sheet .band-line {
-  stroke: #b7b1a5;
-  stroke-width: 1px;
-}
-
-.bubbles-sheet .band-label {
-  fill: #8b857b;
-  font-size: calc(var(--per-px) * 12px);
-  letter-spacing: 0.04em;
-  pointer-events: none;
-}
-
 /* The categories of the room-type table, and the neutral fill for a room outside it. */
 .bubbles-sheet .category-reception {
   fill: #d7a6a1;
@@ -213,14 +195,6 @@
 .bubbles-sheet .link-selected {
   stroke: #2f6f8f;
   stroke-width: 4px;
-}
-
-/* One space flowing into the next: the door's own line inside a broad opening. */
-.bubbles-sheet .link-flow {
-  stroke: #8f887d;
-  stroke-width: 9px;
-  opacity: 0.3;
-  pointer-events: none;
 }
 
 .bubbles-sheet .link-drawn {
@@ -320,103 +294,111 @@
   stroke-width: 2.5px;
 }
 
-/*
- * A proposal is the rulebook's offer, not the graph: fainter than a link, and marked where it is
- * taken. It draws over the bubbles so the mark is always there to click, and takes the pointer only
- * on the thread and the mark, so a bubble underneath is still grabbed everywhere else.
- */
-.bubbles-sheet .proposal {
-  cursor: pointer;
-  pointer-events: none;
+/* The legend stands beside the sheet, never over it: one that covers a bubble is one in the way. */
+.bubbles .legend {
+  gap: 0.35rem;
+  flex: none;
 }
 
-/* The dotted line is too thin to aim at, so a narrow invisible twin takes the hover and the click. */
-.bubbles-sheet .proposal-grip {
-  stroke: transparent;
-  stroke-width: 6px;
-  pointer-events: stroke;
+.bubbles .legend h2 {
+  font-size: 0.95rem;
+  margin: 0;
 }
 
-.bubbles-sheet .proposal-line {
-  stroke: #8f887d;
-  stroke-width: 1.5px;
-  stroke-dasharray: 4 5;
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-.bubbles-sheet .proposal-mark {
-  fill: #fffdf9;
-  stroke: #8f887d;
-  stroke-width: 1.5px;
-  pointer-events: auto;
-}
-
-.bubbles-sheet .proposal-plus {
-  text-anchor: middle;
-  dominant-baseline: central;
-  fill: #6d6862;
-  pointer-events: none;
-}
-
-.bubbles-sheet .proposal:hover .proposal-line {
-  opacity: 1;
-  stroke: #2f6f8f;
-}
-
-.bubbles-sheet .proposal:hover .proposal-mark {
-  stroke: #2f6f8f;
-}
-
-/* The legend reads the sheet, so it never takes a pointer meant for what is under it. */
-.bubbles-sheet .legend {
-  pointer-events: none;
-}
-
-.bubbles-sheet .legend-panel {
-  fill: #fffdf9;
-  fill-opacity: 0.92;
-  stroke: #e2ddd3;
-  stroke-width: 1px;
-}
-
-.bubbles-sheet .legend-swatch {
-  stroke: #6f6a62;
-  stroke-width: 1px;
-}
-
-.bubbles-sheet .legend-label {
-  dominant-baseline: middle;
-  fill: #4a453d;
-  font-size: 11px;
-}
-
-/* The spoken proposals give way to the diagram when the window is short, and scroll inside themselves. */
-.proposals {
+.bubbles .legend ul {
   margin: 0;
   padding: 0;
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  flex: 0 1 auto;
-  min-height: 0;
-  overflow-y: auto;
+  gap: 0.3rem;
 }
 
-.proposals li {
+.bubbles .legend li {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #4a453d;
+}
+
+.bubbles .legend svg {
+  flex: none;
+}
+
+.bubbles .legend .link {
+  stroke: #8f887d;
+  stroke-width: 2px;
+}
+
+.bubbles .legend .legend-swatch {
+  stroke: #6f6a62;
+  stroke-width: 1px;
+}
+
+.bubbles .legend .pin-mark {
+  fill: #8a3f2a;
+}
+
+.bubbles .legend .main-door-mark {
+  fill: #fffdf9;
+  stroke: #4a453d;
+  stroke-width: 1.5px;
+}
+
+.bubbles .legend .legend-buildable {
+  stroke: #8a3f2a;
+  stroke-width: 1.5px;
+  stroke-dasharray: 4 3;
+}
+
+/* One line per storey shown: what its targets come to against the floor the setbacks leave it. */
+.bubbles-fit {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: 0.85rem;
   color: #6d6862;
 }
 
-.proposals button {
-  font: inherit;
-  padding: 0.1rem 0.7rem;
-  border: 1px solid #b7b1a5;
-  border-radius: 999px;
-  background: #fffdf9;
-  color: inherit;
-  cursor: pointer;
+.bubbles-fit div {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.bubbles-fit dt {
+  color: #4a453d;
+}
+
+.bubbles-fit dd {
+  margin: 0;
+}
+
+.bubbles-fit .fit-over,
+.bubbles-fit .fit-over dt {
+  color: #8a3f2a;
+}
+
+/* The front door where it meets the street: the one mark on a link, so it reads as the way in. */
+.bubbles-sheet .main-door-mark {
+  fill: #fffdf9;
+  stroke: #4a453d;
+  stroke-width: 2px;
+  pointer-events: none;
+}
+
+/* A name too long for its own bubble gives way to its initials; the name itself waits on the hand. */
+.bubbles-sheet .bubble-mark {
+  font-size: 1.1em;
+}
+
+.bubbles-sheet .bubble-full {
+  visibility: hidden;
+  font-size: calc(var(--per-px) * 12px);
+}
+
+.bubbles-sheet .bubble-short:hover .bubble-full,
+.bubbles-sheet .bubble-short.bubble-selected .bubble-full {
+  visibility: visible;
 }

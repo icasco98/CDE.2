@@ -17,6 +17,7 @@ import {
   type Point,
 } from '../../geometry'
 import { occupiedStoreys, type Room } from '../../model'
+import { buildableArea } from '../../rulebook'
 import {
   fitCamera,
   metresPerPixel,
@@ -27,7 +28,6 @@ import {
   wheelFactor,
   zoomAbout,
   ZOOM_STEP,
-  type Camera,
 } from '../camera'
 import { alignRooms, northAngle, plotAngle } from './align'
 import { defaultProportion, startingRectangle } from './defaults'
@@ -46,7 +46,9 @@ import {
 } from './draw'
 import { CirclePreview, DrawPreview, PickRoom, VertexHandles } from './drawing'
 import { edgeMarks, proposalsFrom, vanishedWalls, wallPairs, type WallPair } from './doors'
-import { extentOf } from './frame'
+import { extentOf } from '../frame'
+import { BuildableLine, NorthArrow, PlotSheet, ScaleBar } from '../parts'
+import { useSheetCamera } from '../sheetCamera'
 import { joinsOf, type Join } from './joins'
 import {
   angleTo,
@@ -78,12 +80,9 @@ import {
   Ghosts,
   Handles,
   JoinShape,
-  NorthArrow,
   PendingRoom,
-  PlotSheet,
   Proposal,
   RoomShape,
-  ScaleBar,
   Storeys,
   Tension,
   Tray,
@@ -246,7 +245,7 @@ export function ZoningView(props: ZoningViewProps) {
   const [hoveredWall, setHoveredWall] = useState<string | null>(null)
   /** What each room's outline was before its last carve. View memory: the store keeps no such thing. */
   const [beforeCarve, setBeforeCarve] = useState<ReadonlyMap<string, Footprint>>(new Map())
-  const [camera, setCamera] = useState<Camera>(fitCamera)
+  const [camera, setCamera] = useSheetCamera()
   const [box, setBox] = useState({ width: 0, height: 0 })
   const [drawing, setDrawing] = useState<Drawing>(null)
   /** Which tool is waiting on a room, when the hand pressed it with none picked. */
@@ -320,6 +319,8 @@ export function ZoningView(props: ZoningViewProps) {
       ),
     [plot.polygon, standing],
   )
+  /** The Municipality setbacks, drawn here as they are on the bubbles: one line, one rule. */
+  const buildable = useMemo(() => buildableArea(plot), [plot])
 
   const shown = visibleExtent(extent, camera)
   const perPixel = metresPerPixel(extent, camera, box)
@@ -947,7 +948,7 @@ export function ZoningView(props: ZoningViewProps) {
   /** A plot of another size is another sheet, so it opens whole; a room moved about the old one leaves the camera alone. */
   useEffect(() => {
     setCamera(fitCamera)
-  }, [plotSize])
+  }, [plotSize, setCamera])
 
   function begin(room: Placed, start: (footprint: Footprint) => Grip): void {
     if (room.pinned) {
@@ -1327,6 +1328,7 @@ export function ZoningView(props: ZoningViewProps) {
           }}
         >
           <PlotSheet plot={plot} />
+          <BuildableLine polygon={buildable} />
           <Ghosts footprints={below} />
           {marks.tensions.map((mark) => (
             <Tension key={mark.edgeId} mark={mark} />

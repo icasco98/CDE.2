@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildableOf,
   createState,
   defaultLayout,
   layoutFor,
@@ -44,6 +45,17 @@ function fakeFrames() {
   }
 }
 
+/** The starting plot inside its setbacks, which is the floor these bubbles stand on. */
+const floor = buildableOf([
+  [1.5, 1.5],
+  [18.5, 1.5],
+  [18.5, 23],
+  [1.5, 23],
+])
+
+/** The middle of that floor, which is where one bubble on its own comes to rest. */
+const [middleX, middleY] = floor.middle
+
 function room(id: string, extra: Partial<SimulationRoom> = {}): SimulationRoom {
   return { id, storey: 0, storeysSpanned: 1, targetArea: 24, pinned: false, ...extra }
 }
@@ -54,7 +66,7 @@ function start(rooms: readonly SimulationRoom[], layout: LayoutConfig = defaultL
   const status: boolean[] = []
   const run = createRun({
     frames: clock.frames,
-    state: createState(rooms, [], 1),
+    state: createState(rooms, [], floor),
     layout: () => layout,
     report: (bodies: readonly Body[], commit: Commit) =>
       bodies.forEach((body, index) =>
@@ -72,7 +84,7 @@ function start(rooms: readonly SimulationRoom[], layout: LayoutConfig = defaultL
 
 describe('the frame loop', () => {
   it('asks for no frame at all for a picture that is already at rest', () => {
-    const { run, clock, moves } = start([room('a', { bubble: { x: 0, y: 6 } })])
+    const { run, clock, moves } = start([room('a', { bubble: { x: middleX, y: middleY } })])
     run.look()
     // The steps that prove it still were taken on the spot, so nothing was ever scheduled.
     expect(clock.asked()).toBe(0)
@@ -81,7 +93,10 @@ describe('the frame loop', () => {
   })
 
   it('opens a picture left at rest without moving a bubble', () => {
-    const rooms = [room('a', { bubble: { x: -18, y: 6 } }), room('b', { bubble: { x: 18, y: 6 } })]
+    const rooms = [
+      room('a', { bubble: { x: middleX - 6, y: middleY } }),
+      room('b', { bubble: { x: middleX + 6, y: middleY } }),
+    ]
     const first = start(rooms)
     first.run.look()
     first.clock.run(400)
@@ -89,7 +104,7 @@ describe('the frame loop', () => {
     if (!settled) throw new Error('nothing settled')
 
     const again = start([
-      room('a', { bubble: { x: -settled.x, y: settled.y } }),
+      room('a', { bubble: { x: 2 * middleX - settled.x, y: settled.y } }),
       room('b', { bubble: { x: settled.x, y: settled.y } }),
     ])
     again.run.look()
@@ -98,7 +113,10 @@ describe('the frame loop', () => {
   })
 
   it('runs while the picture moves, then asks for nothing and records no step of its own', () => {
-    const rooms = [room('a', { bubble: { x: -18, y: 6 } }), room('b', { bubble: { x: 18, y: 6 } })]
+    const rooms = [
+      room('a', { bubble: { x: middleX - 6, y: middleY } }),
+      room('b', { bubble: { x: middleX + 6, y: middleY } }),
+    ]
     const { run, clock, moves, status } = start(rooms)
     run.look()
     const frames = clock.run(400)
@@ -150,8 +168,40 @@ describe('the frame loop', () => {
     expect(moves.filter((move) => move.id === 'a').at(-1)!.x).not.toBe(4)
   })
 
+  it('calls a picture that cannot come to rest rested once it stops getting stiller', () => {
+    // Three rooms of 40 m² on a floor of 30: there is no arrangement that satisfies every wall,
+    // so the last of the movement never goes, and the run must still stop asking for frames.
+    const tight = buildableOf([
+      [0, 0],
+      [6, 0],
+      [6, 5],
+      [0, 5],
+    ])
+    const clock = fakeFrames()
+    const status: boolean[] = []
+    const run = createRun({
+      frames: clock.frames,
+      state: createState(
+        ['a', 'b', 'c'].map((id) => room(id, { targetArea: 40 })),
+        [],
+        tight,
+      ),
+      layout: () => defaultLayout,
+      report: () => undefined,
+      watch: (moving) => status.push(moving),
+    })
+    run.look()
+    const ran = clock.run(600)
+    expect(ran).toBeLessThan(600)
+    expect(clock.waiting()).toBe(0)
+    expect(status.at(-1)).toBe(false)
+  })
+
   it('settles to rest at once when it is told to, and asks for no frame after', () => {
-    const rooms = [room('a', { bubble: { x: -18, y: 6 } }), room('b', { bubble: { x: 18, y: 6 } })]
+    const rooms = [
+      room('a', { bubble: { x: middleX - 6, y: middleY } }),
+      room('b', { bubble: { x: middleX + 6, y: middleY } }),
+    ]
     const { run, clock, moves } = start(rooms)
     run.settleNow()
     expect(clock.waiting()).toBe(0)

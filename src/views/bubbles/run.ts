@@ -22,6 +22,15 @@ export const browserFrames: Frames = {
   cancel: (handle) => cancelAnimationFrame(handle),
 }
 
+/** How much stiller a frame must be than the stillest so far to count as progress at all. */
+const IMPROVED = 0.97
+
+/**
+ * How many frames without getting stiller are enough to call a picture rested: a little over half
+ * a second at sixty frames a second, which reads as the cloud having stopped rather than as a cut.
+ */
+const STUCK_FRAMES = 40
+
 /** What a drag leaves behind, told where the bubble came to rest once the cloud has stopped. */
 export type Landing = (rest: Position) => void
 
@@ -65,6 +74,9 @@ export function createRun(parts: RunParts): Run {
   let spreadingFrames = 0
   /** Quiet frames in a row; a contact goes quiet for one while the forces behind it still press. */
   let still = 0
+  /** The stillest the picture has been since it was woken, and how long it has been no stiller. */
+  let stillest = Infinity
+  let stuck = 0
   /** Whether anything has moved since the run last came to rest, so a still picture records no step. */
   let stepped = false
   let moving = false
@@ -132,7 +144,14 @@ export function createRun(parts: RunParts): Run {
     const quiet = next.energy < config.energyThreshold
     still = quiet ? still + 1 : 0
     if (!quiet) stepped = true
-    const resting = still >= STILL_FRAMES && spreadingFrames === 0
+    // A storey with more rooms than its floor will hold has no arrangement that satisfies
+    // everything, and the last of the movement never quite goes. The picture is at rest when it
+    // stops getting stiller, as much as when it is still.
+    if (next.energy < stillest * IMPROVED) {
+      stillest = next.energy
+      stuck = 0
+    } else stuck += 1
+    const resting = (still >= STILL_FRAMES || stuck >= STUCK_FRAMES) && spreadingFrames === 0
     if (resting && !hand) {
       finish(next, false)
       return false
@@ -149,6 +168,8 @@ export function createRun(parts: RunParts): Run {
 
   function wake(): void {
     still = 0
+    stillest = Infinity
+    stuck = 0
     if (handle !== 0) return
     announce(true)
     handle = parts.frames.request(tick)
@@ -160,6 +181,8 @@ export function createRun(parts: RunParts): Run {
    */
   function look(): void {
     still = 0
+    stillest = Infinity
+    stuck = 0
     if (handle !== 0) return
     for (let taken = 0; taken < STILL_FRAMES; taken++)
       if (!advance()) {

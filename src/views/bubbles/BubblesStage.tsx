@@ -1,18 +1,13 @@
 import { useMemo } from 'react'
+import { connectDefaults, removedLinks } from '../../app/defaultLinks'
 import { selection, useSelection } from '../../app/selection'
 import { session } from '../../app/session'
 import { useProject } from '../../app/useProject'
-import { storeyLabel, type Position } from '../../bubbles'
-import type { Commit, EdgeKind, Family, Result } from '../../model'
-import {
-  circulationPerStorey,
-  connectionSource,
-  proposedConnections,
-  roomTypeById,
-} from '../../rulebook'
+import type { Position } from '../../bubbles'
+import { EXTERIOR, type Commit, type EdgeKind, type Family, type Result } from '../../model'
+import { circulationPerStorey, connectionSource, roomTypeById, storeyLabel } from '../../rulebook'
 import { addHallway } from './addHallway'
 import { BubblesView } from './BubblesView'
-import type { BubbleProposal } from './types'
 
 /** The bubbles view over the app's one store: every callback is a store action, refusals are said out loud. */
 export function BubblesStage() {
@@ -28,14 +23,15 @@ export function BubblesStage() {
     [project.rooms],
   )
 
-  const proposals = useMemo(
-    () =>
-      proposedConnections(project.rooms, project.edges).map((proposal) => ({
-        ...proposal,
-        source: connectionSource(proposal.rowId),
-      })),
-    [project.rooms, project.edges],
-  )
+  /** A default connection keeps the rulebook's own words, which the link says on hover. */
+  const edges = useMemo(() => {
+    const kindOf = (id: string): string =>
+      id === EXTERIOR ? EXTERIOR : (project.rooms.find((room) => room.id === id)?.type ?? '')
+    return project.edges.map((edge) => {
+      const source = connectionSource(kindOf(edge.a), kindOf(edge.b), edge.kind)
+      return source ? { ...edge, source } : edge
+    })
+  }, [project.edges, project.rooms])
 
   const circulation = useMemo(
     () => circulationPerStorey(project.rooms, project.storeys),
@@ -46,14 +42,6 @@ export function BubblesStage() {
     if (!result.ok) result.problems.forEach((problem) => session.say(problem.message))
     return result.ok
   }
-
-  const take = (proposal: BubbleProposal) =>
-    session.actions.connect({
-      a: proposal.a,
-      b: proposal.b,
-      kind: proposal.kind,
-      storey: proposal.storey,
-    })
 
   /** A room takes its edges with it, so a selection that named either of them is let go with them. */
   const remove = (id: string): void => {
@@ -68,29 +56,34 @@ export function BubblesStage() {
       selection.select(null)
   }
 
-  /** The bubble and the storey its band gives it are one step; a storey the graph refuses is none. */
-  const drop = (id: string, at: Position, storey?: number): boolean => {
-    const result = session.transaction(() => {
-      const moved = session.actions.setBubble(id, at, 'commit')
-      if (!moved.ok || storey === undefined) return moved
-      return session.actions.setStorey(id, storey)
-    })
-    if (result.ok || storey === undefined) return report(result)
+  /**
+   * A room changes the storey it stands on, unless a link it holds would be left joining two
+   * rooms on different floors. An edge is between two rooms on one storey, so the link is named
+   * rather than the rule it would break.
+   */
+  const sendTo = (id: string, storey: number): void => {
+    const result = session.actions.setStorey(id, storey)
+    if (result.ok) return
     const room = project.rooms.find((each) => each.id === id)
-    // An edge joins two rooms on one storey, so the link is named rather than the rule it broke.
     if (room && result.problems.some((problem) => problem.code === 'edge-storey'))
       session.say(
         `${room.name} is linked to a room on ${storeyLabel(room.storey)}, so it stays there. Unlink it to move it.`,
       )
     else report(result)
-    return false
+  }
+
+  /** A link taken out is a link this house does not want, so the rulebook is not to offer it again. */
+  const disconnect = (edgeId: string): void => {
+    const edge = project.edges.find((each) => each.id === edgeId)
+    if (!report(session.actions.disconnect(edgeId))) return
+    if (edge) removedLinks.remember(project.id, edge.a, edge.b)
+    if (selection.get() === edgeId) selection.select(null)
   }
 
   return (
     <BubblesView
       rooms={rooms}
-      edges={project.edges}
-      proposals={proposals}
+      edges={edges}
       storeys={project.storeys}
       circulation={circulation}
       plot={project.plot}
@@ -99,30 +92,24 @@ export function BubblesStage() {
       onMoveBubble={(id: string, at: Position, commit: Commit) =>
         session.actions.setBubble(id, at, commit)
       }
-      onDropBubble={drop}
+      onDropBubble={(id: string, at: Position) => report(session.actions.setBubble(id, at))}
+      onSetStorey={sendTo}
       onPin={(id: string, pinned: boolean) =>
         report(pinned ? session.actions.pin(id) : session.actions.unpin(id))
       }
       onConnect={(a: string, b: string) => report(session.actions.connect({ a, b, kind: 'door' }))}
-      onDisconnect={(edgeId: string) => {
-        if (report(session.actions.disconnect(edgeId)) && selection.get() === edgeId)
-          selection.select(null)
-      }}
+      onDisconnect={disconnect}
       onSetEdgeKind={(edgeId: string, kind: EdgeKind) =>
         report(session.actions.setEdgeKind(edgeId, kind))
       }
       onRemoveRoom={remove}
       onAddHallway={(storey: number) =>
-        report(addHallway(session, project.rooms, storey, project.storeys))
-      }
-      onAccept={(proposal: BubbleProposal) => report(take(proposal))}
-      onAcceptAll={() =>
         report(
           session.transaction(() => {
-            for (const proposal of proposals) {
-              const taken = take(proposal)
-              if (!taken.ok) return taken
-            }
+            const added = addHallway(session, project.rooms, storey, project.storeys)
+            if (!added.ok) return added
+            // The corridor arrives linked to what it serves, as every other room does.
+            return connectDefaults(session)
           }),
         )
       }

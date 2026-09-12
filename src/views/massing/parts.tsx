@@ -15,7 +15,7 @@ import {
 } from '../../massing'
 import type { Plot } from '../../model'
 import { NumberInput } from '../requirements/fields'
-import { storeyLabel } from '../requirements/format'
+import { storeyLabel } from '../../rulebook'
 import { northOf, pointsOf } from './frame'
 
 /** The length of the bar the drawing is read against, in metres. */

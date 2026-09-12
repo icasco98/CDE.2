@@ -1,9 +1,7 @@
-import { twinsOf, twinY, type Body, type Position } from '../../bubbles'
-import type { Point } from '../../geometry'
+import { twinsOf, type Body, type Position } from '../../bubbles'
+import { nearestPointOnSegment, type Point, type Polygon } from '../../geometry'
 import type { Extent } from '../camera'
-
-/** Air around the bubbles so a label at the edge is not cut off. */
-const MARGIN = 3
+import { extentOf as sheetExtentOf } from '../frame'
 
 /** The fill is bubbles.css's to choose, so a bubble and the legend that names it take one class. */
 export function categoryClass(category: string | undefined): string {
@@ -11,30 +9,22 @@ export function categoryClass(category: string | undefined): string {
 }
 
 /**
- * Kept symmetric about the centre line the cloud is pulled to, so a bubble in flight does not swing
- * the whole sheet, widened to the container's shape so the bands run right across it, and opened to
- * any twin that has been dragged outside them, so Fit frames every bubble and every band.
+ * The plot with the bubbles on it, framed exactly as the plan sheet frames the same plot, so the
+ * two tabs draw one picture at one scale. A bubble held inside the buildable line is already
+ * inside the plot; one dragged out of it opens the frame rather than being cut off.
  */
-export function extentOf(
-  bodies: readonly Body[],
-  storeys: number,
-  bandHeight: number,
-  aspect = 0,
-): Extent {
-  let top = -MARGIN
-  let bottom = Math.max(1, storeys) * bandHeight + MARGIN
-  let reach = (bottom - top) / 4
-  for (const body of bodies) {
-    reach = Math.max(reach, Math.abs(body.x) + body.radius)
-    for (const storey of twinsOf(body)) {
-      const y = twinY(body, storey, bandHeight)
-      top = Math.min(top, y - body.radius - MARGIN)
-      bottom = Math.max(bottom, y + body.radius + MARGIN)
-    }
-  }
-  const height = bottom - top
-  const width = Math.max((Math.ceil(reach) + MARGIN) * 2, aspect > 0 ? height * aspect : 0)
-  return { minX: -width / 2, minY: top, width, height }
+export function extentOf(plot: Polygon, bodies: readonly Body[]): Extent {
+  // The four points of the compass on each circle, which is exactly what its own box stands on:
+  // the corners of a square round it would reach further and widen the sheet for nothing.
+  return sheetExtentOf(
+    plot,
+    bodies.map((body) => [
+      [body.x - body.radius, body.y],
+      [body.x, body.y - body.radius],
+      [body.x + body.radius, body.y],
+      [body.x, body.y + body.radius],
+    ]),
+  )
 }
 
 /**
@@ -62,19 +52,75 @@ export function asPoint(at: Position): Point {
   return [at.x, at.y]
 }
 
-/** What the pointer is over, twins and all: a stair is reached at whichever of them was aimed at. */
+/**
+ * What the pointer is over on the storey being worked on. Every storey is drawn on the one plot,
+ * so a bubble on another floor is never what the hand meant.
+ */
 export function bodyAt(
   bodies: readonly Body[],
   at: Position,
-  bandHeight: number,
+  storey: number,
   skip: string | null = null,
 ): Body | undefined {
   return bodies.find(
     (body) =>
       body.id !== skip &&
-      twinsOf(body).some(
-        (storey) =>
-          Math.hypot(body.x - at.x, twinY(body, storey, bandHeight) - at.y) <= body.radius,
-      ),
+      twinsOf(body).includes(storey) &&
+      Math.hypot(body.x - at.x, body.y - at.y) <= body.radius,
   )
+}
+
+/**
+ * Where a link to the outside leaves the plot: the nearest point on a street side, or on any side
+ * where the plot has no street. The outside is not a bubble, so the kerb is what a door to it is
+ * drawn to.
+ */
+export function nearestOutside(polygon: Polygon, street: readonly number[], at: Position): Point {
+  let nearest: Point = [at.x, at.y]
+  let away = Infinity
+  const wanted = polygon.map((_corner, index) => street.includes(index))
+  const anyStreet = wanted.some(Boolean)
+  for (let index = 0; index < polygon.length; index++) {
+    if (anyStreet && !wanted[index]) continue
+    const from = polygon[index]
+    const to = polygon[(index + 1) % polygon.length]
+    if (!from || !to) continue
+    const point = nearestPointOnSegment([at.x, at.y], from, to)
+    const distance = Math.hypot(point[0] - at.x, point[1] - at.y)
+    if (distance < away) {
+      away = distance
+      nearest = point
+    }
+  }
+  return nearest
+}
+
+/** The label on a roomy bubble, in metres of cap height; the stylesheet holds it to a band of pixels. */
+const LABEL_M = 1.15
+
+/** A small room's label shrinks with it, so a short name still sits inside its own circle. */
+export function labelSize(radius: number): number {
+  return Math.min(LABEL_M, Math.max(0.55, radius * 0.42))
+}
+
+/**
+ * Whether a name fits inside its own bubble at the scale the sheet is drawn at. The stylesheet
+ * holds a label between eight and fourteen pixels, so its size on the sheet is known here; a
+ * letter comes to a little over half a cap height in this type, and the chord a line of it sits
+ * on, clear of the rim above and below, is a little over the radius and a half.
+ */
+export function nameFits(name: string, radius: number, perPixel: number): boolean {
+  const size = Math.min(Math.max(labelSize(radius), perPixel * 8), perPixel * 14)
+  return name.length * size * 0.55 <= radius * 1.6
+}
+
+/** What is drawn in a bubble too small for its name: the initials, or the first letters of one word. */
+export function shortMark(name: string): string {
+  const words = name.split(/[\s-]+/).filter(Boolean)
+  if (words.length > 1)
+    return words
+      .slice(0, 3)
+      .map((word) => word.charAt(0).toUpperCase())
+      .join('')
+  return (words[0] ?? name).slice(0, 3)
 }

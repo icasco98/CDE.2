@@ -1,14 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { addHallway, BubblesView, type BubbleProposal } from '../src/views/bubbles'
+import { addHallway, BubblesView } from '../src/views/bubbles'
 import type { Position } from '../src/bubbles'
-import type { Commit, EdgeKind, Family, Result } from '../src/model'
-import {
-  circulationPerStorey,
-  connectionSource,
-  proposedConnections,
-  roomTypeById,
-} from '../src/rulebook'
+import { EXTERIOR, type Commit, type EdgeKind, type Family } from '../src/model'
+import { circulationPerStorey, connectionSource, roomTypeById } from '../src/rulebook'
 import { categoryOf, sampleStore } from './sample'
 import '../src/styles.css'
 
@@ -30,24 +25,14 @@ function Playground() {
     [project.rooms],
   )
 
-  const proposals = useMemo(
-    () =>
-      proposedConnections(project.rooms, project.edges).map((proposal) => ({
-        ...proposal,
-        source: connectionSource(proposal.rowId),
-      })),
-    [project.rooms, project.edges],
-  )
-
-  const took = (result: Result<unknown>): boolean => result.ok
-
-  const take = (proposal: BubbleProposal) =>
-    store.actions.connect({
-      a: proposal.a,
-      b: proposal.b,
-      kind: proposal.kind,
-      storey: proposal.storey,
+  const edges = useMemo(() => {
+    const kindOf = (id: string): string =>
+      id === EXTERIOR ? EXTERIOR : (project.rooms.find((room) => room.id === id)?.type ?? '')
+    return project.edges.map((edge) => {
+      const source = connectionSource(kindOf(edge.a), kindOf(edge.b), edge.kind)
+      return source ? { ...edge, source } : edge
     })
+  }, [project.edges, project.rooms])
 
   return (
     <main className="playground">
@@ -55,8 +40,7 @@ function Playground() {
       {refusal ? <p className="problem">{refusal}</p> : null}
       <BubblesView
         rooms={rooms}
-        edges={project.edges}
-        proposals={proposals}
+        edges={edges}
         storeys={project.storeys}
         circulation={circulationPerStorey(project.rooms, project.storeys)}
         plot={project.plot}
@@ -65,15 +49,8 @@ function Playground() {
         onMoveBubble={(id: string, at: Position, commit: Commit) =>
           store.actions.setBubble(id, at, commit)
         }
-        onDropBubble={(id: string, at: Position, storey?: number) =>
-          took(
-            store.transaction(() => {
-              const moved = store.actions.setBubble(id, at, 'commit')
-              if (!moved.ok || storey === undefined) return moved
-              return store.actions.setStorey(id, storey)
-            }),
-          )
-        }
+        onDropBubble={(id: string, at: Position) => store.actions.setBubble(id, at, 'commit')}
+        onSetStorey={(id: string, storey: number) => store.actions.setStorey(id, storey)}
         onPin={(id: string, pinned: boolean) =>
           pinned ? store.actions.pin(id) : store.actions.unpin(id)
         }
@@ -88,15 +65,6 @@ function Playground() {
           setSelected(null)
         }}
         onAddHallway={(storey: number) => addHallway(store, project.rooms, storey, project.storeys)}
-        onAccept={(proposal: BubbleProposal) => take(proposal)}
-        onAcceptAll={() =>
-          store.transaction(() => {
-            for (const proposal of proposals) {
-              const taken = take(proposal)
-              if (!taken.ok) return taken
-            }
-          })
-        }
         onSetWeight={(family: Family, weight: number) =>
           store.actions.setWeights({ ...project.weights, [family]: weight })
         }

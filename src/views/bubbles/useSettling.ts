@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { createState, defaultLayout, type LayoutConfig, type Position } from '../../bubbles'
+import {
+  createState,
+  defaultLayout,
+  type Buildable,
+  type LayoutConfig,
+  type Position,
+} from '../../bubbles'
 import type { Commit } from '../../model'
 import { browserFrames, createRun, type Frames, type Landing } from './run'
 import type { BubbleLink, BubbleRoom } from './types'
@@ -22,34 +28,35 @@ type Report = (id: string, at: Position, commit: Commit) => void
 function shapeOf(
   rooms: readonly BubbleRoom[],
   edges: readonly BubbleLink[],
-  storeys: number,
+  inside: Buildable,
 ): string {
   const program = rooms.map(
     (room) =>
       `${room.id}:${room.storey}:${room.storeysSpanned}:${room.targetArea}:${room.pinned}:${room.tier ?? ''}`,
   )
-  // An edge's storey is in here because it settles which twin of a stair the link pulls on.
-  const links = edges.map((edge) => `${edge.a}-${edge.b}:${edge.storey}`)
-  return `${storeys}|${program.join(',')}|${links.join(',')}`
+  const links = edges.map((edge) => `${edge.a}-${edge.b}`)
+  // The ground the bubbles are held on is part of the picture: a plot resized is a new one.
+  const ground = `${inside.binds}:${inside.polygon.map((corner) => corner.join(':')).join(' ')}`
+  return `${ground}|${program.join(',')}|${links.join(',')}`
 }
 
 export function useSettling(
   rooms: readonly BubbleRoom[],
   edges: readonly BubbleLink[],
-  storeys: number,
+  inside: Buildable,
   onMoveBubble: Report,
   config: LayoutConfig = defaultLayout,
   frames: Frames = browserFrames,
 ): SettleControls {
   const [moving, setMoving] = useState(false)
-  const latest = useRef({ rooms, edges, storeys, onMoveBubble, config })
-  latest.current = { rooms, edges, storeys, onMoveBubble, config }
+  const latest = useRef({ rooms, edges, inside, onMoveBubble, config })
+  latest.current = { rooms, edges, inside, onMoveBubble, config }
 
   /** Every bubble moves as a preview and the last one commits, so a whole run is one step to undo. */
   const run = useRef(
     createRun({
       frames,
-      state: createState(rooms, edges, storeys),
+      state: createState(rooms, edges, inside),
       layout: () => latest.current.config,
       report: (bodies, commit) =>
         bodies.forEach((body, index) => {
@@ -64,10 +71,10 @@ export function useSettling(
     }),
   ).current
 
-  const shape = shapeOf(rooms, edges, storeys)
+  const shape = shapeOf(rooms, edges, inside)
   useEffect(() => {
     const program = latest.current
-    run.begin(createState(program.rooms, program.edges, program.storeys))
+    run.begin(createState(program.rooms, program.edges, program.inside))
   }, [run, shape])
 
   /** A weight moved changes the forces, so the picture is asked to answer them. */

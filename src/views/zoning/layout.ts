@@ -1,4 +1,4 @@
-import { bandHeightFor, storeyLabel, twinY } from '../../bubbles'
+import { storeyLabel } from '../../rulebook'
 import {
   area,
   boundingBox,
@@ -199,24 +199,20 @@ function listed(names: readonly string[]): string {
 }
 
 /**
- * Where the bubbles put every room of the storey, a stair read on the twin this storey draws. The
- * whole storey is taken, placed rooms included, so the same diagram reads across into the same
- * plot however many rooms have already been put down by hand.
+ * Where the bubbles put every room of the storey. A bubble is already a point on the plot, the
+ * frame a footprint uses, so a stair reads at the same point on every storey it serves. The whole
+ * storey is taken, placed rooms included, so the same diagram reads across into the same plot
+ * however many rooms have already been put down by hand.
  */
 function spotsOn(
   onStorey: readonly Room[],
   edges: readonly Edge[],
   storey: number,
-  bandHeight: number,
 ): Map<string, Point> {
   const spots = new Map<string, Point>()
   for (const room of onStorey) {
     if (!room.bubble) continue
-    const { storey: stands, storeysSpanned, bubble } = room
-    spots.set(room.id, [
-      bubble.x,
-      twinY({ storey: stands, storeysSpanned, y: bubble.y }, storey, bandHeight),
-    ])
+    spots.set(room.id, [room.bubble.x, room.bubble.y])
   }
   // A room the diagram drew no bubble for stands with whatever it is linked to on this storey;
   // only a room linked to nothing with a bubble is left without a place and opens at the centre.
@@ -255,7 +251,7 @@ export function layOut(
   const moving = onStorey.filter((room) => !room.footprint).sort(byId)
   if (moving.length === 0) return { ok: true, value: [] }
 
-  const spots = spotsOn(onStorey, edges, storey, bandHeightFor(rooms))
+  const spots = spotsOn(onStorey, edges, storey)
   const bounds = boundingBox(plot.polygon)
   const centre: Point = [bounds.left + bounds.width / 2, bounds.top + bounds.depth / 2]
   const opens = new Map(moving.map((room) => [room.id, sizeOf(room, sizes)]))

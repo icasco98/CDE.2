@@ -9,18 +9,16 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import {
-  capacityMessage,
+  buildableOf,
   createState,
   layoutFor,
-  storeyCapacity,
-  storeyLabel,
   twinsOf,
-  twinY,
   type Body,
   type Position,
 } from '../../bubbles'
-import type { Point } from '../../geometry'
+import { area, type Point } from '../../geometry'
 import type { EdgeKind } from '../../model'
+import { buildableArea, fitSentence, storeyFits, storeyLabel } from '../../rulebook'
 import {
   fitCamera,
   metresPerPixel,
@@ -29,19 +27,21 @@ import {
   visibleExtent,
   zoomAbout,
   ZOOM_STEP,
-  type Camera,
 } from '../camera'
-import { bandDrop, insideBand, STAIR_STAYS } from './bands'
-import { asPoint, bodyAt, extentOf, holds, pointerAt } from './frame'
-import { Bands, Bubble, Legend, LEGEND_PX, Link, Proposed } from './parts'
-import type { Landing } from './run'
+import { BuildableLine, NorthArrow, PlotSheet, ScaleBar } from '../parts'
+import { useSheetCamera } from '../sheetCamera'
+import { asPoint, bodyAt, extentOf, holds, nameFits, nearestOutside, pointerAt } from './frame'
+import { Bubble, Legend, Link } from './parts'
 import { useSettling } from './useSettling'
 import { WeightsPanel, weightOf } from './WeightsPanel'
-import type { BubbleProposal, BubblesViewProps } from './types'
+import { STAIR_STAYS, type BubblesViewProps } from './types'
 import './bubbles.css'
 
 /** How far the hand may wander before a press on the sheet is a pan rather than a click, in pixels. */
 const DRAG_PX = 3
+
+/** Where the north arrow and the scale bar sit in from the corner of what is drawn, in pixels. */
+const FURNITURE_PX = 26
 
 const EVERY_STOREY_SERVED = 'Every storey has a hallway; add another from the program.'
 
@@ -50,13 +50,8 @@ type Pinch = { readonly grabbed: Point; readonly span: number; readonly scale: n
 
 type Gesture =
   | { readonly kind: 'move'; readonly id: string; readonly grabbed: Position }
-  /** A link being drawn: the room it comes from, the storey of the twin it was taken from, and the pointer. */
-  | {
-      readonly kind: 'link'
-      readonly from: string
-      readonly fromStorey: number
-      readonly at: Position
-    }
+  /** A link being drawn: the room it comes from and where the pointer has got to. */
+  | { readonly kind: 'link'; readonly from: string; readonly at: Position }
   /** The sheet slid under the hand: the metre grabbed and where on the screen the hand started. */
   | { readonly kind: 'pan'; readonly grabbed: Point; readonly from: Point }
   | (Pinch & { readonly kind: 'pinch' })
@@ -71,10 +66,9 @@ function notchesOf(event: WheelEvent): number {
 }
 
 export function BubblesView(props: BubblesViewProps) {
-  const { rooms, edges, proposals, storeys, circulation, plot, weights, selected } = props
-  const { onMoveBubble, onDropBubble, onPin, onConnect, onDisconnect, onSetEdgeKind } = props
-  const { onRemoveRoom, onAddHallway, onAccept, onAcceptAll, onSetWeight, onSelect, onRefuse } =
-    props
+  const { rooms, edges, storeys, circulation, plot, weights, selected } = props
+  const { onMoveBubble, onDropBubble, onSetStorey, onPin, onConnect, onDisconnect } = props
+  const { onSetEdgeKind, onRemoveRoom, onAddHallway, onSetWeight, onSelect, onRefuse } = props
   const svgRef = useRef<SVGSVGElement>(null)
   /** Whether the hand has moved at all, so a press that stays put is a click and not a pan or a drag. */
   const movedRef = useRef(false)
@@ -87,54 +81,56 @@ export function BubblesView(props: BubblesViewProps) {
    */
   const gestureRef = useRef<Gesture>(null)
   const [linking, setLinking] = useState<Linking>(null)
-  const [camera, setCamera] = useState<Camera>(fitCamera)
+  const [camera, setCamera] = useSheetCamera()
   const [box, setBox] = useState({ width: 0, height: 0 })
-  /** The storey being worked on, or nothing for all of them: the others are dimmed, never hidden. */
+  /** The storey being worked on, or nothing for all of them at once. */
   const [only, setOnly] = useState<number | null>(null)
   /** The user-requirements weight is a force, so a slider moved is a new layout for the simulation. */
   const layout = useMemo(() => layoutFor(weightOf(weights, 'userRequirements')), [weights])
+  /** The Municipality setbacks: the wall the bubbles are held inside, and the line that is drawn. */
+  const inside = useMemo(() => buildableOf(buildableArea(plot), plot.on), [plot])
   const { moving, settleNow, spread, hold, release } = useSettling(
     rooms,
     edges,
-    storeys,
+    inside,
     onMoveBubble,
     layout,
   )
 
-  const state = useMemo(() => createState(rooms, edges, storeys), [rooms, edges, storeys])
+  const state = useMemo(() => createState(rooms, edges, inside), [rooms, edges, inside])
   const bodies = state.bodies
   const named = useMemo(() => new Map(rooms.map((room) => [room.id, room])), [rooms])
   const placed = useMemo(() => new Map(bodies.map((body) => [body.id, body])), [bodies])
+  const levels = Math.max(1, Math.trunc(storeys))
+  /** The storey the hand works on: the one the group shows, and the ground when it shows them all. */
+  const active = only ?? 0
   /**
-   * Every twin there is to draw, widest first, so a small room is never buried under a large one
-   * before the cloud is settled.
+   * Every twin there is to draw, lowest storey first so an upper floor is read over the ground,
+   * and widest first inside a storey so a small room is never buried under a large one.
    */
   const drawn = useMemo(
     () =>
       bodies
         .flatMap((body) => twinsOf(body).map((storey) => ({ body, storey })))
-        .sort((a, b) => b.body.radius - a.body.radius),
-    [bodies],
+        .filter(({ storey }) => storey < levels && (only === null || storey === only))
+        .sort((a, b) => a.storey - b.storey || b.body.radius - a.body.radius),
+    [bodies, levels, only],
   )
-  const aspect = box.height > 0 ? box.width / box.height : 0
-  const wanted = extentOf(bodies, state.storeys, state.bandHeight, aspect)
+  const wanted = extentOf(plot.polygon, bodies)
   /** Held still while the forces run, so a drop lands on the metre it was aimed at. */
   const framed = useRef(wanted)
   if (!moving || !holds(framed.current, wanted)) framed.current = wanted
   const extent = framed.current
   const shown = visibleExtent(extent, camera)
   const perPixel = metresPerPixel(extent, camera, box)
-  const crowded = storeyCapacity(rooms, plot.polygon, storeys).filter((entry) => entry.over)
   /** Every storey holds a hallway, so there is no floor on this tab left for the button to serve. */
   const served = circulation.every((entry) => entry.hasHallway)
   const selectedRoom = named.get(selected ?? '')
   const selectedEdge = edges.find((edge) => edge.id === selected)
-
-  /** A twin belongs to one storey, so a stair's ground twin dims like any other ground room. */
-  const dimmedTwin = (storey: number): boolean => only !== null && only !== storey
-
-  /** A room is out of the pointer's reach only when every twin of it is dimmed. */
-  const dimmedRoom = (body: Body): boolean => twinsOf(body).every((storey) => dimmedTwin(storey))
+  // The floor is measured once per plot, not once per frame: the setbacks are a boolean operation
+  // on a polygon, and the fit line is read again every time a bubble moves.
+  const floorM2 = useMemo(() => area(inside.polygon), [inside])
+  const fits = useMemo(() => storeyFits(rooms, floorM2, levels), [rooms, floorM2, levels])
 
   const at = useCallback((event: { clientX: number; clientY: number }): Position => {
     const svg = svgRef.current
@@ -176,10 +172,10 @@ export function BubblesView(props: BubblesViewProps) {
     })
   }
 
-  function reach(event: ReactPointerEvent, body: Body, storey: number): void {
+  function reach(event: ReactPointerEvent, body: Body): void {
     event.stopPropagation()
     focus()
-    begin({ kind: 'link', from: body.id, fromStorey: storey, at: at(event) })
+    begin({ kind: 'link', from: body.id, at: at(event) })
   }
 
   /** Two fingers zoom about the metre their middle began on and carry it along with them. */
@@ -219,30 +215,6 @@ export function BubblesView(props: BubblesViewProps) {
     begin({ ...gesture, at: pointer })
   }
 
-  /**
-   * What a drag leaves behind. A storey is a change to the program and is recorded the moment the
-   * hand lets go, so the bubble is pulled towards its new band and not the one it is leaving. A
-   * move is nothing but a move: the bubble is let go and recorded where the forces bring it to
-   * rest, and the previews since the drag began fold into that one step.
-   */
-  function land(id: string, rest: Position): Landing | null {
-    const room = named.get(id)
-    if (!room) return null
-    const drop = bandDrop(rest, room, state.storeys, state.bandHeight)
-    if (drop.refused === 'stair') {
-      onRefuse(STAIR_STAYS)
-      // Every twin came with the hand, so the whole room goes back into the band it belongs to.
-      onDropBubble(id, { x: rest.x, y: drop.y })
-      return null
-    }
-    const settled = { x: rest.x, y: drop.y }
-    if (drop.storey === room.storey) return (at: Position) => void onDropBubble(id, at)
-    if (!onDropBubble(id, settled, drop.storey))
-      // The model would not have the storey, so the bubble goes back inside the band it belongs to.
-      onDropBubble(id, { x: rest.x, y: insideBand(rest, room, state.storeys, state.bandHeight) })
-    return null
-  }
-
   function releasePointer(event: PointerEvent): void {
     touchesRef.current.clear()
     const gesture = gestureRef.current
@@ -259,15 +231,13 @@ export function BubblesView(props: BubblesViewProps) {
     }
     const pointer = at(event)
     if (gesture.kind === 'move') {
-      release(
-        movedRef.current
-          ? land(gesture.id, { x: pointer.x + gesture.grabbed.x, y: pointer.y + gesture.grabbed.y })
-          : null,
-      )
+      // A move is nothing but a move: the bubble is recorded where the forces bring it to rest,
+      // and the previews since the drag began fold into that one step.
+      release(movedRef.current ? (rest: Position) => void onDropBubble(gesture.id, rest) : null)
       return
     }
-    const target = bodyAt(bodies, pointer, state.bandHeight, gesture.from)
-    if (target && !dimmedRoom(target)) onConnect(gesture.from, target.id)
+    const target = bodyAt(bodies, pointer, active, gesture.from)
+    if (target) onConnect(gesture.from, target.id)
   }
 
   /** The sheet takes the wheel whole, so the page never scrolls under it; a trackpad pinch arrives here with `ctrlKey` and zooms the same way. */
@@ -282,11 +252,6 @@ export function BubblesView(props: BubblesViewProps) {
     onSelect(id)
   }
 
-  function take(event: { stopPropagation: () => void }, proposal: BubbleProposal): void {
-    event.stopPropagation()
-    onAccept(proposal)
-  }
-
   /** Every handler the sheet hands out, as the latest render wrote it. */
   const latest = {
     move: movePointer,
@@ -295,7 +260,6 @@ export function BubblesView(props: BubblesViewProps) {
     grab,
     reach,
     choose,
-    take,
   }
   const live = useRef(latest)
   live.current = latest
@@ -304,17 +268,12 @@ export function BubblesView(props: BubblesViewProps) {
   const handlers = useMemo(
     () => ({
       onGrab: (event: ReactPointerEvent, body: Body) => live.current.grab(event, body),
-      onReach: (event: ReactPointerEvent, body: Body, storey: number) =>
-        live.current.reach(event, body, storey),
+      onReach: (event: ReactPointerEvent, body: Body) => live.current.reach(event, body),
     }),
     [],
   )
   const chooseLink = useCallback(
     (event: ReactPointerEvent, id: string) => live.current.choose(event, id),
-    [],
-  )
-  const takeProposal = useCallback(
-    (event: ReactPointerEvent, proposal: BubbleProposal) => live.current.take(event, proposal),
     [],
   )
 
@@ -357,11 +316,6 @@ export function BubblesView(props: BubblesViewProps) {
     return () => watch.disconnect()
   }, [])
 
-  /** A storey more or fewer is another sheet, so it opens whole; a bubble moved about it does not. */
-  useEffect(() => {
-    setCamera(fitCamera)
-  }, [storeys])
-
   /** The keys zoom about the middle of what is drawn, which is the one point no hand is on. */
   function zoomBy(factor: number): void {
     const middle: Point = [shown.minX + shown.width / 2, shown.minY + shown.height / 2]
@@ -392,7 +346,7 @@ export function BubblesView(props: BubblesViewProps) {
     })
   }
 
-  /** The filter says which storey; with all of them showing, the lowest storey that has none. */
+  /** The group says which storey; with all of them showing, the lowest storey that has none. */
   function addHallway(): void {
     const without = circulation.find((entry) => !entry.hasHallway)
     const storey = only ?? without?.storey
@@ -404,18 +358,47 @@ export function BubblesView(props: BubblesViewProps) {
     else if (selectedRoom) onRemoveRoom(selectedRoom.id)
   }
 
-  /** The outside is not a bubble, so a proposal touching it is offered in words instead of as a line. */
-  const roomOf = (proposal: BubbleProposal): string =>
-    named.has(proposal.a) ? proposal.a : proposal.b
-  const drawable = proposals.filter((proposal) => placed.has(proposal.a) && placed.has(proposal.b))
-  const spoken = proposals.filter((proposal) => !placed.has(proposal.a) || !placed.has(proposal.b))
+  /**
+   * The next floor up, and the ground again from the top: one button walks a room through the
+   * storeys, which is as much as a house of two or three storeys ever asks of it.
+   */
+  const nextStorey = selectedRoom ? (selectedRoom.storey + 1) % levels : 0
+
+  function sendUp(): void {
+    if (!selectedRoom) return
+    if (Math.max(1, Math.trunc(selectedRoom.storeysSpanned)) > 1) {
+      onRefuse(STAIR_STAYS)
+      return
+    }
+    onSetStorey(selectedRoom.id, nextStorey)
+  }
 
   const otherKind: EdgeKind = selectedEdge?.kind === 'open' ? 'door' : 'open'
   const hint = linking
     ? linking.from === null
       ? 'Click one room, then the room to join it to. Escape leaves link mode.'
       : `Now click the room to join to ${named.get(linking.from)?.name ?? 'it'}.`
-    : 'Drag a bubble to move it, or into another band to change its storey.'
+    : only === null
+      ? 'Every storey at once: the ground floor is the one the hand moves. Pick a storey to work on it.'
+      : `Drag a bubble to move it about ${storeyLabel(active)}. It is held inside the buildable line.`
+
+  /**
+   * Where a link is drawn between. The outside is not a bubble, so a door to it runs from its room
+   * to the nearest kerb, and the room is always the near end however the edge was written down.
+   */
+  function endsOf(edge: { a: string; b: string }): {
+    from: Position
+    to: Position
+    outside: boolean
+  } | null {
+    const a = placed.get(edge.a)
+    const b = placed.get(edge.b)
+    if (a && b) return { from: a, to: b, outside: false }
+    const room = a ?? b
+    if (!room) return null
+    const kerb = nearestOutside(plot.polygon, plot.street, room)
+    return { from: room, to: { x: kerb[0], y: kerb[1] }, outside: true }
+  }
 
   return (
     <div className="bubbles">
@@ -426,11 +409,6 @@ export function BubblesView(props: BubblesViewProps) {
         <button type="button" onClick={spread}>
           Spread
         </button>
-        {proposals.length > 0 && (
-          <button type="button" onClick={onAcceptAll}>
-            Accept all proposals
-          </button>
-        )}
         <button
           type="button"
           aria-pressed={linking !== null}
@@ -450,6 +428,14 @@ export function BubblesView(props: BubblesViewProps) {
           onClick={() => selectedRoom && onPin(selectedRoom.id, !selectedRoom.pinned)}
         >
           {selectedRoom?.pinned ? 'Let go' : 'Hold in place'}
+        </button>
+        <button
+          type="button"
+          className="bubbles-wide"
+          disabled={!selectedRoom || levels < 2}
+          onClick={sendUp}
+        >
+          {selectedRoom && levels > 1 ? `To ${storeyLabel(nextStorey)}` : 'To another storey'}
         </button>
         <button
           type="button"
@@ -475,7 +461,7 @@ export function BubblesView(props: BubblesViewProps) {
           <button type="button" aria-pressed={only === null} onClick={() => setOnly(null)}>
             All
           </button>
-          {Array.from({ length: Math.max(1, storeys) }, (_unused, storey) => (
+          {Array.from({ length: levels }, (_unused, storey) => (
             <button
               key={storey}
               type="button"
@@ -486,7 +472,7 @@ export function BubblesView(props: BubblesViewProps) {
             </button>
           ))}
         </div>
-        {/* A program action, not a force, so it stands with the filter that says which storey it acts on. */}
+        {/* A program action, not a force, so it stands with the group that says which storey it acts on. */}
         <button
           type="button"
           disabled={served}
@@ -503,11 +489,6 @@ export function BubblesView(props: BubblesViewProps) {
         </p>
       </div>
       <p className="bubbles-hint">{hint}</p>
-      {crowded.map((entry) => (
-        <p className="bubbles-warning" key={entry.storey}>
-          {capacityMessage(entry)}
-        </p>
-      ))}
       {circulation.map((entry) =>
         entry.wanted === undefined ? null : (
           <p className="bubbles-nudge" key={entry.storey}>
@@ -569,27 +550,24 @@ export function BubblesView(props: BubblesViewProps) {
             }
           }}
         >
-          <Bands
-            storeys={state.storeys}
-            bandHeight={state.bandHeight}
-            shown={shown}
-            perPixel={perPixel}
-          />
+          <PlotSheet plot={plot} />
+          <BuildableLine polygon={inside.polygon} />
           {edges.map((edge) => {
-            const a = placed.get(edge.a)
-            const b = placed.get(edge.b)
-            if (!a || !b) return null
+            if (only !== null && edge.storey !== only) return null
+            const ends = endsOf(edge)
+            if (!ends) return null
             return (
               <Link
                 key={edge.id}
                 id={edge.id}
-                a={a}
-                b={b}
+                from={ends.from}
+                to={ends.to}
                 storey={edge.storey}
-                bandHeight={state.bandHeight}
                 kind={edge.kind}
                 selected={edge.id === selected}
-                dimmed={only !== null && edge.storey !== only}
+                dimmed={edge.storey !== active}
+                outside={ends.outside}
+                {...(edge.source === undefined ? {} : { title: edge.source })}
                 onSelect={chooseLink}
               />
             )
@@ -600,7 +578,7 @@ export function BubblesView(props: BubblesViewProps) {
               return from ? (
                 <line
                   x1={from.x}
-                  y1={twinY(from, gesture.fromStorey, state.bandHeight)}
+                  y1={from.y}
                   x2={gesture.at.x}
                   y2={gesture.at.y}
                   className="link link-drawn"
@@ -615,53 +593,41 @@ export function BubblesView(props: BubblesViewProps) {
                 body={body}
                 room={room}
                 twin={storey}
-                bandHeight={state.bandHeight}
+                fits={nameFits(room.name, body.radius, perPixel)}
                 selected={body.id === selected || linking?.from === body.id}
-                dimmed={dimmedTwin(storey)}
+                dimmed={storey !== active}
                 handlers={handlers}
               />
             ) : null
           })}
-          {drawable.map((proposal) => {
-            const a = placed.get(proposal.a)
-            const b = placed.get(proposal.b)
-            return a && b ? (
-              <Proposed
-                key={`${proposal.rowId}:${proposal.a}:${proposal.b}`}
-                a={a}
-                b={b}
-                storey={proposal.storey}
-                bandHeight={state.bandHeight}
-                proposal={proposal}
-                source={proposal.source}
-                onAccept={takeProposal}
-              />
-            ) : null
-          })}
-          <Legend
-            at={{
-              x: shown.minX + LEGEND_PX.inset * perPixel,
-              y: shown.minY + shown.height - (LEGEND_PX.height + LEGEND_PX.inset) * perPixel,
-            }}
+          <NorthArrow
+            north={plot.north}
+            at={[shown.minX + shown.width - FURNITURE_PX * perPixel, shown.minY + 44 * perPixel]}
+            perPixel={perPixel}
+          />
+          <ScaleBar
+            at={[
+              shown.minX + FURNITURE_PX * perPixel,
+              shown.minY + shown.height - FURNITURE_PX * perPixel,
+            ]}
             perPixel={perPixel}
           />
         </svg>
-        <WeightsPanel weights={weights} onSetWeight={onSetWeight} />
+        <div className="bubbles-side">
+          <WeightsPanel weights={weights} onSetWeight={onSetWeight} />
+          <Legend />
+        </div>
       </div>
-      {spoken.length > 0 && (
-        <ul className="proposals">
-          {spoken.map((proposal) => (
-            <li key={`${proposal.rowId}:${proposal.a}:${proposal.b}`}>
-              <span>
-                {named.get(roomOf(proposal))?.name ?? roomOf(proposal)}: {proposal.source}
-              </span>
-              <button type="button" onClick={(event) => take(event, proposal)}>
-                Accept
-              </button>
-            </li>
+      <dl className="bubbles-fit">
+        {fits
+          .filter((fit) => only === null || fit.storey === only)
+          .map((fit) => (
+            <div key={fit.storey} className={fit.over ? 'fit-over' : undefined}>
+              <dt>{storeyLabel(fit.storey)}</dt>
+              <dd>{fitSentence(fit)}</dd>
+            </div>
           ))}
-        </ul>
-      )}
+      </dl>
     </div>
   )
 }
