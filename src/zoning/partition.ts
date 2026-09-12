@@ -2,7 +2,16 @@ import { area, type Point, type Polygon } from '../geometry'
 import { cellAt, cellCentre, gridOver, INSIDE, OFF, PAST, type Grid } from './grid'
 import { doorOn, reachedFrom, runNeeded, sharedRuns, whyOpen } from './links'
 import { divide, settleAreas } from './reach'
-import { claimDrives, inContact, layContact, layCorridor, layKerb, relaxRun } from './seeds'
+import {
+  claimDrives,
+  inContact,
+  layContact,
+  layCorridor,
+  layKerb,
+  layPlaced,
+  relaxRun,
+} from './seeds'
+import { squareCorridor, straighten } from './straighten'
 import { tidy } from './tidy'
 import { cellsOf, fillHoles, joinSeeds, keepOnePiece, outlineOfCells, zoneOfCells } from './zones'
 import {
@@ -28,6 +37,13 @@ const LITTLE_M2 = 8
 /** The kind whose bays keep a straight run to the street. */
 const BAY = 'garage'
 
+/**
+ * The kinds whose link to the corridor is the house's circulation: the way in, and the way up. A
+ * plan where the entry or the stair has no door onto the hallway is not a plan, so those two pairs
+ * are seeded whatever the bubbles did and are never given up.
+ */
+const CIRCULATION = ['entry-foyer', 'stair']
+
 /** A corridor is the one room laid as a run rather than grown from a reach. */
 function isCorridor(room: PartitionRoom): boolean {
   return room.half > 0
@@ -38,17 +54,25 @@ function isCorridor(room: PartitionRoom): boolean {
  * that order throughout, so the same bubbles give the same zones, cell for cell.
  */
 export function partitionOf(input: PartitionInput): Partition {
-  const rooms = input.rooms
+  const at0 = new Map(input.rooms.map((room, index) => [room.id, index]))
+  const entry0 = input.rooms[at0.get(input.arrivals[0] ?? '') ?? -1]
+  const rooms = input.rooms.map((room) =>
+    isCorridor(room) ? squareCorridor(room, entry0?.at, input.street) : room,
+  )
   const grid = gridOver(input.plot, input.buildable)
   const division = openDivision(grid, rooms, input.buildable)
   const at = new Map(rooms.map((room, index) => [room.id, index]))
   const entry = rooms[at.get(input.arrivals[0] ?? '') ?? -1]
 
+  // A room that already stands on another storey goes down first and is reserved to itself, so
+  // neither the corridor's run nor any reach takes the floor a stair is already built on.
+  for (const [index, room] of rooms.entries()) layPlaced(division, room, index)
   for (const [index, room] of rooms.entries())
     if (isCorridor(room)) layCorridor(division, room, index, entry?.at)
   claimDrives(division, rooms, input.street, (room) => room.type === BAY)
   for (const [index, room] of rooms.entries()) layKerb(division, room, index)
-  seedContacts(division, rooms, input, at)
+  const served = circulationOf(rooms, input, at)
+  const seeded = seedContacts(division, rooms, input, at, served)
 
   const sites = rooms.flatMap((room, index) => (isCorridor(room) ? [] : [index]))
   divide(division, rooms, sites)
@@ -67,6 +91,7 @@ export function partitionOf(input: PartitionInput): Partition {
   // is an ordinary zone again, so the cells the hole-filling left it over its target can go.
   relaxRun(division)
   whole()
+  straighten(division, rooms, seeded, rooms.findIndex(isCorridor), served)
 
   const zones: Zone[] = []
   for (const [index, room] of rooms.entries()) {
@@ -220,6 +245,26 @@ function openDivision(grid: Grid, rooms: readonly PartitionRoom[], buildable: Po
   }
 }
 
+/** The rooms whose link to the corridor is the house's own circulation, by index into the rooms. */
+function circulationOf(
+  rooms: readonly PartitionRoom[],
+  input: PartitionInput,
+  at: ReadonlyMap<string, number>,
+): ReadonlySet<number> {
+  const served = new Set<number>()
+  for (const link of input.links) {
+    const a = at.get(link.a)
+    const b = at.get(link.b)
+    if (a === undefined || b === undefined) continue
+    const one = rooms[a]
+    const other = rooms[b]
+    if (!one || !other) continue
+    if (isCorridor(one) && CIRCULATION.includes(other.type)) served.add(b)
+    if (isCorridor(other) && CIRCULATION.includes(one.type)) served.add(a)
+  }
+  return served
+}
+
 /**
  * A metre of shared wall at every contact the bubbles made, and one for every companion against
  * the room it is entered through, so the division may reshape two rooms but can never part them.
@@ -229,16 +274,29 @@ function seedContacts(
   rooms: readonly PartitionRoom[],
   input: PartitionInput,
   at: ReadonlyMap<string, number>,
-): void {
+  served: ReadonlySet<number>,
+): readonly (readonly [number, number])[] {
+  // Whether two rooms touch is a fact about the bubble diagram the person left, so it is read off
+  // the bubbles as they stand; where the wall is laid is a fact about the plan, so it is laid
+  // against the corridor as the straightening turned it.
+  const given = input.rooms
   const seeded = new Set<string>()
+  const pairs: (readonly [number, number])[] = []
   const seed = (one: number, other: number): void => {
     const key = one < other ? `${one}|${other}` : `${other}|${one}`
     if (seeded.has(key)) return
     seeded.add(key)
     const a = rooms[one]
     const b = rooms[other]
-    if (!a || !b || !inContact(a, b)) return
+    const wasA = given[one]
+    const wasB = given[other]
+    if (!a || !b || !wasA || !wasB) return
+    // The entry and the stair keep their wall on the corridor whether or not the bubbles left the
+    // two of them touching: that pair is the way in and the way up, and it may not be left open.
+    const must = (served.has(one) && isCorridor(b)) || (served.has(other) && isCorridor(a))
+    if (!must && !inContact(wasA, wasB)) return
     layContact(division, a, b, one, other)
+    pairs.push(one < other ? [one, other] : [other, one])
   }
   for (const link of input.links) {
     const a = at.get(link.a)
@@ -249,4 +307,5 @@ function seedContacts(
     const owner = room.owner === undefined ? undefined : at.get(room.owner)
     if (owner !== undefined && owner !== index) seed(index, owner)
   }
+  return pairs
 }

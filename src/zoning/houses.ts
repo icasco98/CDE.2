@@ -24,6 +24,63 @@ export const startingPlot: Polygon = [
   [0, 25],
 ]
 
+/**
+ * The programs the morph is measured on: the bubbles' own feasible suite, each with the storeys
+ * its zones are read on. Both halves of the morph are judged on the same houses, so a change that
+ * helps one plan and spoils another is seen at once.
+ */
+export const suite: readonly {
+  readonly name: string
+  readonly project: () => Project
+  readonly storeys: number
+}[] = [
+  { name: 'the default program on one storey', project: () => villa(1), storeys: 1 },
+  { name: 'the default program on two storeys', project: () => villa(2), storeys: 2 },
+  {
+    name: 'a small household on one storey',
+    project: () =>
+      villa(1, { bedrooms: 2, cars: 1 }, [
+        [0, 0],
+        [22, 0],
+        [22, 28],
+        [0, 28],
+      ]),
+    storeys: 1,
+  },
+  {
+    name: 'a household with a maid and a driver',
+    project: () =>
+      villa(
+        2,
+        { maid: true, driver: true },
+        [
+          [0, 0],
+          [22, 0],
+          [22, 30],
+          [0, 30],
+        ],
+        [2, 3],
+      ),
+    storeys: 2,
+  },
+  {
+    name: 'a corner plot with two streets',
+    project: () =>
+      villa(
+        2,
+        {},
+        [
+          [0, 0],
+          [24, 0],
+          [24, 25],
+          [0, 25],
+        ],
+        [2, 3],
+      ),
+    storeys: 2,
+  },
+]
+
 /** A project with the program rebuilt from the household and the rulebook's links as edges. */
 export function villa(
   storeys: number,

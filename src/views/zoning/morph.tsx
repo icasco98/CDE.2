@@ -15,6 +15,31 @@ export type Proposal = {
   readonly made: Partition
   /** Where each zone's bubble stood, which is where its circle opens from. */
   readonly from: ReadonlyMap<string, Point>
+  /** Whether this is the first morph of the project, which is the one that explains the walls. */
+  readonly first: boolean
+}
+
+/**
+ * What the first morph of a project says under the sheet. Decision 19's ruling is that the walls
+ * run square to the plot and a diagonal is the designer's own; it is said once, because a line
+ * that stands under every morph stops being read after the first.
+ */
+export const MORPH_HINT =
+  'The walls are on the quarter-metre grid and square to the plot. A diagonal is drawn by hand.'
+
+/**
+ * Which projects have been told. View memory, like the links the designer has taken out: the store
+ * holds the house, never what has been said about it, and a new project is a new id.
+ */
+const told = new Set<string>()
+
+export const morphHint = {
+  /** True the first time a project morphs, and false every time after it. */
+  dueFor(projectId: string): boolean {
+    if (told.has(projectId)) return false
+    told.add(projectId)
+    return true
+  },
 }
 
 /** How long the zones take to open, in milliseconds. About a second, with the camera held. */

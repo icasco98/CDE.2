@@ -14,6 +14,8 @@ export type PartitionRoom = {
   /** The room-type key, which the small-room rules and the garage run read. */
   readonly type: string
   readonly targetArea: number
+  /** The least floor the room-type table admits for the kind, where it carries one, in m². */
+  readonly minArea?: number
   /** Where the bubble stands, in plot metres. */
   readonly at: Point
   readonly radius: number
@@ -25,6 +27,11 @@ export type PartitionRoom = {
   readonly kerb?: Kerb
   /** The room whose perimeter this one rides, where it is that room's companion. */
   readonly owner?: string
+  /**
+   * The footprint this room already stands on, where it spans storeys and another storey it stands
+   * on is drawn: a stair is one room, so morphing the floor above must leave it where it is.
+   */
+  readonly placed?: Polygon
 }
 
 /** A stretch of the buildable line, and the way in from it. */

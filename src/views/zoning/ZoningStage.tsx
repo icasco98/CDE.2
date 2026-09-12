@@ -13,7 +13,7 @@ import {
 } from '../../model'
 import { partitionStorey } from '../../zoning'
 import type { RoomSizes } from './defaults'
-import type { Proposal } from './morph'
+import { morphHint, type Proposal } from './morph'
 import type { Placement } from './types'
 import { ZoningView } from './ZoningView'
 
@@ -56,7 +56,10 @@ export function ZoningStage(props: {
     const from = new Map<string, Point>()
     for (const room of project.rooms)
       if (room.bubble) from.set(room.id, [room.bubble.x, room.bubble.y])
-    setMorphing({ kind: 'shown', proposal: { storey, made, from } })
+    setMorphing({
+      kind: 'shown',
+      proposal: { storey, made, from, first: morphHint.dueFor(project.id) },
+    })
   }
 
   const onMorph = (): void => {
