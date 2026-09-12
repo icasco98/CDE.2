@@ -57,13 +57,7 @@
       "pr": 58
     }
   ],
-  "stages": [
-    "Briefed",
-    "Building",
-    "Review",
-    "Your merge",
-    "Merged"
-  ],
+  "stages": ["Briefed", "Building", "Review", "Your merge", "Merged"],
   "done": [
     "P4 to P7 merged: drawings fit the window, a click circles a room at its target area, refusals sit in a corner, storeys undo with the stair.",
     "Requirements, bubbles and one Plan tab with the massing; every stage edits the same graph.",
