@@ -41,10 +41,10 @@ function withBody(state: SimulationState, index: number, at: Point): SimulationS
   }
 }
 
-/** Whether a body may be walked at all: the hand, a kerb and a corridor's anchor all say no. */
+/** Whether a body may be walked at all: the hand, a kerb, an anchor and a tandem bay all say no. */
 function movable(state: SimulationState, index: number): boolean {
   const body = state.bodies[index]
-  if (!body || body.pinned || body.kerb || body.half > 0) return false
+  if (!body || body.pinned || body.kerb || body.half > 0 || body.anchored) return false
   return !state.companions.some((companion) => companion.body === index)
 }
 

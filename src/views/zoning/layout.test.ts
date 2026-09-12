@@ -250,7 +250,7 @@ describe('a plan laid out from the bubbles', () => {
 })
 
 describe('the reference case: the two-storey default program on the 20 × 25 plot', () => {
-  it('lays the ground floor out with no overlap, every room at its target size, linked rooms 7.13 m apart on average against 11.29 m for unlinked', () => {
+  it('lays the ground floor out with no overlap, every room at its target size, linked rooms 7.82 m apart on average against 10.97 m for unlinked', () => {
     const project = diagram(2)
     const out = laid(project, 0)
     if (!out.ok) throw new Error(out.reason)
@@ -267,8 +267,8 @@ describe('the reference case: the two-storey default program on the 20 × 25 plo
     }
 
     const { linked, apart } = spans(project, rooms)
-    expect(linked).toBeCloseTo(7.13, 1)
-    expect(apart).toBeCloseTo(11.29, 1)
+    expect(linked).toBeCloseTo(7.82, 1)
+    expect(apart).toBeCloseTo(10.97, 1)
     expect(linked).toBeLessThan(apart)
   })
 })

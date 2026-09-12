@@ -17,10 +17,14 @@ import {
   nearestOnSegment,
   type Placed,
 } from './capsule'
+import { frontageOf, kerbWithin, type Stretch } from './frontage'
 import { canonicalStart } from './start'
 import { alongTheLine, CLEARED, holdInside, putInside, type Buildable, type Ground } from './ground'
 
 export type Position = { readonly x: number; readonly y: number }
+
+/** Where a tandem bay stands: the bay it is behind, and how far in behind it that puts it. */
+export type Tandem = { readonly behind: number; readonly by: Point }
 
 /** A room as the bubble solver needs it: the model's room without the parts the picture ignores. */
 export type SimulationRoom = {
@@ -227,7 +231,9 @@ export type Body = {
   /** The street a room is held in a band of, and how far from it its middle may ever stand. */
   readonly band?: readonly [Point, Point]
   readonly bandReach?: number
-  /** A corridor whose near end is held on a room: where it lies is not the pairs' to say. */
+  /** A bay the frontage would not hold, and where behind the bay in front of it it stands. */
+  readonly tandem?: Tandem
+  /** A body a wall places outright — a corridor on its anchor, a bay in tandem — not the pairs'. */
   readonly anchored?: true
   /** The room whose perimeter this one rides, where it is that room's companion. */
   readonly rides?: number
@@ -330,19 +336,20 @@ const FALLBACK_PLOT: Point[] = [
 /** The kinds a corridor joins rather than leads to, which is what it may start from. */
 const anchorKinds: readonly string[] = ['entry-foyer', 'stair']
 
-/** The kerb line a walled kind stands against: its own boundary, moved in by the bubble's radius. */
+/**
+ * The kerb line a walled kind stands against: its own boundary, moved in by the bubble's radius,
+ * and cut to the stretch of the frontage the room claimed. The bubble stands against the kerb and
+ * not astride it, and inside its own claim and not along the whole street.
+ */
 function kerbLineFor(
   kind: string | undefined,
   radius: number,
   ground: Ground,
+  claim: Stretch | undefined,
 ): readonly [Point, Point] | undefined {
   const side = kind === undefined ? undefined : kerbFor(kind, ground.sides)
   if (!side) return undefined
-  // The bubble stands against the kerb, not astride it: its whole circle stays inside the line.
-  return [
-    [side.from[0] + side.inward[0] * radius, side.from[1] + side.inward[1] * radius],
-    [side.to[0] + side.inward[0] * radius, side.to[1] + side.inward[1] * radius],
-  ]
+  return kerbWithin(side, radius, side === ground.sides.service ? claim : undefined)
 }
 
 export function createState(
@@ -357,11 +364,23 @@ export function createState(
     : canonicalStart(rooms, edges, ground)
   const box = boundingBox(ground.inside.polygon.length >= 3 ? ground.inside.polygon : FALLBACK_PLOT)
   const middle = { x: box.left + box.width / 2, y: box.top + box.depth / 2 }
+  const frontage = frontageOf(
+    rooms.map((room) => ({
+      id: room.id,
+      storey: room.storey,
+      targetArea: room.targetArea,
+      ...(room.kind === undefined ? {} : { kind: room.kind }),
+      ...(room.bubble === undefined ? {} : { at: room.bubble }),
+    })),
+    ground,
+  )
   const bodies: Body[] = rooms.map((room) => {
     const corridor = room.kind === 'hallway'
     const radius = corridor ? CORRIDOR_R : radiusOf(room.targetArea)
     const opening = room.bubble ?? opened.get(room.id) ?? middle
-    const kerb = corridor ? undefined : kerbLineFor(room.kind, radius, ground)
+    const kerb = corridor
+      ? undefined
+      : kerbLineFor(room.kind, radius, ground, frontage.claims.get(room.id))
     const band = room.kind === undefined ? undefined : bandFor(room.kind, ground.sides)
     return {
       id: room.id,
@@ -383,6 +402,20 @@ export function createState(
         : { band: [band.from, band.to] as const, bandReach: radius * BAND_RADII }),
     }
   })
+  // A bay the frontage would not hold stands in tandem behind the bay in front of it: one
+  // bay-depth further in, on the same stretch of street. It is not a kerb room then; where it
+  // stands is the bay in front's to say, the way a corridor's near end is its anchor's.
+  const inward = ground.sides.service?.inward
+  const tandem = new Map<number, Tandem>()
+  for (const [index, body] of bodies.entries()) {
+    const ahead = frontage.behind.get(body.id)
+    const front = ahead === undefined ? undefined : bodies.findIndex((each) => each.id === ahead)
+    if (front === undefined || front < 0 || !inward) continue
+    tandem.set(index, {
+      behind: front,
+      by: [inward[0] * 2 * body.radius, inward[1] * 2 * body.radius],
+    })
+  }
   const at = new Map(bodies.map((body, index) => [body.id, index]))
   const links: Link[] = []
   for (const edge of edges) {
@@ -403,8 +436,10 @@ export function createState(
   return {
     bodies: turned.map((body, index) => ({
       ...body,
-      ...(anchored.has(index) ? { anchored: true as const } : {}),
+      ...(anchored.has(index) || tandem.has(index) ? { anchored: true as const } : {}),
       ...(rides.has(index) ? { rides: rides.get(index) as number } : {}),
+      ...(tandem.has(index) ? { tandem: tandem.get(index) as Tandem } : {}),
+      ...(tandem.has(index) ? { kerb: undefined } : {}),
     })),
     links,
     corridors,
@@ -565,10 +600,24 @@ function onKerb(w: Work): void {
   const dx = to[0] - from[0]
   const dy = to[1] - from[1]
   const run = dx * dx + dy * dy
-  if (run < 1e-12) return
+  // A claim no wider than the room itself leaves one place to stand, and the room stands in it.
+  if (run < 1e-12) {
+    w.x = from[0]
+    w.y = from[1]
+    return
+  }
   const along = Math.min(1, Math.max(0, ((w.x - from[0]) * dx + (w.y - from[1]) * dy) / run))
   w.x = from[0] + dx * along
   w.y = from[1] + dy * along
+}
+
+/** A bay in tandem set down behind the bay in front of it: one bay-depth in, on its stretch. */
+function inTandem(work: readonly Work[], w: Work): void {
+  const tandem = w.body.tandem
+  const front = tandem === undefined ? undefined : work[tandem.behind]
+  if (!tandem || !front) return
+  w.x = front.x + tandem.by[0]
+  w.y = front.y + tandem.by[1]
 }
 
 /**
@@ -878,6 +927,7 @@ function project(work: readonly Work[], state: SimulationState, air: number): vo
     // so what a round leaves is a picture with no overlap past the quarter the model allows. The
     // pairs can never undo a wall, because a bubble a wall holds moves only the way it lets it.
     for (const w of work) onKerb(w)
+    for (const w of work) inTandem(work, w)
     for (const w of work) inTheBand(w)
     for (const corridor of state.corridors) alongTheRooms(work, corridor, inside)
     if (holds)
@@ -923,6 +973,8 @@ function project(work: readonly Work[], state: SimulationState, air: number): vo
       w.y = held.at[1]
       w.angle = held.angle
     }
+  for (const w of work) onKerb(w)
+  for (const w of work) inTandem(work, w)
   for (const w of work) inTheBand(w)
   for (const corridor of state.corridors) alongTheRooms(work, corridor, inside)
   // A bubble the forces drove into its neighbour and the projection put back has not moved, so the

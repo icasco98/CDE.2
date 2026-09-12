@@ -1,6 +1,7 @@
 import type { Point } from '../geometry'
 import { companionsOf } from '../rulebook'
 import { CORRIDOR_R, corridorHalf } from './capsule'
+import { frontageOf, middleOf } from './frontage'
 import { putInside, type Ground } from './ground'
 
 /** A room as the first arrangement reads one: its kind, its floor, and how much of it there is. */
@@ -73,6 +74,7 @@ export function canonicalStart(
   const places = new Map<string, StartPlace>()
   const frame = frameOf(ground)
   if (!frame) return places
+  const frontage = frontageOf(rooms, ground)
   const owned = new Map<string, string>()
   const withTypes = rooms.map((room) => ({ id: room.id, type: room.kind ?? '' }))
   for (const room of rooms)
@@ -122,29 +124,19 @@ export function canonicalStart(
     for (const room of privateRooms) taken.add(room.id)
     const middle = here.filter((room) => !taken.has(room.id))
 
-    // The kerb, from the diwaniya's side: the diwaniya, then the entry at the middle of the
-    // frontage, then the garage bays side by side against the far side boundary.
-    const byKerb = [...kerb].sort(
-      (one, other) => kerbOrder.indexOf(one.kind ?? '') - kerbOrder.indexOf(other.kind ?? ''),
-    )
-    let front = 0
-    for (const room of byKerb) {
-      const radius = radiusOf(room.targetArea)
-      if (room.kind === 'entry-foyer') {
-        put(room, Math.max(front + radius, frame.frontage / 2), radius)
-        front = Math.max(front + 2 * radius, frame.frontage / 2 + radius)
-        continue
-      }
-      if (room.kind === 'garage' || room.kind === 'service-entrance') continue
-      front = row([room], front, 0, 1)
+    // The kerb, claim by claim: the frontage rule says who takes which stretch of the street and in
+    // what order, and the first arrangement stands each of them in the middle of its own stretch.
+    for (const room of kerb) {
+      const claim = frontage.claims.get(room.id)
+      if (!claim) continue
+      put(room, middleOf(claim), radiusOf(room.targetArea))
     }
-    const bays = byKerb.filter((room) => room.kind === 'garage' || room.kind === 'service-entrance')
-    let far = frame.frontage
-    for (const room of [...bays].reverse()) {
-      const radius = radiusOf(room.targetArea)
-      far -= radius
-      put(room, far, radius)
-      far -= radius
+    // A bay the frontage would not hold stands in tandem, one bay-depth in behind the bay in front.
+    for (const room of kerb) {
+      const ahead = frontage.behind.get(room.id)
+      const inFront = ahead === undefined ? undefined : frontage.claims.get(ahead)
+      if (!inFront) continue
+      put(room, middleOf(inFront), radiusOf(room.targetArea) * 3)
     }
 
     // The back, from the far corner: the service rooms away from the diwaniya first, then the

@@ -71,12 +71,13 @@ test('raising the site weight takes a garage bay to a side boundary and the kitc
   // the kitchen there.
   expect(kitchen.y).toBeLessThan(looseKitchen.y - 0.5)
   expect(kitchen.y).toBeLessThan(12)
-  // S2 gathers the bays side by side: each stands against the kerb the setbacks leave, and the
-  // two of them stand next to each other on it rather than at opposite ends of the frontage.
+  // The frontage rule gives the bays what the diwaniya and the entry leave, and on twenty metres
+  // that is one bay's worth: the first stands against the kerb the setbacks leave and the second
+  // stands in tandem behind it, on the same stretch of street, one bay-depth in.
   expect(bay.y + bay.radius).toBeCloseTo(23, 1)
-  expect(other.y + other.radius).toBeCloseTo(23, 1)
   expect(looseBay.y + looseBay.radius).toBeCloseTo(23, 1)
-  expect(Math.abs(bay.x - other.x)).toBeLessThanOrEqual(bay.radius + other.radius + 0.1)
+  expect(other.x).toBeCloseTo(bay.x, 1)
+  expect(bay.y - other.y).toBeCloseTo(2 * other.radius, 1)
 })
 
 test('the entry cannot be dragged off the kerb; it slides along it', async ({ page }) => {

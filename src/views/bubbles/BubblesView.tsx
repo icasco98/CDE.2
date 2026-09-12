@@ -627,6 +627,11 @@ export function BubblesView(props: BubblesViewProps) {
                 room={room}
                 twin={storey}
                 label={label}
+                {...(body.tandem === undefined
+                  ? {}
+                  : {
+                      note: `in tandem behind ${named.get(bodies[body.tandem.behind]?.id ?? '')?.name ?? 'the bay in front'}`,
+                    })}
                 selected={body.id === selected || linking?.from === body.id}
                 dimmed={storey !== active}
                 handlers={handlers}

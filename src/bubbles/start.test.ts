@@ -19,6 +19,10 @@ const plot: Plot = {
 }
 const ground = groundOf(plot, startingSite)
 
+function radiusOf(area: number): number {
+  return Math.sqrt(area / Math.PI)
+}
+
 /** The kerb line the setbacks leave: two metres in from the street, at the bottom of the sheet. */
 const KERB_Y = 23
 
@@ -52,15 +56,26 @@ const links = [
 ]
 
 describe('the first arrangement, derived from the program', () => {
-  it('puts the walled rooms on the kerb in order, from the diwaniya’s side', () => {
+  it('claims the frontage in order, the diwaniya first and the bays with what is left', () => {
     const places = canonicalStart(villa, links, ground)
     const at = (id: string) => places.get(id) ?? { x: 0, y: 0 }
-    // The service side runs from the east end of the plot to the west, so the diwaniya opens at
-    // the east, the entry at the middle of the frontage and the bays against the west boundary.
+    // The service side runs from the east end of the plot to the west, so the diwaniya claims the
+    // east, the entry the middle of what is left and the bays the west boundary.
     expect(at('diwaniya').x).toBeGreaterThan(at('entry').x)
     expect(at('entry').x).toBeGreaterThan(at('bay1').x)
-    expect(at('bay1').x).toBeGreaterThan(at('bay2').x)
-    for (const id of ['entry', 'bay1', 'bay2']) expect(at(id).y).toBeLessThan(KERB_Y)
+    // The diwaniya's own rim is on the kerb: that is the claim, and the whole point of it.
+    const diwaniya = radiusOf(52.5)
+    expect(at('diwaniya').y + diwaniya).toBeCloseTo(KERB_Y, 6)
+    for (const id of ['entry', 'bay1']) expect(at(id).y).toBeLessThan(KERB_Y)
+  })
+
+  it('stands a bay the frontage will not hold in tandem behind the bay in front', () => {
+    const places = canonicalStart(villa, links, ground)
+    const at = (id: string) => places.get(id) ?? { x: 0, y: 0 }
+    // Seventeen metres of frontage, an eight-metre diwaniya and a three-metre entry leave room
+    // for one bay of four and a half, so the second stands behind the first and not beside it.
+    expect(at('bay2').x).toBeCloseTo(at('bay1').x, 6)
+    expect(at('bay1').y - at('bay2').y).toBeCloseTo(2 * radiusOf(18), 6)
   })
 
   it('opens the same way twice, because nothing in it is left to chance', () => {

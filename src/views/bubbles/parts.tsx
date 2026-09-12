@@ -51,6 +51,8 @@ type BubbleProps = {
    * redraws no bubble at all.
    */
   readonly label: BubbleLabel
+  /** What else is worth saying about where this bubble stands, for the hand that rests on it. */
+  readonly note?: string
   readonly handlers: BubbleHandlers
 }
 
@@ -65,8 +67,18 @@ function standsAt(body: Body) {
 }
 
 /** Memoised on the body, the twin and the label, so a pan draws no bubble again. */
+/** What the hand resting on a bubble is told: its name and its size, and where it stands when
+ * where it stands is not its own to choose. */
+function titleOf(
+  room: { readonly name: string; readonly targetArea: number },
+  note?: string,
+): string {
+  const said = `${room.name}, ${Math.round(room.targetArea)} m²`
+  return note ? `${said}, ${note}` : said
+}
+
 export const Bubble = memo(function Bubble(props: BubbleProps) {
-  const { body, room, twin, label, handlers } = props
+  const { body, room, twin, label, note, handlers } = props
   const corridor = body.half > 0
   const at = { x: body.x, y: body.y }
   // A corridor's two marks sit at its far end rather than on a rim it does not have.
@@ -107,7 +119,7 @@ export const Bubble = memo(function Bubble(props: BubbleProps) {
           className={`bubble-shape ${categoryClass(room.category)}`}
           onPointerDown={(event) => handlers.onGrab(event, body)}
         >
-          <title>{`${room.name}, ${Math.round(room.targetArea)} m²`}</title>
+          <title>{titleOf(room, note)}</title>
         </rect>
       ) : (
         <circle
@@ -118,7 +130,7 @@ export const Bubble = memo(function Bubble(props: BubbleProps) {
           className={`bubble-shape ${categoryClass(room.category)}`}
           onPointerDown={(event) => handlers.onGrab(event, body)}
         >
-          <title>{`${room.name}, ${Math.round(room.targetArea)} m²`}</title>
+          <title>{titleOf(room, note)}</title>
         </circle>
       )}
       {/* The stack sits about the middle of the shape, a line of its own cap height apart, so
