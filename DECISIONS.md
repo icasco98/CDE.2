@@ -135,7 +135,16 @@ A reversal is a new entry, never an edit.
     unarchitectural shapes. Moving a bubble by hand and morphing again
     gives a different plan with the same links, and that is the
     designer's hand as the one source of variation; the same bubbles
-    always give the same plan. The result is shown dashed with Accept
+    always give the same plan. Half one (Z4a) measures a bubble's reach
+    in the square metric, along the longer axis, not as the crow flies:
+    with Euclidean distance an uncontested zone came out a circle and
+    the proposal read as bubbles; in the square metric an uncontested
+    reach is a square and a contested boundary a grid line. A metre and
+    a half of wall is seeded at every bubble contact and the driveway in
+    front of a garage bay is the bay's or nobody's. The corridor snaps
+    to the nearer grid axis in half two; a diagonal wall appears only
+    when the designer draws one by hand, since orthogonal lines are
+    preferred (the owner's ruling). The result is shown dashed with Accept
     and Back to bubbles; Accept commits the store once, so one undo
     returns to the bubbles; Back plays the morph in reverse and writes
     nothing. A plan that does not fit is never refused: rooms past the
