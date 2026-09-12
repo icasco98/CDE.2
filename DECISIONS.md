@@ -104,23 +104,34 @@ A reversal is a new entry, never an edit.
     stays a circle, and its twins settle to the same spot on every
     storey.
 
-19. **The morph is a proposal, deterministic, and may spill.** The
-    zones are the bubbles inflated in place: each circle into a
-    rectangle of its area within the proportion range of its kind,
-    the ellipse into a corridor, links into doors, then joins and
-    alignment. The same bubbles always give the same plan. The result
-    is shown dashed with Accept and Back to bubbles; Accept commits
-    the store once, so one undo returns to the bubbles; Back plays
-    the morph in reverse and writes nothing. Slivers left between
-    rooms go to the rooms up to the top of their range, the rest to
-    circulation. A plan that does not fit is never refused: rooms
-    past the buildable line are drawn hatched outside it with the
-    overflow in m², the rooms with slack above the bottom of their
-    range are offered for reduction one click each, and when every
-    room at its minimum still does not fit the sheet says the storey's
-    program is too big for the plot by that much. The tool never
-    shrinks a room on its own. The same fit line stands on the
-    Requirements totals, before a bubble is drawn.
+19. **The morph partitions the floor; it is a proposal, deterministic,
+    and may spill.** The zones are a division of the whole buildable
+    area: each point of the floor goes to the bubble nearest it, with
+    bigger bubbles claiming more (a weighted Voronoi). There are no
+    gaps and no overlaps by construction, and two bubbles that touch
+    always share a wall, because the boundary between their regions is
+    where they meet. Every boundary is then straightened to the 0.25 m
+    grid, so a zone is an orthogonal polygon of at most eight corners
+    and a rectangle where its region allows; each zone is carved to
+    its target area against its neighbours, the difference going to
+    the hallway, which is the leftover spine between the rooms it
+    serves, at least 1.20 m wide, drawn last. Reachability from the
+    entry to every room through doors is checked before the proposal
+    is shown. The proportion range is a penalty the partition respects
+    where it can, not a guarantee. Inflating rectangles and pushing
+    them apart was tried in the storyboard and rejected: it leaves
+    empty space and breaks contacts the bubbles had. The same bubbles
+    always give the same plan. The result is shown dashed with Accept
+    and Back to bubbles; Accept commits the store once, so one undo
+    returns to the bubbles; Back plays the morph in reverse and writes
+    nothing. A plan that does not fit is never refused: rooms past the
+    buildable line are drawn hatched outside it with the overflow in
+    m², the rooms with slack above the bottom of their range are
+    offered for reduction one click each, and when every room at its
+    minimum still does not fit the sheet says the storey's program is
+    too big for the plot by that much. The tool never shrinks a room
+    on its own. The same fit line stands on the Requirements totals,
+    before a bubble is drawn.
 
 20. **Links are strong, walls are strict, the start is fixed.** A
     link's rest length is touching and its pull is strong, and the

@@ -70,8 +70,8 @@ by side. The tool never presents one answer.
    an ellipse along the rooms it serves. Damped, deterministic for the
    same input, pinnable. If a storey's areas cannot fit its buildable
    area, it says so here and on the Requirements totals.
-3. **Zoning.** The bubbles inflated in place into footprints of the
-   same area, offered as a proposal to accept or send back, spilling
+3. **Zoning.** The buildable area partitioned among the bubbles into
+   footprints of the target areas, offered as a proposal to accept or send back, spilling
    past the buildable line rather than refused; then rooms dragged,
    rotated, reshaped and carved by hand; an unrealised edge shown as
    tension between two rooms.
