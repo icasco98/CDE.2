@@ -693,6 +693,9 @@ test('raising the user requirements weight parts the Diwaniya from the Master Be
   const diwaniya = await bubbleAt(page, 'Diwaniya')
   const master = await bubbleAt(page, 'Master Bedroom')
   await drag(page, master.screen, diwaniya.screen)
+  // A drop holds the bubble, so the hand is taken off it again before the forces are asked what
+  // they would do with it.
+  await page.getByRole('button', { name: 'Let go' }).click()
   await settle(page)
   const low = await apart(page, 'Diwaniya', 'Master Bedroom')
 
@@ -736,22 +739,22 @@ async function pinnedInStore(page: Page, name: string) {
   }, name)
 }
 
-test('a drag holds a bubble only while the hand is on it, and Hold in place lasts', async ({
-  page,
-}) => {
+test('a drop holds the bubble where it was put, and Let go hands it back', async ({ page }) => {
   await openBubbles(page)
   await settle(page)
   const drop = await bubbleAt(page, 'Formal Living')
   const kitchen = await bubbleAt(page, 'Kitchen')
   await drag(page, kitchen.screen, { x: drop.screen.x, y: drop.screen.y - 40 })
   await resting(page)
-  await expect(page.getByRole('button', { name: 'Hold in place' })).toBeEnabled()
-  await expect(roomNamed(page, 'Kitchen').first().locator('.pin-mark')).toHaveCount(0)
-  await expect.poll(() => pinnedInStore(page, 'Kitchen')).toBe(false)
-
-  await page.getByRole('button', { name: 'Hold in place' }).click()
+  // Dropped is held: nobody would guess they had to press Hold in place first, and the forces
+  // are strong enough now to take a bubble straight back where the hand did not want it.
+  await expect(page.getByRole('button', { name: 'Let go' })).toBeEnabled()
   await expect(roomNamed(page, 'Kitchen').first().locator('.pin-mark')).toHaveCount(1)
   await expect.poll(() => pinnedInStore(page, 'Kitchen')).toBe(true)
+
+  await page.getByRole('button', { name: 'Let go' }).click()
+  await expect(roomNamed(page, 'Kitchen').first().locator('.pin-mark')).toHaveCount(0)
+  await expect.poll(() => pinnedInStore(page, 'Kitchen')).toBe(false)
 
   const again = await bubbleAt(page, 'Kitchen')
   await drag(page, again.screen, { x: again.screen.x + 60, y: again.screen.y })
@@ -772,16 +775,58 @@ test('a diagram left at rest opens at rest, and no bubble moves on arrival', asy
 
   // Not "settles again somewhere else": the picture opens where it was left, to a quarter of a
   // metre, which is the last of the movement a storey this full never quite loses.
+  //
+  // An auxiliary room is the exception, and it is an honest one. It does not settle anywhere: it
+  // rides the perimeter of the room it opens off, and which part of that perimeter is free is
+  // decided afresh from whatever stands round it. A picture built again from the store can find
+  // the part it rested on taken and put it on another, so what is asked of it is not that it
+  // stands still but that it still opens off its own room.
   await resting(page)
   const after = await placesOn(page)
+  const rides = new Set(await companions(page))
+  const named = await names(page)
   expect(after).toHaveLength(before.length)
+  const walked: string[] = []
   for (const [index, place] of before.entries()) {
     const [id, x, y] = place.split(' ')
     const [otherId, otherX, otherY] = (after[index] ?? '').split(' ')
     expect(otherId).toBe(id)
-    expect(Math.hypot(Number(otherX) - Number(x), Number(otherY) - Number(y))).toBeLessThan(0.25)
+    if (id !== undefined && rides.has(id)) continue
+    const moved = Math.hypot(Number(otherX) - Number(x), Number(otherY) - Number(y))
+    if (moved > 0.25) walked.push(`${named.get(id ?? '') ?? id} ${moved.toFixed(2)}`)
   }
+  expect(walked).toEqual([])
+  // It still opens off its own room: the WC stands on the diwaniya's perimeter, wherever round it.
+  const reach = await apart(page, 'Diwaniya', 'Diwaniya WC')
+  const radii = await Promise.all(
+    ['Diwaniya', 'Diwaniya WC'].map(async (name) =>
+      Number(
+        await roomNamed(page, name).first().locator('[data-bubble]').getAttribute('data-radius'),
+      ),
+    ),
+  )
+  expect(reach).toBeLessThan((radii[0] ?? 0) + (radii[1] ?? 0) + 0.2)
 })
+
+/** What each room on the sheet is called, by the id its group carries. */
+async function names(page: Page): Promise<ReadonlyMap<string, string>> {
+  const pairs = await page.$$eval('[data-room]', (groups) =>
+    groups.map(
+      (group) =>
+        [group.getAttribute('data-room') ?? '', group.getAttribute('data-name') ?? ''] as const,
+    ),
+  )
+  return new Map(pairs)
+}
+
+/** The rooms that ride another room's perimeter: the ensuites, the WCs, the maid's bathroom. */
+async function companions(page: Page): Promise<readonly string[]> {
+  return page.$$eval('[data-room]', (groups) =>
+    groups
+      .filter((group) => /Ensuite|WC|Bathroom/.test(group.getAttribute('data-name') ?? ''))
+      .map((group) => group.getAttribute('data-room') ?? ''),
+  )
+}
 
 /** The id a room is drawn under, taken from any twin of it. */
 async function roomIdOf(page: Page, name: string): Promise<string> {

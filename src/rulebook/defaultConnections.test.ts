@@ -59,10 +59,16 @@ describe('the table stays inside the model', () => {
     expect(named.filter((kind) => kind !== EXTERIOR && !kinds.has(kind))).toEqual([])
   })
 
-  it('reads D1, D2 and on, with no id used twice', () => {
-    expect(defaultConnections.map((row) => row.id)).toEqual(
-      defaultConnections.map((_, index) => `D${index + 1}`),
-    )
+  it('reads D1, D2 and on, in order, with no id used twice and none renumbered', () => {
+    // A row's id is its name in the markdown and in every sentence that cites it, so a row the
+    // owner withdraws leaves its number behind rather than moving everything after it up one.
+    const numbers = defaultConnections.map((row) => Number(row.id.replace('D', '')))
+    expect(defaultConnections.every((row) => /^D\d+$/.test(row.id))).toBe(true)
+    expect(new Set(numbers).size).toBe(numbers.length)
+    expect([...numbers].sort((one, other) => one - other)).toEqual(numbers)
+    // D8 opened the stair off the entry; it is withdrawn, because an entry's wall cannot carry
+    // six doors and D26 already reaches the stair from the corridor.
+    expect(numbers).not.toContain(8)
   })
 
   it('proposes the front door from the outside only, and once', () => {

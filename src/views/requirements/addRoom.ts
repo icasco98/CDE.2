@@ -1,4 +1,5 @@
 import { connectDefaults } from '../../app/defaultLinks'
+import { openBubbles } from '../../app/openBubbles'
 import type { Result, Store } from '../../model'
 import { companionName, roomTypeById, standingOf, typicalArea } from '../../rulebook'
 
@@ -39,7 +40,10 @@ export function addRoomWithCompanion(
       })
       if (!alongside.ok) return alongside
     }
-    // A room arrives linked to what the rulebook expects it to touch, in the same step.
-    return connectDefaults(store)
+    // A room arrives linked to what the rulebook expects it to touch, and standing where the
+    // first arrangement puts it, in the same step.
+    const linked = connectDefaults(store)
+    if (linked && !linked.ok) return linked
+    return openBubbles(store)
   })
 }

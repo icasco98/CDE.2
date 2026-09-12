@@ -194,7 +194,7 @@ test('a brief asking a 5 m² WC to touch four rooms says so on the Requirements 
   })
   await page.goto('/')
   await expect(page.locator('.findings')).toContainText(
-    'Diwaniya WC is linked to four rooms; at 5 m² it can touch two. Remove a link.',
+    'Diwaniya WC is linked to four rooms; at 5 m² it can touch three. Remove a link.',
   )
 })
 

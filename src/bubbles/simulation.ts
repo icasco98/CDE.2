@@ -1,9 +1,9 @@
 import { boundingBox, type Point } from '../geometry'
 import type { Family, Weights } from '../model'
 import { companionOwners, forces, kerbFor, type ForceField, type ForceRoom } from '../rulebook'
-import { CORRIDOR_R, corridorHalf, gapBetween, type Placed } from './capsule'
+import { CORRIDOR_R, corridorHalf, endsOf, gapBetween, type Placed } from './capsule'
 import { canonicalStart } from './start'
-import { CLEARED, holdInside, putInside, type Buildable, type Ground } from './ground'
+import { alongTheLine, CLEARED, holdInside, putInside, type Buildable, type Ground } from './ground'
 
 export type Position = { readonly x: number; readonly y: number }
 
@@ -211,6 +211,8 @@ export type Body = {
   readonly kerb?: readonly [Point, Point]
   /** A corridor whose near end is held on a room: where it lies is not the pairs' to say. */
   readonly anchored?: true
+  /** The room whose perimeter this one rides, where it is that room's companion. */
+  readonly rides?: number
 }
 
 /** A link between two bodies. Both stand on the one plot, so its storey changes no arithmetic. */
@@ -373,12 +375,18 @@ export function createState(
   )
   // Which way a corridor lies is not stored: it is read off where the room it starts from and the
   // rooms it serves are standing, so a picture drawn from the store lies the way it settled.
-  const turned = turnedFrom(bodies, corridors)
+  const turned = turnedFrom(bodies, corridors, ground.inside)
+  const companions = companionsIn(rooms, edges, at)
+  const rides = new Map(companions.map((companion) => [companion.body, companion.owner]))
   return {
-    bodies: turned.map((body, index) => (anchored.has(index) ? { ...body, anchored: true } : body)),
+    bodies: turned.map((body, index) => ({
+      ...body,
+      ...(anchored.has(index) ? { anchored: true as const } : {}),
+      ...(rides.has(index) ? { rides: rides.get(index) as number } : {}),
+    })),
     links,
     corridors,
-    companions: companionsIn(rooms, edges, at),
+    companions,
     ground,
     energy: Infinity,
   }
@@ -420,32 +428,30 @@ function corridorsOf(bodies: readonly Body[], links: readonly Link[]): readonly 
   return out
 }
 
-/** Every corridor turned toward the rooms it serves, from where the bodies are standing now. */
-function turnedFrom(bodies: readonly Body[], corridors: readonly Corridor[]): readonly Body[] {
-  const angles = new Map<number, number>()
+/** Every corridor set down by the one rule, from where the bodies are standing now. */
+function turnedFrom(
+  bodies: readonly Body[],
+  corridors: readonly Corridor[],
+  inside: Buildable,
+): readonly Body[] {
+  const lies = new Map<number, { readonly x: number; readonly y: number; readonly angle: number }>()
   for (const corridor of corridors) {
     const body = bodies[corridor.body]
     if (!body) continue
-    let x = 0
-    let y = 0
-    let counted = 0
-    for (const other of corridor.served) {
-      const served = bodies[other]
-      if (!served) continue
-      x += served.x
-      y += served.y
-      counted += 1
-    }
-    if (counted === 0) continue
     const anchor = corridor.anchor === undefined ? undefined : bodies[corridor.anchor]
-    const from = anchor ?? body
-    const run = Math.hypot(x / counted - from.x, y / counted - from.y)
-    if (run < 1e-9) continue
-    angles.set(corridor.body, Math.atan2(y / counted - from.y, x / counted - from.x))
+    lies.set(
+      corridor.body,
+      corridorLies(
+        body,
+        anchor ? { x: anchor.x, y: anchor.y, radius: anchor.radius } : undefined,
+        aimOf(bodies, corridor.served, inside.middle),
+        inside,
+      ),
+    )
   }
   return bodies.map((body, index) => {
-    const angle = angles.get(index)
-    return angle === undefined ? body : { ...body, angle }
+    const lie = lies.get(index)
+    return lie === undefined ? body : { ...body, ...lie }
   })
 }
 
@@ -490,7 +496,14 @@ function fixed(body: Body): boolean {
   return body.pinned || body.anchored === true
 }
 
-/** How much of a correction the first body takes: none when it is held, all when the other is. */
+/**
+ * How much of a correction the first body takes. A body that goes nowhere at a pair's asking takes
+ * none of it and the other takes the whole — the person's hand holds a bubble outright, and so does
+ * a corridor's anchor — and where both may move the smaller moves further, as the lighter thing
+ * does. A body a wall leaves one line to move along is not held outright: it takes its share along
+ * that line, and the room left lying in it is walked out by the correction when the picture rests,
+ * which is a move no projection could make.
+ */
 function shareOf(a: Body, b: Body): number {
   if (fixed(a)) return 0
   if (fixed(b)) return 1
@@ -537,78 +550,189 @@ function onKerb(w: Work): void {
 }
 
 /**
- * The corridor turned and set down: its near end on the room it starts from, its length pointing
- * at the middle of the rooms it serves. A corridor is the one bubble whose direction is not the
- * forces' to choose, because what a corridor is for is reaching the doors off it. Where the way it
- * wants to lie would take its far end off the floor, it is turned toward the middle until it fits,
- * because the buildable line is a wall and the rooms it serves are not going anywhere either.
+ * Where a corridor lies: its near end on the room it starts from, touching it, and its length
+ * along the rooms it serves. The near end is a wall, not a pull — it sits on the anchor by
+ * construction and the rooms round it make way — so where the way it wants to lie would take an
+ * end off the floor, it is turned, a step at a time either way, until it lies along ground it has.
+ * This is the one rule: the picture drawn from the store and the picture the forces run both
+ * read it, so a corridor is never drawn lying one way and settled lying another.
  */
-function alongTheRooms(work: readonly Work[], corridor: Corridor, inside: Buildable): void {
-  const middle = inside.middle
-  const w = work[corridor.body]
-  if (!w) return
-  let toX = 0
-  let toY = 0
-  let counted = 0
-  for (const other of corridor.served) {
-    const served = work[other]
-    if (!served) continue
-    toX += served.x
-    toY += served.y
-    counted += 1
-  }
-  const aim: Point = counted > 0 ? [toX / counted, toY / counted] : middle
-  const anchor = corridor.anchor === undefined ? undefined : work[corridor.anchor]
-  const from: Point = anchor ? [anchor.x, anchor.y] : [w.x, w.y]
+export function corridorLies(
+  body: {
+    readonly x: number
+    readonly y: number
+    readonly angle: number
+    readonly radius: number
+    readonly half: number
+  },
+  anchor: { readonly x: number; readonly y: number; readonly radius: number } | undefined,
+  aim: Point,
+  inside: Buildable,
+): { readonly x: number; readonly y: number; readonly angle: number } {
+  const from: Point = anchor ? [anchor.x, anchor.y] : [body.x, body.y]
   const ux = aim[0] - from[0]
   const uy = aim[1] - from[1]
   const run = Math.hypot(ux, uy)
-  if (run < 1e-9) return
-  if (!anchor) {
-    w.angle = Math.atan2(uy, ux)
-    return
-  }
-  const reach = restBetween(anchor.body, w.body) + w.body.half
-  const toMiddle = Math.atan2(middle[1] - from[1], middle[0] - from[0])
+  if (run < 1e-9) return { x: body.x, y: body.y, angle: body.angle }
   const wanted = Math.atan2(uy, ux)
-  for (let turn = 0; turn <= TURNS; turn++) {
-    // Turned from the way it wants to lie toward the middle of the floor, a step at a time.
-    const share = turn / TURNS
-    const angle = wanted + share * (((toMiddle - wanted + 3 * Math.PI) % (2 * Math.PI)) - Math.PI)
-    const x = from[0] + Math.cos(angle) * reach
-    const y = from[1] + Math.sin(angle) * reach
-    const end: Point = [x + Math.cos(angle) * w.body.half, y + Math.sin(angle) * w.body.half]
-    w.angle = angle
-    w.x = x
-    w.y = y
-    if (turn === TURNS || pointInside(inside, end, w.body.radius)) return
-  }
+  if (!anchor) return { x: body.x, y: body.y, angle: wanted }
+  const reach = restBetween(anchor, body) + body.half
+  const lying = (angle: number) => ({
+    x: from[0] + Math.cos(angle) * reach,
+    y: from[1] + Math.sin(angle) * reach,
+    angle,
+  })
+  const fits = (at: { readonly x: number; readonly y: number; readonly angle: number }): boolean =>
+    endsOf({ x: at.x, y: at.y, angle: at.angle, half: body.half }).every((end) => {
+      const put = putInside(inside, end, body.radius)
+      return Math.hypot(put[0] - end[0], put[1] - end[1]) < 1e-6
+    })
+  const straight = lying(wanted)
+  if (inside.sides.length < 3 || fits(straight)) return straight
+  for (let turn = 1; turn <= TURNS; turn++)
+    for (const way of [1, -1]) {
+      const tried = lying(wanted + way * turn * A_TURN)
+      if (fits(tried)) return tried
+    }
+  return straight
 }
 
-/** How many steps a corridor is given to turn from where it wants to lie toward the middle. */
+/** Where the rooms a corridor serves stand, as one point; the middle of the floor when it has none. */
+function aimOf(
+  places: readonly { readonly x: number; readonly y: number }[],
+  served: readonly number[],
+  middle: Point,
+): Point {
+  let x = 0
+  let y = 0
+  let counted = 0
+  for (const other of served) {
+    const at = places[other]
+    if (!at) continue
+    x += at.x
+    y += at.y
+    counted += 1
+  }
+  return counted === 0 ? middle : [x / counted, y / counted]
+}
+
+/** The corridor set down where `corridorLies` says, on the places the frame has reached so far. */
+function alongTheRooms(work: readonly Work[], corridor: Corridor, inside: Buildable): void {
+  const w = work[corridor.body]
+  if (!w) return
+  const anchor = corridor.anchor === undefined ? undefined : work[corridor.anchor]
+  const lie = corridorLies(
+    { x: w.x, y: w.y, angle: w.angle, radius: w.body.radius, half: w.body.half },
+    anchor ? { x: anchor.x, y: anchor.y, radius: anchor.body.radius } : undefined,
+    aimOf(work, corridor.served, inside.middle),
+    inside,
+  )
+  w.x = lie.x
+  w.y = lie.y
+  w.angle = lie.angle
+}
+
+/** A step of the turn a corridor takes when the line will not have it lying the way it wants. */
+const A_TURN = Math.PI / 12
+
+/** Half a turn each way: every way round a corridor could be asked to lie instead. */
 const TURNS = 12
 
-/** Whether a point is inside the line with room to spare, which is where a corridor's end must be. */
-function pointInside(inside: Buildable, at: Point, radius: number): boolean {
-  const held = putInside(inside, at, radius)
-  return Math.hypot(held[0] - at[0], held[1] - at[1]) < 1e-6
-}
-
-/** A companion set back on its owner's perimeter, free to slide round it and never to leave it. */
-function onOwner(work: readonly Work[], companion: Companion): void {
+/**
+ * A companion set back on its owner's perimeter, free to slide round it and never to leave it. It
+ * is set down on the nearest part of that perimeter the buildable line will have, so a WC on the
+ * street side of a diwaniya standing on the kerb comes round rather than hanging over the line.
+ */
+function onOwner(
+  work: readonly Work[],
+  companion: Companion,
+  inside: Buildable,
+  holds: boolean,
+): void {
   const w = work[companion.body]
   const owner = work[companion.owner]
   if (!w || !owner || w.body.pinned) return
+  const reach = restBetween(owner.body, w.body)
   const dx = w.x - owner.x
   const dy = w.y - owner.y
   const run = Math.hypot(dx, dy)
-  const reach = restBetween(owner.body, w.body)
-  if (run < 1e-9) {
-    w.x = owner.x + reach
+  const was = run < 1e-9 ? 0 : Math.atan2(dy, dx)
+  const at = (angle: number): Point => [
+    owner.x + Math.cos(angle) * reach,
+    owner.y + Math.sin(angle) * reach,
+  ]
+  const put = (angle: number): void => {
+    const [x, y] = at(angle)
+    w.x = x
+    w.y = y
+  }
+  if (!holds) {
+    put(was)
     return
   }
-  w.x = owner.x + (dx / run) * reach
-  w.y = owner.y + (dy / run) * reach
+  /** Whether the perimeter is free here: inside the line, and clear of the rooms already there. */
+  const free = (angle: number): boolean => {
+    const [x, y] = at(angle)
+    const inLine = putInside(inside, [x, y], w.body.radius)
+    if (Math.hypot(inLine[0] - x, inLine[1] - y) > 1e-6) return false
+    const put: Placed = { x, y, angle: 0, half: 0 }
+    return !work.some((other, index) => {
+      if (other === w || other === owner || !shareAStorey(other.body, w.body)) return false
+      const closest = closestBetween(other.body, w.body)
+      // A disc is measured from its middle; only a corridor needs its whole segment looked at.
+      if (other.body.half === 0) return Math.hypot(other.x - x, other.y - y) < closest
+      return gapBetween(placedOf(other), put, index).distance < closest
+    })
+  }
+  // The nearest free part of the owner's perimeter, so a companion slides round rather than
+  // hanging over the line or standing in another room — and a corridor counts among the rooms in
+  // the way, which is what takes a WC out from behind the cluster at the entry. Where none of the
+  // perimeter is free it keeps its place, and the overlap wall has its say instead.
+  for (let turn = 0; turn <= TURNS; turn++)
+    for (const way of turn === 0 ? [1] : [1, -1]) {
+      const angle = was + way * turn * A_TURN
+      if (turn === TURNS || free(angle)) {
+        put(turn === TURNS ? was : angle)
+        return
+      }
+    }
+}
+
+/** A move with the part of it that runs across a line taken out, leaving what runs along it. */
+function along(by: Point, ux: number, uy: number): Point {
+  const on = by[0] * ux + by[1] * uy
+  return [ux * on, uy * on]
+}
+
+/**
+ * The one line a wall leaves a body free to move along, where it leaves it only one: the kerb a
+ * walled room stands on, or the tangent of the perimeter a companion rides. A body no such wall
+ * holds is free of the plane and has no line.
+ */
+function lineOf(w: Work, work: readonly Work[]): Point | undefined {
+  const kerb = w.body.kerb
+  if (kerb) {
+    const run = Math.hypot(kerb[1][0] - kerb[0][0], kerb[1][1] - kerb[0][1])
+    if (run > 1e-9) return [(kerb[1][0] - kerb[0][0]) / run, (kerb[1][1] - kerb[0][1]) / run]
+  }
+  const owner = w.body.rides === undefined ? undefined : work[w.body.rides]
+  if (owner) {
+    const away = Math.hypot(w.x - owner.x, w.y - owner.y)
+    if (away > 1e-9) return [-(w.y - owner.y) / away, (w.x - owner.x) / away]
+  }
+  return undefined
+}
+
+/**
+ * What a bubble really does when a pair asks it to move: the part of its wall leaves it free to
+ * do. A room on a kerb moves along the kerb, a companion round its owner, and anything standing
+ * against the buildable line along the line — so a push that a wall would undo is never taken.
+ */
+function move(w: Work, by: Point, work: readonly Work[], inside: Buildable, holds: boolean): Point {
+  if (by[0] === 0 && by[1] === 0) return by
+  const line = lineOf(w, work)
+  const wanted = line ? along(by, line[0], line[1]) : by
+  return holds ? alongTheLine(inside, [w.x, w.y], w.body.radius, wanted) : wanted
 }
 
 function pairKey(a: number, b: number): number {
@@ -643,14 +767,21 @@ function project(work: readonly Work[], state: SimulationState, air: number): vo
   }
 
   /** What the pairs asked for, taken as a mean and short of the whole, and whether any asked. */
-  const take = (): boolean => {
+  const take = (all: readonly Work[], line: Buildable, holds: boolean): boolean => {
     let asked = false
     for (const [index, w] of work.entries()) {
       const want = wants[index]
-      if (!want || w.body.pinned || want.asked === 0) continue
+      if (!want || fixed(w.body) || want.asked === 0) continue
       asked = true
-      w.x += (want.dx / want.asked) * RELAXATION
-      w.y += (want.dy / want.asked) * RELAXATION
+      const by = move(
+        w,
+        [(want.dx / want.asked) * RELAXATION, (want.dy / want.asked) * RELAXATION],
+        all,
+        line,
+        holds,
+      )
+      w.x += by[0]
+      w.y += by[1]
     }
     for (const want of wants) {
       want.dx = 0
@@ -660,48 +791,51 @@ function project(work: readonly Work[], state: SimulationState, air: number): vo
     return asked
   }
 
-  for (let pass = 0; pass < PROJECTION_ROUNDS; pass++) {
-    for (const link of state.links) {
-      const a = work[link.a]
-      const b = work[link.b]
-      if (!a || !b || (a.body.pinned && b.body.pinned)) continue
-      const gap = gapBetween(placedOf(a), placedOf(b), link.a + link.b)
-      const rest = restBetween(a.body, b.body) + air
-      // Only closing, and only a link that is really open: a pair the springs hold a hair's
-      // breadth apart is touching, and pulling it closed every frame would leave the picture
-      // shuffling for ever between the spring and the projection.
-      if (gap.distance <= rest + TOUCHING) continue
-      // Closed to the edge of that breadth rather than through it, so the springs have nothing to
-      // push back out against and the pair settles instead of being closed again every frame.
-      ask(link.a, link.b, rest + TOUCHING / 2 - gap.distance, gap.ux, gap.uy)
-    }
-    const pulled = take()
-    // The overlap wall is stronger than the links, so it has the last word in every round: it is
-    // answered after them, on the places their pull has just left the bubbles in, and one pair at
-    // a time rather than as a mean, because a small room wedged between two large ones must come
-    // out somewhere and a mean of two opposite demands would leave it where it is.
+  /** Every overlapping pair pushed apart, one pair at a time; whether any of them was. */
+  const part = (all: readonly Work[], line: Buildable, held: boolean): boolean => {
     let pushed = false
-    for (let i = 0; i < work.length; i++) {
-      const a = work[i]
+    for (let i = 0; i < all.length; i++) {
+      const a = all[i]
       if (!a) continue
-      for (let j = i + 1; j < work.length; j++) {
-        const b = work[j]
-        if (!b || (a.body.pinned && b.body.pinned)) continue
+      for (let j = i + 1; j < all.length; j++) {
+        const b = all[j]
+        if (!b || (fixed(a.body) && fixed(b.body))) continue
         if (!shareAStorey(a.body, b.body)) continue
         const gap = gapBetween(placedOf(a), placedOf(b), i + j)
         const overlap = closestBetween(a.body, b.body) - gap.distance
         if (overlap <= CLEARED) continue
         pushed = true
         const share = shareOf(a.body, b.body)
-        a.x -= gap.ux * overlap * share
-        a.y -= gap.uy * overlap * share
-        b.x += gap.ux * overlap * (1 - share)
-        b.y += gap.uy * overlap * (1 - share)
+        const away = move(
+          a,
+          [-gap.ux * overlap * share, -gap.uy * overlap * share],
+          all,
+          line,
+          held,
+        )
+        const toward = move(
+          b,
+          [gap.ux * overlap * (1 - share), gap.uy * overlap * (1 - share)],
+          all,
+          line,
+          held,
+        )
+        a.x += away[0]
+        a.y += away[1]
+        b.x += toward[0]
+        b.y += toward[1]
       }
     }
+    return pushed
+  }
+
+  for (let pass = 0; pass < PROJECTION_ROUNDS; pass++) {
+    // The walls in full first — the kerb the walled rooms stand on, the corridor's anchor, the
+    // companions on their owners' perimeters and the buildable line — and the pairs after them,
+    // so what a round leaves is a picture with no overlap past the quarter the model allows. The
+    // pairs can never undo a wall, because a bubble a wall holds moves only the way it lets it.
     for (const w of work) onKerb(w)
     for (const corridor of state.corridors) alongTheRooms(work, corridor, inside)
-    for (const companion of state.companions) onOwner(work, companion)
     if (holds)
       for (const w of work) {
         const held = holdInside(inside, placedOf(w), w.body.radius)
@@ -709,8 +843,43 @@ function project(work: readonly Work[], state: SimulationState, air: number): vo
         w.y = held.at[1]
         w.angle = held.angle
       }
+
+    for (const link of state.links) {
+      const a = work[link.a]
+      const b = work[link.b]
+      if (!a || !b || (fixed(a.body) && fixed(b.body))) continue
+      const gap = gapBetween(placedOf(a), placedOf(b), link.a + link.b)
+      const rest = restBetween(a.body, b.body) + air
+      // Only closing, and only a link that is really open: a pair the springs hold a hair's
+      // breadth apart is touching, and pulling it closed every frame would leave the picture
+      // shuffling for ever between the spring and the projection.
+      if (gap.distance <= rest + TOUCHING) continue
+      ask(link.a, link.b, rest + TOUCHING / 2 - gap.distance, gap.ux, gap.uy)
+    }
+    const pulled = take(work, inside, holds)
+    // The companions after the links: an auxiliary room rides its owner's perimeter and has the
+    // whole of it to choose from, so it is the one to give way to a room that has only this one
+    // wall to reach its neighbour by.
+    for (const companion of state.companions) onOwner(work, companion, inside, holds)
+    // The overlap wall is stronger than the links, so it has the last word in every round: it is
+    // answered after them, on the places their pull has just left the bubbles in, and one pair at
+    // a time rather than as a mean, because a small room wedged between two large ones must come
+    // out somewhere and a mean of two opposite demands would leave it where it is.
+    const pushed = part(work, inside, holds)
     if (!pulled && !pushed) break
   }
+  // The two walls that are never traded have the last word, whatever the pairs have just asked.
+  // The buildable line holds every bubble inside it; and a corridor's near end sits on the room it
+  // starts from by construction, so it is set back there — turned, if need be, to lie on ground the
+  // line has — and the rooms round it make way.
+  if (holds)
+    for (const w of work) {
+      const held = holdInside(inside, placedOf(w), w.body.radius)
+      w.x = held.at[0]
+      w.y = held.at[1]
+      w.angle = held.angle
+    }
+  for (const corridor of state.corridors) alongTheRooms(work, corridor, inside)
   // A bubble the forces drove into its neighbour and the projection put back has not moved, so the
   // projection takes that speed off it: exactly the part of it that pressed against the wall and
   // nothing else. It never hands any back, or a bubble let go inside another would be thrown

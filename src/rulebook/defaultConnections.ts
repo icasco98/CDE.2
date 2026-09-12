@@ -75,12 +75,12 @@ export const defaultConnections: readonly DefaultConnection[] = [
   },
   {
     id: 'D6',
-    from: 'entry-foyer',
+    from: 'hallway',
     to: 'family-living',
     kind: 'door',
     pairing: 'each',
     source:
-      'U4: family living is the hub, reached from the family entrance. Public to private in one step, which U2 would not have; the entry is the threshold the household crosses at, and U2 is a force, not a wall.',
+      "U4: family living is the hub, reached off the corridor the front door opens into. An entry's wall cannot carry six doors, so the corridor takes the rooms the entry receives into.",
     confidence: provisional,
   },
   {
@@ -90,16 +90,6 @@ export const defaultConnections: readonly DefaultConnection[] = [
     kind: 'door',
     pairing: 'one',
     source: 'U9: guests find the WC from the entry, never through a private room.',
-    confidence: provisional,
-  },
-  {
-    id: 'D8',
-    from: 'entry-foyer',
-    to: 'stair',
-    kind: 'door',
-    pairing: 'each',
-    source:
-      'U11 with the room-type table: the stair is a circulation kind a front door may open onto.',
     confidence: provisional,
   },
   {
@@ -265,7 +255,8 @@ export const defaultConnections: readonly DefaultConnection[] = [
     to: 'stair',
     kind: 'open',
     pairing: 'each',
-    source: 'U11: the stair stands on the corridor it serves, open to it.',
+    source:
+      "U11: the stair stands on the corridor it serves, open to it. An entry's wall cannot carry six doors, so this is the whole of how the stair is reached from the front door.",
     confidence: provisional,
   },
   {

@@ -37,6 +37,14 @@ export type Finding = {
 const PER_LINK = 1
 const SMALL_LINK = 0.9
 
+/**
+ * How many times that a link really spends of a room's wall. A door needs its metre and a length
+ * of wall either side of it to be a door rather than a hole, and the room has to turn the corner
+ * between one neighbour and the next; three metres of perimeter to a link is what a plan spends.
+ * Judgement, like the rest of the table, and among the first numbers the known house will correct.
+ */
+const WALL_PER_LINK = 3
+
 /** The Municipality's smallest room; under it a door may take a little less wall. */
 const SMALL_ROOM_M2 = 10
 
@@ -52,13 +60,12 @@ function standsOn(room: BriefRoom, storey: number): boolean {
 }
 
 /**
- * How many links a room's wall can hold at its target aspect. A link needs a metre of wall, and it
- * has to be a metre of one wall rather than a metre taken round a corner, so what a room can give
- * is read off the wall it has: the mean of the four at the most generous aspect its kind admits.
+ * How many links a room's wall can hold at its target aspect: its perimeter at the most generous
+ * aspect its kind admits, divided by what a link really spends of it.
  *
  * A corridor is the exception, and it is the reason a corridor exists: it is served down both of
- * its long sides, so what it can hold is read off its length twice over. Its own row leaves the
- * proportion free, so the length is the one its area gives at the Municipality's clear width.
+ * its long sides, a door every metre, so what it can hold is read off its length twice over. Its
+ * own row leaves the proportion free, so the length is the one its area gives at its clear width.
  */
 export function linksHeld(room: BriefRoom): number | undefined {
   const kind = roomTypeById(room.type)
@@ -71,7 +78,7 @@ export function linksHeld(room: BriefRoom): number | undefined {
   const ratio = Math.max(1, kind.proportion.max)
   const short = Math.sqrt(Math.max(room.targetArea, 0) / ratio)
   const long = short * ratio
-  return Math.floor((short + long) / 2 / per)
+  return Math.floor((2 * (short + long)) / (WALL_PER_LINK * per))
 }
 
 function radiusOf(area: number): number {

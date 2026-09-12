@@ -39,21 +39,10 @@ function defaultVilla(storeys: number) {
 }
 
 describe('the brief checked before a bubble moves', () => {
-  it('finds only the entry over-linked in the villa a rebuild gives, on one storey or two', () => {
-    // The rulebook's default connections open the formal living room, the family living room, the
-    // guest WC, the stair and the corridor off an eight-metre entry, and put the front door there
-    // too; eight square metres of room has not the wall for six doors. Nothing else about the villa
-    // a rebuild gives is out of reach.
-    // One storey has no stair, so the entry there carries five doors rather than six.
-    for (const [storeys, count] of [
-      [1, 'five'],
-      [2, 'six'],
-    ] as const) {
+  it('finds nothing wrong with the villa a rebuild gives, on one storey or two', () => {
+    for (const storeys of [1, 2]) {
       const project = defaultVilla(storeys)
-      const found = feasibility(project.rooms, project.edges, project.plot, project.storeys)
-      expect(found.map((each) => each.sentence)).toEqual([
-        `Entry is linked to ${count} rooms; at 8 m² it can touch three. Remove a link.`,
-      ])
+      expect(feasibility(project.rooms, project.edges, project.plot, project.storeys)).toEqual([])
     }
   })
 
@@ -91,7 +80,7 @@ describe('the brief checked before a bubble moves', () => {
       1,
     )
     expect(found.find((each) => each.code === 'wall')?.sentence).toBe(
-      'Diwaniya WC is linked to four rooms; at 5 m² it can touch two. Remove a link.',
+      'Diwaniya WC is linked to four rooms; at 5 m² it can touch three. Remove a link.',
     )
   })
 
@@ -110,9 +99,9 @@ describe('the brief checked before a bubble moves', () => {
 
   it('reads a corridor off both its long sides, because that is what a corridor is for', () => {
     // Twelve square metres at the Municipality's 1.20 m clear is a ten-metre run with a door every
-    // metre down each side of it.
+    // metre down each side of it; an eight-metre entry has room for the four the rulebook gives it.
     expect(linksHeld(room('hall', 'hallway', 12))).toBe(20)
-    expect(linksHeld(room('entry', 'entry-foyer', 8))).toBe(3)
+    expect(linksHeld(room('entry', 'entry-foyer', 8))).toBe(4)
   })
 
   it('says when the walled rooms ask for more kerb than the frontage has', () => {

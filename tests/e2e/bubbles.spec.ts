@@ -85,9 +85,7 @@ async function placeOf(page: Page, id: string) {
   return { x: Number(x), y: Number(y) }
 }
 
-test('a dragged bubble follows the hand, and the hand’s hold goes with the hand', async ({
-  page,
-}) => {
+test('a dragged bubble follows the hand, and stays where the hand drops it', async ({ page }) => {
   await open(page)
   await settle(page)
   const bubble = page.locator('[data-bubble]').first()
@@ -103,9 +101,12 @@ test('a dragged bubble follows the hand, and the hand’s hold goes with the han
   expect(Math.hypot(held.x - before.x, held.y - before.y)).toBeGreaterThan(2)
   await page.mouse.up()
   await resting(page)
-  // The hand's hold goes with the hand: only Hold in place lasts.
-  await expect(page.locator(`[data-room="${id}"] .pin-mark`)).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Hold in place' })).toBeEnabled()
+  // Where it is dropped it stays: the drop holds it, the pin mark says so, and Let go is the
+  // button that hands it back to the forces.
+  await expect(page.locator(`[data-room="${id}"] .pin-mark`)).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Let go' })).toBeEnabled()
+  const dropped = await placeOf(page, id)
+  expect(Math.hypot(dropped.x - held.x, dropped.y - held.y)).toBeLessThan(0.5)
 })
 
 test('dragging from one bubble to another connects them', async ({ page }) => {

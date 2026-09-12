@@ -51,7 +51,14 @@ function Playground() {
         onMoveBubble={(id: string, at: Position, commit: Commit) =>
           store.actions.setBubble(id, at, commit)
         }
-        onDropBubble={(id: string, at: Position) => store.actions.setBubble(id, at, 'commit')}
+        onDropBubble={(id: string, at: Position) =>
+          // Dropped is held: the bubble is put where the hand left it and pinned there in the one
+          // step, so the forces cannot take it back and Let go is what hands it to them again.
+          store.transaction(() => {
+            const put = store.actions.setBubble(id, at, 'commit')
+            return put.ok ? store.actions.pin(id) : put
+          })
+        }
         onSetStorey={(id: string, storey: number) => store.actions.setStorey(id, storey)}
         onPin={(id: string, pinned: boolean) =>
           pinned ? store.actions.pin(id) : store.actions.unpin(id)

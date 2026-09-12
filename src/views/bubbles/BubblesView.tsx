@@ -33,6 +33,7 @@ import { BuildableLine, NorthArrow, PlotSheet, ScaleBar } from '../parts'
 import { useSheetCamera } from '../sheetCamera'
 import {
   asPoint,
+  apart,
   bodyAt,
   extentOf,
   holds,
@@ -185,7 +186,9 @@ export function BubblesView(props: BubblesViewProps) {
         ),
       )
     }
-    return said
+    // And then no two of them crossing: a name drawn over another name is a third word that is
+    // neither of them, so the smaller bubble gives its name up for its mark.
+    return apart(said, bodies, (id) => marks.get(named.get(id)?.name ?? '') ?? '')
   }, [bodies, named, marks, perPixel])
 
   const at = useCallback((event: { clientX: number; clientY: number }): Position => {
@@ -287,9 +290,15 @@ export function BubblesView(props: BubblesViewProps) {
     }
     const pointer = at(event)
     if (gesture.kind === 'move') {
-      // A move is nothing but a move: the bubble is recorded where the forces bring it to rest,
-      // and the previews since the drag began fold into that one step.
-      release(movedRef.current ? (rest: Position) => void onDropBubble(gesture.id, rest) : null)
+      // A bubble stays where it is dropped: the forces are strong enough now to carry it back
+      // where they would rather have it, so the hand's own placing is kept by holding it there —
+      // the pin mark comes up, and Let go hands it back to the forces. Where the hand left it is
+      // where the walls let the hand leave it: the bubble under the hand is put on its kerb and
+      // inside the buildable line every frame of the drag, so the place to keep is the one it is
+      // drawn at when the hand comes off, not the point of the pointer.
+      const body = bodies.find((each) => each.id === gesture.id)
+      if (movedRef.current && body) onDropBubble(gesture.id, { x: body.x, y: body.y })
+      release(null)
       return
     }
     const target = bodyAt(bodies, pointer, active, gesture.from)
@@ -436,7 +445,7 @@ export function BubblesView(props: BubblesViewProps) {
       : `Now click the room to join to ${named.get(linking.from)?.name ?? 'it'}.`
     : only === null
       ? 'Every storey at once: the ground floor is the one the hand moves. Pick a storey to work on it.'
-      : `Drag a bubble to move it about ${storeyLabel(active)}. It is held inside the buildable line.`
+      : `Drag a bubble to move it about ${storeyLabel(active)}. Where you drop it, it is held; Let go hands it back to the forces. It never leaves the buildable line.`
 
   /**
    * Where a link is drawn between. The outside is not a bubble, so a door to it runs from its room

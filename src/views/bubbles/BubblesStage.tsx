@@ -78,7 +78,16 @@ export function BubblesStage() {
       onMoveBubble={(id: string, at: Position, commit: Commit) =>
         session.actions.setBubble(id, at, commit)
       }
-      onDropBubble={(id: string, at: Position) => report(session.actions.setBubble(id, at))}
+      onDropBubble={(id: string, at: Position) =>
+        report(
+          // Dropped is held: the bubble is put where the hand left it and pinned there in the one
+          // step, so the forces cannot take it back and Let go is what hands it to them again.
+          session.transaction(() => {
+            const put = session.actions.setBubble(id, at)
+            return put.ok ? session.actions.pin(id) : put
+          }),
+        )
+      }
       onSetStorey={(id: string, storey: number) => {
         // A door the move could not hold is said out loud and fades, as every refusal does.
         const moved = sendToStorey(session, id, storey)

@@ -4,7 +4,16 @@ import { createIdGenerator, createStore, EXTERIOR, type Household, type Project 
 import { defaultProgram, feasibility, impliedConnections, kerbFor, roomTypeById } from '../rulebook'
 import { correctContacts } from './correction'
 import { groundOf } from './ground'
-import { createState, layoutFor, settle, type SimulationState } from './simulation'
+import {
+  closestBetween,
+  createState,
+  type Body,
+  layoutFor,
+  settle,
+  shareAStorey,
+  type SimulationState,
+} from './simulation'
+import { gapBetween } from './capsule'
 import { touching } from './tension'
 
 /*
@@ -38,37 +47,6 @@ function villa(
     store.actions.addRoom(each)
   for (const link of impliedConnections(store.getState().rooms, store.getState().edges))
     store.actions.connect({ a: link.a, b: link.b, kind: link.kind, storey: link.storey })
-  return received(store)
-}
-
-/** The rooms an entry receives into, which a corridor takes over when the entry's wall is short. */
-const receptions: readonly string[] = ['formal-living', 'family-living', 'guest-wc']
-
-/**
- * The fix the brief asks for, taken. The rulebook's default connections open the formal living
- * room, the family living room and the guest WC off an eight-metre entry, and eight square metres
- * of room has not the wall for that many doors on top of the front door, the stair and the
- * corridor. Moving them onto the corridor is what a corridor is for, and it is what makes these
- * programs ones a bubble diagram can really draw.
- */
-function received(store: ReturnType<typeof createStore>): Project {
-  const before = store.getState()
-  const entry = before.rooms.find((room) => room.type === 'entry-foyer')
-  const hall = before.rooms.find((room) => room.type === 'hallway' && room.storey === 0)
-  if (!entry || !hall) return before
-  for (const edge of before.edges) {
-    const far = edge.a === entry.id ? edge.b : edge.b === entry.id ? edge.a : null
-    const kind = before.rooms.find((room) => room.id === far)?.type
-    if (!far || !kind) continue
-    // The stair already opens off the corridor, so the entry's own door to it simply goes.
-    if (kind === 'stair') {
-      store.actions.disconnect(edge.id)
-      continue
-    }
-    if (!receptions.includes(kind)) continue
-    store.actions.disconnect(edge.id)
-    store.actions.connect({ a: hall.id, b: far, kind: edge.kind, storey: 0 })
-  }
   return store.getState()
 }
 
@@ -94,23 +72,54 @@ const suite: readonly { readonly name: string; readonly project: Project }[] = [
   // A small household on one floor. The villa a rebuild gives has 334 m² of rooms on the 365 m²
   // the setbacks leave, which circles cannot pack, so the one-storey case is a house that fits.
   { name: 'a small household on one storey', project: villa(1, { bedrooms: 2, cars: 1 }) },
+  { name: 'the default program on one storey', project: villa(1) },
   { name: 'the default program on two storeys', project: villa(2) },
   {
     // Staff and two cars ask for more ground than the starting plot has, so this one is a
-    // twenty-two by thirty, which is still inside the Municipality's smaller setback band.
+    // twenty-two by thirty; and staff arrive at a side door, so it is a corner, which gives the
+    // service entrance a kerb of its own and leaves the entry's own stretch of street to the
+    // garage and the rooms that receive from it.
     name: 'a household with a maid and a driver',
-    project: villa(2, { maid: true, driver: true }, [
-      [0, 0],
-      [22, 0],
-      [22, 30],
-      [0, 30],
-    ]),
+    project: villa(
+      2,
+      { maid: true, driver: true },
+      [
+        [0, 0],
+        [22, 0],
+        [22, 30],
+        [0, 30],
+      ],
+      cornerStreets,
+    ),
   },
   {
     name: 'a corner plot with two streets',
     project: villa(2, {}, starting, cornerStreets),
   },
 ]
+
+function nameOf(project: Project, id: string): string {
+  return project.rooms.find((room) => room.id === id)?.name ?? id
+}
+
+/** Every pair of a picture's bodies that share a floor, with how they stand to one another. */
+function pairsOf(
+  picture: SimulationState,
+): readonly { a: Body; b: Body; gap: number; past: number }[] {
+  const out: { a: Body; b: Body; gap: number; past: number }[] = []
+  for (const [index, a] of picture.bodies.entries())
+    for (let other = index + 1; other < picture.bodies.length; other++) {
+      const b = picture.bodies[other]
+      if (!b || !shareAStorey(a, b)) continue
+      const { distance } = gapBetween(
+        { x: a.x, y: a.y, angle: a.angle, half: a.half },
+        { x: b.x, y: b.y, angle: b.angle, half: b.half },
+        index + other,
+      )
+      out.push({ a, b, gap: distance, past: closestBetween(a, b) - distance })
+    }
+  return out
+}
 
 describe('the feasible suite', () => {
   for (const { name, project } of suite) {
@@ -129,10 +138,37 @@ describe('the feasible suite', () => {
           const a = picture.bodies[link.a]
           const b = picture.bodies[link.b]
           if (!a || !b || touching(a, b)) continue
-          const nameOf = (id: string) => project.rooms.find((room) => room.id === id)?.name ?? id
-          open.push(`${nameOf(a.id)} to ${nameOf(b.id)}`)
+          open.push(`${nameOf(project, a.id)} to ${nameOf(project, b.id)}`)
         }
         expect(open).toEqual([])
+      })
+
+      it('leaves no two rooms resting past the quarter', () => {
+        const deep: string[] = []
+        for (const pair of pairsOf(picture)) {
+          const { a, b, past } = pair
+          // A corridor is not a room and is measured on its own terms below. Between two rooms the
+          // quarter holds to within a tenth of the smaller one's radius, which is the step the
+          // projection takes and no more: a pair a hair inside each other is a pair at rest.
+          if (a.half > 0 || b.half > 0) continue
+          if (past <= Math.min(a.radius, b.radius) / 10) continue
+          deep.push(`${nameOf(project, a.id)} in ${nameOf(project, b.id)} by ${past.toFixed(2)}`)
+        }
+        expect(deep).toEqual([])
+      })
+
+      it('leaves no room standing in a corridor', () => {
+        const inside: string[] = []
+        for (const { a, b, gap } of pairsOf(picture)) {
+          // A room stands along a corridor, and may lie a little into it as any pair may. What it
+          // may never do is stand in it: its middle is always clear of the corridor's own width.
+          const corridor = a.half > 0 ? a : b.half > 0 ? b : undefined
+          if (!corridor || (a.half > 0 && b.half > 0)) continue
+          if (gap >= corridor.radius) continue
+          const room = corridor === a ? b : a
+          inside.push(`${nameOf(project, room.id)} in ${nameOf(project, corridor.id)}`)
+        }
+        expect(inside).toEqual([])
       })
 
       it('stands every walled room on its own kerb', () => {

@@ -132,6 +132,25 @@ export function putInside(inside: Buildable, at: Point, radius: number): Point {
   return [x, y]
 }
 
+/**
+ * A move with whatever presses into the line taken out of it. A bubble already standing against a
+ * side cannot go further that way, so what it is asked to do across that side is dropped and what
+ * is left runs along it: that is how a room pressed into a corner still gets out of another's way.
+ */
+export function alongTheLine(inside: Buildable, at: Point, radius: number, move: Point): Point {
+  let [dx, dy] = move
+  const room = Math.min(radius, inside.deepest)
+  for (const side of inside.sides) {
+    const q = nearestOnSegment(side.from, side.to, at[0], at[1])
+    if (Math.hypot(at[0] - q[0], at[1] - q[1]) > room + CLEARED) continue
+    const into = dx * side.inward[0] + dy * side.inward[1]
+    if (into >= 0) continue
+    dx -= into * side.inward[0]
+    dy -= into * side.inward[1]
+  }
+  return [dx, dy]
+}
+
 /** Where a body came to lie once the line had its say: a place, and the way it lies there. */
 export type Held = { readonly at: Point; readonly angle: number }
 
