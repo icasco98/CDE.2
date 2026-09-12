@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { rectangleToPolygon, type Polygon } from '../geometry'
+import { arcPoints, rectangleToPolygon, type Polygon } from '../geometry'
 import type { Room } from '../model'
 import { facesOf } from './solids'
 
@@ -70,4 +70,20 @@ it('draws nothing for a room that is not placed', () => {
 
 it('draws nothing for a room standing past the top of the project', () => {
   expect(facesOf(room(box, 2), 2, [3.5, 3.5])).toEqual([])
+})
+
+it('stands a circular room up as a faceted prism of one wall per polygon side', () => {
+  const centre = [10, 12] as const
+  const ring = arcPoints(centre, 2.5, 0, 0, true).slice(0, -1)
+  const circle: Room = {
+    ...room(ring),
+    footprint: {
+      polygon: ring,
+      rotation: 0,
+      arcs: [{ from: 0, to: 0, centre, radius: 2.5, clockwise: true }],
+    },
+  }
+  const faces = facesOf(circle, 1, [3.5])
+  expect(faces.filter((face) => face.kind === 'side')).toHaveLength(ring.length)
+  expect(faces.filter((face) => face.kind === 'top')[0]?.corners).toHaveLength(ring.length)
 })

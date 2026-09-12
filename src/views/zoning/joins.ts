@@ -15,6 +15,8 @@ type Joinable = {
   readonly id: string
   readonly name: string
   readonly outline: Polygon
+  /** The area the room really covers, so a curved wall is read by its curve and not its chords. */
+  readonly measure: number
 }
 
 /**
@@ -105,9 +107,7 @@ export function joinsOf(standing: readonly Joinable[], edges: readonly Edge[]): 
       rings,
       outline,
       at: centroid(outline),
-      label: members
-        .map((member) => `${member.name} ${metres2(area(member.outline))} m²`)
-        .join(' · '),
+      label: members.map((member) => `${member.name} ${metres2(member.measure)} m²`).join(' · '),
     })
   }
   return joins

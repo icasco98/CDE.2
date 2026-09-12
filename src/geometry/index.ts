@@ -1,4 +1,5 @@
-export type { Footprint, Point, Polygon } from './types'
+export type { Arc, Footprint, Point, Polygon } from './types'
+export { angleOf, arcPoints, arcRun, arcThrough, exactArea, sheetArcs } from './arcs'
 export type { Piece, Rect } from './polygon'
 export {
   area,

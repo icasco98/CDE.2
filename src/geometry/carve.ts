@@ -30,7 +30,11 @@ export function subtractPolygons(
   return { polygon: best, split: pieces.length > 1 }
 }
 
-/** `subject` with every cutter taken out of it, in the subject's own frame, so its rotation is kept. */
+/**
+ * `subject` with every cutter taken out of it, in the subject's own frame, so its rotation is
+ * kept. A carve changes the shape of the polygon, so its arcs no longer stand for its walls and
+ * are dropped; a carve that takes nothing off leaves the footprint, and its arcs, as they were.
+ */
 export function carveFootprint(
   subject: Footprint,
   cutters: readonly Footprint[],

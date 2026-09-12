@@ -5,7 +5,8 @@ import { edgeMarks } from './doors'
 import { joinsOf } from './joins'
 
 function room(id: string, name: string, left: number, top: number, width: number, depth: number) {
-  return { id, name, outline: rectangleToPolygon({ left, top, width, depth }) }
+  const outline = rectangleToPolygon({ left, top, width, depth })
+  return { id, name, outline, measure: area(outline) }
 }
 
 function edge(id: string, a: string, b: string, kind: Edge['kind'] = 'open'): Edge {

@@ -1,5 +1,5 @@
 import { storeyLabel } from '../bubbles'
-import { area, boundingBox, type Point, type Rect } from '../geometry'
+import { area, boundingBox, exactArea, type Point, type Rect } from '../geometry'
 import { envelopeOf, type Envelope } from '../massing/numbers'
 import type { Project } from '../model'
 import { streetSides, type DoorMark } from '../views/zoning/doors'
@@ -227,12 +227,17 @@ function plotDraws(project: Project, placement: Placement): readonly Draw[] {
 function roomDraws(standing: readonly Placed[], placement: Placement): readonly Draw[] {
   const draws: Draw[] = []
   for (const { outline } of standing) draws.push(path(outline.map(placement.at), true, ROOM_STROKE))
-  for (const { outline, room } of standing) {
+  for (const { outline, room, footprint } of standing) {
     const bounds = boundingBox(outline)
     const centre = placement.at([bounds.left + bounds.width / 2, bounds.top + bounds.depth / 2])
     draws.push(label([centre[0], centre[1] + mm(0.6)], room.name, LABEL_PT, 'centre'))
     draws.push(
-      label([centre[0], centre[1] - mm(2.8)], `${round1(area(outline))} m²`, NUMBER_PT, 'centre'),
+      label(
+        [centre[0], centre[1] - mm(2.8)],
+        `${round1(exactArea(footprint))} m²`,
+        NUMBER_PT,
+        'centre',
+      ),
     )
   }
   return draws
