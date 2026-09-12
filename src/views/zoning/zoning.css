@@ -2,13 +2,14 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  height: 100%;
+  flex: 1 1 auto;
   min-height: 0;
 }
 
 .zoning-bar {
   display: flex;
   align-items: center;
+  flex: none;
   /* The bar carries enough buttons to wrap on a narrow tab, so its rows sit closer than its
      buttons do and the sheet keeps its height. */
   gap: 0.35rem 0.75rem;
@@ -50,8 +51,9 @@
 .zoning-body {
   display: flex;
   gap: 0.75rem;
-  /* A definite height, so the sheet letterboxes inside it rather than growing to its own shape and running off the screen. */
-  height: 65vh;
+  /* The height the bar leaves, so the sheet letterboxes inside it rather than growing to its own
+     shape; below the floor the page scrolls rather than show a sliver of a plan. */
+  flex: 1 1 0;
   min-height: 320px;
 }
 
@@ -91,9 +93,10 @@
   /* The metres one CSS pixel covers, set by the view on every camera change; every mark on the
      sheet that must hold its size on the screen is sized from it. */
   --per-px: 0.03;
+  /* The sheet stretches to the body's height, border and all, so its edge is not a pixel past it. */
   flex: 1;
   min-width: 0;
-  height: 100%;
+  min-height: 0;
   background: #faf8f4;
   border: 1px solid #e2ddd3;
   border-radius: 4px;
@@ -353,6 +356,7 @@
 .zoning-hint {
   margin: 0;
   color: #6d6862;
+  flex: none;
 }
 
 /*

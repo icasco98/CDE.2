@@ -269,7 +269,9 @@ test('Restore shape says what is in its way rather than opening a prompt with no
 test('a prompt a button opened stands on the room, not on the button', async ({ page }) => {
   await openZoning(page)
   await place(page, 'Dining Room', 8, 8)
-  await place(page, 'Kitchen', 8, 4.5)
+  // Dropped so the room's top wall lands on a grid line rather than midway between two, which
+  // snaps the same way however large the sheet is drawn.
+  await place(page, 'Kitchen', 8, 4.625)
   await page.locator('[data-carve]').click()
   await expect(roomNamed(page, 'Dining Room')).toHaveAttribute('data-area', '21.25')
   await clickSheet(page, 8, 9)
@@ -557,7 +559,9 @@ async function everyGesture(page: Page): Promise<Record<string, unknown>> {
   await expect(page.locator('[data-proposal]')).toHaveCount(1)
   await page.locator('[data-proposal]').click()
   await expect(page.locator('[data-edge]')).toHaveCount(1)
-  await drag(page, await onSheet(page, 8, 7.625), await onSheet(page, 5, 6.625))
+  // Grabbed above its middle: the Dining Room's rotation handle stands a fixed number of pixels
+  // clear of its wall, which on a shorter sheet is a metre or more up into the Kitchen.
+  await drag(page, await onSheet(page, 8, 7), await onSheet(page, 5, 6))
   await drag(page, await centreOf(page, '[data-rotate-handle]'), await onSheet(page, 9, 6.625))
   await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-rotation', '90.0')
   await drag(

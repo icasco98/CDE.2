@@ -386,3 +386,27 @@ test('a room picked in the massing is the room picked on the sheet', async ({ pa
   await openMass(page)
   await expect(prismNamed(page, 'Dining Room')).toHaveClass(/prism-selected/)
 })
+
+test('a handle on the sheet keeps its size on the screen when the window changes height', async ({
+  page,
+}) => {
+  await openTwoRooms(page)
+  await page.getByRole('button', { name: 'Sheet', exact: true }).click()
+  await clickSheet(page, 5, 5.125)
+  await expect(roomNamed(page, 'Kitchen')).toHaveClass(/room-selected/)
+
+  const handle = page.locator('svg.zoning-sheet .resize-handle').first()
+  const before = await handle.boundingBox()
+  const sheetBefore = (await page.locator('svg.zoning-sheet').boundingBox())?.height ?? 0
+
+  await page.setViewportSize({ width: 1280, height: 980 })
+  await expect
+    .poll(async () => (await page.locator('svg.zoning-sheet').boundingBox())?.height ?? 0)
+    .toBeGreaterThan(sheetBefore + 100)
+  const after = await handle.boundingBox()
+  if (!before || !after) throw new Error('the handle is not drawn')
+
+  // The sheet is deeper, so the plan is drawn larger; the handle is the same target it was.
+  expect(Math.abs(after.width - before.width)).toBeLessThanOrEqual(1)
+  expect(Math.abs(after.height - before.height)).toBeLessThanOrEqual(1)
+})
