@@ -325,7 +325,8 @@ test('a door is opened and closed again from the sheet, and an open edge is pick
 }) => {
   await openTwoRooms(page)
   await page.getByRole('button', { name: 'Sheet', exact: true }).click()
-  await page.locator('[data-proposal]').click()
+  // The rulebook gave these two a door when the program was rebuilt, so the sheet carries one
+  // already: this test is about picking it and turning it into an opening.
   await expect(page.locator('[data-edge][data-door="door"]')).toHaveCount(1)
 
   // Nothing picked, so the room's own handles are not standing over the wall the door is on; the

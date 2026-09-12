@@ -7,7 +7,7 @@ async function resting(page: Page) {
   await expect(page.locator('.bubbles-status')).toHaveText('Resting', { timeout: 30000 })
 }
 
-/** The sample's twelve rooms, one of them a stair drawn in both of the bands it spans. */
+/** The sample's twelve rooms, one of them a stair drawn on both the storeys it spans. */
 const TWINS = 13
 
 async function open(page: Page) {
@@ -30,8 +30,9 @@ function positions(page: Page) {
   )
 }
 
+/** A room by its name, which the bubble carries: a small one draws its initials, not its name. */
 function roomNamed(page: Page, name: string) {
-  return page.locator('[data-room]').filter({ has: page.getByText(name, { exact: true }) })
+  return page.locator(`[data-room][data-name="${name}"]`)
 }
 
 async function centre(target: Locator) {
@@ -48,11 +49,23 @@ async function drag(page: Page, from: { x: number; y: number }, to: { x: number;
   await page.mouse.up()
 }
 
-test('draws every room as a circle inside its storey band', async ({ page }) => {
+test('draws every room as a circle on the plot, inside the buildable line', async ({ page }) => {
   await open(page)
-  await expect(page.locator('.band-label')).toHaveText(['Ground', 'First'])
-  await expect(page.getByText('Diwaniya', { exact: true })).toBeVisible()
-  await expect(page.getByText('55 m²')).toBeVisible()
+  await expect(page.locator('svg.bubbles-sheet .plot')).toHaveCount(1)
+  await expect(page.locator('svg.bubbles-sheet [data-buildable]')).toHaveCount(1)
+  await expect(page.locator('svg.bubbles-sheet .north')).toHaveCount(1)
+  await expect(page.locator('svg.bubbles-sheet .scale-bar')).toHaveCount(1)
+  await expect(roomNamed(page, 'Diwaniya').locator('.bubble-name')).toHaveText('Diwaniya')
+  await expect(roomNamed(page, 'Diwaniya').locator('.bubble-area')).toHaveText('55 m²')
+})
+
+test('draws the front door as a link to the street with a mark at the outside end', async ({
+  page,
+}) => {
+  await open(page)
+  const door = page.locator('[data-kind="main-door"]')
+  await expect(door).toHaveCount(1)
+  await expect(door.locator('.main-door-mark')).toHaveCount(1)
 })
 
 test('settles to the same picture from two fresh loads', async ({ page }) => {
@@ -166,7 +179,7 @@ async function metreUnder(page: Page, at: { x: number; y: number }) {
   )
 }
 
-/** A point on the sheet with nothing but a band under it, so a press there is a pan. */
+/** A point on the sheet with nothing but the plot under it, so a press there is a pan. */
 async function emptySpot(page: Page): Promise<{ x: number; y: number }> {
   const found = await page.evaluate(() => {
     const sheet = document.querySelector('svg.bubbles-sheet')
@@ -177,7 +190,7 @@ async function emptySpot(page: Page): Promise<{ x: number; y: number }> {
         const x = Math.round(box.x + box.width * across)
         const y = Math.round(box.y + box.height * down)
         const on = document.elementFromPoint(x, y)
-        if (on === sheet || on?.classList.contains('band')) return { x, y }
+        if (on === sheet || on?.classList.contains('plot')) return { x, y }
       }
     }
     return null
@@ -253,7 +266,7 @@ test('link mode joins two rooms by two clicks', async ({ page }) => {
   await page.mouse.click(other.x, other.y)
   await expect(page.locator('[data-edge]')).toHaveCount(links + 1)
   await page.locator('svg.bubbles-sheet').press('Escape')
-  await expect(page.locator('.bubbles-hint')).toContainText('Drag a bubble')
+  await expect(page.locator('.bubbles-hint')).toContainText('Every storey at once')
 })
 
 test('a selected link says its kind and is turned from a door into an opening', async ({
@@ -285,27 +298,28 @@ test('a selected room goes on Delete, and its links go with it', async ({ page }
   await expect(page.getByRole('button', { name: 'Delete', exact: true })).toBeDisabled()
 })
 
-test('the storey filter greys the other storeys and takes them out of reach', async ({ page }) => {
+test('the storey group draws one storey on the plot, and All greys the one above', async ({
+  page,
+}) => {
   await open(page)
   await settle(page)
   await page
     .getByRole('group', { name: 'Storey shown' })
     .getByRole('button', { name: 'First' })
     .click()
-  await expect(roomNamed(page, 'Kitchen')).toHaveClass(/bubble-dimmed/)
+  await expect(roomNamed(page, 'Kitchen')).toHaveCount(0)
   await expect(roomNamed(page, 'Master Bedroom')).not.toHaveClass(/bubble-dimmed/)
-  await expect(page.locator('.link-dimmed').first()).toBeVisible()
-  const at = await centre(roomNamed(page, 'Kitchen').locator('[data-bubble]'))
-  await page.mouse.click(at.x, at.y)
-  await expect(page.locator('.bubble-selected')).toHaveCount(0)
   await page
     .getByRole('group', { name: 'Storey shown' })
     .getByRole('button', { name: 'All' })
     .click()
   await expect(roomNamed(page, 'Kitchen')).not.toHaveClass(/bubble-dimmed/)
+  // Every storey at once: the ground is the floor the hand works on and the one above is faint.
+  await expect(roomNamed(page, 'Master Bedroom')).toHaveClass(/bubble-dimmed/)
+  await expect(page.locator('.link-dimmed').first()).toBeVisible()
 })
 
-test('the legend names every category and both kinds of link', async ({ page }) => {
+test('the legend stands beside the sheet and names every mark on it', async ({ page }) => {
   await open(page)
   await expect(page.locator('.legend-label')).toHaveText([
     'Reception',
@@ -314,8 +328,11 @@ test('the legend names every category and both kinds of link', async ({ page }) 
     'Service',
     'Open',
     'Held in place',
-    'Proposed',
     'Door',
     'Open',
+    'Front door',
+    'Buildable line',
   ])
+  // Beside the drawing, never over it: the legend is not in the sheet at all.
+  await expect(page.locator('svg.bubbles-sheet .legend')).toHaveCount(0)
 })

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { area } from '../../geometry'
 import type { Household, Project } from '../../model'
 import { defaultProgram } from '../../rulebook'
+import { connectDefaults } from '../../app/defaultLinks'
 import { session } from '../../app/session'
 import { CheckField, NumberField, Section } from './fields'
 import { refusalOf } from './refusals'
@@ -32,6 +33,9 @@ export function HouseholdSection({ project }: { project: Project }) {
         })
         if (!added.ok) return added
       }
+      // The rulebook's default connections come with the program, as edges: the designer removes
+      // what this house does not want rather than accepting one offer at a time.
+      return connectDefaults(session)
     })
     setProblem(refusalOf(refusal))
     setChanged(false)

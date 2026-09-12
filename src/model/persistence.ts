@@ -1,3 +1,5 @@
+import { boundingBox, type Polygon } from '../geometry'
+import { buildableArea } from '../rulebook/setbacks'
 import { isDocument, parseProject, type Document } from './parse'
 import { STARTING_HEIGHT_M, startingHousehold } from './project'
 import type { Store } from './store'
@@ -35,12 +37,94 @@ function householdMasterOnGround(document: Document): Document {
   return { ...document, household: { masterOnGround: false, ...household } }
 }
 
+/** A stored room as the bubble migration reads one; everything else about it is left alone. */
+type BandedRoom = {
+  readonly storey?: unknown
+  readonly storeysSpanned?: unknown
+  readonly targetArea?: unknown
+  readonly bubble?: unknown
+}
+
+function numberOr(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
+/**
+ * The height of one band on the old sheet. The stacked bands are gone from the tool, but a
+ * version 5 file was written against them, so the arithmetic that placed them lives on here and
+ * nowhere else: wide enough for the largest room and for the busiest storey's rooms in a square.
+ */
+function bandHeightOf(rooms: readonly BandedRoom[]): number {
+  let largest = 0
+  const perStorey = new Map<number, number>()
+  for (const room of rooms) {
+    const target = Math.max(0, numberOr(room.targetArea, 0))
+    largest = Math.max(largest, Math.sqrt(target / Math.PI))
+    const storey = numberOr(room.storey, 0)
+    perStorey.set(storey, (perStorey.get(storey) ?? 0) + target)
+  }
+  let busiest = 0
+  for (const total of perStorey.values()) busiest = Math.max(busiest, total)
+  return Math.max(12, largest * 4, Math.sqrt(busiest) * 1.2)
+}
+
+function bubbleOf(room: BandedRoom): { readonly x: number; readonly y: number } | undefined {
+  if (!isDocument(room.bubble)) return undefined
+  const { x, y } = room.bubble
+  if (typeof x !== 'number' || typeof y !== 'number') return undefined
+  return { x, y }
+}
+
+/**
+ * Bubbles leave the stacked bands for the plot's own metres, the frame a footprint uses. Where a
+ * bubble stood in its band is all the old sheet knew, so the band is mapped onto the buildable
+ * area: across the cloud's own width to across the buildable width, and down the band to down the
+ * buildable depth. A project with no bubbles is handed back as it came.
+ */
+function bubblesToPlotMetres(document: Document): Document {
+  const rooms = Array.isArray(document.rooms) ? (document.rooms as readonly BandedRoom[]) : []
+  const bubbles = rooms.map(bubbleOf)
+  if (!bubbles.some((bubble) => bubble !== undefined)) return document
+  const plot = isDocument(document.plot) ? document.plot : {}
+  const polygon = Array.isArray(plot.polygon) ? (plot.polygon as Polygon) : []
+  const street = Array.isArray(plot.street) ? (plot.street as readonly number[]) : []
+  const inside = buildableArea({ polygon, street })
+  const box = boundingBox(inside.length >= 3 ? inside : polygon)
+  const storeys = Math.max(1, Math.trunc(numberOr(document.storeys, 1)))
+  const bandHeight = bandHeightOf(rooms)
+  let left = Infinity
+  let right = -Infinity
+  for (const bubble of bubbles) {
+    if (!bubble) continue
+    left = Math.min(left, bubble.x)
+    right = Math.max(right, bubble.x)
+  }
+  const share = (value: number, from: number, span: number): number =>
+    span > 1e-9 ? Math.min(1, Math.max(0, (value - from) / span)) : 0.5
+  return {
+    ...document,
+    rooms: rooms.map((room, index) => {
+      const bubble = bubbles[index]
+      if (!bubble) return room
+      const top = (storeys - 1 - numberOr(room.storey, 0)) * bandHeight
+      return {
+        ...room,
+        bubble: {
+          x: box.left + share(bubble.x, left, right - left) * box.width,
+          y: box.top + share(bubble.y, top, bandHeight) * box.depth,
+        },
+      }
+    }),
+  }
+}
+
 /** From the version keyed to the next one. */
 const migrations: ReadonlyMap<number, Migration> = new Map<number, Migration>([
   [1, (document) => ({ household: startingHousehold, ...document })],
   [2, weightsToFamilies],
   [3, storeysToHeights],
   [4, householdMasterOnGround],
+  [5, bubblesToPlotMetres],
 ])
 
 export function serialize(project: Project): string {

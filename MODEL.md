@@ -99,8 +99,15 @@ Each stage adds constraints. None changes the graph.
   pin the room touched until released.
 - **Connect** and **disconnect** are the only ways edges come and go;
   an edge's `kind` may be changed in place and it stays the same edge.
-  The tool may **propose** an edge when two rooms come to touch or the
-  rulebook expects one; a person accepts it.
+  The rulebook's default connections arrive as edges when a program is
+  rebuilt or a room is added; a person disconnects what this house
+  does not want, and a pair taken out is not offered again in that
+  project. The tool may still **propose** an edge when two rooms come
+  to touch in zoning; a person accepts it.
+- **Send to a storey** moves a room with its companions (auxiliary
+  kinds joined to it and to no other room), drops the edges it can no
+  longer hold, and connects the defaults on the new storey, in one
+  transaction that one undo reverts. A stair refuses.
 - **Settle** runs the solver on unpinned rooms. It is interruptible:
   grab a room and it pins, the rest continue.
 - **Undo** covers rooms, edges, plot, storeys, heights, weights and

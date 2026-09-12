@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { rectangleToPolygon } from '../../geometry'
+import { rectangleToPolygon } from '../geometry'
 import { extentOf, pointsOf } from './frame'
 
 const plot = rectangleToPolygon({ left: 0, top: 0, width: 20, depth: 25 })

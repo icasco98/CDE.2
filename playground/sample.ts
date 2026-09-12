@@ -1,4 +1,4 @@
-import { createIdGenerator, createStore, type Store } from '../src/model'
+import { createIdGenerator, createStore, EXTERIOR, type Store } from '../src/model'
 
 type Seed = {
   readonly name: string
@@ -87,5 +87,8 @@ export function sampleStore(): Store {
     const to = ids.get(b)
     if (from && to) actions.connect({ a: from, b: to, kind: 'door' })
   }
+  // The front door, so the sample has the one link that runs off the bubbles to the street.
+  const entry = ids.get('Entry')
+  if (entry) actions.connect({ a: EXTERIOR, b: entry, kind: 'main-door' })
   return store
 }

@@ -4,9 +4,9 @@ import { openSheet } from './plan'
 type Corner = readonly [number, number]
 
 /**
- * The house the reference case reads: two storeys, the program rebuilt from the household, the
- * plot binding, the bubbles settled and every proposed link taken, which is the state a person
- * reaches the Zoning tab in.
+ * The house the reference case reads: two storeys, the program rebuilt from the household with
+ * the rulebook's default connections as edges, the plot binding and the bubbles settled, which is
+ * the state a person reaches the Zoning tab in.
  */
 async function openZoning(page: Page): Promise<void> {
   await page.goto('/')
@@ -18,7 +18,6 @@ async function openZoning(page: Page): Promise<void> {
   await expect(page.locator('svg g[data-room]').first()).toBeVisible()
   await page.getByRole('button', { name: 'Settle now' }).click()
   await expect(page.locator('.bubbles-status')).toHaveText('Resting', { timeout: 30000 })
-  await page.getByRole('button', { name: 'Accept all proposals' }).click()
 
   await openSheet(page)
 }

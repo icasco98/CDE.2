@@ -1,4 +1,4 @@
-import { storeyLabel } from '../bubbles'
+import { storeyLabel } from '../rulebook'
 import { area, boundingBox, exactArea, type Point, type Rect } from '../geometry'
 import { envelopeOf, type Envelope } from '../massing/numbers'
 import type { Project } from '../model'

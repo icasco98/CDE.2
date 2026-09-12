@@ -1,0 +1,84 @@
+/*
+ * The ground both sheets draw: the plot, its street sides, the buildable line, north and the
+ * scale bar. Every rule names both sheets, because one plot drawn twice must read the same way
+ * twice; everything else each stylesheet keeps to itself.
+ *
+ * Every stroke is in pixels on the screen, not metres on the sheet, so a zoom draws a bigger plot
+ * and not a heavier boundary.
+ */
+
+.zoning-sheet .grid-line,
+.bubbles-sheet .grid-line {
+  fill: none;
+  stroke: #ddd6c8;
+  stroke-width: 0.5px;
+}
+
+.zoning-sheet .plot,
+.bubbles-sheet .plot {
+  stroke: #6f6a62;
+  stroke-width: 2px;
+}
+
+/* The plot is drawn for reference when it does not bind, so it is thin and broken. */
+.zoning-sheet .plot-off,
+.bubbles-sheet .plot-off {
+  stroke-width: 1px;
+  stroke-dasharray: 8 6;
+}
+
+/* The setback line is a wall, not a room: no fill, and dashed so it is never read as a boundary. */
+.zoning-sheet .buildable,
+.bubbles-sheet .buildable {
+  fill: none;
+  stroke: #8a3f2a;
+  stroke-width: 1.5px;
+  stroke-dasharray: 6 4;
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.zoning-sheet .street,
+.bubbles-sheet .street {
+  stroke: #4a453d;
+  stroke-width: 5px;
+  stroke-linecap: square;
+}
+
+.zoning-sheet .street-label,
+.zoning-sheet .north text,
+.zoning-sheet .scale-bar text,
+.bubbles-sheet .street-label,
+.bubbles-sheet .north text,
+.bubbles-sheet .scale-bar text {
+  fill: #6d6862;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+
+/* The arrow and the bar are drawn in pixels inside a counter-scaled group, so their type is too. */
+.zoning-sheet .north text,
+.zoning-sheet .scale-bar text,
+.bubbles-sheet .north text,
+.bubbles-sheet .scale-bar text {
+  font-size: 12px;
+}
+
+.zoning-sheet .street-label,
+.bubbles-sheet .street-label {
+  font-size: calc(var(--per-px) * 11px);
+}
+
+.zoning-sheet .north line,
+.zoning-sheet .scale-bar line,
+.bubbles-sheet .north line,
+.bubbles-sheet .scale-bar line {
+  stroke: #6d6862;
+  stroke-width: 1.5px;
+}
+
+.zoning-sheet .north polygon,
+.bubbles-sheet .north polygon {
+  fill: #6d6862;
+}

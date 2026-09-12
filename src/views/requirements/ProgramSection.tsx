@@ -1,12 +1,19 @@
 import { useState } from 'react'
 import { area } from '../../geometry'
 import type { Project } from '../../model'
-import { categoryLabels, typesByCategory } from '../../rulebook'
+import {
+  buildableAreaOf,
+  categoryLabels,
+  fitSentence,
+  storeyFits,
+  storeyLabel,
+  typesByCategory,
+} from '../../rulebook'
 import { session } from '../../app/session'
 import { addRoomWithCompanion } from './addRoom'
 import { Section } from './fields'
 import { addStorey, removeStorey } from './storeys'
-import { metres2, storeyLabel } from './format'
+import { metres2 } from './format'
 import { ProgramRow } from './ProgramRow'
 import { refusalOf } from './refusals'
 
@@ -19,12 +26,10 @@ export function ProgramSection({ project }: { project: Project }) {
     setProblem(refusalOf(addRoomWithCompanion(session, kind, plotArea, project.storeys)))
   }
 
-  const perStorey = Array.from({ length: project.storeys }, (_, storey) =>
-    project.rooms
-      .filter((room) => room.storey === storey)
-      .reduce((sum, room) => sum + room.targetArea, 0),
-  )
-  const total = perStorey.reduce((sum, value) => sum + value, 0)
+  // The same reading the bubbles sheet gives, from the same function: what each storey's targets
+  // come to against the floor the setbacks leave it, a stair counted on every storey it reaches.
+  const fits = storeyFits(project.rooms, buildableAreaOf(project.plot), project.storeys)
+  const total = fits.reduce((sum, fit) => sum + fit.needed, 0)
 
   return (
     <Section title="Program">
@@ -76,10 +81,11 @@ export function ProgramSection({ project }: { project: Project }) {
       </div>
       {problem ? <p className="problem">{problem}</p> : null}
       <dl className="totals">
-        {perStorey.map((value, storey) => (
-          <div key={storey}>
-            <dt>{storeyLabel(storey)}</dt>
-            <dd>{metres2(value)} m²</dd>
+        {fits.map((fit) => (
+          <div key={fit.storey} className={fit.over ? 'fit-over' : undefined}>
+            <dt>{storeyLabel(fit.storey)}</dt>
+            <dd>{metres2(fit.needed)} m²</dd>
+            <dd className="fit">{fitSentence(fit)}</dd>
           </div>
         ))}
         <div>

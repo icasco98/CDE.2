@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createState, settle } from '../../bubbles'
+import { buildableOf, createState, settle } from '../../bubbles'
 import {
   area,
   boundingBox,
@@ -19,7 +19,13 @@ import {
   type Project,
   type Room,
 } from '../../model'
-import { defaultProgram, proposedConnections, roomTypeById, roomTypes } from '../../rulebook'
+import {
+  buildableArea,
+  defaultProgram,
+  impliedConnections,
+  roomTypeById,
+  roomTypes,
+} from '../../rulebook'
 import { offTarget, proportionOf, sizesOf, startingRectangle, type RoomSizes } from './defaults'
 import { layOut } from './layout'
 
@@ -31,7 +37,8 @@ type Household = Project['household']
 
 /**
  * A project as the person reaches the Zoning tab with it: the program rebuilt from the household,
- * every proposed link taken, and the bubbles settled, which is where a plan is read from.
+ * the rulebook's default connections as edges, and the bubbles settled on the plot, which is where
+ * a plan is read from.
  */
 function diagram(
   storeys = 2,
@@ -45,18 +52,13 @@ function diagram(
   const opened = store.getState()
   for (const room of defaultProgram(area(opened.plot.polygon), opened.household, storeys))
     store.actions.addRoom(room)
-  for (const proposal of proposedConnections(store.getState().rooms, store.getState().edges))
-    store.actions.connect({
-      a: proposal.a,
-      b: proposal.b,
-      kind: proposal.kind,
-      storey: proposal.storey,
-    })
+  for (const link of impliedConnections(store.getState().rooms, store.getState().edges))
+    store.actions.connect({ a: link.a, b: link.b, kind: link.kind, storey: link.storey })
   const project = store.getState()
   const state = createState(
     project.rooms.map((room) => ({ ...room, tier: roomTypeById(room.type)?.tier })),
     project.edges.filter((edge) => edge.a !== EXTERIOR && edge.b !== EXTERIOR),
-    project.storeys,
+    buildableOf(buildableArea(project.plot)),
   )
   for (const body of settle(state).state.bodies)
     store.actions.setBubble(body.id, { x: body.x, y: body.y })
@@ -244,7 +246,7 @@ describe('a plan laid out from the bubbles', () => {
 })
 
 describe('the reference case: the two-storey default program on the 20 × 25 plot', () => {
-  it('lays the ground floor out with no overlap, every room at its target size, linked rooms 6.56 m apart on average against 10.30 m for unlinked', () => {
+  it('lays the ground floor out with no overlap, every room at its target size, linked rooms 8.97 m apart on average against 11.33 m for unlinked', () => {
     const project = diagram(2)
     const out = laid(project, 0)
     if (!out.ok) throw new Error(out.reason)
@@ -261,8 +263,8 @@ describe('the reference case: the two-storey default program on the 20 × 25 plo
     }
 
     const { linked, apart } = spans(project, rooms)
-    expect(linked).toBeCloseTo(6.56, 1)
-    expect(apart).toBeCloseTo(10.3, 1)
+    expect(linked).toBeCloseTo(8.97, 1)
+    expect(apart).toBeCloseTo(11.33, 1)
     expect(linked).toBeLessThan(apart)
   })
 })

@@ -1,3 +1,4 @@
+import { removedLinks } from '../../app/defaultLinks'
 import { selection, useSelection } from '../../app/selection'
 import { session } from '../../app/session'
 import { useProject } from '../../app/useProject'
@@ -91,7 +92,12 @@ export function ZoningStage(props: {
       onConnect={(a: Endpoint, b: Endpoint, storey: number) =>
         report(session.actions.connect({ a, b, kind: 'door', storey }))
       }
-      onDisconnect={(edgeId: string) => report(session.actions.disconnect(edgeId))}
+      onDisconnect={(edgeId: string) => {
+        // A link taken out here is out of this house, so the rulebook does not offer it again.
+        const edge = project.edges.find((each) => each.id === edgeId)
+        report(session.actions.disconnect(edgeId))
+        if (edge) removedLinks.remember(project.id, edge.a, edge.b)
+      }}
       onSelect={selection.select}
       onStorey={props.onStorey}
       onSetEdgeKind={(edgeId: string, kind: EdgeKind) =>

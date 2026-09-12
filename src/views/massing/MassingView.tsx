@@ -3,7 +3,7 @@ import { area, boundingBox, outlineOf, type Point } from '../../geometry'
 import { envelopeOf, facesOf, roomsInOrder, type Point3 } from '../../massing'
 import { occupiedStoreys, type Room } from '../../model'
 import { pointerAt, wheelFactor } from '../camera'
-import { storeyLabel } from '../requirements/format'
+import { storeyLabel } from '../../rulebook'
 import { Storeys } from '../zoning/parts'
 import { centreOf, groundOf, northOf, planAzimuth } from './frame'
 import {

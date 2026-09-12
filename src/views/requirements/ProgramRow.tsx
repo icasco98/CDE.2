@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import type { Room } from '../../model'
 import { categoryLabels, roomTypeById, spansAllStoreys, typesByCategory } from '../../rulebook'
+import { sendToStorey } from '../../app/sendToStorey'
 import { session } from '../../app/session'
 import { NumberInput } from './fields'
-import { storeyLabel } from './format'
+import { storeyLabel } from '../../rulebook'
 import { refusalOf } from './refusals'
 import { spanBetween, startsFor, topAfterStart, topOf, topsFor } from './spans'
 
@@ -103,7 +104,9 @@ export function ProgramRow({ room, storeys }: { room: Room; storeys: number }) {
             aria-label="Storey"
             value={room.storey}
             onChange={(event) =>
-              setProblem(refusalOf(session.actions.setStorey(room.id, Number(event.target.value))))
+              // A room takes its companions up with it and leaves behind what it can no longer
+              // hold, whether it is sent from the program or from the bubble on the sheet.
+              setProblem(refusalOf(sendToStorey(session, room.id, Number(event.target.value))))
             }
           >
             {Array.from({ length: storeys }, (_, storey) => (

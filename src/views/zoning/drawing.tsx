@@ -2,7 +2,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 import { outlineOf, type Footprint, type Point, type Polygon } from '../../geometry'
 import type { Room } from '../../model'
 import { metres2 } from '../requirements/format'
-import { pointsOf } from './frame'
+import { pointsOf } from '../frame'
 
 /** How wide a point handle, the "+" beside it and the mark on a corner are, in pixels. */
 const VERTEX_PX = 9

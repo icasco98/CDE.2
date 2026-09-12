@@ -13,7 +13,7 @@ import type { Edge } from '../../model'
 import { fitCamera, metresPerPixel, viewBoxOf, zoomAbout, ZOOM_STEP } from '../camera'
 import { wallPairs } from './doors'
 import { circleFootprint, closesAt, drawnPolygon, type Corner } from './draw'
-import { extentOf } from './frame'
+import { extentOf } from '../frame'
 import { moveFootprint, moveSharedWall, sheetOf, type Neighbour, type Sheet } from './gestures'
 import { joinsOf } from './joins'
 

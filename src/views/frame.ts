@@ -1,10 +1,13 @@
-import { boundingBox, type Point, type Polygon } from '../../geometry'
-import type { Extent } from '../camera'
+import { boundingBox, type Point, type Polygon } from '../geometry'
+import type { Extent } from './camera'
 
 /** Air around the drawing in metres, so a label or a handle at the edge is not cut off. */
 const MARGIN = 2.5
 
-/** The plot and everything drawn on it, with room around the lot for the marks outside a wall. */
+/**
+ * The plot and everything drawn on it, with room around the lot for the marks outside a wall. Both
+ * sheets frame the plot this way, so the bubbles and the plan are the same picture at one scale.
+ */
 export function extentOf(plot: Polygon, outlines: readonly Polygon[]): Extent {
   const corners = [...plot, ...outlines.flat()]
   const bounds = boundingBox(corners.length > 0 ? corners : [[0, 0] as Point, [20, 25] as Point])

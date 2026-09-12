@@ -224,6 +224,43 @@ describe('the project file', () => {
     expect(back.ok && back.value.household.masterOnGround).toBe(true)
   })
 
+  it('maps bubbles in the old bands into the plot metres a footprint uses', () => {
+    // A version 5 project of two storeys: the bands were 12 m deep, the first storey's band ran
+    // from 0 to 12 and the ground's from 12 to 24, and x counted either side of nought.
+    const project = furnished()
+    const rooms = project.rooms.map((room, index) => ({
+      ...room,
+      targetArea: 12,
+      bubble: index === 0 ? { x: -6, y: 18 } : { x: 6, y: 6 },
+    }))
+    const back = deserialize(JSON.stringify({ ...project, rooms, version: 5 }))
+    if (!back.ok) throw new Error('the version 5 project was refused')
+    // This plot faces two streets, so the setbacks leave 2 to 18.5 across and 2 to 23.5 down.
+    for (const room of back.value.rooms) {
+      expect(room.bubble?.x).toBeGreaterThanOrEqual(2)
+      expect(room.bubble?.x).toBeLessThanOrEqual(18.5)
+      expect(room.bubble?.y).toBeGreaterThanOrEqual(2)
+      expect(room.bubble?.y).toBeLessThanOrEqual(23.5)
+    }
+    // Across the cloud's width to across the buildable width, and down the band to down its depth:
+    // the leftmost bubble, halfway down the ground band, lands left and halfway down the floor.
+    expect(back.value.rooms[0]?.bubble).toEqual({ x: 2, y: 12.75 })
+    expect(back.value.rooms[1]?.bubble).toEqual({ x: 18.5, y: 2 })
+    expect(back.value.rooms[2]?.bubble).toEqual({ x: 18.5, y: 12.75 })
+    expect(back.value.version).toBe(PROJECT_VERSION)
+  })
+
+  it('leaves a version 5 project with no bubbles exactly as it was', () => {
+    const project = furnished()
+    const rooms = project.rooms.map((room) => {
+      const without: Record<string, unknown> = { ...room }
+      delete without.bubble
+      return without
+    })
+    const back = deserialize(JSON.stringify({ ...project, rooms, version: 5 }))
+    expect(back.ok && back.value.rooms.every((room) => room.bubble === undefined)).toBe(true)
+  })
+
   it('refuses a version it cannot migrate and one from a newer tool', () => {
     const project = furnished()
     expect(deserialize(JSON.stringify({ ...project, version: 0 }))).toMatchObject({
