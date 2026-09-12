@@ -1,11 +1,51 @@
-import { useEffect, useState, type ChangeEvent } from 'react'
+import {
+  useEffect,
+  useState,
+  type ChangeEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from 'react'
 import { deserialize, serialize } from '../model'
 import { ExportMenu } from './ExportMenu'
 import { downloadBlob, fileNameFor } from './files'
 import { NotYet } from './NotYet'
-import { session } from './session'
+import { session, type Message } from './session'
 import { stages } from './stages'
 import { useMessages, useProject } from './useProject'
+
+/** At most four, newest at the bottom; older ones are dropped rather than scrolled to. */
+const maxVisible = 4
+
+/** The corner stack: fading refusals dismiss on a click, sticky problems only by their button or Escape. */
+function MessageStack({ messages }: { messages: readonly Message[] }) {
+  const visible = messages.slice(-maxVisible)
+  return (
+    <ul className="messages" role="status" aria-live="polite">
+      {visible.map((message) => {
+        const sticky = message.until === undefined
+        const onKeyDown = (event: ReactKeyboardEvent<HTMLLIElement>): void => {
+          if (sticky && event.key === 'Escape') session.dismiss(message.id)
+        }
+        return (
+          <li
+            key={message.id}
+            data-sticky={sticky || undefined}
+            onKeyDown={onKeyDown}
+            onClick={() => {
+              if (!sticky) session.dismiss(message.id)
+            }}
+          >
+            <span>{message.text}</span>
+            {sticky && (
+              <button type="button" onClick={() => session.dismiss(message.id)}>
+                Dismiss
+              </button>
+            )}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
 
 export function Shell() {
   const project = useProject()
@@ -93,21 +133,10 @@ export function Shell() {
           ))}
         </nav>
       </header>
-      {messages.length > 0 && (
-        <ul className="messages">
-          {messages.map((message) => (
-            <li key={message.id}>
-              <span>{message.text}</span>
-              <button type="button" onClick={() => session.dismiss(message.id)}>
-                Dismiss
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
       <main className={`stage-${stageId}`}>
         <Screen />
       </main>
+      <MessageStack messages={messages} />
     </>
   )
 }

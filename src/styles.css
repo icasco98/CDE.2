@@ -28,8 +28,7 @@ h2 {
 }
 
 main,
-.shell,
-.messages {
+.shell {
   max-width: 960px;
   margin: 0 auto;
   padding: 0 1.5rem;
@@ -269,9 +268,22 @@ table.program td input[type='number'] {
   margin: 0;
 }
 
+/* Fixed over the corner rather than in flow, so a refusal never pushes the drawing down the
+   page; pointer-events stay off the empty stack so it never steals a gesture on the sheet
+   beneath it, and come back on each line so its Dismiss button and click-to-close still work. */
 .messages {
+  position: fixed;
+  left: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
   list-style: none;
-  margin-top: 1rem;
+  max-width: min(420px, calc(100vw - 3rem));
+  pointer-events: none;
 }
 
 .messages li {
@@ -282,8 +294,12 @@ table.program td input[type='number'] {
   border: 1px solid #a5442c;
   border-radius: 3px;
   padding: 0.5rem 0.75rem;
-  margin-bottom: 0.5rem;
   background: #fdf3f0;
+  pointer-events: auto;
+}
+
+.messages li:not([data-sticky]) {
+  cursor: pointer;
 }
 
 .hidden-label {
