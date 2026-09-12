@@ -757,3 +757,28 @@ test('a pinned room is not aligned, and the message says why', async ({ page }) 
   await expect(page.locator('.messages')).toContainText('Kitchen is pinned')
   await expect(roomNamed(page, 'Kitchen')).toHaveAttribute('data-rotation', '15.0')
 })
+
+test('three refusals in a row move nothing on the sheet', async ({ page }) => {
+  await openZoning(page)
+  await place(page, 'Dining Room', 8, 8)
+  await place(page, 'Kitchen', 8, 20)
+  await place(page, 'Guest WC', 20, 8)
+  const sheet = page.locator('svg.zoning-sheet')
+  const before = await sheet.boundingBox()
+
+  // Each room pinned in turn, then dropped over another: pinned refuses the drop outright, so
+  // three different rooms give three different sentences rather than one refusal said thrice.
+  for (const [name, from, onto] of [
+    ['Dining Room', { x: 8, y: 8 }, { x: 8, y: 20 }],
+    ['Kitchen', { x: 8, y: 20 }, { x: 20, y: 8 }],
+    ['Guest WC', { x: 20, y: 8 }, { x: 8, y: 8 }],
+  ] as const) {
+    await clickSheet(page, from.x, from.y)
+    await page.getByRole('button', { name: 'Pin' }).click()
+    await drag(page, await onSheet(page, from.x, from.y), await onSheet(page, onto.x, onto.y))
+    await expect(page.locator('.messages')).toContainText(`${name} is pinned`)
+  }
+
+  await expect(page.locator('.messages li')).toHaveCount(3)
+  expect(await sheet.boundingBox()).toEqual(before)
+})
