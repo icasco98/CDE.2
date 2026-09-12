@@ -1,14 +1,21 @@
 {
-  "revision": 27,
-  "date": "12 Sep 2026",
-  "session": "Session 3",
+  "revision": 28,
+  "date": "13 Sep 2026",
+  "session": "Session 4",
   "repo": "https://github.com/icasco98/CDE.2",
-  "headline": "P4 to P7 merged. The run is complete; the tool waits for your test.",
-  "decide": [],
+  "headline": "Z1, Z2 and Z3 merged: the bubbles sit on the plot and settle like a villa. Z4 waits on your word.",
+  "decide": [
+    {
+      "id": "z4",
+      "kind": "start",
+      "text": "Start Z4 half one, the partition: bubbles become zones with every contact kept, the corridor first, reachability checked.",
+      "link": "https://github.com/icasco98/CDE.2/blob/main/PLAN.md"
+    }
+  ],
   "yours": [
     {
-      "id": "test3",
-      "text": "Fetch main, run start, test all three tabs end to end, send comments."
+      "id": "z4",
+      "text": "Say \"start Z4\" for the partition half."
     },
     {
       "id": "o3",
@@ -19,53 +26,39 @@
       "text": "O5 · A fresh brief for the usability run."
     },
     {
-      "id": "o1",
-      "text": "O1 · The firm's edition of MEW R-6."
+      "id": "o4",
+      "text": "O4 · Rulebook walls, with the basement rules for B0."
     },
     {
-      "id": "o7",
-      "text": "O7 · Correct the rulebook tables when you have time."
+      "id": "o1",
+      "text": "O1 · The firm's edition of MEW R-6."
     }
   ],
   "agents": [
     {
-      "task": "P4",
-      "name": "Drawings sized to space",
+      "task": "Z1",
+      "name": "Plot under the bubbles",
       "model": "Opus",
       "stage": 4,
-      "pr": 61
+      "pr": 67
     },
     {
-      "task": "P5",
-      "name": "Circle by target area",
-      "model": "Sonnet",
-      "stage": 4,
-      "pr": 60
-    },
-    {
-      "task": "P6",
-      "name": "Refusals out of the way",
-      "model": "Sonnet",
-      "stage": 4,
-      "pr": 59
-    },
-    {
-      "task": "P7",
-      "name": "Storey count under undo",
+      "task": "Z2+Z3",
+      "name": "Walls, site forces, corridor",
       "model": "Opus",
       "stage": 4,
-      "pr": 58
+      "pr": 69
     }
   ],
   "stages": ["Briefed", "Building", "Review", "Your merge", "Merged"],
   "done": [
-    "P4 to P7 merged: drawings fit the window, a click circles a room at its target area, refusals sit in a corner, storeys undo with the stair.",
-    "Requirements, bubbles and one Plan tab with the massing; every stage edits the same graph.",
-    "Export PDF and DXF with true arcs. 614 unit tests, 123 browser tests, all green."
+    "Z1 (#67): bubbles in plot metres on one plot per storey with the buildable line, one camera with the plan, default connections as edges, a storey move takes the ensuite.",
+    "Z2 and Z3 (#69): frontage claimed diwaniya first, garage bays at the kerb or in tandem, the corridor from the entry, forces with your O7 strengths, feasibility findings on the brief, every link touching on the default villa.",
+    "O7 first pass (#66); decisions 17 to 21 (#65); the basement as B0 of milestone 2 (#68). 741 unit tests, 137 browser tests, all green."
   ],
   "next": [
-    "Your end-to-end test: fetch main, run start, all three tabs, send comments.",
-    "A9 usability run once O3 the known house and O5 the fresh brief exist.",
-    "Milestone 2 waits on O4 walls and the forces revisit."
+    "Z4 half one, the partition, on your word; then half two, the straightening.",
+    "Z5 fit by reduction; then your end-to-end test and A9 with O3 and O5.",
+    "Milestone 2 opens with B0 the basement once O4 gives its rules."
   ]
 }
