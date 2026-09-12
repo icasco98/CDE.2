@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createIdGenerator } from './ids'
+import { checkProject } from './invariants'
 import { startingHousehold } from './project'
 import { createStore, type Store } from './store'
 import { EXTERIOR, ok, type Result } from './types'
@@ -159,19 +160,23 @@ describe('storey heights', () => {
     expect(store.getState().heights).toEqual([3.5])
   })
 
-  it('is undone one height at a time, and fits the storeys in hand', () => {
+  it('is undone one height at a time, with the storeys the height belonged to', () => {
     store.actions.setHeight(0, 4)
     store.actions.addStorey()
     expect(store.getState().heights).toEqual([4, 4])
     store.undo()
-    expect(store.getState().heights).toEqual([3.5, 3.5])
-    expect(store.getState().storeys).toBe(2)
+    expect(store.getState().heights).toEqual([4])
+    expect(store.getState().storeys).toBe(1)
+    store.undo()
+    expect(store.getState().heights).toEqual([3.5])
+    expect(store.getState().storeys).toBe(1)
   })
 })
 
 describe('undo', () => {
-  it('covers rooms, edges, plot, weights and household', () => {
+  it('covers rooms, edges, plot, storeys, weights and household', () => {
     const room = addRoom('bedroom')
+    store.actions.addStorey()
     store.actions.setPlot({ on: true, polygon: [], north: 30, street: [0] })
     store.actions.setWeights({ privacy: 0.8 })
     store.actions.setHousehold({ ...store.getState().household, bedrooms: 6 })
@@ -185,6 +190,8 @@ describe('undo', () => {
     expect(store.getState().weights).toEqual({})
     store.undo()
     expect(store.getState().plot.north).toBe(0)
+    store.undo()
+    expect(store.getState().storeys).toBe(1)
     store.undo()
     expect(store.getState().rooms).toEqual([])
     expect(store.canUndo()).toBe(false)
@@ -218,12 +225,43 @@ describe('undo', () => {
     })
   })
 
-  it('leaves the storey count alone', () => {
+  it('covers the storey count, and its heights with it', () => {
     addRoom('bedroom')
     store.actions.addStorey()
+    expect(store.getState().storeys).toBe(2)
+    store.undo()
+    expect(store.getState().storeys).toBe(1)
+    expect(store.getState().heights).toEqual([3.5])
+    expect(store.getState().rooms).toHaveLength(1)
     store.undo()
     expect(store.getState().rooms).toEqual([])
+    expect(store.getState().storeys).toBe(1)
+  })
+
+  it('takes a removed storey back, with the height it stood at', () => {
+    store.actions.addStorey()
+    store.actions.setHeight(1, 2.8)
+    expect(store.actions.removeStorey().ok).toBe(true)
+    expect(store.getState()).toMatchObject({ storeys: 1, heights: [3.5] })
+    store.undo()
+    expect(store.getState()).toMatchObject({ storeys: 2, heights: [3.5, 2.8] })
+    store.redo()
+    expect(store.getState()).toMatchObject({ storeys: 1, heights: [3.5] })
+  })
+
+  it('walks back through two storeys added one after the other, and forward again', () => {
+    store.actions.addStorey()
+    store.actions.addStorey()
+    expect(store.getState().storeys).toBe(3)
+    store.undo()
+    expect(store.getState()).toMatchObject({ storeys: 2, heights: [3.5, 3.5] })
+    store.undo()
+    expect(store.getState()).toMatchObject({ storeys: 1, heights: [3.5] })
+    expect(store.canUndo()).toBe(false)
+    store.redo()
     expect(store.getState().storeys).toBe(2)
+    store.redo()
+    expect(store.getState().storeys).toBe(3)
   })
 
   it('redoes what it undid, and forgets the redo after a new change', () => {
@@ -236,6 +274,34 @@ describe('undo', () => {
     store.undo()
     store.actions.setType(room, 'diwaniya')
     expect(store.canRedo()).toBe(false)
+  })
+
+  it('leaves a project every check passes at every step back and forward', () => {
+    const stair = addRoom('stair')
+    store.actions.addStorey()
+    store.actions.setStorey(stair, 0, 2)
+    const upstairs = addRoom('bedroom', { storey: 1 })
+    store.actions.connect({ a: stair, b: upstairs, kind: 'open', storey: 1 })
+    store.actions.setHeight(1, 3)
+    store.actions.addStorey()
+
+    const sound = (): void => {
+      const project = store.getState()
+      expect(checkProject(project)).toEqual([])
+      expect(project.heights).toHaveLength(project.storeys)
+      for (const room of project.rooms)
+        expect(room.storey + room.storeysSpanned).toBeLessThanOrEqual(project.storeys)
+    }
+
+    sound()
+    let steps = 0
+    while (store.undo()) {
+      sound()
+      steps += 1
+    }
+    expect(steps).toBe(7)
+    while (store.redo()) sound()
+    expect(store.getState().storeys).toBe(3)
   })
 
   it('keeps a hundred steps', () => {
