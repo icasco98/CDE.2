@@ -211,10 +211,11 @@ export function createActions(context: Context) {
     addStorey(): Result {
       const project = state()
       const top = project.heights[project.heights.length - 1] ?? STARTING_HEIGHT_M
-      return settle(
-        { ...project, storeys: project.storeys + 1, heights: [...project.heights, top] },
-        'aside',
-      )
+      return settle({
+        ...project,
+        storeys: project.storeys + 1,
+        heights: [...project.heights, top],
+      })
     },
 
     setHeight(storey: number, metres: number): Result {
@@ -245,7 +246,7 @@ export function createActions(context: Context) {
           code: 'storey-in-use',
           message: `storey ${top} still holds rooms or edges`,
         })
-      return settle({ ...project, storeys: top, heights: project.heights.slice(0, top) }, 'aside')
+      return settle({ ...project, storeys: top, heights: project.heights.slice(0, top) })
     },
 
     addActor(input: { name: string; role: string }): Result<string> {

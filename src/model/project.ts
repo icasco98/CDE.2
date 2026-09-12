@@ -13,11 +13,12 @@ import {
 /** The floor-to-floor height a storey opens at, in metres. */
 export const STARTING_HEIGHT_M = 3.5
 
-/** What undo restores: rooms, edges, plot, heights, weights and household, and nothing else. */
+/** What undo restores: rooms, edges, plot, storeys, heights, weights and household, and nothing else. */
 export type Snapshot = {
   readonly rooms: readonly Room[]
   readonly edges: readonly Edge[]
   readonly plot: Plot
+  readonly storeys: number
   readonly heights: readonly number[]
   readonly weights: Weights
   readonly household: Household
@@ -63,21 +64,12 @@ export function emptyProject(newId: IdGenerator, name = 'Untitled'): Project {
 }
 
 export function snapshotOf(project: Project): Snapshot {
-  const { rooms, edges, plot, heights, weights, household } = project
-  return { rooms, edges, plot, heights, weights, household }
+  const { rooms, edges, plot, storeys, heights, weights, household } = project
+  return { rooms, edges, plot, storeys, heights, weights, household }
 }
 
-/** One height per storey, padded from the top storey and cut to length. */
-function fitHeights(heights: readonly number[], storeys: number): readonly number[] {
-  if (heights.length === storeys) return heights
-  const fitted = heights.slice(0, storeys)
-  while (fitted.length < storeys) fitted.push(fitted[fitted.length - 1] ?? STARTING_HEIGHT_M)
-  return fitted
-}
-
-/** The storey count is outside undo, so heights from an older step are fitted to the storeys in hand. */
 export function restore(project: Project, snapshot: Snapshot): Project {
-  return { ...project, ...snapshot, heights: fitHeights(snapshot.heights, project.storeys) }
+  return { ...project, ...snapshot }
 }
 
 export function findRoom(project: Project, id: string): Room | undefined {
