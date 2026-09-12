@@ -1,6 +1,7 @@
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { outlineOf, type Footprint, type Point, type Polygon } from '../../geometry'
 import type { Room } from '../../model'
+import { metres2 } from '../requirements/format'
 import { pointsOf } from './frame'
 
 /** How wide a point handle, the "+" beside it and the mark on a corner are, in pixels. */
@@ -44,10 +45,29 @@ export function DrawPreview({
   )
 }
 
-/** The circle the hand is pulling out of its centre, with the radius it has reached. */
-export function CirclePreview({ centre, radius }: { centre: Point; radius: number }) {
+/**
+ * The circle the hand is pulling out of its centre, with the radius it has reached, its live area,
+ * and, faint beside it, the room's target — so the hand can see how far the drag has carried it
+ * from the size a click alone would have given.
+ */
+export function CirclePreview({
+  centre,
+  radius,
+  targetArea,
+  perPixel,
+}: {
+  centre: Point
+  radius: number
+  targetArea: number
+  perPixel: number
+}) {
+  const liveArea = Math.PI * radius * radius
   return (
-    <g className="drawing" data-circle-radius={radius.toFixed(2)}>
+    <g
+      className="drawing"
+      data-circle-radius={radius.toFixed(2)}
+      data-circle-area={liveArea.toFixed(2)}
+    >
       <circle cx={centre[0]} cy={centre[1]} r={Math.max(radius, 0.01)} className="draw-run" />
       <line
         x1={centre[0]}
@@ -56,6 +76,22 @@ export function CirclePreview({ centre, radius }: { centre: Point; radius: numbe
         y2={centre[1]}
         className="draw-close"
       />
+      <text
+        x={centre[0]}
+        y={centre[1]}
+        style={{
+          font: `${12 * perPixel}px sans-serif`,
+          textAnchor: 'middle',
+          dominantBaseline: 'middle',
+          fill: '#2b2822',
+          paintOrder: 'stroke',
+          stroke: '#fffdf9',
+          strokeWidth: 3 * perPixel,
+        }}
+      >
+        {metres2(liveArea)}
+        <tspan fill="#6d6862" fillOpacity={0.75}>{` · target ${metres2(targetArea)}`}</tspan>
+      </text>
     </g>
   )
 }
