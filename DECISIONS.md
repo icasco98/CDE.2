@@ -149,7 +149,15 @@ A reversal is a new entry, never an edit.
     front of a garage bay is the bay's or nobody's. The corridor snaps
     to the nearer grid axis in half two; a diagonal wall appears only
     when the designer draws one by hand, since orthogonal lines are
-    preferred (the owner's ruling). The result is shown dashed with Accept
+    preferred (the owner's ruling). Half two (Z4b) straightened the
+    cells into rectangles and Ls with running walls, stacked the stair
+    across storeys and gave small rooms their exact target, at a cost
+    it declared: room areas up to a third off, centroids up to 6 m from
+    their bubbles, the hallway the leftover, and one rest in three
+    costing the family living its door to the corridor. A cell
+    partition repaired into rooms is at its limit there; Z6 rebuilds
+    the second half around the spine, by the cofounder, keeping Z4b's
+    test harness. The result is shown dashed with Accept
     and Back to bubbles; Accept commits the store once, so one undo
     returns to the bubbles; Back plays the morph in reverse and writes
     nothing. A plan that does not fit is never refused: rooms past the
