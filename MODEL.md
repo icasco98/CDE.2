@@ -98,8 +98,8 @@ Each stage adds constraints. None changes the graph.
   rulebook expects one; a person accepts it.
 - **Settle** runs the solver on unpinned rooms. It is interruptible:
   grab a room and it pins, the rest continue.
-- **Undo** covers rooms, edges, plot, heights, weights and household.
-  The project's name, actors and camera are outside it.
+- **Undo** covers rooms, edges, plot, storeys, heights, weights and
+  household. The project's name, actors and camera are outside it.
 
 ## Persistence
 

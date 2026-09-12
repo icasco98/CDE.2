@@ -27,7 +27,7 @@ for help. No solver, no findings, no analysis.
 | A6 | **Zoning.** Salvaged canvas re-pointed at the graph: move, rotate, resize, carve; plot walls; unrealised edge drawn as tension; proposed edge on touch, accepted by a click; doors drawn from edges. | A2, A3, A5 | Every gesture has a Playwright test. Moving a room never changes an edge. | done, PR #19 |
 | A7 | **Massing.** Salvaged 3D re-pointed at the graph: storeys, heights, envelope numbers, click to select. | A3, A6 | A room selected in any view is selected in all three. | done, PR #23 |
 | A8 | **Export.** PDF to scale, DXF, produced in the browser. | A6, A7 | A printed sheet measures true at its stated scale. The DXF opens in AutoCAD with layers per storey. | done, PR #47 |
-| A9 | **Sample project and usability run.** A sample project; the two owner projects run through the whole loop; fix list worked. | A4 to A8, A10 to A12, F1 to F4, G0 to G4, O3, O5 | The milestone's done condition is met and timed. | todo |
+| A9 | **Sample project and usability run.** A sample project; the two owner projects run through the whole loop; fix list worked. | A4 to A8, A10 to A12, F1 to F4, G0 to G5, P4 to P7, O3, O5 | The milestone's done condition is met and timed. | todo |
 | A10 | **Weights as the three families.** The three sliders become user requirements, site constraints and environmental factors, the families in `rulebook/forces.md`; a project saved with the placeholder keys opens with them mapped. | A4 | The three names are on screen; an old project file opens without loss. | done, PR #15 |
 | A11 | **Default connections from the rulebook.** A table of default adjacencies per room kind (kitchen to dining, ensuite to its bedroom, diwaniya to the exterior); rebuilding the program shows them in the bubbles as proposed links a click accepts. Nothing connects without the click. | A5, O2 | Rebuilding the program proposes the defaults; accepting one creates the edge; the table has a source per row. | done, PR #16 |
 | A12 | **Zoom and pan on the zoning sheet.** Wheel and pinch zoom about the pointer, drag to pan on empty sheet, a Fit button; labels stay readable at any zoom. | A6 | A 6 m² ensuite's label is legible without help; every gesture still passes its Playwright test at 3× zoom. | done, PR #24 |
@@ -41,6 +41,10 @@ for help. No solver, no findings, no analysis.
 | G3 | **One Plan tab.** Zoning and massing side by side from the same store; move and rotate in the massing; the orbit pivots on the building, tilts, has a plan view and wheel zoom. | A7, G0 | A room moved in the massing moves on the sheet in the same frame; the building turns about its own centre. | done, PR #52 |
 | G4 | **Joins and alignment.** Two rooms with an open connection draw as one outline with the wall gone; Align to north and Align to plot on the selected room or all unpinned rooms. | G0 | An open-plan pair reads as one space with two areas; aligned rooms have walls parallel to the north arrow or the street side. | done, PR #50 |
 | G5 | **Draw tool.** Polygons by clicking corners, vertex editing, arcs and circles stored as polygons with the true arc remembered for export. | G0, A8 | A 5 m circle's area is within half a percent; the DXF opens in AutoCAD with a true arc. | done, PR #54 |
+| P4 | **Drawings sized to the space left.** The sheet and the massing take the height left under their bars instead of a share of the window, so the Plan tab never scrolls and screen-sized marks keep their size. From the agents' usability runs. | G3 | Nothing on the Plan tab is below the fold on a 1280 × 720 window; every zoning gesture test still passes. | in progress |
+| P5 | **A circle by target area.** The Circle tool offers the radius that gives the room's target area, so a round guest WC reads its target. | G5 | Draw a circle for a 3 m² room with one click and read 3.0 m². | in progress |
+| P6 | **Refusals out of the way.** Fading messages sit over the drawing's corner instead of pushing it down the page. | G0 | Three refusals in a row move nothing on the page. | in progress |
+| P7 | **Storey count under undo.** Storeys join the undo snapshot with heights, so adding a storey and stretching a stair revert together. | F1, A7 | One undo after Add storey restores both the count and the stair. | in progress |
 
 ### Owner tasks
 
@@ -57,18 +61,13 @@ for help. No solver, no findings, no analysis.
 ### Proposed, not approved
 
 Named here so they are not forgotten; each starts only when the owner
-approves it. P1 to P3 wait for the fresh brief; P4 to P7 came out of
-the agents' own usability runs.
+approves it, after the fresh brief has run through the tool.
 
 | # | Task | Why it waits |
 |---|---|---|
 | P1 | **Intent tags on the brief.** Wishes in plain words, each mapped to a force or a wall, with the tool showing what each one did. | The usability run shows which wishes people actually have. |
 | P2 | **Two entry paths.** A guided sequence for a client beside the architect; the one-page form for the architect alone. Same store. | Needs P1 to have anything to guide through. |
 | P3 | **AI intake.** Paste a client's text brief; the tool proposes rooms, storeys, wishes and edges, and lists every assumption for confirmation. | Must only produce inputs the screen already accepts, so it follows P1. |
-| P4 | **Drawings sized to the space left.** The sheet and the massing take the height left under their bars instead of a share of the window, so the Plan tab never scrolls and screen-sized marks keep their size. | G3 | Nothing on the Plan tab is below the fold on a 1280 × 720 window. |
-| P5 | **A circle by target area.** The Circle tool offers the radius that gives the room's target area, so a round guest WC reads its target, not whatever the drag gave. | G5 | Draw a circle for a 3 m² room with one click and read 3.0 m². |
-| P6 | **Refusals out of the way.** Fading messages sit over the drawing's corner instead of pushing it down the page. | G0 | Three refusals in a row move nothing. |
-| P7 | **Storey count under undo.** Storeys and heights join the undo snapshot so adding a storey and stretching a stair revert together. | F1, A7 | One undo after Add storey restores both count and stair. |
 
 ## Milestone 2: the rule engine
 
