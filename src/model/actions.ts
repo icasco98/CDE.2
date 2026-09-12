@@ -175,6 +175,19 @@ export function createActions(context: Context) {
       return result.ok ? ok(edge.id) : result
     },
 
+    /**
+     * Where a door is drawn on the wall its two rooms share. It is a hint and nothing else: an
+     * edge that loses it draws its door in the middle of the wall instead, as it always did.
+     */
+    setEdgeHint(edgeId: string, hint: WallHint): Result {
+      const project = state()
+      if (!project.edges.some((edge) => edge.id === edgeId)) return missing('edge', edgeId)
+      return settle({
+        ...project,
+        edges: project.edges.map((each) => (each.id === edgeId ? { ...each, hint } : each)),
+      })
+    },
+
     /** An edge keeps its identity when its kind changes; the main door is made by connect alone. */
     setEdgeKind(edgeId: string, kind: EdgeKind): Result {
       const project = state()

@@ -8,6 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import {
+  area,
   boundingBox,
   exactArea,
   outlineOf,
@@ -17,7 +18,14 @@ import {
   type Point,
 } from '../../geometry'
 import { occupiedStoreys, type Room } from '../../model'
-import { buildableArea } from '../../rulebook'
+import {
+  blockedRun,
+  buildableArea,
+  fitSentence,
+  listedNames,
+  storeyFits,
+  storeyLabel,
+} from '../../rulebook'
 import {
   fitCamera,
   metresPerPixel,
@@ -50,6 +58,7 @@ import { extentOf } from '../frame'
 import { BuildableLine, NorthArrow, PlotSheet, ScaleBar } from '../parts'
 import { useSheetCamera } from '../sheetCamera'
 import { joinsOf, type Join } from './joins'
+import { MorphZones } from './morph'
 import {
   angleTo,
   carveRefusal,
@@ -208,6 +217,18 @@ function heldBack(name: string, doing: string, refusal: string): string {
 
 const emptySheet: Sheet = { others: [], outlines: [], boundary: [] }
 
+/**
+ * What a bay with no run to the street is told, with the bay in front of it named where the
+ * program has one: standing in tandem behind it, along the same driveway, is the other answer.
+ */
+function noRun(rooms: readonly Room[], id: string): string {
+  const bay = rooms.find((room) => room.id === id)
+  if (!bay) return ''
+  const bays = rooms.filter((room) => room.type === bay.type)
+  const front = bays[bays.indexOf(bay) - 1]
+  return blockedRun(bay.name, front?.name)
+}
+
 function isPlaced(room: Room): room is Placed {
   return room.footprint !== undefined
 }
@@ -224,7 +245,8 @@ function keyOf(pair: WallPair): string {
 export function ZoningView(props: ZoningViewProps) {
   const { projectId, rooms, edges, storeys, storey, plot, sizes, selected } = props
   const { onPlace, onPlaceAll, onUnplace, onPin, onConnect, onDisconnect } = props
-  const { onSelect, onStorey, onSetEdgeKind, onRefuse, onLayOut, unplacedCount } = props
+  const { onSelect, onStorey, onSetEdgeKind, onRefuse } = props
+  const { onMorph, onAccept, onBack, proposal, asking } = props
   const svgRef = useRef<SVGSVGElement>(null)
   const sheetRef = useRef<Sheet>(emptySheet)
   /** Whether the drag has done anything yet, so an abandoned one puts back only what it moved and a press that never moved is a click. */
@@ -322,6 +344,15 @@ export function ZoningView(props: ZoningViewProps) {
   /** The Municipality setbacks, drawn here as they are on the bubbles: one line, one rule. */
   const buildable = useMemo(() => buildableArea(plot), [plot])
 
+  /** While a proposal stands the sheet shows it and nothing else, so the two are never read as one. */
+  const showing = proposal === null
+  /** A person who has asked for less motion gets the proposal as a cut rather than as a growth. */
+  const cutMorph =
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      : true
+  /** What this storey's targets come to against the floor, with what the proposal spilled past it. */
+  const fit = storeyFits(rooms, area(buildable), storeys).find((each) => each.storey === storey)
   const shown = visibleExtent(extent, camera)
   const perPixel = metresPerPixel(extent, camera, box)
 
@@ -332,6 +363,19 @@ export function ZoningView(props: ZoningViewProps) {
     isPlaced(selectedRoom) &&
     here.some((r) => r.id === selectedRoom.id)
   const remembered = selected === null ? undefined : beforeCarve.get(selected)
+
+  useEffect(() => {
+    if (proposal === null && asking === null) return
+    // Escape is Back wherever the keyboard happens to be: the proposal covers the whole sheet, so
+    // it is the one thing a press of Escape could mean while it stands.
+    const away = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      onBack()
+    }
+    window.addEventListener('keydown', away)
+    return () => window.removeEventListener('keydown', away)
+  }, [proposal, asking, onBack])
 
   const at = (event: { clientX: number; clientY: number }): Point => {
     const svg = svgRef.current
@@ -1141,18 +1185,26 @@ export function ZoningView(props: ZoningViewProps) {
     <div className="zoning">
       <div className="zoning-bar">
         <Storeys storeys={storeys} storey={storey} onStorey={onStorey} />
-        <button
-          type="button"
-          onClick={onLayOut}
-          disabled={unplacedCount === 0}
-          title={
-            unplacedCount === 0
-              ? 'Every room already stands on the sheet.'
-              : 'Puts every room still in the tray where its bubble says, on every storey.'
-          }
-        >
-          Lay out from bubbles
-        </button>
+        {proposal === null && asking === null && (
+          <button
+            type="button"
+            onClick={onMorph}
+            title="Divides this storey among its bubbles and offers the plan; nothing is written until you accept it."
+          >
+            Morph
+          </button>
+        )}
+        {(proposal !== null || asking !== null) && (
+          <>
+            {/* Two different things: the first says what may go, the second says what may stand. */}
+            <button type="button" data-accept="" onClick={onAccept}>
+              {asking === null ? 'Accept' : 'Replace'}
+            </button>
+            <button type="button" data-back="" onClick={onBack}>
+              Back to bubbles
+            </button>
+          </>
+        )}
         <button type="button" onClick={turn} disabled={!grabbable}>
           Rotate 90°
         </button>
@@ -1252,7 +1304,7 @@ export function ZoningView(props: ZoningViewProps) {
       </div>
       <p className="zoning-hint">{drawing ? HINTS[drawing.kind] : HINT}</p>
       <div className="zoning-body">
-        <Tray rooms={tray.filter((room) => room.id !== asked?.id)} onGrab={grabTray} />
+        {showing && <Tray rooms={tray.filter((room) => room.id !== asked?.id)} onGrab={grabTray} />}
         <svg
           ref={svgRef}
           className={[
@@ -1330,31 +1382,38 @@ export function ZoningView(props: ZoningViewProps) {
           <PlotSheet plot={plot} />
           <BuildableLine polygon={buildable} />
           <Ghosts footprints={below} />
-          {marks.tensions.map((mark) => (
-            <Tension key={mark.edgeId} mark={mark} />
-          ))}
-          {/* Under the rooms, which keep their own shapes to take the pointer. */}
-          {joins.map((join) => (
-            <JoinShape
-              key={join.key}
-              join={join}
-              selected={selected !== null && join.ids.includes(selected)}
+          {proposal && (
+            <MorphZones
+              proposal={proposal}
+              names={new Map(rooms.map((room) => [room.id, room.name]))}
+              cut={cutMorph}
             />
-          ))}
-          {placed
-            .filter((room) => room.id !== asked?.id)
-            .map((room) => (
-              <RoomShape
-                key={room.id}
-                room={room}
-                sizes={sizes.get(room.type)}
-                selected={room.id === selected}
-                joined={joined.has(room.id)}
-                onGrab={onGrabRoom}
-                onHover={onHoverRoom}
+          )}
+          {showing && marks.tensions.map((mark) => <Tension key={mark.edgeId} mark={mark} />)}
+          {/* Under the rooms, which keep their own shapes to take the pointer. */}
+          {showing &&
+            joins.map((join) => (
+              <JoinShape
+                key={join.key}
+                join={join}
+                selected={selected !== null && join.ids.includes(selected)}
               />
             ))}
-          {asked && (
+          {showing &&
+            placed
+              .filter((room) => room.id !== asked?.id)
+              .map((room) => (
+                <RoomShape
+                  key={room.id}
+                  room={room}
+                  sizes={sizes.get(room.type)}
+                  selected={room.id === selected}
+                  joined={joined.has(room.id)}
+                  onGrab={onGrabRoom}
+                  onHover={onHoverRoom}
+                />
+              ))}
+          {showing && asked && (
             <PendingRoom
               id={asked.id}
               name={asked.name}
@@ -1363,49 +1422,53 @@ export function ZoningView(props: ZoningViewProps) {
             />
           )}
           {/* Drawn under the door marks and the proposals, which keep the middle of the wall. */}
-          {pairs.map((pair) => (
-            <WallHandle
-              key={keyOf(pair)}
-              pair={pair}
-              perPixel={perPixel}
-              shown={wallShown(pair)}
-              onGrab={(event) => grabWall(event, pair)}
-              onHover={(over) => setHoveredWall(over ? keyOf(pair) : null)}
-            />
-          ))}
-          {vanished.map((mark) => (
-            <VanishedWall
-              key={mark.edgeId}
-              mark={mark}
-              selected={mark.edgeId === selected}
-              onSelect={(event) => {
-                event.stopPropagation()
-                if (panningWith(event)) {
-                  grabSheet(event, false)
-                  return
-                }
-                svgRef.current?.focus({ preventScroll: true })
-                onSelect(mark.edgeId)
-              }}
-            />
-          ))}
-          {marks.doors.map((mark) => (
-            <Door
-              key={mark.edgeId}
-              mark={mark}
-              selected={mark.edgeId === selected}
-              onSelect={(event) => {
-                event.stopPropagation()
-                if (panningWith(event)) {
-                  grabSheet(event, false)
-                  return
-                }
-                svgRef.current?.focus({ preventScroll: true })
-                onSelect(mark.edgeId)
-              }}
-            />
-          ))}
-          {selectedRoom &&
+          {showing &&
+            pairs.map((pair) => (
+              <WallHandle
+                key={keyOf(pair)}
+                pair={pair}
+                perPixel={perPixel}
+                shown={wallShown(pair)}
+                onGrab={(event) => grabWall(event, pair)}
+                onHover={(over) => setHoveredWall(over ? keyOf(pair) : null)}
+              />
+            ))}
+          {showing &&
+            vanished.map((mark) => (
+              <VanishedWall
+                key={mark.edgeId}
+                mark={mark}
+                selected={mark.edgeId === selected}
+                onSelect={(event) => {
+                  event.stopPropagation()
+                  if (panningWith(event)) {
+                    grabSheet(event, false)
+                    return
+                  }
+                  svgRef.current?.focus({ preventScroll: true })
+                  onSelect(mark.edgeId)
+                }}
+              />
+            ))}
+          {showing &&
+            marks.doors.map((mark) => (
+              <Door
+                key={mark.edgeId}
+                mark={mark}
+                selected={mark.edgeId === selected}
+                onSelect={(event) => {
+                  event.stopPropagation()
+                  if (panningWith(event)) {
+                    grabSheet(event, false)
+                    return
+                  }
+                  svgRef.current?.focus({ preventScroll: true })
+                  onSelect(mark.edgeId)
+                }}
+              />
+            ))}
+          {showing &&
+            selectedRoom &&
             isPlaced(selectedRoom) &&
             grabbable &&
             !selectedRoom.pinned &&
@@ -1442,21 +1505,22 @@ export function ZoningView(props: ZoningViewProps) {
               />
             )}
           {/* The marks are drawn over the handles: a proposal has one place to be clicked, where a room can still be resized by a corner. */}
-          {proposals.map((mark) => (
-            <Proposal
-              key={`${mark.a}|${mark.b}`}
-              mark={mark}
-              perPixel={perPixel}
-              onAccept={(event) => {
-                event.stopPropagation()
-                if (panningWith(event)) {
-                  grabSheet(event, false)
-                  return
-                }
-                onConnect(mark.a, mark.b, storey)
-              }}
-            />
-          ))}
+          {showing &&
+            proposals.map((mark) => (
+              <Proposal
+                key={`${mark.a}|${mark.b}`}
+                mark={mark}
+                perPixel={perPixel}
+                onAccept={(event) => {
+                  event.stopPropagation()
+                  if (panningWith(event)) {
+                    grabSheet(event, false)
+                    return
+                  }
+                  onConnect(mark.a, mark.b, storey)
+                }}
+              />
+            ))}
           {gesture?.kind === 'drop' && <DropGhost at={gesture.at} size={dropSize()} />}
           {drawing?.kind === 'draw' && (
             <DrawPreview
@@ -1497,6 +1561,43 @@ export function ZoningView(props: ZoningViewProps) {
           />
         </svg>
       </div>
+      {proposal && fit && (
+        <dl className="zoning-report">
+          <div className={fit.over ? 'fit-over' : undefined}>
+            <dt>{storeyLabel(storey)}</dt>
+            <dd data-fit="">
+              {proposal.made.overflowM2 > 0
+                ? `${fitSentence(fit)} · ${Math.round(proposal.made.overflowM2)} m² of the plan falls outside the buildable line`
+                : fitSentence(fit)}
+            </dd>
+          </div>
+          {proposal.made.tensions.map((tension) => (
+            <div key={tension.linkId}>
+              <dt>Tension</dt>
+              <dd data-zone-tension-said="">{tension.sentence}</dd>
+            </div>
+          ))}
+          {proposal.made.blockedBays.map((id) => (
+            <div key={id} className="fit-over">
+              <dt>Finding</dt>
+              <dd data-bay-blocked="">{noRun(rooms, id)}</dd>
+            </div>
+          ))}
+          {proposal.made.unreached.length > 0 && (
+            <div className="fit-over">
+              <dt>Finding</dt>
+              <dd data-unreached="">
+                {`No door leads to ${listedNames(proposal.made.unreached.map((id) => rooms.find((room) => room.id === id)?.name ?? id))} from the entry or the street.`}
+              </dd>
+            </div>
+          )}
+        </dl>
+      )}
+      {asking !== null && (
+        <div className="zoning-ask zoning-replace" data-replace="">
+          <p>{`Replace the ${asking} placed ${asking === 1 ? 'room' : 'rooms'} on ${storeyLabel(storey)}?`}</p>
+        </div>
+      )}
       {picking && (
         <PickRoom
           rooms={tray}

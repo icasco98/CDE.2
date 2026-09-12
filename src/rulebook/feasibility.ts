@@ -6,7 +6,7 @@ import { sidesOf } from './sides'
 import type { PlotShape } from './setbacks'
 import { roomTypeById } from './sizes'
 import { freeProportion } from './types'
-import { inWords, metresIn } from './words'
+import { inWords, listedNames, metresIn } from './words'
 
 /*
  * The brief checked before a bubble moves, under decision 21: a link can fail because the program
@@ -27,7 +27,7 @@ export type BriefRoom = {
 export type BriefEdge = { readonly a: Endpoint; readonly b: Endpoint; readonly storey: number }
 
 export type Finding = {
-  readonly code: 'crossing' | 'wall' | 'kerb'
+  readonly code: 'crossing' | 'wall' | 'kerb' | 'run'
   readonly storey: number
   /** What is wrong and what to do about it, in one sentence. */
   readonly sentence: string
@@ -156,6 +156,19 @@ export function feasibility(
     for (const [index, standing] of onKerb) {
       const side = sides.every.find((each) => each.index === index)
       if (!side || standing.length === 0) continue
+      // The frontage is claimed by the rooms that need a street door before the garage has any of
+      // it; where what is left will not hold one bay, the first bay has nothing to stand on and
+      // nothing to stand behind, and every bay after it is in tandem behind a bay with no run.
+      const bays = standing.filter((room) => room.type === 'garage')
+      const first = bays[0]
+      const spare =
+        side.length -
+        standing
+          .filter((room) => room.type !== 'garage')
+          .reduce((total, room) => total + 2 * radiusOf(room.targetArea), 0)
+      if (first && spare < 2 * radiusOf(first.targetArea))
+        found.push({ code: 'run', storey, sentence: blockedRun(first.name) })
+
       const radii = standing.map((room) => radiusOf(room.targetArea))
       let needed = radii.reduce((total, radius) => total + 2 * radius, 0)
       for (let i = 0; i + 1 < radii.length; i++)
@@ -164,16 +177,21 @@ export function feasibility(
       found.push({
         code: 'kerb',
         storey,
-        sentence: `The kerb is ${metresIn(side.length)} m and ${listOf(standing)} need ${metresIn(needed)} m of it. Move one to another storey, or give it less area.`,
+        sentence: `The kerb is ${metresIn(side.length)} m and ${listedNames(standing.map((room) => room.name))} need ${metresIn(needed)} m of it. Move one to another storey, or give it less area.`,
       })
     }
   }
   return found
 }
 
-/** The rooms standing on a kerb, by the names the program gave them. */
-function listOf(rooms: readonly BriefRoom[]): string {
-  const said = rooms.map((room) => room.name)
-  if (said.length <= 1) return said[0] ?? 'nothing'
-  return `${said.slice(0, -1).join(', ')} and ${said[said.length - 1]}`
+/**
+ * What a garage bay with no straight run to the street is told. A bay standing behind another is
+ * on the same driveway and has its run through it, so the fix is to clear what is in front of it
+ * or to put it in tandem; a bay with no bay in front of it has nothing to stand behind, and the
+ * frontage itself is what has to give.
+ */
+export function blockedRun(bay: string, front?: string): string {
+  return front === undefined
+    ? `${bay} has no straight run to the street; the frontage has no room left for it. Move a room to another storey, or give the garage fewer bays.`
+    : `${bay} has no straight run to the street; move the room in front of it or stack it behind ${front}.`
 }
