@@ -1,17 +1,13 @@
 import { expect, it } from 'vitest'
-import { buildableOf, createState, defaultLayout, step, type SimulationRoom } from '../../bubbles'
+import { createState, defaultLayout, groundOf, step, type SimulationRoom } from '../../bubbles'
 import { rectangleToPolygon } from '../../geometry'
+import { startingSite } from '../../model'
 import { fitCamera, metresPerPixel, viewBoxOf, zoomAbout, ZOOM_STEP } from '../camera'
 import { extentOf } from './frame'
 
 /** The starting plot and the floor the setbacks leave of it. */
 const plot = rectangleToPolygon({ left: 0, top: 0, width: 20, depth: 25 })
-const floor = buildableOf([
-  [1.5, 1.5],
-  [18.5, 1.5],
-  [18.5, 23],
-  [1.5, 23],
-])
+const floor = groundOf({ on: true, polygon: plot, north: 0, street: [2] }, startingSite)
 
 /** Thirty rooms over two storeys, the sizes a villa's program runs to. */
 function programOfThirty(): SimulationRoom[] {

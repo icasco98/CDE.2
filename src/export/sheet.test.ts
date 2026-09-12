@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { rectangleToPolygon, type Polygon } from '../geometry'
 import { PROJECT_VERSION, type Project, type Room } from '../model'
-import { startingHousehold, startingPlot } from '../model/project'
+import { startingHousehold, startingPlot, startingSite } from '../model/project'
 import { contentStreamOf, type Page } from './pdf'
 import { sheetPages } from './sheet'
 
@@ -14,6 +14,7 @@ function project(extra: Partial<Project> = {}): Project {
     storeys: 1,
     heights: [3.5],
     plot: startingPlot,
+    site: startingSite,
     household: startingHousehold,
     rooms: [],
     edges: [],

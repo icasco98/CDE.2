@@ -200,6 +200,9 @@ export const RoomShape = memo(function RoomShape(props: RoomShapeProps) {
   return (
     <g
       data-room={room.id}
+      // A room drawn inside a join gives its label to the join, so its name is on the group as
+      // well: a room is still that room when its name is being said by the space it flows into.
+      data-name={room.name}
       data-rotation={footprint.rotation.toFixed(1)}
       data-area={measure.toFixed(2)}
       className={props.selected ? 'room room-selected' : 'room'}

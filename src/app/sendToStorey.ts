@@ -1,6 +1,7 @@
 import {
   EXTERIOR,
   occupiedStoreys,
+  ok,
   refused,
   type Endpoint,
   type Project,
@@ -34,13 +35,15 @@ function meet(project: Project, a: Endpoint, b: Endpoint): boolean {
  * leaves the ground-floor corridor behind and finds the corridor upstairs.
  *
  * It is one transaction, so one undo puts the whole move back. A stair refuses: it stands on
- * every storey it reaches and its span is the program's to set.
+ * every storey it reaches and its span is the program's to set. What comes back is a sentence for
+ * every door the move let go, so the person is told rather than left to notice.
  */
-export function sendToStorey(store: Moving, id: string, storey: number): Result {
+export function sendToStorey(store: Moving, id: string, storey: number): Result<readonly string[]> {
   const room = store.getState().rooms.find((each) => each.id === id)
   if (room && Math.max(1, Math.trunc(room.storeysSpanned)) > 1)
     return refused({ code: 'stair-storey', message: STAIR_STAYS })
-  return store.transaction(() => {
+  const letGo: string[] = []
+  const moved = store.transaction(() => {
     const project = store.getState()
     const moving = [id, ...companionsOf(project.rooms, project.edges, id)]
     const carried = new Set(moving)
@@ -54,9 +57,18 @@ export function sendToStorey(store: Moving, id: string, storey: number): Result 
       const set = store.actions.setStorey(each, storey)
       if (!set.ok) return set
     }
-    const moved = store.getState()
+    const after = store.getState()
+    const nameOf = (endpoint: Endpoint): string =>
+      endpoint === EXTERIOR
+        ? 'the street'
+        : (after.rooms.find((each) => each.id === endpoint)?.name ?? 'a room')
     for (const edge of held) {
-      if (!meet(moved, edge.a, edge.b)) continue
+      if (!meet(after, edge.a, edge.b)) {
+        const near = carried.has(edge.a) ? edge.a : edge.b
+        const far = carried.has(edge.a) ? edge.b : edge.a
+        letGo.push(`${nameOf(near)}: its door to ${nameOf(far)} was let go.`)
+        continue
+      }
       const made = store.actions.connect({
         a: edge.a,
         b: edge.b,
@@ -67,4 +79,5 @@ export function sendToStorey(store: Moving, id: string, storey: number): Result 
     }
     return connectDefaults(store)
   })
+  return moved.ok ? ok(letGo as readonly string[]) : moved
 }

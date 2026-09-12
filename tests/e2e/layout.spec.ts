@@ -113,12 +113,10 @@ test('the same press stands the stair on the floor above and lays the rooms arou
   await openZoning(page)
   await page.getByRole('button', { name: 'Lay out from bubbles' }).click()
   const ground = await page.locator('[data-room]').count()
-  const stair = await page
-    .locator('[data-room]')
-    .filter({ has: page.getByText('Stair', { exact: true }) })
-    .first()
-    .locator('polygon')
-    .getAttribute('points')
+  // By name on the group, not by the label drawn in the room: a stair open to the corridor beside
+  // it is drawn as one space with it and the join says the name, so the label is not always there.
+  const stairShape = page.locator('[data-room][data-name="Stair"]').first().locator('polygon')
+  const stair = await stairShape.getAttribute('points')
   expect(stair).not.toBeNull()
 
   await page.getByRole('button', { name: 'First', exact: true }).click()
@@ -129,8 +127,7 @@ test('the same press stands the stair on the floor above and lays the rooms arou
   // A stair is one room drawn on every floor it reaches, so its outline upstairs is the one below.
   expect(
     await page
-      .locator('[data-room]')
-      .filter({ has: page.getByText('Stair', { exact: true }) })
+      .locator('[data-room][data-name="Stair"]')
       .first()
       .locator('polygon')
       .getAttribute('points'),

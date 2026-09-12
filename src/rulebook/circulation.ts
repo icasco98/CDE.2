@@ -1,6 +1,7 @@
 import { storeyLabel } from './fit'
 import { roomTypes } from './roomTypes'
 import { roomTypeById } from './sizes'
+import { inWords } from './words'
 
 /** A room as the circulation rule reads one: its kind, where it stands, and how much floor it takes. */
 export type CirculationRoom = {
@@ -36,25 +37,6 @@ export const circulationRule = {
 const companionKinds: ReadonlySet<string> = new Set(
   roomTypes.flatMap((type) => (type.companion === undefined ? [] : [type.companion])),
 )
-
-/** Small counts read as words, because the nudge is a sentence. */
-const counted = [
-  'no',
-  'one',
-  'two',
-  'three',
-  'four',
-  'five',
-  'six',
-  'seven',
-  'eight',
-  'nine',
-  'ten',
-]
-
-function inWords(count: number): string {
-  return counted[count] ?? String(count)
-}
 
 function round(value: number): number {
   return Math.round(value * 10) / 10

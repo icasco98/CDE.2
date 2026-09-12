@@ -9,16 +9,17 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import {
-  buildableOf,
   createState,
+  groundOf,
   layoutFor,
+  readLink,
   twinsOf,
   type Body,
   type Position,
 } from '../../bubbles'
 import { area, type Point } from '../../geometry'
 import type { EdgeKind } from '../../model'
-import { buildableArea, fitSentence, storeyFits, storeyLabel } from '../../rulebook'
+import { fitSentence, storeyFits, storeyLabel } from '../../rulebook'
 import {
   fitCamera,
   metresPerPixel,
@@ -32,6 +33,7 @@ import { BuildableLine, NorthArrow, PlotSheet, ScaleBar } from '../parts'
 import { useSheetCamera } from '../sheetCamera'
 import {
   asPoint,
+  apart,
   bodyAt,
   extentOf,
   holds,
@@ -43,7 +45,7 @@ import {
 } from './frame'
 import { Bubble, Legend, Link } from './parts'
 import { useSettling } from './useSettling'
-import { WeightsPanel, weightOf } from './WeightsPanel'
+import { WeightsPanel } from './WeightsPanel'
 import { STAIR_STAYS, type BubblesViewProps } from './types'
 import './bubbles.css'
 
@@ -76,7 +78,7 @@ function notchesOf(event: WheelEvent): number {
 }
 
 export function BubblesView(props: BubblesViewProps) {
-  const { rooms, edges, storeys, circulation, plot, weights, selected } = props
+  const { rooms, edges, storeys, circulation, plot, site, weights, selected } = props
   const { onMoveBubble, onDropBubble, onSetStorey, onPin, onConnect, onDisconnect } = props
   const { onSetEdgeKind, onRemoveRoom, onAddHallway, onSetWeight, onSelect, onRefuse } = props
   const svgRef = useRef<SVGSVGElement>(null)
@@ -95,19 +97,20 @@ export function BubblesView(props: BubblesViewProps) {
   const [box, setBox] = useState({ width: 0, height: 0 })
   /** The storey being worked on, or nothing for all of them at once. */
   const [only, setOnly] = useState<number | null>(null)
-  /** The user-requirements weight is a force, so a slider moved is a new layout for the simulation. */
-  const layout = useMemo(() => layoutFor(weightOf(weights, 'userRequirements')), [weights])
-  /** The Municipality setbacks: the wall the bubbles are held inside, and the line that is drawn. */
-  const inside = useMemo(() => buildableOf(buildableArea(plot)), [plot])
+  /** Every weight is a force, so a slider moved is a new layout for the simulation. */
+  const layout = useMemo(() => layoutFor(weights), [weights])
+  /** The plot as the walls and the forces read it: the setbacks, the sides, the client's answers. */
+  const ground = useMemo(() => groundOf(plot, site), [plot, site])
+  const inside = ground.inside
   const { moving, settleNow, spread, hold, release } = useSettling(
     rooms,
     edges,
-    inside,
+    ground,
     onMoveBubble,
     layout,
   )
 
-  const state = useMemo(() => createState(rooms, edges, inside), [rooms, edges, inside])
+  const state = useMemo(() => createState(rooms, edges, ground), [rooms, edges, ground])
   const bodies = state.bodies
   const named = useMemo(() => new Map(rooms.map((room) => [room.id, room])), [rooms])
   const placed = useMemo(() => new Map(bodies.map((body) => [body.id, body])), [bodies])
@@ -140,6 +143,20 @@ export function BubblesView(props: BubblesViewProps) {
   // The floor is measured once per plot, not once per frame: the setbacks are a boolean operation
   // on a polygon, and the fit line is read again every time a bubble moves.
   const floorM2 = useMemo(() => area(inside.polygon), [inside])
+  /**
+   * What each link is doing. A link that has closed is drawn as a link; one that has not is drawn
+   * as a line of tension with the one thing standing in its way, said once here and once in the
+   * list under the sheet, so a missed link is never shrugged at.
+   */
+  const readings = useMemo(() => {
+    const nameFor = (id: string): string => named.get(id)?.name ?? id
+    const said = new Map<string, string>()
+    for (const edge of edges) {
+      const reading = readLink(state, edge.a, edge.b, nameFor)
+      if (reading && !reading.realized && reading.reason) said.set(edge.id, reading.reason)
+    }
+    return said
+  }, [edges, state, named])
   const fits = useMemo(() => storeyFits(rooms, floorM2, levels), [rooms, floorM2, levels])
   /** The initials a bubble too small for its name falls back on, no two rooms wearing the same. */
   const marks = useMemo(() => shortMarks(rooms.map((room) => room.name)), [rooms])
@@ -169,7 +186,9 @@ export function BubblesView(props: BubblesViewProps) {
         ),
       )
     }
-    return said
+    // And then no two of them crossing: a name drawn over another name is a third word that is
+    // neither of them, so the smaller bubble gives its name up for its mark.
+    return apart(said, bodies, (id) => marks.get(named.get(id)?.name ?? '') ?? '')
   }, [bodies, named, marks, perPixel])
 
   const at = useCallback((event: { clientX: number; clientY: number }): Position => {
@@ -271,9 +290,15 @@ export function BubblesView(props: BubblesViewProps) {
     }
     const pointer = at(event)
     if (gesture.kind === 'move') {
-      // A move is nothing but a move: the bubble is recorded where the forces bring it to rest,
-      // and the previews since the drag began fold into that one step.
-      release(movedRef.current ? (rest: Position) => void onDropBubble(gesture.id, rest) : null)
+      // A bubble stays where it is dropped: the forces are strong enough now to carry it back
+      // where they would rather have it, so the hand's own placing is kept by holding it there —
+      // the pin mark comes up, and Let go hands it back to the forces. Where the hand left it is
+      // where the walls let the hand leave it: the bubble under the hand is put on its kerb and
+      // inside the buildable line every frame of the drag, so the place to keep is the one it is
+      // drawn at when the hand comes off, not the point of the pointer.
+      const body = bodies.find((each) => each.id === gesture.id)
+      if (movedRef.current && body) onDropBubble(gesture.id, { x: body.x, y: body.y })
+      release(null)
       return
     }
     const target = bodyAt(bodies, pointer, active, gesture.from)
@@ -420,7 +445,7 @@ export function BubblesView(props: BubblesViewProps) {
       : `Now click the room to join to ${named.get(linking.from)?.name ?? 'it'}.`
     : only === null
       ? 'Every storey at once: the ground floor is the one the hand moves. Pick a storey to work on it.'
-      : `Drag a bubble to move it about ${storeyLabel(active)}. It is held inside the buildable line.`
+      : `Drag a bubble to move it about ${storeyLabel(active)}. Where you drop it, it is held; Let go hands it back to the forces. It never leaves the buildable line.`
 
   /**
    * Where a link is drawn between. The outside is not a bubble, so a door to it runs from its room
@@ -592,6 +617,27 @@ export function BubblesView(props: BubblesViewProps) {
         >
           <PlotSheet plot={plot} />
           <BuildableLine polygon={inside.polygon} />
+          {drawn.map(({ body, storey }) => {
+            const room = named.get(body.id)
+            const label = labels.get(body.id)
+            return room && label ? (
+              <Bubble
+                key={`${body.id}:${storey}`}
+                body={body}
+                room={room}
+                twin={storey}
+                label={label}
+                {...(body.tandem === undefined
+                  ? {}
+                  : {
+                      note: `in tandem behind ${named.get(bodies[body.tandem.behind]?.id ?? '')?.name ?? 'the bay in front'}`,
+                    })}
+                selected={body.id === selected || linking?.from === body.id}
+                dimmed={storey !== active}
+                handlers={handlers}
+              />
+            ) : null
+          })}
           {edges.map((edge) => {
             if (only !== null && edge.storey !== only) return null
             const ends = endsOf(edge)
@@ -607,6 +653,7 @@ export function BubblesView(props: BubblesViewProps) {
                 selected={edge.id === selected}
                 dimmed={edge.storey !== active}
                 outside={ends.outside}
+                tension={readings.get(edge.id) ?? null}
                 {...(edge.source === undefined ? {} : { title: edge.source })}
                 onSelect={chooseLink}
               />
@@ -625,22 +672,6 @@ export function BubblesView(props: BubblesViewProps) {
                 />
               ) : null
             })()}
-          {drawn.map(({ body, storey }) => {
-            const room = named.get(body.id)
-            const label = labels.get(body.id)
-            return room && label ? (
-              <Bubble
-                key={`${body.id}:${storey}`}
-                body={body}
-                room={room}
-                twin={storey}
-                label={label}
-                selected={body.id === selected || linking?.from === body.id}
-                dimmed={storey !== active}
-                handlers={handlers}
-              />
-            ) : null
-          })}
           <NorthArrow
             north={plot.north}
             at={[shown.minX + shown.width - FURNITURE_PX * perPixel, shown.minY + 44 * perPixel]}
@@ -656,6 +687,18 @@ export function BubblesView(props: BubblesViewProps) {
         </svg>
         <div className="bubbles-side">
           <WeightsPanel weights={weights} onSetWeight={onSetWeight} />
+          {/* Beside the sheet with the legend, so a list that grows never pushes the drawing
+              off the bottom of the page. */}
+          {readings.size > 0 && (
+            <section className="bubbles-tension">
+              <h2>Links not made</h2>
+              <ul>
+                {[...readings].map(([id, reason]) => (
+                  <li key={id}>{reason}</li>
+                ))}
+              </ul>
+            </section>
+          )}
           <Legend />
         </div>
       </div>

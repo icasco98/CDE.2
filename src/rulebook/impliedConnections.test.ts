@@ -31,7 +31,7 @@ const referenceCase: readonly string[] = [
   'Outside to Garage bay 1 (door, D3)',
   'Outside to Garage bay 2 (door, D3)',
   'Entry to Formal Living (door, D5)',
-  'Entry to Family Living (door, D6)',
+  'Hallway to Family Living (door, D6)',
   'Entry to Guest WC (door, D7)',
   'Entry to Hallway (open, D9)',
   'Diwaniya to Diwaniya WC (door, D11)',

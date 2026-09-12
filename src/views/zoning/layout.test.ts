@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildableOf, createState, settle } from '../../bubbles'
+import { createState, groundOf, settle } from '../../bubbles'
 import {
   area,
   boundingBox,
@@ -19,13 +19,7 @@ import {
   type Project,
   type Room,
 } from '../../model'
-import {
-  buildableArea,
-  defaultProgram,
-  impliedConnections,
-  roomTypeById,
-  roomTypes,
-} from '../../rulebook'
+import { defaultProgram, impliedConnections, roomTypeById, roomTypes } from '../../rulebook'
 import { offTarget, proportionOf, sizesOf, startingRectangle, type RoomSizes } from './defaults'
 import { layOut } from './layout'
 
@@ -56,9 +50,13 @@ function diagram(
     store.actions.connect({ a: link.a, b: link.b, kind: link.kind, storey: link.storey })
   const project = store.getState()
   const state = createState(
-    project.rooms.map((room) => ({ ...room, tier: roomTypeById(room.type)?.tier })),
+    project.rooms.map((room) => ({
+      ...room,
+      kind: room.type,
+      tier: roomTypeById(room.type)?.tier,
+    })),
     project.edges.filter((edge) => edge.a !== EXTERIOR && edge.b !== EXTERIOR),
-    buildableOf(buildableArea(project.plot)),
+    groundOf(project.plot, project.site),
   )
   for (const body of settle(state).state.bodies)
     store.actions.setBubble(body.id, { x: body.x, y: body.y })
@@ -147,8 +145,8 @@ describe('a plan laid out from the bubbles', () => {
     const project = diagram(2)
     const out = laid(project, 0)
     if (!out.ok) throw new Error(out.reason)
-    expect(out.value).toHaveLength(12)
-    expect(overlappingPairs(placedOn(taken(project.rooms, out.value), 0))).toEqual([])
+    expect(out.value.placements).toHaveLength(12)
+    expect(overlappingPairs(placedOn(taken(project.rooms, out.value.placements), 0))).toEqual([])
   })
 
   it('holds every room it places inside a plot that binds', () => {
@@ -156,7 +154,7 @@ describe('a plan laid out from the bubbles', () => {
     const out = laid(project, 0)
     if (!out.ok) throw new Error(out.reason)
     const plot = boundingBox(project.plot.polygon)
-    for (const placement of out.value) {
+    for (const placement of out.value.placements) {
       const bounds = boundingBox(outlineOf(placement.footprint))
       expect(bounds.left).toBeGreaterThanOrEqual(plot.left - 1e-6)
       expect(bounds.top).toBeGreaterThanOrEqual(plot.top - 1e-6)
@@ -195,21 +193,27 @@ describe('a plan laid out from the bubbles', () => {
       GRID_M,
     )
     if (!out.ok) throw new Error(out.reason)
-    expect(out.value.map((placement) => placement.id)).not.toContain(standing.id)
-    expect(out.value.map((placement) => placement.id)).not.toContain(held.id)
-    const after = taken(rooms, out.value)
+    expect(out.value.placements.map((placement) => placement.id)).not.toContain(standing.id)
+    expect(out.value.placements.map((placement) => placement.id)).not.toContain(held.id)
+    const after = taken(rooms, out.value.placements)
     expect(after.find((room) => room.id === standing.id)?.footprint).toEqual(footprint)
     expect(after.find((room) => room.id === held.id)?.footprint).toEqual(heldFootprint)
     expect(overlappingPairs(placedOn(after, 0))).toEqual([])
   })
 
-  it('refuses a plot too small to hold the storey, and names the rooms left over one another', () => {
+  it('lays out what a plot too small will hold and names the rooms it leaves in the tray', () => {
     const project = diagram(2, rectangleToPolygon({ left: 0, top: 0, width: 8, depth: 8 }))
     const out = laid(project, 0)
-    if (out.ok) throw new Error('an eight-metre square held a whole ground floor')
-    expect(out.reason).toMatch(/^Not enough room on Ground for /)
-    expect(out.reason).toMatch(/enlarge the plot or unplace something$/)
-    expect(out.reason).toContain('Kitchen')
+    if (!out.ok) throw new Error(out.reason)
+    // An eight-metre square will not hold a ground floor, and what it will not hold it says: the
+    // rooms it could place are placed, and the rest are named in the one sentence.
+    expect(out.value.missed).toMatch(/^No room on Ground for /)
+    expect(out.value.missed).toMatch(/in the tray until the plot or the program gives way$/)
+    expect(out.value.placements.length).toBeLessThan(
+      project.rooms.filter((room) => room.storey === 0).length,
+    )
+    // Nothing it did place lies over anything else, which is the whole of what a placement means.
+    expect(overlappingPairs(placedOn(taken(project.rooms, out.value.placements), 0))).toEqual([])
     expect(project.rooms.every((room) => room.footprint === undefined)).toBe(true)
   })
 
@@ -221,8 +225,8 @@ describe('a plan laid out from the bubbles', () => {
 
     const ground = laid(project, 0)
     if (!ground.ok) throw new Error(ground.reason)
-    expect(ground.value.map((placement) => placement.id)).toContain(stair.id)
-    const afterGround = taken(project.rooms, ground.value)
+    expect(ground.value.placements.map((placement) => placement.id)).toContain(stair.id)
+    const afterGround = taken(project.rooms, ground.value.placements)
 
     const upstairs = layOut(
       afterGround,
@@ -233,11 +237,11 @@ describe('a plan laid out from the bubbles', () => {
       GRID_M,
     )
     if (!upstairs.ok) throw new Error(upstairs.reason)
-    expect(upstairs.value.map((placement) => placement.id)).not.toContain(stair.id)
-    const after = taken(afterGround, upstairs.value)
+    expect(upstairs.value.placements.map((placement) => placement.id)).not.toContain(stair.id)
+    const after = taken(afterGround, upstairs.value.placements)
     const laidStair = after.find((room) => room.id === stair.id)
     expect(laidStair?.footprint).toEqual(
-      ground.value.find((placement) => placement.id === stair.id)?.footprint,
+      ground.value.placements.find((placement) => placement.id === stair.id)?.footprint,
     )
     expect(placedOn(after, 0).map((room) => room.id)).toContain(stair.id)
     expect(placedOn(after, 1).map((room) => room.id)).toContain(stair.id)
@@ -246,11 +250,11 @@ describe('a plan laid out from the bubbles', () => {
 })
 
 describe('the reference case: the two-storey default program on the 20 × 25 plot', () => {
-  it('lays the ground floor out with no overlap, every room at its target size, linked rooms 8.97 m apart on average against 11.33 m for unlinked', () => {
+  it('lays the ground floor out with no overlap, every room at its target size, linked rooms 7.82 m apart on average against 10.97 m for unlinked', () => {
     const project = diagram(2)
     const out = laid(project, 0)
     if (!out.ok) throw new Error(out.reason)
-    const rooms = placedOn(taken(project.rooms, out.value), 0)
+    const rooms = placedOn(taken(project.rooms, out.value.placements), 0)
     expect(rooms).toHaveLength(12)
     expect(overlappingPairs(rooms)).toEqual([])
 
@@ -263,8 +267,8 @@ describe('the reference case: the two-storey default program on the 20 × 25 plo
     }
 
     const { linked, apart } = spans(project, rooms)
-    expect(linked).toBeCloseTo(8.97, 1)
-    expect(apart).toBeCloseTo(11.33, 1)
+    expect(linked).toBeCloseTo(7.82, 1)
+    expect(apart).toBeCloseTo(10.97, 1)
     expect(linked).toBeLessThan(apart)
   })
 })

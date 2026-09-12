@@ -234,10 +234,55 @@ function spotsOn(
 }
 
 /**
+ * How far out a room the parting could not clear is looked for a place of its own, in steps of the
+ * grid, and how many places are tried on each ring out. Bounded either way: this runs only for the
+ * rooms the parting left lying over something, and a storey that has nowhere for them says so
+ * rather than searching the plot to a standstill.
+ */
+const RINGS = 24
+const MOST_STATIONS = 48
+
+/**
+ * The nearest place to where a room's bubble put it that the room really fits: rings of places out
+ * from there, a grid step apart, the first of them inside the plot and over nothing. Nothing where
+ * there is no such place, which is a storey with no room left for this room.
+ */
+function nearestFree(
+  body: Body,
+  others: readonly Body[],
+  plot: Plot,
+  gridM: number,
+): Footprint | undefined {
+  const step = gridM > 0 ? gridM : 0.5
+  const clear = (put: Footprint): boolean =>
+    !(plot.on && isOutsideBoundary(put, plot.polygon)) &&
+    !others.some((other) => overlaps(put, other.footprint))
+  for (let ring = 0; ring <= RINGS; ring++) {
+    const away = ring * step
+    const stations = ring === 0 ? 1 : Math.min(ring * 8, MOST_STATIONS)
+    for (let station = 0; station < stations; station++) {
+      const turn = (station * 2 * Math.PI) / stations
+      const put = translateFootprint(body.footprint, [Math.cos(turn) * away, Math.sin(turn) * away])
+      if (clear(put)) return put
+    }
+  }
+  return undefined
+}
+
+/** What one press of the button made of a storey: the rooms it placed, and what it could not place. */
+export type Laid = {
+  readonly placements: readonly Placement[]
+  /** The one sentence the sheet says about the rooms left in the tray; nothing when it placed all. */
+  readonly missed?: string
+}
+
+/**
  * The plan the bubble diagram already draws: every unplaced room on the storey opened at its
  * target size where its bubble stands, then parted from whatever it landed over and held inside
- * the plot. Nothing is rotated, resized or carved, and nothing is searched for: the same diagram
- * gives the same plan every time. A storey too crowded to part is refused whole.
+ * the plot. Nothing is rotated, resized or carved: the same diagram gives the same plan every
+ * time. A room the parting could not clear is put at the nearest place to its bubble that it
+ * fits, and where the storey has no such place the room stays in the tray and the sheet says so
+ * — one room left behind is not a reason to leave the whole floor undrawn.
  */
 export function layOut(
   rooms: readonly Room[],
@@ -246,10 +291,10 @@ export function layOut(
   storey: number,
   sizes: ReadonlyMap<string, RoomSizes>,
   gridM: number,
-): Attempt<readonly Placement[]> {
+): Attempt<Laid> {
   const onStorey = rooms.filter((room) => occupiedStoreys(room).includes(storey))
   const moving = onStorey.filter((room) => !room.footprint).sort(byId)
-  if (moving.length === 0) return { ok: true, value: [] }
+  if (moving.length === 0) return { ok: true, value: { placements: [] } }
 
   const spots = spotsOn(onStorey, edges, storey)
   const bounds = boundingBox(plot.polygon)
@@ -323,18 +368,32 @@ export function layOut(
 
   snapCorners(bodies, obstacles, plot, gridM)
 
-  const crowded = bodies.filter((body) =>
-    [...bodies, ...obstacles].some(
-      (other) => other !== body && overlaps(body.footprint, other.footprint),
-    ),
-  )
-  if (crowded.length > 0) {
-    return {
-      ok: false,
-      reason: `Not enough room on ${storeyLabel(storey)} for ${listed(crowded.map((body) => body.name))}; enlarge the plot or unplace something`,
-    }
+  // A room the parting could not clear is looked for a place of its own, in room order by id so
+  // the same diagram gives the same plan every time. Each one moved is a place the next may not
+  // take, so the rooms are answered one at a time on what the ones before them left.
+  const missed = new Set<Body>()
+  /** Everything a room has to stand clear of: the rooms already down, less the ones going back. */
+  const around = (body: Body): readonly Body[] =>
+    [...bodies, ...obstacles].filter((other) => other !== body && !missed.has(other))
+  for (const body of bodies) {
+    if (!around(body).some((other) => overlaps(body.footprint, other.footprint))) continue
+    const free = nearestFree(body, around(body), plot, gridM)
+    if (free) body.footprint = free
+    else missed.add(body)
   }
-  return { ok: true, value: bodies.map((body) => ({ id: body.id, footprint: body.footprint })) }
+
+  const placed = bodies.filter((body) => !missed.has(body))
+  return {
+    ok: true,
+    value: {
+      placements: placed.map((body) => ({ id: body.id, footprint: body.footprint })),
+      ...(missed.size === 0
+        ? {}
+        : {
+            missed: `No room on ${storeyLabel(storey)} for ${listed([...missed].map((body) => body.name))}; ${missed.size === 1 ? 'it stays' : 'they stay'} in the tray until the plot or the program gives way`,
+          }),
+    },
+  }
 }
 
 /**

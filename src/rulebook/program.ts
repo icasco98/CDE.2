@@ -121,31 +121,45 @@ export type CompanionRoom = { readonly id: string; readonly type: string }
 export type CompanionEdge = { readonly a: string; readonly b: string }
 
 /**
- * The auxiliary rooms a room owns: the ensuite and the dressing room of a bedroom, the WC of a
- * diwaniya, the bathroom of a maid's room. A companion is recognised by the company it keeps
- * rather than by its name: it is an auxiliary kind, it is joined to this room, and it is joined
- * to no other room at all. A bathroom off the corridor serves the house and stays where it is;
- * a bedroom's own is part of the bedroom and goes wherever the bedroom goes.
+ * Which room each auxiliary room belongs to. A companion is recognised by the company it keeps
+ * rather than by its name: it is an auxiliary kind, and it is joined to exactly one room of the
+ * house. A bathroom off the corridor serves the house and stays where it is; a bedroom's own is
+ * part of the bedroom and goes wherever the bedroom goes.
  */
+export function companionOwners(
+  rooms: readonly CompanionRoom[],
+  edges: readonly CompanionEdge[],
+): ReadonlyMap<string, string> {
+  const known = new Set(rooms.map((room) => room.id))
+  const joined = new Map<string, Set<string>>()
+  for (const edge of edges) {
+    if (!known.has(edge.a) || !known.has(edge.b)) continue
+    for (const [one, other] of [
+      [edge.a, edge.b],
+      [edge.b, edge.a],
+    ] as const) {
+      const to = joined.get(one) ?? new Set<string>()
+      to.add(other)
+      joined.set(one, to)
+    }
+  }
+  const owners = new Map<string, string>()
+  for (const room of rooms) {
+    if (!roomTypeById(room.type)?.flags.auxiliary) continue
+    const to = joined.get(room.id)
+    if (!to || to.size !== 1) continue
+    const [owner] = [...to]
+    if (owner !== undefined) owners.set(room.id, owner)
+  }
+  return owners
+}
+
+/** The auxiliary rooms one room owns: its ensuite, its dressing room, its own WC. */
 export function companionsOf(
   rooms: readonly CompanionRoom[],
   edges: readonly CompanionEdge[],
   id: string,
 ): readonly string[] {
-  const known = new Set(rooms.map((room) => room.id))
-  const owned: string[] = []
-  for (const room of rooms) {
-    if (room.id === id) continue
-    if (!roomTypeById(room.type)?.flags.auxiliary) continue
-    let toIt = false
-    let elsewhere = false
-    for (const edge of edges) {
-      const far = edge.a === room.id ? edge.b : edge.b === room.id ? edge.a : null
-      if (far === null) continue
-      if (far === id) toIt = true
-      else if (known.has(far)) elsewhere = true
-    }
-    if (toIt && !elsewhere) owned.push(room.id)
-  }
-  return owned
+  const owners = companionOwners(rooms, edges)
+  return [...owners].filter(([, owner]) => owner === id).map(([companion]) => companion)
 }

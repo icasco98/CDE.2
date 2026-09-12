@@ -1,4 +1,4 @@
-import type { Commit, EdgeKind, Family, Plot, Weights } from '../../model'
+import type { Commit, EdgeKind, Family, Plot, Site, Weights } from '../../model'
 import type { Position } from '../../bubbles'
 import type { StoreyCirculation } from '../../rulebook'
 
@@ -13,6 +13,8 @@ export type BubbleRoom = {
   readonly targetArea: number
   readonly pinned: boolean
   readonly bubble?: Position
+  /** The room-type table's key, which the walls and the forces read. */
+  readonly kind?: string
   /** From the room-type table where the program has one; without it every bubble takes the neutral fill. */
   readonly category?: string
   /** The room-type table's privacy tier, which the forces read when the user-requirements weight is up. */
@@ -36,6 +38,8 @@ export type BubblesViewProps = {
   /** Each storey's hallway as the rulebook reads it: where one stands, and where one is wanted. */
   readonly circulation: readonly StoreyCirculation[]
   readonly plot: Plot
+  /** The client's two site answers, which S4 and S5 read. */
+  readonly site: Site
   /** The three families of forces, on the sheet beside the diagram they change. */
   readonly weights: Weights
   /** A room id, an edge id, or nothing. */

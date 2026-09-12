@@ -181,6 +181,80 @@ export function labelFor(
   return { rows, size, short: false }
 }
 
+/** A bubble as the labels are measured against one another: where it is, and how big. */
+export type LabelledBubble = {
+  readonly id: string
+  readonly x: number
+  readonly y: number
+  readonly radius: number
+  readonly storey: number
+  readonly storeysSpanned: number
+}
+
+/** How wide and how deep a label is drawn, in metres, about the middle of its own bubble. */
+function boxOf(label: BubbleLabel): { readonly across: number; readonly down: number } {
+  const widest = label.rows.reduce((most, row) => Math.max(most, row.text.length), 0)
+  return { across: widest * label.size * LETTER, down: label.rows.length * label.size * LINE }
+}
+
+function together(one: LabelledBubble, other: LabelledBubble): boolean {
+  const span = (each: LabelledBubble): number => Math.max(1, Math.trunc(each.storeysSpanned))
+  return one.storey < other.storey + span(other) && other.storey < one.storey + span(one)
+}
+
+/**
+ * The labels with no two of them crossing. Two names drawn over one another read as a third that
+ * is neither: "Master Bedroom" under "Bedroom 1" reads "ster Bedroom", and a reader has no way of
+ * telling which room either half belongs to. Where two would cross, the smaller bubble gives its
+ * name up for its mark and waits on the hand, because the smaller room is the one with least room
+ * to say it in; where two are the same size the one named later gives way, so the picture is the
+ * same picture every time it is drawn.
+ */
+export function apart(
+  labels: ReadonlyMap<string, BubbleLabel>,
+  bubbles: readonly LabelledBubble[],
+  markOf: (id: string) => string,
+): ReadonlyMap<string, BubbleLabel> {
+  const out = new Map(labels)
+  const shown = bubbles.filter((bubble) => out.has(bubble.id))
+  for (let pass = 0; pass < shown.length; pass++) {
+    let crossed = false
+    for (const [index, one] of shown.entries())
+      for (let next = index + 1; next < shown.length; next++) {
+        const other = shown[next]
+        const a = out.get(one.id)
+        const b = other && out.get(other.id)
+        if (!other || !a || !b || (a.short && b.short) || !together(one, other)) continue
+        const boxA = boxOf(a)
+        const boxB = boxOf(b)
+        if (Math.abs(one.x - other.x) >= (boxA.across + boxB.across) / 2) continue
+        if (Math.abs(one.y - other.y) >= (boxA.down + boxB.down) / 2) continue
+        const gives =
+          a.short || b.short
+            ? a.short
+              ? other
+              : one
+            : one.radius === other.radius
+              ? one.id < other.id
+                ? other
+                : one
+              : one.radius < other.radius
+                ? one
+                : other
+        const label = out.get(gives.id)
+        if (!label || label.short) continue
+        out.set(gives.id, {
+          rows: [{ text: markOf(gives.id), kind: 'mark' }],
+          size: label.size,
+          short: true,
+        })
+        crossed = true
+      }
+    if (!crossed) break
+  }
+  return out
+}
+
 /**
  * The initials a bubble too small for its name wears, no two of them the same. A name gives one
  * letter per word; where that would leave two rooms with the same mark, the rooms that clash take

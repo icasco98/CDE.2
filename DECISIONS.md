@@ -99,10 +99,17 @@ A reversal is a new entry, never an edit.
     quarter of the smaller one's area, the slack between packed
     circles and packed rectangles, and never wholly; the repulsion is
     soft inside that quarter and a wall beyond it. While settling,
-    bubbles are held inside the buildable line. A hallway is an
-    ellipse of its area, long axis along the rooms it serves; a stair
-    stays a circle, and its twins settle to the same spot on every
-    storey.
+    bubbles are held inside the buildable line. A hallway is a
+    corridor of its area, 1.8 m wide (the top of the room-type band;
+    at 2.4 m it was all end-caps, at 1.2 m longer than the plot), its
+    near end on the entry or the stair, turning toward the rooms it
+    serves, touched along its sides; a stair stays a circle, drawn on
+    every storey it reaches at one spot. A link rests at touching, not
+    inside the quarter, or the spring and the wall fight and the
+    picture never rests. A bubble the hand drops is held where it was
+    dropped until let go, because the forces are now strong enough to
+    undo the hand otherwise (this reverses F3's drag-holds-only-while-
+    held). Z2 found these; Z1 and Z2 built them.
 
 19. **The morph is two halves, partition then straightening; a
     proposal, deterministic, and it may spill.** First the partition:
@@ -148,7 +155,18 @@ A reversal is a new entry, never an edit.
     The entry on the street frontage, the garage at the kerb and the
     diwaniya's own street door are walls, not forces: the bubble sits
     on the kerb line inside the setback, may slide along the frontage
-    and never leaves it. The first arrangement is derived from the
+    and never leaves it. The owner's O7 ruling refines it: the entry
+    and the garage are walls; the diwaniya is a strong pull (S1)
+    inside a band one room's depth from the kerb. Frontage is claimed
+    in order of who needs a street door: the diwaniya first (at the
+    corner when the client says so), then the entry, then the women's
+    reception, then the garage bays with what is left, backed on to
+    the boundary away from the diwaniya; a bay the frontage will not
+    hold stands in tandem behind the bay before it, along the same
+    driveway, never behind another room. A frontage that cannot hold
+    the diwaniya and one bay side by side is a finding on the brief,
+    not a hidden bay. The garage is a ground-floor placeholder until
+    the basement storey (milestone 2, B0). The first arrangement is derived from the
     program, never random, and every re-settle starts from where the
     bubbles are, so the same program settles the same way twice and
     the designer's hand is the only source of variation. What pushes

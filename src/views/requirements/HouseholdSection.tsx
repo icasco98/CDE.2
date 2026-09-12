@@ -3,6 +3,7 @@ import { area } from '../../geometry'
 import type { Household, Project } from '../../model'
 import { defaultProgram } from '../../rulebook'
 import { connectDefaults } from '../../app/defaultLinks'
+import { openBubbles } from '../../app/openBubbles'
 import { session } from '../../app/session'
 import { CheckField, NumberField, Section } from './fields'
 import { refusalOf } from './refusals'
@@ -34,8 +35,11 @@ export function HouseholdSection({ project }: { project: Project }) {
         if (!added.ok) return added
       }
       // The rulebook's default connections come with the program, as edges: the designer removes
-      // what this house does not want rather than accepting one offer at a time.
-      return connectDefaults(session)
+      // what this house does not want rather than accepting one offer at a time. Then every room
+      // is opened where the first arrangement puts it, so the program is on the plot at once.
+      const linked = connectDefaults(session)
+      if (linked && !linked.ok) return linked
+      return openBubbles(session)
     })
     setProblem(refusalOf(refusal))
     setChanged(false)

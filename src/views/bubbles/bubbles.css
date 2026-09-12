@@ -401,3 +401,22 @@
 .bubbles-sheet .bubble-short.bubble-selected .bubble-full {
   visibility: visible;
 }
+
+/* A link that has not closed is drawn as tension rather than as a door: the same line, dashed and
+   lighter, so the picture says which of its links it has really made. */
+.bubbles-sheet .link-open .link {
+  stroke: #a89b83;
+  stroke-dasharray: 5 4;
+}
+
+/* Every link the picture could not close, said once beside the sheet with what is in its way. */
+.bubbles-tension ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.8rem;
+  color: #8a6a3f;
+}
+
+.bubbles-tension li {
+  margin: 0.2rem 0;
+}

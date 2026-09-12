@@ -7,6 +7,7 @@ import {
   type Plot,
   type Project,
   type Room,
+  type Site,
   type Weights,
 } from './types'
 
@@ -18,6 +19,7 @@ export type Snapshot = {
   readonly rooms: readonly Room[]
   readonly edges: readonly Edge[]
   readonly plot: Plot
+  readonly site: Site
   readonly storeys: number
   readonly heights: readonly number[]
   readonly weights: Weights
@@ -38,6 +40,9 @@ export const startingPlot: Plot = {
   street: [2],
 }
 
+/** What a project assumes until the client says otherwise: no corner diwaniya, the garden behind. */
+export const startingSite: Site = { diwaniyaAtCorner: false, garden: 'rear' }
+
 export const startingHousehold: Household = {
   familySize: 4,
   bedrooms: 3,
@@ -55,6 +60,7 @@ export function emptyProject(newId: IdGenerator, name = 'Untitled'): Project {
     storeys: 1,
     heights: [STARTING_HEIGHT_M],
     plot: startingPlot,
+    site: startingSite,
     household: startingHousehold,
     rooms: [],
     edges: [],
@@ -65,8 +71,8 @@ export function emptyProject(newId: IdGenerator, name = 'Untitled'): Project {
 }
 
 export function snapshotOf(project: Project): Snapshot {
-  const { rooms, edges, plot, storeys, heights, weights, household } = project
-  return { rooms, edges, plot, storeys, heights, weights, household }
+  const { rooms, edges, plot, site, storeys, heights, weights, household } = project
+  return { rooms, edges, plot, site, storeys, heights, weights, household }
 }
 
 export function restore(project: Project, snapshot: Snapshot): Project {

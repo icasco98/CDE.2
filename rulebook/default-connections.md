@@ -34,8 +34,16 @@ a kind:
   rooms; `EXTERIOR` never pairs this way.
 
 **The privacy gradient.** U2 wants a door only between adjacent tiers.
-Three rows cross a tier boundary anyway (D6, D14, D18); each says in
-its source why the crossing is the one a villa actually makes.
+Two rows cross a tier boundary anyway (D14, D18); each says in its
+source why the crossing is the one a villa actually makes.
+
+**What the entry can carry.** An entry of eight square metres has about
+three metres of wall to a side at its target aspect, and the front door,
+the corridor, the formal living room and the guest WC already spend it.
+D6 and D8 used to open the family living room and the stair off the
+entry as well; the bubble diagram showed that six doors will not go
+round it, so family living is reached from the corridor (D6) and the
+stair from the corridor alone (D26). D8 is withdrawn.
 
 **The front door.** A `main-door` is proposed only while the project
 has none, and only once, because `MODEL.md` allows a project exactly
@@ -50,9 +58,8 @@ one.
 | D3 | EXTERIOR | garage | door | each | S2: the garage stands at the kerb with the shortest driveway, so every bay opens to the street. | provisional |
 | D4 | EXTERIOR | service-entrance | door | each | S6 and U7: deliveries and staff arrive at a side door, never the family's. | provisional |
 | D5 | entry-foyer | formal-living | door | each | U10: formal living receives the guests the household invites in, from the entry. | provisional |
-| D6 | entry-foyer | family-living | door | each | U4: family living is the hub, reached from the family entrance. Public to private in one step, which U2 would not have; the entry is the threshold the household crosses at, and U2 is a force, not a wall. | provisional |
+| D6 | hallway | family-living | door | each | U4: family living is the hub, reached off the corridor the front door opens into. An entry's wall cannot carry six doors, so the corridor takes the rooms the entry receives into. | provisional |
 | D7 | entry-foyer | guest-wc | door | one | U9: guests find the WC from the entry, never through a private room. | provisional |
-| D8 | entry-foyer | stair | door | each | U11 with the room-type table: the stair is a circulation kind a front door may open onto. | provisional |
 | D9 | entry-foyer | hallway | open | each | Circulation to circulation: the foyer widens into the corridor that serves the house. | provisional |
 | D10 | womens-reception | entry-foyer | door | each | U10: the women's reception receives from the entry, away from family living. | provisional |
 | D11 | diwaniya | diwaniya-wc | door | one | U1 with the auxiliary flag: the diwaniya's WC is entered from the diwaniya and from nowhere else. | provisional |
@@ -70,7 +77,7 @@ one.
 | D23 | hallway | master-bedroom | door | each | U2 and U5: a bedroom is reached from the corridor, never through another bedroom. | provisional |
 | D24 | hallway | bedroom | door | each | U2 and U5: a bedroom is reached from the corridor, never through another bedroom. | provisional |
 | D25 | hallway | bathroom | door | each | A shared bathroom is reached from the corridor, so no one room owns it. | provisional |
-| D26 | hallway | stair | open | each | U11: the stair stands on the corridor it serves, open to it. | provisional |
+| D26 | hallway | stair | open | each | U11: the stair stands on the corridor it serves, open to it. An entry's wall cannot carry six doors, so this is the whole of how the stair is reached from the front door. | provisional |
 | D27 | driver-room | driver-bathroom | door | one | The auxiliary flag: the driver's bathroom is entered from his room. | provisional |
 | D28 | driver-room | garage | door | each | U8: the driver is by the cars, with his own door. | provisional |
 
@@ -85,8 +92,8 @@ with a room on any storey it spans.
 
 ## Least certain
 
-D6 and D14 are the two gradient crossings that a hallway would remove
-if `defaultProgram` laid one out; revisit both when it does. D12 may
+D14 is the gradient crossing a service entrance makes, and D18 the one
+a dining room makes; revisit both when the known house is entered. D12 may
 want to be `open` in the houses the firm actually builds, and D25 is a
 guess about a villa with a shared bathroom, which is not the common
 case here.

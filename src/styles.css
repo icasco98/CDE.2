@@ -337,3 +337,16 @@ table.program td input[type='number'] {
   overflow: hidden;
   clip-path: inset(50%);
 }
+
+/* What the program asks of geometry that geometry cannot give, under the totals it belongs to. */
+.findings {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  color: #a5442c;
+  max-width: 70ch;
+}
+
+.findings li {
+  margin: 0.2rem 0;
+}

@@ -9,7 +9,9 @@ import {
   type Plot,
   type Project,
   type Result,
+  type Garden,
   type Room,
+  type Site,
   type Violation,
   type WallHint,
   type Weights,
@@ -149,6 +151,18 @@ export function parseProject(document: Document): Result<Project> {
     }
   }
 
+  const gardens: readonly string[] = ['rear', 'side', 'none']
+
+  const siteOf = (value: unknown, at: string): Site => {
+    const raw = nested(value, at)
+    const garden = text(raw.garden, `${at}.garden`)
+    if (!gardens.includes(garden)) fail(`${at}.garden`, 'rear, side or none')
+    return {
+      diwaniyaAtCorner: flag(raw.diwaniyaAtCorner, `${at}.diwaniyaAtCorner`),
+      garden: garden as Garden,
+    }
+  }
+
   const householdOf = (value: unknown, at: string): Household => {
     const raw = nested(value, at)
     return {
@@ -176,6 +190,7 @@ export function parseProject(document: Document): Result<Project> {
     storeys: count(document.storeys, 'storeys'),
     heights: list(document.heights, 'heights').map((height, i) => count(height, `heights[${i}]`)),
     plot: plotOf(document.plot, 'plot'),
+    site: siteOf(document.site, 'site'),
     household: householdOf(document.household, 'household'),
     rooms: list(document.rooms, 'rooms').map((raw, i) => room(raw, `rooms[${i}]`)),
     edges: list(document.edges, 'edges').map((raw, i) => edge(raw, `edges[${i}]`)),

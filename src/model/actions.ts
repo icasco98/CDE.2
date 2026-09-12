@@ -21,6 +21,7 @@ import {
   type Plot,
   type Project,
   type Result,
+  type Site,
   type WallHint,
   type Weights,
 } from './types'
@@ -204,6 +205,9 @@ export function createActions(context: Context) {
       settle({ ...state(), plot: { ...state().plot, street } }),
 
     setWeights: (weights: Weights): Result => settle({ ...state(), weights }),
+
+    /** The client's two site answers, S4 and S5; they are the project's, so undo covers them. */
+    setSite: (site: Site): Result => settle({ ...state(), site }),
 
     setHousehold: (household: Household): Result => settle({ ...state(), household }),
 
