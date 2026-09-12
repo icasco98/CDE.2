@@ -34,9 +34,10 @@ const CONTACT_M = 0.9
  * How far a zone's middle may sit from the bubble it grew from. The brief asked for a metre; the
  * reaches are walked back under their bubbles twice to hold them near it, and a storey packed to
  * the buildable line still leaves a room half a metre further out, because a zone cut against its
- * neighbours on three sides has its middle pulled toward the fourth.
+ * neighbours on three sides has its middle pulled toward the fourth. The furthest out is the
+ * formal living of the default two-storey villa, which the garage's own driveway moves east.
  */
-const ADRIFT_M = 1.7
+const ADRIFT_M = 1.8
 
 /** The programs the suite runs, each with the storeys its zones are read on. */
 const suite: readonly {
@@ -47,26 +48,9 @@ const suite: readonly {
   readonly open?: readonly string[]
   /** Rooms those open links leave with no way in, from the entry or from a street door. */
   readonly shut?: readonly string[]
-  /** Garage bays this plot's frontage leaves with no straight run to the street. */
-  readonly parked?: readonly string[]
 }[] = [
-  {
-    // The whole villa on one floor: the frontage is spent before the second bay has any of it,
-    // and what stands in front of that bay is what the finding names.
-    name: 'the default program on one storey',
-    project: () => villa(1),
-    storeys: 1,
-    parked: ['Garage bay 2'],
-  },
-  {
-    // Sixteen metres of buildable frontage carry the diwaniya's own eight and the entry's three,
-    // and will not hold a bay beside them; the second bay stands behind the formal living, which
-    // is the finding rather than a plan.
-    name: 'the default program on two storeys',
-    project: () => villa(2),
-    storeys: 2,
-    parked: ['Garage bay 2'],
-  },
+  { name: 'the default program on one storey', project: () => villa(1), storeys: 1 },
+  { name: 'the default program on two storeys', project: () => villa(2), storeys: 2 },
   {
     name: 'a small household on one storey',
     project: () =>
@@ -83,7 +67,6 @@ const suite: readonly {
     // metres of street will not hold the diwaniya, the entry and two bays and still leave the
     // formal living a wall on the entry. The zones cannot close what the bubbles never touched.
     name: 'a household with a maid and a driver',
-    parked: ['Garage bay 2'],
     open: ['Entry to Formal Living', 'Ground Hallway to Family Living'],
     shut: [
       'Formal Living',
@@ -268,11 +251,11 @@ describe('the partition', () => {
         }
       })
 
-      it('keeps a garage bay a straight run to the street, or says which has none', () => {
+      it('keeps every garage bay a straight run to the street', () => {
         for (const [storey, partition] of made.entries()) {
           expect([storey, partition.blockedBays.map((id) => nameOf(house, id))]).toEqual([
             storey,
-            storey === 0 ? [...(each.parked ?? [])] : [],
+            [],
           ])
           // And the bays it did not name really do reach the street: straight out of the bay
           // towards the kerb, every point on the way is the bay's own or nobody's.
@@ -366,6 +349,57 @@ describe('a link the corridor crosses', () => {
 
   it('says which rooms the entry cannot reach', () => {
     expect([...made.unreached].sort()).toEqual(['East', 'Hallway'])
+  })
+})
+
+describe('a garage bay behind another', () => {
+  /** A plot whose street runs along the bottom, with the buildable line a metre inside it. */
+  const kerb = { from: [1, 15] as Point, to: [15, 15] as Point, inward: [0, -1] as Point }
+  const yard: Polygon = [
+    [0, 0],
+    [16, 0],
+    [16, 16],
+    [0, 16],
+  ]
+  const line: Polygon = [
+    [1, 1],
+    [15, 1],
+    [15, 15],
+    [1, 15],
+  ]
+  const bays = [
+    { ...room('Bay 1', [4, 12.5], 18), type: 'garage' },
+    { ...room('Bay 2', [4, 7.5], 18), type: 'garage' },
+  ]
+
+  it('has its run through the bay in front of it', () => {
+    const made = partitionOf({
+      rooms: [...bays, room('Living', [11, 9], 40)],
+      links: [],
+      arrivals: ['Living'],
+      plot: yard,
+      buildable: line,
+      street: kerb,
+    })
+    expect(made.blockedBays).toEqual([])
+  })
+
+  it('has none when the corridor lies across the drive in front of it', () => {
+    const made = partitionOf({
+      // The corridor is laid before anything else and is never given up, so the driveway cannot be
+      // claimed through it and the bay behind it really has no way out. That is the finding.
+      rooms: [
+        ...bays,
+        room('Hallway', [8, 10], 20, { type: 'hallway', radius: 0.9, half: 6, angle: 0 }),
+        room('Living', [2, 5], 25),
+      ],
+      links: [],
+      arrivals: ['Living'],
+      plot: yard,
+      buildable: line,
+      street: kerb,
+    })
+    expect(made.blockedBays).toEqual(['Bay 2'])
   })
 })
 

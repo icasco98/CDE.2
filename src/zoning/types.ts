@@ -22,12 +22,13 @@ export type PartitionRoom = {
   /** The way that segment lies, in radians. */
   readonly angle: number
   /** The stretch of the buildable line this room claimed, and the way in from it. */
-  readonly kerb?: { readonly from: Point; readonly to: Point; readonly inward: Point }
+  readonly kerb?: Kerb
   /** The room whose perimeter this one rides, where it is that room's companion. */
   readonly owner?: string
-  /** The garage bay this one stands in tandem behind, along the same driveway. */
-  readonly behind?: string
 }
+
+/** A stretch of the buildable line, and the way in from it. */
+export type Kerb = { readonly from: Point; readonly to: Point; readonly inward: Point }
 
 /** A link between two rooms of the storey, which the partition either gives a door or leaves open. */
 export type PartitionLink = { readonly id: string; readonly a: string; readonly b: string }
@@ -44,7 +45,7 @@ export type PartitionInput = {
    */
   readonly arrivals: readonly string[]
   /** The stretch of the buildable line the cars come off, and the way in from it. */
-  readonly street?: { readonly from: Point; readonly to: Point; readonly inward: Point }
+  readonly street?: Kerb
 }
 
 /** One room's share of the floor: an orthogonal polygon on the grid, and what it measures. */

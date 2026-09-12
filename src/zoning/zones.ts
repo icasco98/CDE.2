@@ -171,7 +171,9 @@ export function fillHoles(division: Division, rooms: number): void {
     for (const index of inside) {
       const owner = division.owner[index] ?? NOBODY
       if (owner === NOBODY) {
-        division.owner[index] = room
+        // A pocket a claim holds is not the surrounding room's to fill: the ground in front of a
+        // garage bay stays the garage's or nobody's even when a room has closed round it.
+        if (allowed(division, index, room)) division.owner[index] = room
         continue
       }
       trapped.set(owner, [...(trapped.get(owner) ?? []), index])

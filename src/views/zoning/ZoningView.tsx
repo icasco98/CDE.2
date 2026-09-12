@@ -1196,8 +1196,9 @@ export function ZoningView(props: ZoningViewProps) {
         )}
         {(proposal !== null || asking !== null) && (
           <>
+            {/* Two different things: the first says what may go, the second says what may stand. */}
             <button type="button" data-accept="" onClick={onAccept}>
-              Accept
+              {asking === null ? 'Accept' : 'Replace'}
             </button>
             <button type="button" data-back="" onClick={onBack}>
               Back to bubbles

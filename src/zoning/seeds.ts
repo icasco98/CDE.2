@@ -1,6 +1,6 @@
 import type { Point } from '../geometry'
 import { cellCentre, INSIDE, OFF, type Grid } from './grid'
-import { NOBODY, type Division, type PartitionRoom } from './types'
+import { NOBODY, type Division, type Kerb, type PartitionRoom } from './types'
 
 /*
  * What is put down before any reach is measured. The corridor is laid first, because a plan is
@@ -268,62 +268,68 @@ export function layContact(
 }
 
 /**
- * The driveway a garage bay keeps: the stretch of kerb it claimed, as deep as the deepest bay
- * standing on it, is the garage's or nobody's. A bay in tandem stands on the same stretch behind
- * the bay in front of it, which is why the claim is read over the whole group of them at once.
+ * The driveway a group of garage bays keeps: the whole stretch of kerb they stand on, from the
+ * street to behind the deepest of them, is the garage's or nobody's. It is read off where the bays
+ * stand rather than off the frontage rule's claims, because a narrow plot gives no bay a claim at
+ * all and yet still stands one bay behind another, and the ground between two bays on one drive is
+ * the drive: a room let into it would leave the bay behind with no way out.
  */
 export function claimDrives(
   division: Division,
   rooms: readonly PartitionRoom[],
+  street: Kerb | undefined,
   isBay: (room: PartitionRoom) => boolean,
 ): void {
-  const claims = division.claims
-  for (const [index, room] of rooms.entries()) {
-    const kerb = room.kerb
-    if (!kerb || !isBay(room)) continue
-    const group = [index]
-    for (let more = true; more;) {
-      more = false
-      for (const [other, each] of rooms.entries()) {
-        if (group.includes(other) || each.behind === undefined) continue
-        const ahead = rooms.findIndex((one) => one.id === each.behind)
-        if (!group.includes(ahead)) continue
-        group.push(other)
-        more = true
-      }
+  if (!street) return
+  const along = unit(street.from, street.to)
+  /** Where a bay stands on the street: the stretch it takes of it, and how far in it is. */
+  const standing = rooms.flatMap((room, index) => {
+    if (!isBay(room)) return []
+    const at = alongLine(street.from, along, room.at)
+    const into =
+      (room.at[0] - street.from[0]) * street.inward[0] +
+      (room.at[1] - street.from[1]) * street.inward[1]
+    return [{ index, from: at - room.radius, to: at + room.radius, into, radius: room.radius }]
+  })
+  // Bays side by side take their own stretches and need no drive between them; bays one behind
+  // another take the same stretch, and all of it is one drive.
+  const groups: { members: number[]; from: number; to: number; depth: number }[] = []
+  for (const bay of standing) {
+    const width = bay.to - bay.from
+    const sharing = groups.find(
+      (group) => Math.min(group.to, bay.to) - Math.max(group.from, bay.from) > width / 2,
+    )
+    const depth = bay.into + bay.radius
+    if (!sharing) {
+      groups.push({ members: [bay.index], from: bay.from, to: bay.to, depth })
+      continue
     }
-    const along = unit(kerb.from, kerb.to)
-    const run = Math.hypot(kerb.to[0] - kerb.from[0], kerb.to[1] - kerb.from[1])
-    if (run < 1e-9) continue
-    // Only the ground between the street and the nearest rim of the deepest bay on this stretch is
-    // claimed: that is the run itself. A bay standing on the kerb needs none, because its own cells
-    // are already against the line; a bay in tandem needs the whole driveway past the bay in front.
-    let depth = 0
-    for (const member of group) {
-      const bay = rooms[member]
-      if (!bay) continue
-      const into =
-        (bay.at[0] - kerb.from[0]) * kerb.inward[0] + (bay.at[1] - kerb.from[1]) * kerb.inward[1]
-      depth = Math.max(depth, into - bay.radius)
-    }
-    if (depth <= 0) continue
-    const claim = claims.length
-    claims.push(group)
-    // A cell narrower than the claim at each end, so a room standing beside the bay may still
+    sharing.members.push(bay.index)
+    sharing.from = Math.min(sharing.from, bay.from)
+    sharing.to = Math.max(sharing.to, bay.to)
+    sharing.depth = Math.max(sharing.depth, depth)
+  }
+  for (const group of groups) {
+    if (group.depth <= 0) continue
+    const claim = division.claims.length
+    division.claims.push(group.members)
+    // A cell narrower than the stretch at each end, so a room standing beside a bay may still
     // share its side wall: what the driveway needs is the ground in front of the bay, not its sides.
+    const middle = (group.from + group.to) / 2
     const box: Box = {
       at: [
-        kerb.from[0] + along[0] * (run / 2) + kerb.inward[0] * (depth / 2),
-        kerb.from[1] + along[1] * (run / 2) + kerb.inward[1] * (depth / 2),
+        street.from[0] + along[0] * middle + street.inward[0] * (group.depth / 2),
+        street.from[1] + along[1] * middle + street.inward[1] * (group.depth / 2),
       ],
       along,
-      halfLong: Math.max(division.grid.step, run / 2 - division.grid.step),
-      halfWide: depth / 2,
+      halfLong: Math.max(division.grid.step, (group.to - group.from) / 2 - division.grid.step),
+      halfWide: group.depth / 2,
     }
     for (const cell of cellsIn(division.grid, box)) {
       // A cell the corridor already lies on is not the garage's to claim; that bay's run is
       // blocked, and the finding says so rather than the driveway taking the corridor's floor.
-      if (division.fixed[cell] !== 0 && !group.includes(division.owner[cell] ?? NOBODY)) continue
+      if (division.fixed[cell] !== 0 && !group.members.includes(division.owner[cell] ?? NOBODY))
+        continue
       if ((division.claim[cell] ?? NOBODY) !== NOBODY) continue
       division.claim[cell] = claim
     }

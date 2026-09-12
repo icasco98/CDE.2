@@ -85,7 +85,6 @@ export function partitionStorey(house: House, storey: number): Partition {
     const body = bodies.get(room.id)
     if (!body) return []
     const owner = owners.get(room.id)
-    const behind = frontage.behind.get(room.id)
     return [
       {
         id: room.id,
@@ -100,7 +99,6 @@ export function partitionStorey(house: House, storey: number): Partition {
           ? {}
           : { kerb: kerbOf(room, house, frontage.claims.get(room.id)) }),
         ...(owner === undefined || !standing.has(owner) ? {} : { owner }),
-        ...(behind === undefined || !standing.has(behind) ? {} : { behind }),
       },
     ]
   })

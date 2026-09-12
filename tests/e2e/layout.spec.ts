@@ -128,9 +128,11 @@ test('Morph divides the storey among its bubbles, with no overlap and no gap', a
   }
   expect(gaps).toEqual([])
 
-  // Every link on the storey is a door, and nothing is shut off from the entry or the street.
+  // Every link on the storey is a door, nothing is shut off from the entry or the street, and
+  // both garage bays keep their run: the second stands in tandem behind the first, on one drive.
   await expect(page.locator('[data-zone-tension]')).toHaveCount(0)
   await expect(page.locator('[data-unreached]')).toHaveCount(0)
+  await expect(page.locator('[data-bay-blocked]')).toHaveCount(0)
 })
 
 test('Accept places every room in one step and one Undo unplaces them all', async ({ page }) => {
@@ -237,8 +239,10 @@ test('a storey already drawn is asked about before it is replaced', async ({ pag
   await page.getByRole('button', { name: 'Morph' }).click()
   await expect(page.locator('[data-replace]')).toContainText(`Replace the ${placed} placed rooms`)
   await expect(page.locator('[data-zone]')).toHaveCount(0)
+  // The question is answered by Replace; the proposal it then draws is answered by Accept.
+  await expect(page.getByRole('button', { name: 'Accept' })).toHaveCount(0)
 
-  await page.getByRole('button', { name: 'Accept' }).click()
+  await page.getByRole('button', { name: 'Replace' }).click()
   await expect(page.locator('[data-zone]').first()).toBeVisible()
   await page.getByRole('button', { name: 'Back to bubbles' }).click()
   await expect(page.locator('[data-room]')).toHaveCount(placed)

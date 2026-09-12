@@ -1,5 +1,5 @@
 import { area, type Point, type Polygon } from '../geometry'
-import { cellAt, gridOver, INSIDE, PAST, type Grid } from './grid'
+import { cellAt, cellCentre, gridOver, INSIDE, OFF, PAST, type Grid } from './grid'
 import { doorOn, reachedFrom, runNeeded, sharedRuns, whyOpen } from './links'
 import { divide, settleAreas } from './reach'
 import { claimDrives, inContact, layContact, layCorridor, layKerb, relaxRun } from './seeds'
@@ -46,7 +46,7 @@ export function partitionOf(input: PartitionInput): Partition {
 
   for (const [index, room] of rooms.entries())
     if (isCorridor(room)) layCorridor(division, room, index, entry?.at)
-  claimDrives(division, rooms, (room) => room.type === BAY)
+  claimDrives(division, rooms, input.street, (room) => room.type === BAY)
   for (const [index, room] of rooms.entries()) layKerb(division, room, index)
   seedContacts(division, rooms, input, at)
 
@@ -116,11 +116,15 @@ export function partitionOf(input: PartitionInput): Partition {
   }
 }
 
+/** How wide a run to the street has to be, in metres: the 3 m of a bay in the room-type table. */
+const RUN_M = 3
+
 /**
- * The bays with no straight run to the street: the ground between the bay and the street line,
- * over the bay's own width, is the garage's or nobody's, so a cell of it held by another room is
- * a bay a car cannot reach. Checked on the zones rather than on the claims, because it is the
- * plan that has to hold, and a bay standing in tandem has its run through the bay in front of it.
+ * The bays with no straight run to the street. A car needs one clear run of a bay's own width from
+ * the bay's floor to the street line, not the whole of its floor clear: the ground in that run is
+ * the garage's or nobody's, and a bay standing in tandem has its run through the bay in front of
+ * it, which is the same driveway, so another garage bay in the way is not in the way at all. It is
+ * read off the zones rather than off the claims, because it is the plan that has to hold.
  */
 function blockedRuns(
   division: Division,
@@ -130,32 +134,72 @@ function blockedRuns(
   const street = input.street
   if (!street) return []
   const grid = division.grid
+  const bays = new Set(rooms.flatMap((room, index) => (room.type === BAY ? [index] : [])))
+  const away: Point = [-street.inward[0], -street.inward[1]]
+  const along = unitAlong(street.from, street.to)
   const blocked: string[] = []
-  for (const [index, room] of rooms.entries()) {
-    if (room.type !== BAY) continue
-    const away: Point = [-street.inward[0], -street.inward[1]]
-    const across: Point = [-away[1], away[0]]
-    const bays = new Set(rooms.flatMap((each, other) => (each.type === BAY ? [other] : [])))
-    let stopped = false
-    for (const side of [-room.radius / 2, 0, room.radius / 2]) {
-      const from: Point = [room.at[0] + across[0] * side, room.at[1] + across[1] * side]
-      for (let step = 0; step < grid.rows + grid.cols; step++) {
-        const cell = cellAt(
-          grid,
-          from[0] + away[0] * step * grid.step,
-          from[1] + away[1] * step * grid.step,
-        )
-        if (cell < 0 || (grid.place[cell] ?? 0) === 0) break
-        const owner = division.owner[cell] ?? NOBODY
-        if (owner === NOBODY || owner === index || bays.has(owner)) continue
-        stopped = true
-        break
-      }
-      if (stopped) break
+  for (const index of bays) {
+    const room = rooms[index]
+    if (!room) continue
+    // The bay's floor cut into lanes running to the street, each one a cell wide.
+    const lanes = new Map<number, boolean>()
+    for (let cell = 0; cell < division.owner.length; cell++) {
+      if (division.owner[cell] !== index) continue
+      const from = cellCentre(grid, cell)
+      const lane = Math.round(
+        ((from[0] - street.from[0]) * along[0] + (from[1] - street.from[1]) * along[1]) / grid.step,
+      )
+      if (lanes.get(lane) === false) continue
+      lanes.set(lane, laneIsClear(division, bays, index, from, away))
     }
-    if (stopped) blocked.push(room.id)
+    const widest = widestRun(lanes, grid.step)
+    if (widest < Math.min(RUN_M, lanes.size * grid.step) - 1e-9) blocked.push(room.id)
   }
   return blocked
+}
+
+/** Whether one lane out of a bay reaches the street without crossing a room that is not a bay. */
+function laneIsClear(
+  division: Division,
+  bays: ReadonlySet<number>,
+  bay: number,
+  from: Point,
+  away: Point,
+): boolean {
+  const grid = division.grid
+  for (let step = 1; step < grid.rows + grid.cols; step++) {
+    const on = cellAt(
+      grid,
+      from[0] + away[0] * step * grid.step,
+      from[1] + away[1] * step * grid.step,
+    )
+    if (on < 0 || (grid.place[on] ?? OFF) === OFF) return true
+    const owner = division.owner[on] ?? NOBODY
+    if (owner === NOBODY || owner === bay || bays.has(owner)) continue
+    return false
+  }
+  return true
+}
+
+/** The widest stretch of neighbouring lanes that all reach the street, in metres. */
+function widestRun(lanes: ReadonlyMap<number, boolean>, step: number): number {
+  const clear = [...lanes].filter(([, open]) => open).map(([lane]) => lane)
+  clear.sort((one, other) => one - other)
+  let widest = 0
+  let run = 0
+  let last: number | undefined
+  for (const lane of clear) {
+    run = last !== undefined && lane === last + 1 ? run + 1 : 1
+    last = lane
+    widest = Math.max(widest, run)
+  }
+  return widest * step
+}
+
+/** The way a stretch of the buildable line runs, as a unit vector. */
+function unitAlong(from: Point, to: Point): Point {
+  const run = Math.hypot(to[0] - from[0], to[1] - from[1])
+  return run < 1e-9 ? [1, 0] : [(to[0] - from[0]) / run, (to[1] - from[1]) / run]
 }
 
 /** The floor before anything is put on it, and whether the storey's targets fit inside the line. */
