@@ -1,7 +1,22 @@
 import { boundingBox, type Point } from '../geometry'
 import type { Family, Weights } from '../model'
-import { companionOwners, forces, kerbFor, type ForceField, type ForceRoom } from '../rulebook'
-import { CORRIDOR_R, corridorHalf, endsOf, gapBetween, type Placed } from './capsule'
+import {
+  BAND_RADII,
+  bandFor,
+  companionOwners,
+  forces,
+  kerbFor,
+  type ForceField,
+  type ForceRoom,
+} from '../rulebook'
+import {
+  CORRIDOR_R,
+  corridorHalf,
+  endsOf,
+  gapBetween,
+  nearestOnSegment,
+  type Placed,
+} from './capsule'
 import { canonicalStart } from './start'
 import { alongTheLine, CLEARED, holdInside, putInside, type Buildable, type Ground } from './ground'
 
@@ -209,6 +224,9 @@ export type Body = {
   readonly tier?: string
   /** The kerb this body stands against and slides along, where its kind is one of the walled three. */
   readonly kerb?: readonly [Point, Point]
+  /** The street a room is held in a band of, and how far from it its middle may ever stand. */
+  readonly band?: readonly [Point, Point]
+  readonly bandReach?: number
   /** A corridor whose near end is held on a room: where it lies is not the pairs' to say. */
   readonly anchored?: true
   /** The room whose perimeter this one rides, where it is that room's companion. */
@@ -344,6 +362,7 @@ export function createState(
     const radius = corridor ? CORRIDOR_R : radiusOf(room.targetArea)
     const opening = room.bubble ?? opened.get(room.id) ?? middle
     const kerb = corridor ? undefined : kerbLineFor(room.kind, radius, ground)
+    const band = room.kind === undefined ? undefined : bandFor(room.kind, ground.sides)
     return {
       id: room.id,
       x: opening.x,
@@ -359,6 +378,9 @@ export function createState(
       ...(room.kind === undefined ? {} : { kind: room.kind }),
       ...(room.tier === undefined ? {} : { tier: room.tier }),
       ...(kerb === undefined ? {} : { kerb }),
+      ...(band === undefined
+        ? {}
+        : { band: [band.from, band.to] as const, bandReach: radius * BAND_RADII }),
     }
   })
   const at = new Map(bodies.map((body, index) => [body.id, index]))
@@ -547,6 +569,27 @@ function onKerb(w: Work): void {
   const along = Math.min(1, Math.max(0, ((w.x - from[0]) * dx + (w.y - from[1]) * dy) / run))
   w.x = from[0] + dx * along
   w.y = from[1] + dy * along
+}
+
+/**
+ * A room the band holds set back inside it. The owner's ruling on S1 is a wall, not only a pull: a
+ * diwaniya may stand at most one room's depth back from its street, so where the frame has left it
+ * further off than that it comes straight back to the edge of the band. Held every round, which is
+ * how a wall is held, and never traded. It is a bound on depth and nothing else: a room inside the
+ * band may still have the garage between it and the kerb, which is a frontage the plot has not got
+ * rather than a depth the ruling forbids.
+ */
+function inTheBand(w: Work): void {
+  const band = w.body.band
+  const reach = w.body.bandReach
+  if (!band || reach === undefined) return
+  const on = nearestOnSegment(band[0], band[1], w.x, w.y)
+  const dx = w.x - on[0]
+  const dy = w.y - on[1]
+  const away = Math.hypot(dx, dy)
+  if (away <= reach || away < 1e-9) return
+  w.x = on[0] + (dx / away) * reach
+  w.y = on[1] + (dy / away) * reach
 }
 
 /**
@@ -835,6 +878,7 @@ function project(work: readonly Work[], state: SimulationState, air: number): vo
     // so what a round leaves is a picture with no overlap past the quarter the model allows. The
     // pairs can never undo a wall, because a bubble a wall holds moves only the way it lets it.
     for (const w of work) onKerb(w)
+    for (const w of work) inTheBand(w)
     for (const corridor of state.corridors) alongTheRooms(work, corridor, inside)
     if (holds)
       for (const w of work) {
@@ -879,6 +923,7 @@ function project(work: readonly Work[], state: SimulationState, air: number): vo
       w.y = held.at[1]
       w.angle = held.angle
     }
+  for (const w of work) inTheBand(w)
   for (const corridor of state.corridors) alongTheRooms(work, corridor, inside)
   // A bubble the forces drove into its neighbour and the projection put back has not moved, so the
   // projection takes that speed off it: exactly the part of it that pressed against the wall and

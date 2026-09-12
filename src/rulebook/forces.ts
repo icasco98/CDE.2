@@ -80,6 +80,21 @@ function towardKinds(at: Point, kinds: readonly string[], field: ForceField): Po
   return other ? toward(at, other) : nowhere
 }
 
+/**
+ * How far from its street a room the band holds may stand, in its own radii. The owner's ruling on
+ * S1 is exact, and it is a wall as much as a pull: the diwaniya may stand at most one room's depth
+ * back from the kerb, and its own door is on the kerb. One room's depth back is a near rim a whole
+ * diameter from the line, which is a middle three radii from it — so the room sits inside the first
+ * two room-depths of the plot, and never behind the garage. S1 goes on pulling it to the street
+ * inside that band; the band is only the furthest back the pull may ever leave it.
+ */
+export const BAND_RADII = 3
+
+/** The street a kind is held in the band of, where its kind is held in one at all. */
+export function bandFor(kind: string, sides: PlotSides): PlotSide | undefined {
+  return kind === 'diwaniya' ? sides.service : undefined
+}
+
 const isKind =
   (...kinds: readonly string[]) =>
   (room: ForceRoom): boolean =>
@@ -99,8 +114,9 @@ export const forces: readonly Force[] = [
     strength: strong,
     statement: 'S1: the diwaniya stands on the service street with its own door.',
     acts: isKind('diwaniya'),
-    // A strong pull, not a wall: the room may stand up to one room's depth back behind its own
-    // court, and its street door is drawn on the kerb at the nearest point whatever it does.
+    // A pull, and a band: the room may stand up to one room's depth back behind its own court and
+    // no further — `BAND_RADII` above is the ruling, held every round the way a wall is held — and
+    // its street door is drawn on the kerb at the nearest point whatever it does inside that.
     pull: (_room, at, field) => towardSide(at, field.sides.service),
   },
   {

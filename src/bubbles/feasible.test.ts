@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { area, pointInPolygon, type Polygon } from '../geometry'
 import { createIdGenerator, createStore, EXTERIOR, type Household, type Project } from '../model'
-import { defaultProgram, feasibility, impliedConnections, kerbFor, roomTypeById } from '../rulebook'
+import {
+  bandFor,
+  defaultProgram,
+  feasibility,
+  impliedConnections,
+  kerbFor,
+  nearestOn,
+  roomTypeById,
+} from '../rulebook'
 import { correctContacts } from './correction'
 import { groundOf } from './ground'
 import {
@@ -169,6 +177,19 @@ describe('the feasible suite', () => {
           inside.push(`${nameOf(project, room.id)} in ${nameOf(project, corridor.id)}`)
         }
         expect(inside).toEqual([])
+      })
+
+      it('keeps the diwaniya within one room-depth of its street', () => {
+        const sides = groundOf(project.plot, project.site).sides
+        for (const body of picture.bodies) {
+          const band = body.kind === undefined ? undefined : bandFor(body.kind, sides)
+          if (!band) continue
+          const on = nearestOn(band, body.x, body.y)
+          // The owner's ruling: the near rim is a diameter from the line at the furthest, which is
+          // a middle three radii from it. Behind the garage is outside the band by any reading.
+          const rim = Math.hypot(body.x - on[0], body.y - on[1]) - body.radius
+          expect(rim).toBeLessThanOrEqual(2 * body.radius + 0.01)
+        }
       })
 
       it('stands every walled room on its own kerb', () => {

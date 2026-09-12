@@ -117,6 +117,20 @@ describe('the walls the picture is held by', () => {
     expect(entry.x).toBeGreaterThan(ground.inside.polygon[0]?.[0] ?? 0)
   })
 
+  it('holds the diwaniya within one room-depth of its street, wherever it is let go', () => {
+    // Let go at the far back of the floor, which is where no diwaniya may stand: the band is a
+    // wall, so one frame brings it back to the deepest place the owner's ruling allows.
+    const back = villa.map((each) =>
+      each.id === 'diwaniya' ? { ...each, bubble: { x: 10, y: 3 } } : each,
+    )
+    const out = step(createState(back, links, ground))
+    const room = out.bodies.find((body) => body.id === 'diwaniya')
+    if (!room) throw new Error('there is no diwaniya')
+    // Three radii from the line is the furthest its middle may be: a near rim one diameter back.
+    expect(KERB_Y - room.y).toBeLessThanOrEqual(3 * room.radius + 1e-6)
+    expect(KERB_Y - room.y - room.radius).toBeLessThanOrEqual(2 * room.radius + 1e-6)
+  })
+
   it('draws the corridor as a capsule of its area, its near end on the entry', () => {
     const out = settle(createState(villa, links, ground))
     const hall = out.state.bodies.find((body) => body.id === 'hall')

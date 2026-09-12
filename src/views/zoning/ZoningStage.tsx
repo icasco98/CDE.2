@@ -32,8 +32,13 @@ function planFrom(project: Project, sizes: ReadonlyMap<string, RoomSizes>): Plan
       refusals.push(laid.reason)
       continue
     }
-    placements.push(...laid.value)
-    const at = new Map(laid.value.map((placement) => [placement.id, placement.footprint]))
+    placements.push(...laid.value.placements)
+    // A room the storey had no place for stays in the tray, and the sheet says which rooms in the
+    // one sentence: a floor is drawn as far as it goes rather than left undrawn for one room.
+    if (laid.value.missed) refusals.push(laid.value.missed)
+    const at = new Map(
+      laid.value.placements.map((placement) => [placement.id, placement.footprint]),
+    )
     rooms = rooms.map((room) => {
       const footprint = at.get(room.id)
       return footprint ? { ...room, footprint } : room
