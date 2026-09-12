@@ -240,7 +240,7 @@ $('note-send').addEventListener('click', async () => {
   if (!window.claude || !window.claude.use) return
   db = await window.claude.use('db'); if (!db) return
   render()
-  db.doc('board/current').onSnapshot((s) => { if (s.exists) { board = s.data(); render() } }, () => {})
+  db.doc('board/current').onSnapshot((s) => { const d = s.exists ? s.data() : null; if (d && (d.revision ?? 0) >= (embedded.revision ?? 0)) { board = d; render() } }, () => {})
   db.collection('decisions').onSnapshot((s) => { decisions = {}; s.docs.forEach((d) => { decisions[d.id] = d.data() }); render() }, () => {})
   db.collection('notes').orderBy('at', 'desc').limit(8).onSnapshot((s) => { notes = s.docs.map((d) => d.data()); render() }, () => {})
 })()
