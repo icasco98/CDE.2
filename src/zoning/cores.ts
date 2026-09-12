@@ -1,7 +1,6 @@
-import type { Point } from '../geometry'
-import { cellCentre, type Grid } from './grid'
+import { type Grid } from './grid'
 import { allowed, usable, WALL } from './seeds'
-import { cellsOfBox, joined, jogsRun, JOG, type Box, type Shape } from './shape'
+import { joined, jogsRun, JOG, type Box, type Shape } from './shape'
 import { NOBODY, type Division, type PartitionRoom } from './types'
 
 /*
@@ -11,7 +10,7 @@ import { NOBODY, type Division, type PartitionRoom } from './types'
  */
 
 /** The floor a room must have before it may take an arm, in m²; under it a zone is a rectangle. */
-const LITTLE_M2 = 8
+export const LITTLE_M2 = 8
 
 /** How far outside its own cells a zone may look for the rectangle it becomes, in cells. */
 const MARGIN = 8
@@ -31,10 +30,6 @@ const SPARE = 0.6
 
 /** A cell no zone may stand on at all. */
 const BLOCKED = -1e6
-
-/** The corridor's width in cells: the Municipality's 1.20 m clear, and no more than 2.4 m. */
-export const NARROWEST = 5
-export const WIDEST = 9
 
 /** Prefix sums of a score over a window of the grid, so any box in it is read in constant time. */
 type Field = {
@@ -158,7 +153,7 @@ function bestArm(field: Field, main: Box): Box | null {
 }
 
 /** The cells one room holds in the division as the reaches left it. */
-function ownedBy(division: Division, index: number): readonly number[] {
+export function ownedBy(division: Division, index: number): readonly number[] {
   const out: number[] = []
   for (let cell = 0; cell < division.owner.length; cell++)
     if (division.owner[cell] === index) out.push(cell)
@@ -166,7 +161,7 @@ function ownedBy(division: Division, index: number): readonly number[] {
 }
 
 /** The window a zone is fitted in: its own cells, with room round them to square up into. */
-function windowOf(grid: Grid, cells: readonly number[], margin: number): Box {
+export function windowOf(grid: Grid, cells: readonly number[], margin: number): Box {
   let left = grid.cols
   let right = -1
   let top = grid.rows
@@ -293,89 +288,4 @@ export function sparePlaceOf(
     else break
   }
   return { main: kept, arm: null }
-}
-
-/**
- * The corridor's own rectangle: the run it was laid as, read back off the axis it was turned onto
- * rather than off the cells it ended with, so the spine is the width the Municipality asks and the
- * length its target gives it and nothing the hole-filling handed it on the way. A run that crosses
- * the buildable line is shortened from its far end, never bent.
- */
-export function spineOf(
-  division: Division,
-  room: PartitionRoom | undefined,
-  index: number,
-): Shape | null {
-  if (!room || room.half <= 0 || room.targetArea <= 0) return null
-  const grid = division.grid
-  const along: Point = [Math.cos(room.angle), Math.sin(room.angle)]
-  const wide = Math.min(WIDEST, Math.max(NARROWEST, Math.round((2 * room.radius) / grid.step)))
-  const near: Point = [room.at[0] - along[0] * room.half, room.at[1] - along[1] * room.half]
-  const tip: Point = [near[0] - along[0] * room.radius, near[1] - along[1] * room.radius]
-  // The run is as long as its target gives it, and longer where a room it serves stands further
-  // down the axis than that: a corridor that stops short of the stair is a corridor that serves it
-  // by a door it has not got.
-  const seeded = reachOfSeeds(division, index, tip, along, wide)
-  const long = Math.max(JOG, seeded, Math.round(room.targetArea / (wide * grid.step) / grid.step))
-  const across = Math.abs(along[0]) > 0.5
-  const tipCol = Math.floor((tip[0] - grid.left) / grid.step)
-  const tipRow = Math.floor((tip[1] - grid.top) / grid.step)
-  const middle = across
-    ? Math.round((room.at[1] - grid.top) / grid.step - wide / 2)
-    : Math.round((room.at[0] - grid.left) / grid.step - wide / 2)
-  const forward = across ? along[0] > 0 : along[1] > 0
-  const box: Box = across
-    ? { col: forward ? tipCol : tipCol - long + 1, row: middle, cols: long, rows: wide }
-    : { col: middle, row: forward ? tipRow : tipRow - long + 1, cols: wide, rows: long }
-  return shortened(division, box, across, forward)
-}
-
-/** How far to either side of the corridor's own axis a seeded wall still counts as on it, in cells. */
-const BESIDE = 8
-
-/**
- * How far down its own axis the furthest wall seeded on the corridor stands, in cells from the
- * tip. A run cut to its target alone can stop short of the last room the bubbles stood against it,
- * and a corridor that stops short of the stair serves it by a door it has not got. Only the run's
- * own seeded cells are read: taking the rooms' side as well stretches the run past a pair standing
- * across from one another, and parts them.
- */
-function reachOfSeeds(
-  division: Division,
-  index: number,
-  tip: Point,
-  along: Point,
-  wide: number,
-): number {
-  const grid = division.grid
-  const across: Point = [-along[1], along[0]]
-  let reach = 0
-  for (let cell = 0; cell < division.owner.length; cell++) {
-    if (division.fixed[cell] !== WALL || division.owner[cell] !== index) continue
-    const at = cellCentre(grid, cell)
-    const off = Math.abs((at[0] - tip[0]) * across[0] + (at[1] - tip[1]) * across[1]) / grid.step
-    if (off > wide / 2 + BESIDE) continue
-    const down = ((at[0] - tip[0]) * along[0] + (at[1] - tip[1]) * along[1]) / grid.step
-    reach = Math.max(reach, Math.ceil(down))
-  }
-  return reach
-}
-
-/** The run cut back from its far end until every cell of it is floor the storey may build on. */
-function shortened(division: Division, box: Box, across: boolean, forward: boolean): Shape | null {
-  let held = box
-  for (let tries = 0; tries < 200; tries++) {
-    const cells = cellsOfBox(division.grid, held)
-    if (
-      cells.length === held.cols * held.rows &&
-      cells.every((cell) => usable(division, cell) && division.claim[cell] === NOBODY)
-    )
-      return { main: held, arm: null }
-    const long = across ? held.cols : held.rows
-    if (long <= JOG) return null
-    held = across
-      ? { ...held, col: forward ? held.col : held.col + 1, cols: long - 1 }
-      : { ...held, row: forward ? held.row : held.row + 1, rows: long - 1 }
-  }
-  return null
 }

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { GRID_M, nearestPointOnBoundary, type Point, type Polygon } from '../geometry'
+import {
+  GRID_M,
+  nearestPointOnBoundary,
+  sharedWalls,
+  WALL_TOLERANCE,
+  type Point,
+  type Polygon,
+} from '../geometry'
 import { occupiedStoreys } from '../model'
 import { settled, suite } from './houses'
 import { partitionOf } from './partition'
@@ -24,11 +31,21 @@ const WIDEST_M = 2.4
  * How near a straightened zone comes to its target. The brief asked for a cell. A room of running
  * walls is a rectangle of whole grid steps, so its area moves in steps of a whole wall's length —
  * a five-metre wall carries 1.25 m² with it — and a cell is not something a wall move can land on.
- * What the wall-moving really holds is a quarter of the target, and never more than eight square
- * metres; the worst on the suite is the diwaniya of the one-storey villa, 45 m² of its 52.5.
+ * What the wall-moving really holds is a third of the target, and never more than nine square
+ * metres; the worst on the suite are the diwaniya of the one-storey villa, 44 m² of its 52.5, and
+ * the entry of the house with a maid and a driver, whose plot its program overfills.
  */
-const OFF_TARGET = 0.25
-const OFF_TARGET_M2 = 8
+const OFF_TARGET = 0.35
+const OFF_TARGET_M2 = 9
+
+/** The floor under which a room is drawn at its target outright rather than fitted, in m². */
+const LITTLE_M2 = 8
+
+/** A cell of the sheet's grid, which is how near a small room is asked to come to its target. */
+const CELL_M2 = GRID_M * GRID_M
+
+/** The kinds the corridor must keep a door onto: the way into the house, and the way up. */
+const CIRCULATION = ['entry-foyer', 'stair']
 
 /** The kinds that are read differently: the corridor is the leftover spine and is measured last. */
 const CORRIDOR = 'hallway'
@@ -107,6 +124,48 @@ describe('the straightening', () => {
           const across = shortestWall(zone?.polygon ?? [])
           expect([storey, square(zone?.polygon ?? []), across >= NARROWEST_M, across <= WIDEST_M]) //
             .toEqual([storey, true, true, true])
+        }
+      })
+
+      it('draws every room under eight square metres at its target, and never under it', () => {
+        for (const [storey, partition] of made.entries()) {
+          const rooms = new Map(roomsOn(storey).map((room) => [room.id, room]))
+          const off = partition.zones
+            .filter((zone) => {
+              const room = rooms.get(zone.id)
+              if (!room || room.targetArea >= LITTLE_M2) return false
+              return zone.areaM2 < room.targetArea || zone.areaM2 - room.targetArea > CELL_M2 + 1e-9
+            })
+            .map((zone) => `${nameOf(zone.id)} ${zone.areaM2} of ${rooms.get(zone.id)?.targetArea}`)
+          expect([storey, off]).toEqual([storey, []])
+        }
+      })
+
+      it('keeps the corridor its wall on the entry and on the stair, and the stair reached', () => {
+        for (const [storey, partition] of made.entries()) {
+          const corridor = roomsOn(storey).find((room) => room.type === CORRIDOR)
+          if (!corridor) continue
+          const run = partition.zones.find((zone) => zone.id === corridor.id)?.polygon
+          const short: string[] = []
+          for (const room of roomsOn(storey)) {
+            if (!CIRCULATION.includes(room.type)) continue
+            const linked = house.edges.some(
+              (edge) =>
+                edge.storey === storey &&
+                ((edge.a === room.id && edge.b === corridor.id) ||
+                  (edge.b === room.id && edge.a === corridor.id)),
+            )
+            const zone = partition.zones.find((each) => each.id === room.id)?.polygon
+            if (!linked || !zone || !run) continue
+            const wall = sharedWalls(run, zone, WALL_TOLERANCE).reduce(
+              (total, each) =>
+                total + Math.hypot(each.to[0] - each.from[0], each.to[1] - each.from[1]),
+              0,
+            )
+            if (wall < 0.9) short.push(`${room.name} ${wall.toFixed(2)}`)
+            if (partition.unreached.includes(room.id)) short.push(`${room.name} unreached`)
+          }
+          expect([storey, short]).toEqual([storey, []])
         }
       })
 

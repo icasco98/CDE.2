@@ -1,5 +1,5 @@
 import { createState, frontageOf, groundOf, type Body } from '../bubbles'
-import { area as areaOf, type Point } from '../geometry'
+import { area as areaOf, outlineOf, type Point, type Polygon } from '../geometry'
 import { EXTERIOR, occupiedStoreys, type Edge, type Plot, type Room, type Site } from '../model'
 import {
   buildableArea,
@@ -43,6 +43,24 @@ function bubblesOf(house: House): ReadonlyMap<string, Body> {
     .filter((edge) => edge.a !== EXTERIOR && edge.b !== EXTERIOR)
     .map((edge) => ({ a: edge.a, b: edge.b, storey: edge.storey }))
   return new Map(createState(rooms, edges, ground).bodies.map((body) => [body.id, body]))
+}
+
+/**
+ * The footprint a room that spans storeys already stands on, where another storey it stands on is
+ * drawn. A stair is one room with one footprint, so morphing the floor above must stack it on the
+ * floor below; where no storey it serves is drawn yet, the first morph decides and the next one
+ * inherits what it decided.
+ */
+function placedOn(room: Room, house: House, storey: number): Polygon | undefined {
+  if (!room.footprint || occupiedStoreys(room).length < 2) return undefined
+  const elsewhere = occupiedStoreys(room).filter((on) => on !== storey)
+  const drawn = house.rooms.some(
+    (other) =>
+      other.id !== room.id &&
+      other.footprint &&
+      occupiedStoreys(other).some((on) => elsewhere.includes(on)),
+  )
+  return drawn ? outlineOf(room.footprint) : undefined
 }
 
 /** How much of its target a room with no stated range may be carved down to, at the very most. */
@@ -113,6 +131,7 @@ export function partitionStorey(house: House, storey: number): Partition {
     const body = bodies.get(room.id)
     if (!body) return []
     const owner = owners.get(room.id)
+    const stands = placedOn(room, house, storey)
     return [
       {
         id: room.id,
@@ -128,6 +147,7 @@ export function partitionStorey(house: House, storey: number): Partition {
           ? {}
           : { kerb: kerbOf(room, house, frontage.claims.get(room.id)) }),
         ...(owner === undefined || !standing.has(owner) ? {} : { owner }),
+        ...(stands === undefined ? {} : { placed: stands }),
       },
     ]
   })

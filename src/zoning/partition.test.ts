@@ -36,8 +36,11 @@ const CONTACT_M = 0.9
  * fourth, and half two then turns the corridor onto an axis and squares every zone to a rectangle,
  * which moves a middle again: the furthest out on the suite is the formal living of the house with
  * a maid and a driver, three and a half metres from its bubble on a plot its program overfills.
+ * A small room, which is drawn at its target outright, goes further still where the division left
+ * it a strip a metre wide: the second bedroom's ensuite on the one-storey villa, wedged between
+ * the garage's drive and the corridor, is put down six metres from its bubble to be a room at all.
  */
-const ADRIFT_M = 3.6
+const ADRIFT_M = 6
 
 /** The programs the suite runs, each with the storeys its zones are read on. */
 const suite: readonly {

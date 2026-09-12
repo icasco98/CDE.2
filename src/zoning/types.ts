@@ -27,6 +27,11 @@ export type PartitionRoom = {
   readonly kerb?: Kerb
   /** The room whose perimeter this one rides, where it is that room's companion. */
   readonly owner?: string
+  /**
+   * The footprint this room already stands on, where it spans storeys and another storey it stands
+   * on is drawn: a stair is one room, so morphing the floor above must leave it where it is.
+   */
+  readonly placed?: Polygon
 }
 
 /** A stretch of the buildable line, and the way in from it. */

@@ -1,4 +1,4 @@
-import type { Point } from '../geometry'
+import { boundingBox, pointInPolygon, type Point } from '../geometry'
 import { cellCentre, INSIDE, OFF, type Grid } from './grid'
 import { NOBODY, type Division, type Kerb, type PartitionRoom } from './types'
 
@@ -173,6 +173,47 @@ export function layCorridor(
     division.fixed[cell] = 0
     over -= division.grid.cellArea
   }
+}
+
+/**
+ * A room that already stands somewhere and may not be moved: its own cells are put down as walls
+ * and reserved to it by a claim, so neither the corridor's run nor any reach may take them. A stair
+ * is one room on every storey it serves, and the floor above must stack on the floor below.
+ */
+export function layPlaced(division: Division, room: PartitionRoom, index: number): void {
+  const cells = placedCells(division, room)
+  if (cells.length === 0) return
+  const claim = division.claims.length
+  division.claims.push([index])
+  for (const cell of cells) {
+    division.claim[cell] = claim
+    settle(division, cell, index, WALL)
+  }
+}
+
+/** The cells of the footprint a room already stands on, read off the polygon and not off the floor. */
+export function placedCells(division: Division, room: PartitionRoom): readonly number[] {
+  const standing = room.placed
+  if (!standing || standing.length < 3) return []
+  const grid = division.grid
+  const bounds = boundingBox(standing)
+  const lowCol = Math.max(0, Math.floor((bounds.left - grid.left) / grid.step))
+  const highCol = Math.min(
+    grid.cols - 1,
+    Math.ceil((bounds.left + bounds.width - grid.left) / grid.step),
+  )
+  const lowRow = Math.max(0, Math.floor((bounds.top - grid.top) / grid.step))
+  const highRow = Math.min(
+    grid.rows - 1,
+    Math.ceil((bounds.top + bounds.depth - grid.top) / grid.step),
+  )
+  const out: number[] = []
+  for (let row = lowRow; row <= highRow; row++)
+    for (let col = lowCol; col <= highCol; col++) {
+      const cell = row * grid.cols + col
+      if (pointInPolygon(standing, cellCentre(grid, cell))) out.push(cell)
+    }
+  return out
 }
 
 /** How far along a line a point falls, in metres from its start. */

@@ -156,6 +156,20 @@ test('Morph divides the storey among its bubbles, with no overlap and no gap', a
   expect(said.length).toBeLessThanOrEqual(2)
   expect(said.filter((sentence) => !/Hallway/.test(sentence))).toEqual([])
   await expect(page.locator('[data-bay-blocked]')).toHaveCount(0)
+
+  // The way in and the way up are the two walls that may never open: the entry onto the hallway
+  // and the hallway onto the stair. A link is either a door or a tension, so a sentence naming
+  // one of those two pairs is a wall the morph failed to make.
+  const circulation = [
+    /^(Entry|Ground Hallway) (and|cannot reach) (Entry|Ground Hallway)/,
+    /^(Ground Hallway|Stair) (and|cannot reach) (Ground Hallway|Stair)/,
+  ]
+  expect(said.filter((sentence) => circulation.some((pair) => pair.test(sentence)))).toEqual([])
+  // The stair is reached: the floor above is got to from the front door, whatever else the
+  // straightened corridor may have come to stand across.
+  expect(await page.locator('[data-unreached]').allTextContents()).toEqual(
+    expect.not.arrayContaining([expect.stringContaining('Stair')]),
+  )
 })
 
 test('Accept places every room in one step and one Undo unplaces them all', async ({ page }) => {
@@ -394,9 +408,11 @@ test('a wall between two accepted zones moves whole, and both areas follow', asy
   const after = [await areaOf(0), await areaOf(1)]
   expect(after[0]).not.toBe(before[0])
   expect(after[1]).not.toBe(before[1])
+  // To a tenth of a square metre, because the sheet writes each area rounded to the centimetre
+  // and the two roundings need not fall the same way.
   expect(Math.abs((after[0] ?? 0) - (before[0] ?? 0))).toBeCloseTo(
     Math.abs((after[1] ?? 0) - (before[1] ?? 0)),
-    2,
+    1,
   )
   expect(await sharedRun()).toBeGreaterThanOrEqual(wall - 1e-6)
 })
@@ -430,4 +446,36 @@ test('the DXF of the accepted plan carries at most eight corners a room', async 
   expect(rooms.length).toBeGreaterThan(8)
   const corners = rooms.map((room) => room.split('0\nSEQEND')[0]?.split('0\nVERTEX').length ?? 0)
   expect(Math.max(...corners.map((count) => count - 1))).toBeLessThanOrEqual(8)
+})
+
+test('the stair morphed on the floor above stacks on the one below', async ({ page }) => {
+  await openZoning(page)
+  await page.getByRole('button', { name: 'Morph' }).click()
+  await page.getByRole('button', { name: 'Accept' }).click()
+
+  const cornersOf = async (): Promise<[number, number][]> =>
+    page.evaluate(() => {
+      const shape = document.querySelector('[data-room][data-name="Stair"] polygon')
+      if (!(shape instanceof SVGPolygonElement)) return []
+      const out: [number, number][] = []
+      for (let i = 0; i < shape.points.numberOfItems; i++) {
+        const at = shape.points.getItem(i)
+        out.push([at.x, at.y])
+      }
+      return out
+    })
+  const ground = await cornersOf()
+  expect(ground.length).toBeGreaterThan(3)
+
+  // A stair is one room on both storeys, so morphing the floor above may not move it: its cells
+  // are put down at the footprint it already stands on before the floor is divided at all.
+  await page.getByRole('button', { name: 'First', exact: true }).click()
+  await expect(page.locator('[data-room][data-name="Stair"]')).toHaveCount(1)
+  // The stair is already drawn up here, because it is the same room, so the morph asks first.
+  await page.getByRole('button', { name: 'Morph' }).click()
+  await expect(page.locator('[data-replace]')).toContainText('Replace the 1 placed room')
+  await page.getByRole('button', { name: 'Replace' }).click()
+  await expect(page.locator('[data-zone]').first()).toBeVisible()
+  await page.getByRole('button', { name: 'Accept' }).click()
+  expect(await cornersOf()).toEqual(ground)
 })

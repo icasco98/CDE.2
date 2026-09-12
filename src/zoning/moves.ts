@@ -1,5 +1,5 @@
 import type { Point } from '../geometry'
-import { NARROWEST, WIDEST } from './cores'
+import { NARROWEST, WIDEST } from './spine'
 import { sidesOfCell, type Grid } from './grid'
 import { allowed, usable } from './seeds'
 import {
@@ -64,6 +64,9 @@ const CONTACT = 4
  */
 const CONTACT_WEIGHT = 60
 
+/** What a pair owes while one of the two has no floor at all, in cells of wall. */
+const MISSING = 3 * CONTACT
+
 /** A zone as the straightening carries it: what it has become, and what it was asked for. */
 export type Zoned = {
   readonly index: number
@@ -76,6 +79,11 @@ export type Zoned = {
   readonly weight: number
   /** Where the bubble stood, in cells from the grid's own corner. */
   readonly at: Point
+  /**
+   * A zone no wall move may touch: a room already built on another storey, and a small room drawn
+   * at its target outright. Both are settled before the wall-moving starts and the rest make way.
+   */
+  pinned: boolean
 }
 
 /** A wall on the move: the band of cells it sweeps, and the shape the zone is left with. */
@@ -142,13 +150,15 @@ function looseCells(division: Division, held: Int32Array): number {
  * so the walls are moved until the pairs are back together and never moved apart again.
  */
 function owed(one: Shape | null, other: Shape | null): number {
-  if (!one || !other) return 0
+  // A room the fitting left nothing owes more than any pair that at least stands on the same floor,
+  // so putting it down anywhere near its partner reads as making the pair rather than breaking it.
+  if (!one || !other) return MISSING
   const run = touching(one, other)
   return CONTACT - Math.min(CONTACT, run) + (run > 0 ? 0 : apart(one, other))
 }
 
 /** What the seeded contacts round one or two zones owe, as the shapes stand or as a move leaves them. */
-function contactsOwed(
+export function contactsOwed(
   zoned: readonly Zoned[],
   contacts: readonly (readonly [number, number])[],
   shapes: ReadonlyMap<number, Shape | null>,
@@ -202,7 +212,7 @@ function weigh(
   let taking: Box | null = null
   if (other !== NOBODY) {
     const neighbour = zoned[other] as Zoned
-    if (!neighbour.shape) return null
+    if (!neighbour.shape || neighbour.pinned) return null
     if (!cells.every((cell) => allowed(division, cell, other))) return null
     // Only the part of the band the neighbour actually holds leaves it; the rest was floor nobody
     // held. That part has to be a block of its own, or what the neighbour is left with is not a
@@ -378,7 +388,7 @@ function movesOf(
   out: (moving: Moving) => void,
 ): void {
   const shape = zone.shape
-  if (!shape) return
+  if (!shape || zone.pinned) return
   const weighing = (band: Box, next: Shape, going: boolean, side: Side): void => {
     const moving = weigh(
       division,
