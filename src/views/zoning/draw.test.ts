@@ -101,25 +101,22 @@ describe('the circle tool', () => {
     expect(footprint.polygon.length).toBeGreaterThanOrEqual(48)
   })
 
-  // The three reference areas: a 0.05 m step lands close for the two larger rooms but the 3 m²
-  // guest WC, whose ideal radius is only about 1 m, feels a fixed step more (see the comment on
-  // TARGET_RADIUS_STEP_M) — still four times closer than the drag's own 0.25 m step would land.
+  // The three reference areas: a 0.01 m step lands every one within 1% of its target, including
+  // the 3 m² guest WC, the smallest room a person is likely to circle (see the comment on
+  // TARGET_RADIUS_STEP_M).
   it.each([
-    { targetArea: 3, radius: 1.0, area: Math.PI * 1.0 ** 2, within: 0.05 },
-    { targetArea: 5, radius: 1.25, area: Math.PI * 1.25 ** 2, within: 0.03 },
-    { targetArea: 20, radius: 2.5, area: Math.PI * 2.5 ** 2, within: 0.03 },
-  ])(
-    'gives the target radius for $targetArea m² within its bound',
-    ({ targetArea, radius, area, within }) => {
-      expect(targetRadius(targetArea)).toBeCloseTo(radius, 9)
-      const drawnArea = Math.PI * targetRadius(targetArea) ** 2
-      expect(drawnArea).toBeCloseTo(area, 9)
-      expect(Math.abs(drawnArea - targetArea) / targetArea).toBeLessThan(within)
-    },
-  )
+    { targetArea: 3, radius: 0.98, area: Math.PI * 0.98 ** 2 },
+    { targetArea: 5, radius: 1.26, area: Math.PI * 1.26 ** 2 },
+    { targetArea: 20, radius: 2.52, area: Math.PI * 2.52 ** 2 },
+  ])('gives the target radius for $targetArea m² within 1%', ({ targetArea, radius, area }) => {
+    expect(targetRadius(targetArea)).toBeCloseTo(radius, 9)
+    const drawnArea = Math.PI * targetRadius(targetArea) ** 2
+    expect(drawnArea).toBeCloseTo(area, 9)
+    expect(Math.abs(drawnArea - targetArea) / targetArea).toBeLessThan(0.01)
+  })
 
   it('never gives a radius under one step, even for a very small target', () => {
-    expect(targetRadius(0.001)).toBe(0.05)
+    expect(targetRadius(0.000001)).toBe(0.01)
   })
 })
 

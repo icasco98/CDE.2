@@ -22,15 +22,13 @@ export const SMALLEST_DRAWN_M2 = 1
 const RADIUS_STEP_M = 0.25
 
 /**
- * A circle drawn for the room's target area steps in this many metres instead: coarser than the
- * grid the hand drags to, but fine enough that the target shows through the rounding. The area a
- * step of `s` gives up is about `2 * (s / 2) / r` of it (the radius error is at most half a step,
- * and area grows with the square of the radius); at r ≈ 1 m — the 3 m² guest WC — that is close to
- * 5% and the click lands at 3.14 m², about 4.7% over; by r ≈ 1.25 m (5 m² and up) it is under 2%.
- * A single click is still worth it under 3 m²: the drag's own 0.25 m step would be four times as
- * far off.
+ * A circle drawn for the room's target area steps in this many metres instead: a centimetre, what
+ * a builder sets a wall out to, rather than the grid the hand drags to. The area a step of `s`
+ * gives up is about `2 * (s / 2) / r` of it (the radius error is at most half a step, and area
+ * grows with the square of the radius), so it shrinks as the room grows; even at r ≈ 1 m — the
+ * smallest rooms a person circles, like a 3 m² guest WC — that keeps the click under 1% of target.
  */
-const TARGET_RADIUS_STEP_M = 0.05
+const TARGET_RADIUS_STEP_M = 0.01
 
 /** A polygon needs three corners; below that a room has no inside. */
 const FEWEST_CORNERS = 3
@@ -47,7 +45,7 @@ export function snapRadius(metres: number): number {
   return Math.max(RADIUS_STEP_M, Math.round(metres / RADIUS_STEP_M) * RADIUS_STEP_M)
 }
 
-/** The radius of the circle of exactly `targetArea`, to the nearest 0.05 m (see the step above). */
+/** The radius of the circle of exactly `targetArea`, to the nearest 0.01 m (see the step above). */
 export function targetRadius(targetArea: number): number {
   const exact = Math.sqrt(targetArea / Math.PI)
   return Math.max(

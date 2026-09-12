@@ -137,9 +137,10 @@ test('a click on the Circle tool gives the room its target area, and a drag stil
   await openZoning(page)
   await tool(page, 'Circle', 'Guest WC')
   await clickSheet(page, 10, 12)
-  // sqrt(3 m² / π) is 0.98 m, which the 0.05 m step for a click lands on 1.00 m: π m², not 3.
-  await expect(roomNamed(page, 'Guest WC')).toHaveAttribute('data-area', '3.14')
-  await expect(page.getByText('3.1 of 3 m²')).toBeVisible()
+  // sqrt(3 m² / π) is 0.9772 m, which the 0.01 m step for a click lands on 0.98 m: 3.02 m², which
+  // the label's own rounding to one decimal (metres2) turns back into a bare "3" for both sides.
+  await expect(roomNamed(page, 'Guest WC')).toHaveAttribute('data-area', '3.02')
+  await expect(page.getByText('3 of 3 m²')).toBeVisible()
 
   await tool(page, 'Circle', 'Kitchen')
   // Well clear of the Guest WC's own circle, so the drop lands with no room to ask about.
