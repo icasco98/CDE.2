@@ -11,10 +11,26 @@ must-haves are in the Municipality entry and the project, and are
 never traded.
 
 **Status.** Drafted by the cofounder from the room-type table, the
-Municipality entry, the climate entry and published sources; every
-strength is `provisional` judgement until the known house confirms it.
-Under decision 9 a provisional force only recommends. The owner
-corrects strengths, adds and removes forces, and marks sourced rows.
+Municipality entry, the climate entry and published sources. The owner's
+first pass (O7, 12 Sep 2026) went through the user and site rows: a row
+marked `owner` carries the owner's strength and stands until the known
+house confirms or corrects it; `provisional` rows are still the
+cofounder's judgement. Under decision 9 a provisional force only
+recommends. Rows become `sourced` when the known house and the firm's
+practice confirm them. The environmental rows wait for milestone 3.
+
+**Walls beside the forces.** Under decision 20 the entry on the
+frontage and the garage at the kerb are walls, not forces: the bubble
+stands on the kerb line inside the setback and slides along it. The
+diwaniya is a force (S1), strong, and may stand up to one room's depth
+back behind its own court; its own street door stays on the kerb. The
+service entrance (S7) is a wall on a side boundary near the kitchen.
+
+**Two choices belong to the project, not the table.** Whether the
+diwaniya addresses the corner of two streets (S4) and whether the garden
+goes to the rear or a side (S5) are the client's to say on each
+project, so they are inputs on the requirements screen, not fixed
+forces; the table keeps the rows as the two defaults the input offers.
 
 **Strength** is weak, medium or strong, read as 0.3, 0.6 or 0.9 before
 the family weight multiplies it. **Acts on** names room kinds from
@@ -24,16 +40,16 @@ the family weight multiplies it. **Acts on** names room kinds from
 
 | Id | Force | Acts on | Pulls toward | Strength | Source | Confidence |
 |---|---|---|---|---|---|---|
-| U1 | Guest separation | Diwaniya, Diwaniya WC | the street side, with its own entrance, away from Family Living and bedrooms | strong | Diwaniya as an institution with its own door (Al-Razouki; UNESCO inscription) | provisional |
-| U2 | Privacy gradient | every room with a tier | a door only between adjacent tiers: public to semi-public to private | strong | threshold-zone principle in Arab domestic architecture; room-type tiers | provisional |
+| U1 | Guest separation | Diwaniya, Diwaniya WC | the street side, with its own entrance, away from Family Living and bedrooms | strong | Diwaniya as an institution with its own door (Al-Razouki; UNESCO inscription) | owner |
+| U2 | Privacy gradient | every room with a tier | public rooms toward the street, private toward the back, a door only between adjacent tiers; a link always wins over the gradient | strong | threshold-zone principle in Arab domestic architecture; room-type tiers; owner | owner |
 | U3 | Kitchen serves dining | Kitchen, Dining Room | sharing a wall with a door | strong | adjacency-matrix practice; firm practice | provisional |
 | U4 | Family living is the hub | Family Living | short routes to bedrooms, kitchen and the family entrance | medium | firm practice | provisional |
-| U5 | Bedrooms are quiet | Master Bedroom, Bedroom | away from Diwaniya, Formal Living, Kitchen and the street | strong | room-type tiers; firm practice | provisional |
+| U5 | Bedrooms are quiet | Master Bedroom, Bedroom | away from Diwaniya, Formal Living, Kitchen and the street | strong | room-type tiers; firm practice | owner |
 | U6 | Suite integrity | Ensuite Bathroom, Dressing Room | sharing a wall with their own bedroom, door between | strong | room-type auxiliary flag | provisional |
 | U7 | Staff near their work | Maid Room, Maid Bathroom | Kitchen, Laundry and the Service Entrance | medium | firm practice; program of government-model houses | provisional |
 | U8 | Driver by the cars | Driver Room, Driver Bathroom | the Garage and the street, with their own door | medium | firm practice | provisional |
-| U9 | Guests find the WC | Guest WC | Formal Living and the Entry, never through a private room | medium | firm practice | provisional |
-| U10 | Formal living receives | Formal Living, Women's Reception | the Entry, away from Family Living | medium | firm practice | provisional |
+| U9 | Guests find the WC | Guest WC | Formal Living and the Entry, never through a private room | medium | firm practice | owner |
+| U10 | Formal living receives | Formal Living, Women's Reception | the Entry, away from Family Living | medium | firm practice | owner |
 | U11 | Stair in the middle | Stair, Lift | the centroid of the rooms it serves on every storey | medium | walking-distance economy | provisional |
 | U12 | Compactness | every room | fewer exterior corners, less envelope per m² of floor | medium | envelope cost per m²; MEW/R-6 intent | provisional |
 | U13 | Budget | every room | target areas toward the low end of their range when the weight is high | weak | the project's budget band | provisional |
@@ -42,12 +58,14 @@ the family weight multiplies it. **Acts on** names room kinds from
 
 | Id | Force | Acts on | Pulls toward | Strength | Source | Confidence |
 |---|---|---|---|---|---|---|
-| S1 | Entrances on the service street | Entry, Diwaniya, Garage | the plot side marked as the service street | strong | Municipality definition of the service street; utilities arrive there | provisional |
-| S2 | Garage at the kerb | Garage | the street boundary, shortest driveway, no room behind it | strong | firm practice | provisional |
-| S3 | Neighbour privacy | Master Bedroom, Bedroom, Family Living, Courtyard | openings away from side and rear boundaries | medium | Municipality attached-facade rule (no openings toward a neighbour) extended as a preference | provisional |
-| S4 | Corner plot | Diwaniya | the corner where two streets meet, addressing both | medium | firm practice | provisional |
-| S5 | Garden to the rear | Courtyard, Family Living | the boundary away from the service street | medium | firm practice | provisional |
-| S6 | Service to the side | Service Entrance, Laundry, Storage | a side boundary, not the street frontage | weak | firm practice | provisional |
+| S1 | Diwaniya to the street | Diwaniya | the service street side, its own door on the kerb; the room may stand one room's depth back behind its own court | strong | Municipality definition of the service street; owner | owner |
+| S2 | Garage at the kerb | Garage | the street boundary, shortest driveway, no room behind it (a wall under decision 20; the force only chooses where along the frontage) | strong | firm practice; owner | owner |
+| S3 | Neighbour privacy | – | dropped by the owner: setbacks and the privacy gradient are enough | – | – | dropped |
+| S4 | Corner plot | Diwaniya | the corner where two streets meet, addressing both, when the project says so | medium | firm practice; the client's choice per project | project choice |
+| S5 | Garden to the rear | Courtyard, Family Living | the boundary away from the service street, or a side, as the project says | medium | firm practice; the client's choice per project | project choice |
+| S6 | Service to the side | Laundry, Storage, Maid Room | a side boundary, not the street frontage | medium | firm practice; owner | owner |
+| S7 | Service entrance on a side | Service Entrance | a side boundary near the Kitchen: a wall on the side street's kerb where there is one, else on the service street beside the Garage | strong | firm practice; owner | owner |
+| S8 | Kitchen away from the street | Kitchen, Laundry, Maid Room, Storage | never on the frontage; a side or the rear | strong | firm practice; owner | owner |
 
 ## Environmental factors
 
@@ -71,8 +89,8 @@ to move a room. No force ever moves a pinned room or crosses a wall.
 
 ## Least certain
 
-U4, U10 and S4 are firm practice with no external source; E5 and E6 are
-weak and may be dropped; U13 overlaps E3 and U12 and may merge into
+U4 is firm practice with no external source and not yet confirmed by
+the owner; E5 and E6 are weak and may be dropped; U13 overlaps E3 and U12 and may merge into
 one compactness force under the user family once a budget model
 exists. The three families as the weights on screen replace the
 placeholder sliders (client, climate, budget) on the requirements
