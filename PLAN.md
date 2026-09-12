@@ -105,6 +105,7 @@ circulation routes draw over edges.
 | B3 | Geometry findings: walls broken, forces unsatisfied, with numbers. Reference cases. | B1, A9 | todo |
 | B4 | Findings screen: verdict on the surface, detail one click down, assumptions editable in place. | B2, B3 | todo |
 | B5 | Circulation: actors, routes over edges, animated walk. | A6 | todo |
+| B0 | **The basement storey.** A storey below ground, its own plot on the bubble sheet, under the Municipality's basement rules from O4 (allowed area, height, whether it counts in the ratio, the ramp's slope and width). The ramp is a room spanning basement and ground, walled on the kerb like the entry. The garage bays stand in the basement by default; the ground frontage carries the ramp instead. The diwaniya may stand in the basement too, as a household choice beside the corner and garden choices, with its own stair or entrance from the street. Until this lands the garage stays on the ground floor as a placeholder. First task of the milestone. | O4, Z5 | todo |
 
 ## Milestone 3: forces and settling
 
