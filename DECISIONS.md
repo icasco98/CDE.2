@@ -90,9 +90,9 @@ A reversal is a new entry, never an edit.
     bubble's position is in plot metres, the frame a footprint uses,
     so a bubble and the zone it becomes are the same point. One plot
     per storey, chosen by tab; All shows the upper storey's bubbles
-    faint over the ground. The stacked bands go. The site and
-    environmental forces act here, on coordinates, which is the only
-    place they can.
+    faint over the ground. The stacked bands go. The site forces act
+    here, on coordinates, which is the only place they can; the
+    environmental ones wait for milestone 3.
 
 18. **Bubbles at true area, overlapping up to a quarter.** A bubble
     is drawn at its target area. Two bubbles may overlap by up to a
@@ -121,3 +121,39 @@ A reversal is a new entry, never an edit.
     program is too big for the plot by that much. The tool never
     shrinks a room on its own. The same fit line stands on the
     Requirements totals, before a bubble is drawn.
+
+20. **Links are strong, walls are strict, the start is fixed.** A
+    link's rest length is touching and its pull is strong, and the
+    no-overlap wall is stronger still, so links never make piles. The
+    default connections are real edges from the first frame; the
+    designer removes what is not wanted rather than adding what is.
+    The entry on the street frontage, the garage at the kerb and the
+    diwaniya's own street door are walls, not forces: the bubble sits
+    on the kerb line inside the setback, may slide along the frontage
+    and never leaves it. The first arrangement is derived from the
+    program, never random, and every re-settle starts from where the
+    bubbles are, so the same program settles the same way twice and
+    the designer's hand is the only source of variation. What pushes
+    the bedrooms away from the street is the privacy gradient, a user
+    requirement, not the sun; sun, wind and views are environmental
+    factors and wait for milestone 3.
+
+21. **A missed link is diagnosed, never shrugged at.** A link can
+    fail for three reasons and the tool says which. The program asked
+    for what geometry cannot give: the graph is not planar, a room is
+    linked to more rooms than its wall at target aspect can touch, or
+    two rooms claim the same kerb. This is checked on the brief before
+    a bubble moves and reported there with the fix. The settle got
+    stuck: the bubbles never touched. After settling, any linked pair
+    not touching gets a discrete correction, the smaller walked round
+    the larger's perimeter to the nearest free wall. The morph broke a
+    contact: the bubbles touched and the zones do not. The morph
+    treats a touching linked pair as one body while it pushes overlaps
+    apart; it may reshape, it may not separate. Auxiliary rooms (the
+    diwaniya WC, an ensuite) never settle alone: they ride their
+    owner's perimeter from the first frame and morph with it. Every
+    link is in one of three states, realized (a door), unrealized but
+    possible (the tension line, with a sentence naming what is in the
+    way) or impossible (a finding on the brief). A suite of programs
+    known to be feasible, every link realized after the morph, is a
+    test that ships with the tool.
