@@ -40,7 +40,7 @@ for help. No solver, no findings, no analysis.
 | G2 | **Lay out from bubbles.** One button places every unplaced room on the storey at its target size where its bubble says, pushes overlaps apart and inside the plot, deterministically; placed rooms stay put. | G0, F4 | The same diagram gives the same plan twice; doors and tensions appear at once; a reference diagram lays out inside the plot with no overlap. | done, PR #49 |
 | G3 | **One Plan tab.** Zoning and massing side by side from the same store; move and rotate in the massing; the orbit pivots on the building, tilts, has a plan view and wheel zoom. | A7, G0 | A room moved in the massing moves on the sheet in the same frame; the building turns about its own centre. | done, PR #52 |
 | G4 | **Joins and alignment.** Two rooms with an open connection draw as one outline with the wall gone; Align to north and Align to plot on the selected room or all unpinned rooms. | G0 | An open-plan pair reads as one space with two areas; aligned rooms have walls parallel to the north arrow or the street side. | done, PR #50 |
-| G5 | **Draw tool.** Polygons by clicking corners, vertex editing, arcs and circles stored as polygons with the true arc remembered for export. | G0, A8 | A 5 m circle's area is within half a percent; the DXF opens in AutoCAD with a true arc. | in progress |
+| G5 | **Draw tool.** Polygons by clicking corners, vertex editing, arcs and circles stored as polygons with the true arc remembered for export. | G0, A8 | A 5 m circle's area is within half a percent; the DXF opens in AutoCAD with a true arc. | done, PR #54 |
 
 ### Owner tasks
 
@@ -57,13 +57,18 @@ for help. No solver, no findings, no analysis.
 ### Proposed, not approved
 
 Named here so they are not forgotten; each starts only when the owner
-approves it, after the fresh brief has run through the tool.
+approves it. P1 to P3 wait for the fresh brief; P4 to P7 came out of
+the agents' own usability runs.
 
 | # | Task | Why it waits |
 |---|---|---|
 | P1 | **Intent tags on the brief.** Wishes in plain words, each mapped to a force or a wall, with the tool showing what each one did. | The usability run shows which wishes people actually have. |
 | P2 | **Two entry paths.** A guided sequence for a client beside the architect; the one-page form for the architect alone. Same store. | Needs P1 to have anything to guide through. |
 | P3 | **AI intake.** Paste a client's text brief; the tool proposes rooms, storeys, wishes and edges, and lists every assumption for confirmation. | Must only produce inputs the screen already accepts, so it follows P1. |
+| P4 | **Drawings sized to the space left.** The sheet and the massing take the height left under their bars instead of a share of the window, so the Plan tab never scrolls and screen-sized marks keep their size. | G3 | Nothing on the Plan tab is below the fold on a 1280 × 720 window. |
+| P5 | **A circle by target area.** The Circle tool offers the radius that gives the room's target area, so a round guest WC reads its target, not whatever the drag gave. | G5 | Draw a circle for a 3 m² room with one click and read 3.0 m². |
+| P6 | **Refusals out of the way.** Fading messages sit over the drawing's corner instead of pushing it down the page. | G0 | Three refusals in a row move nothing. |
+| P7 | **Storey count under undo.** Storeys and heights join the undo snapshot so adding a storey and stretching a stair revert together. | F1, A7 | One undo after Add storey restores both count and stair. |
 
 ## Milestone 2: the rule engine
 
