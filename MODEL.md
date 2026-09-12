@@ -11,7 +11,7 @@ connection from where two walls happen to land.
 
 | Entity | Fields | Notes |
 |---|---|---|
-| **Project** | `id`, `name`, `storeys`, `heights[]`, `plot`, `household`, `rooms[]`, `edges[]`, `weights`, `actors[]`, `version` | One JSON document. Metres and m². `heights` is the floor-to-floor height of each storey in metres, one entry per storey, 3.5 unless the person changes it; the Municipality's 3 m clear minimum and 15 m maximum are walls in the rulebook, not limits on the field. |
+| **Project** | `id`, `name`, `storeys`, `heights[]`, `plot`, `site`, `household`, `rooms[]`, `edges[]`, `weights`, `actors[]`, `version` | One JSON document. `site` is the client's two choices, `diwaniyaAtCorner` and `garden` (rear, side or none), which the forces S4 and S5 read. Metres and m². `heights` is the floor-to-floor height of each storey in metres, one entry per storey, 3.5 unless the person changes it; the Municipality's 3 m clear minimum and 15 m maximum are walls in the rulebook, not limits on the field. |
 | **Plot** | `on` (boolean: the boundary binds), `polygon`, `north` (degrees from up), `street` (which edges face a street) | `on` false: the plot is drawn for reference and constrains nothing. A rectangle today, any polygon later; same field either way. |
 | **Room** | `id`, `name`, `type`, `storey`, `storeysSpanned`, `targetArea`, `bubble?`, `footprint?`, `pinned` | `type` keys the room-type table. `bubble` is `{x, y}` in plot metres, the same frame as a footprint, so a bubble and the zone it becomes are one point. `footprint` is `{polygon, rotation, arcs?}`: a rigid polygon in its own frame, turned about its centre, absent while unplaced. `arcs` remembers which runs of the polygon stand for true arcs (each with its centre, radius and direction in the polygon's frame) so a curved wall exports as an arc and its area is exact; the polygon stays what every calculation works on. A stair is a room with `storeysSpanned > 1`. `pinned` means the solver may not move it. |
 | **Edge** | `id`, `a`, `b`, `kind`, `storey`, `hint?` | `a`/`b` are room ids, or the singleton `EXTERIOR`. `kind` is `door`, `open` (one space flows into the next) or `main-door` (exactly one per project, from `EXTERIOR`). `hint` is a wall position for drawing; losing it changes nothing. |
@@ -106,8 +106,21 @@ Each stage adds constraints. None changes the graph.
   to touch in zoning; a person accepts it.
 - **Send to a storey** moves a room with its companions (auxiliary
   kinds joined to it and to no other room), drops the edges it can no
-  longer hold, and connects the defaults on the new storey, in one
-  transaction that one undo reverts. A stair refuses.
+  longer hold and says which, and connects the defaults on the new
+  storey, in one transaction that one undo reverts. A stair refuses.
+- **Rebuild** and **add a room** also give every new room its bubble
+  at the canonical start, so the diagram is the same twice and the
+  layout is live at once.
+- **Walls in the bubbles.** The buildable line, the kerb claims of the
+  rooms with a street door (diwaniya first, then entry, then women's
+  reception, then garage bays with what is left, a bay without
+  frontage in tandem behind the one before), the diwaniya's band of
+  one room's depth, the corridor's near end on the entry or the stair,
+  and a companion on its owner's perimeter are re-applied every step
+  and never traded. The site forces of `rulebook/forces.md` pull
+  inside them; a link pulls to touching and the overlap past the
+  quarter is projected back. A bubble the hand drops is held there
+  until let go.
 - **Settle** runs the solver on unpinned rooms. It is interruptible:
   grab a room and it pins, the rest continue.
 - **Undo** covers rooms, edges, plot, storeys, heights, weights and
