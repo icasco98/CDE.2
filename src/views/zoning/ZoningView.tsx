@@ -40,6 +40,7 @@ import {
   movedVertex,
   removedVertex,
   snapRadius,
+  targetRadius,
   SMALLEST_DRAWN_M2,
   type Corner,
 } from './draw'
@@ -105,7 +106,8 @@ const HINT = 'Drag a room to move it. Drop it on another to carve. Drag a shared
 /** One line for each tool, so the sheet always says what the hand is in the middle of. */
 const HINTS = {
   draw: 'Click the corners. Hold A and drag to bow a wall out into a curve. Enter, or the first corner, closes it; Escape cancels.',
-  circle: 'Click the centre and drag the radius out; it lands on quarter metres. Escape cancels.',
+  circle:
+    'Click for the target size, or drag a radius; a drag lands on quarter metres. Escape cancels.',
   points:
     'Drag a point to move it, + puts one in, Delete takes out the point you last held. Moving a point on a curve makes that curve straight.',
 } as const
@@ -236,6 +238,8 @@ export function ZoningView(props: ZoningViewProps) {
   const spaceRef = useRef(false)
   /** `A` held: the next wall the draw tool puts down is bowed out rather than run straight. */
   const arcRef = useRef(false)
+  /** Where the hand pressed to start a circle, in screen pixels, so its release can tell a click from a drag. */
+  const circleDownRef = useRef<readonly [number, number] | null>(null)
   const [gesture, setGesture] = useState<Gesture>(null)
   const [asked, setAsked] = useState<Asked | null>(null)
   const [hovered, setHovered] = useState<string | null>(null)
@@ -523,6 +527,7 @@ export function ZoningView(props: ZoningViewProps) {
   function stopDrawing(): void {
     setDrawing(null)
     setPicking(null)
+    circleDownRef.current = null
   }
 
   /** A shape the hand has closed lands like any other drop: clear, or asked about where it lies over. */
@@ -550,6 +555,7 @@ export function ZoningView(props: ZoningViewProps) {
     if (!drawing) return
     const pointer = at(event)
     if (drawing.kind === 'circle') {
+      circleDownRef.current = [event.clientX, event.clientY]
       setDrawing({ ...drawing, centre: snapPointToGrid(pointer), radius: 0 })
       return
     }
@@ -589,16 +595,24 @@ export function ZoningView(props: ZoningViewProps) {
     setDrawing({ ...drawing, at: snapPointToGrid(pointer) })
   }
 
-  function drawUp(): void {
+  function drawUp(event: PointerEvent): void {
     if (!drawing) return
     if (drawing.kind === 'circle') {
       const centre = drawing.centre
       if (!centre) return
-      if (drawing.radius <= 0) {
+      const start = circleDownRef.current
+      circleDownRef.current = null
+      // A press let go where it landed, within the same reach a click elsewhere on the sheet gets,
+      // is the room's target size; carrying the hand further out hands the radius to the drag.
+      const clicked =
+        start !== null && Math.hypot(event.clientX - start[0], event.clientY - start[1]) <= DRAG_PX
+      const room = rooms.find((entry) => entry.id === drawing.roomId)
+      const radius = clicked && room ? targetRadius(room.targetArea) : drawing.radius
+      if (radius <= 0) {
         setDrawing({ ...drawing, centre: null })
         return
       }
-      const footprint = circleFootprint(centre, drawing.radius)
+      const footprint = circleFootprint(centre, radius)
       const roomId = drawing.roomId
       stopDrawing()
       if (exactArea(footprint) < SMALLEST_DRAWN_M2) {
@@ -832,7 +846,7 @@ export function ZoningView(props: ZoningViewProps) {
   /** A tool's press may be let go anywhere, so the release is taken from the window, not the sheet. */
   useEffect(() => {
     if (!drawingOut) return
-    const up = (): void => live.current.drawUp()
+    const up = (event: PointerEvent): void => live.current.drawUp(event)
     window.addEventListener('pointerup', up)
     return () => window.removeEventListener('pointerup', up)
   }, [drawingOut])
@@ -1451,7 +1465,12 @@ export function ZoningView(props: ZoningViewProps) {
             />
           )}
           {drawing?.kind === 'circle' && drawing.centre && (
-            <CirclePreview centre={drawing.centre} radius={drawing.radius} />
+            <CirclePreview
+              centre={drawing.centre}
+              radius={drawing.radius}
+              targetArea={rooms.find((room) => room.id === drawing.roomId)?.targetArea ?? 0}
+              perPixel={perPixel}
+            />
           )}
           {drawing?.kind === 'points' && selectedRoom && isPlaced(selectedRoom) && (
             <VertexHandles
