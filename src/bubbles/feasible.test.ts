@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { area, pointInPolygon, type Polygon } from '../geometry'
-import {
-  createIdGenerator,
-  createStore,
-  EXTERIOR,
-  startingSite,
-  type Household,
-  type Project,
-} from '../model'
+import { createIdGenerator, createStore, EXTERIOR, type Household, type Project } from '../model'
 import { defaultProgram, feasibility, impliedConnections, kerbFor, roomTypeById } from '../rulebook'
 import { correctContacts } from './correction'
 import { groundOf } from './ground'
@@ -117,12 +110,10 @@ describe('the feasible suite', () => {
             (body.y - kerb.from[1]) * (kerb.to[1] - kerb.from[1])
           const run = Math.hypot(kerb.to[0] - kerb.from[0], kerb.to[1] - kerb.from[1]) ** 2
           const at = Math.min(1, Math.max(0, along / run))
-          const on = [
-            kerb.from[0] + (kerb.to[0] - kerb.from[0]) * at,
-            kerb.from[1] + (kerb.to[1] - kerb.from[1]) * at,
-          ]
+          const onX = kerb.from[0] + (kerb.to[0] - kerb.from[0]) * at
+          const onY = kerb.from[1] + (kerb.to[1] - kerb.from[1]) * at
           // Standing against the kerb is standing a radius in from it, and never off it.
-          expect(Math.hypot(body.x - on[0], body.y - on[1])).toBeCloseTo(body.radius, 3)
+          expect(Math.hypot(body.x - onX, body.y - onY)).toBeCloseTo(body.radius, 3)
         }
       })
 

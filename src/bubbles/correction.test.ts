@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { startingSite, type Plot } from '../model'
 import { correctContacts } from './correction'
 import { groundOf } from './ground'
-import { createState, defaultLayout, type SimulationEdge, type SimulationRoom } from './simulation'
+import {
+  createState,
+  defaultLayout,
+  type SimulationEdge,
+  type SimulationRoom,
+  type SimulationState,
+} from './simulation'
 import { touching } from './tension'
 
 const plot: Plot = {
@@ -22,7 +28,7 @@ function room(id: string, targetArea: number, extra: Partial<SimulationRoom> = {
   return { id, storey: 0, storeysSpanned: 1, targetArea, pinned: false, ...extra }
 }
 
-function pairOf(state: { bodies: readonly { id: string }[] }, a: string, b: string) {
+function pairOf(state: SimulationState, a: string, b: string) {
   const one = state.bodies.find((body) => body.id === a)
   const other = state.bodies.find((body) => body.id === b)
   if (!one || !other) throw new Error('the picture is missing a room')
