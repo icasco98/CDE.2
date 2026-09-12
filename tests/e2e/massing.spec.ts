@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { openMass, openSheet, tab } from './plan'
 
 type At = { x: number; y: number }
 
@@ -38,15 +39,15 @@ async function place(page: Page, name: string, x: number, y: number): Promise<vo
   )
 }
 
-/** The default program, two rooms placed side by side on the ground, and the Massing tab open. */
+/** The default program, two rooms placed side by side on the ground, and the massing across the tab. */
 async function openMassing(page: Page): Promise<void> {
   await page.goto('/')
   await page.getByRole('button', { name: /rebuild program from household/i }).click()
-  await page.getByRole('button', { name: 'Zoning' }).click()
+  await openSheet(page)
   await place(page, 'Kitchen', 5, 5.125)
   await place(page, 'Dining Room', 10.75, 5)
   await expect(page.locator('svg.zoning-sheet [data-room]')).toHaveCount(2)
-  await page.getByRole('button', { name: 'Massing' }).click()
+  await page.getByRole('button', { name: 'Massing', exact: true }).click()
   await expect(page.locator('svg.massing-sheet')).toBeVisible()
 }
 
@@ -74,7 +75,7 @@ test('a room clicked here is the room selected in the zoning', async ({ page }) 
     .filter({ has: page.locator('title', { hasText: 'Kitchen' }) })
   await kitchen.click()
   await expect(kitchen).toHaveClass(/prism-selected/)
-  await page.getByRole('button', { name: 'Zoning' }).click()
+  await page.getByRole('button', { name: 'Sheet', exact: true }).click()
   await expect(
     page.locator('[data-room]').filter({ has: page.getByText('Kitchen', { exact: true }) }),
   ).toHaveClass(/room-selected/)
@@ -108,9 +109,9 @@ test('a storey added on the requirements screen brings a height field with it', 
 }) => {
   await openMassing(page)
   await expect(page.getByLabel(/^Height of /)).toHaveCount(1)
-  await page.getByRole('button', { name: 'Requirements' }).click()
+  await tab(page, 'Requirements').click()
   await page.getByRole('button', { name: 'Add storey' }).click()
-  await page.getByRole('button', { name: 'Massing' }).click()
+  await openMass(page)
   await expect(page.getByLabel(/^Height of /)).toHaveCount(2)
   await expect(page.getByLabel('Height of First')).toHaveValue('3.5')
   await expect(page.locator('[data-storey="1"]')).toBeVisible()
@@ -132,7 +133,8 @@ test('a drag on empty ground turns the view', async ({ page }) => {
   const before = await drawnOrder(page)
   const sheet = await page.locator('svg.massing-sheet').boundingBox()
   if (!sheet) throw new Error('there is no sheet')
-  const edge = { x: sheet.x + 20, y: sheet.y + sheet.height - 20 }
+  // A corner of the sheet, which the margin round the drawing keeps clear of the mass itself.
+  const edge = { x: sheet.x + 20, y: sheet.y + 20 }
   await drag(page, edge, { x: edge.x + 400, y: edge.y })
   await expect(page.getByRole('button', { name: 'NE', exact: true })).toHaveAttribute(
     'aria-pressed',

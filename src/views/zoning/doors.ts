@@ -42,6 +42,9 @@ export type TensionMark = {
 /** A wall two rooms share with no edge across it. */
 export type ProposalMark = { readonly a: string; readonly b: string; readonly at: Point }
 
+/** The run of wall an open connection has given up to a join, which is all that is left to draw of it. */
+export type VanishedWall = { readonly edgeId: string; readonly from: Point; readonly to: Point }
+
 /** Two rooms of the storey, the longest wall they hold in common, and the room of the two that
  * reaches back the shorter way from it, so a handle on that wall is never wider than its rooms. */
 export type WallPair = {
@@ -181,6 +184,27 @@ export function edgeMarks(
     })
   }
   return { doors, tensions }
+}
+
+/**
+ * The wall each of these edges has given up to a join. An open connection inside a join has no
+ * door drawn on it, because the wall is gone; the line the wall stood on is drawn instead, so the
+ * connection can still be picked on the sheet and undone or made a door again there.
+ */
+export function vanishedWalls(
+  standing: readonly Standing[],
+  edges: readonly Edge[],
+): readonly VanishedWall[] {
+  const marks: VanishedWall[] = []
+  for (const edge of edges) {
+    const a = outlineFor(standing, edge.a)
+    const b = outlineFor(standing, edge.b)
+    if (!a || !b) continue
+    const wall = longest(sharedWalls(a, b, WALL_TOLERANCE))
+    if (!wall) continue
+    marks.push({ edgeId: edge.id, from: wall.from, to: wall.to })
+  }
+  return marks
 }
 
 /** How far a room reaches from end to end across a wall, in metres. */

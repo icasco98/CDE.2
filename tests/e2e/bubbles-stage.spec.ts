@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
+import { openSheet } from './plan'
 
 /** The forces run while the tab is open, so nothing on the sheet is measured until it stops. */
 async function resting(page: Page) {
@@ -691,7 +692,7 @@ test('a stair from Ground to Second is three twins here and one prism in the mas
   await expect(page.locator(`[data-room="${stair}"]`)).toHaveCount(3)
   await expect(twin(page, stair, 2).locator('.bubble-span').first()).toHaveText('Ground to Second')
 
-  await page.getByRole('button', { name: 'Zoning' }).click()
+  await openSheet(page)
   const tray = page
     .locator('[data-tray]')
     .filter({ hasText: /^Stair/ })
@@ -705,7 +706,7 @@ test('a stair from Ground to Second is three twins here and one prism in the mas
   )
   await expect(page.locator('svg.zoning-sheet [data-room]')).toHaveCount(1)
 
-  await page.getByRole('button', { name: 'Massing' }).click()
+  await page.getByRole('button', { name: 'Massing', exact: true }).click()
   // One room standing through three storeys is one prism, not three: four walls and a roof.
   await expect(page.locator('svg.massing-sheet [data-room]')).toHaveCount(1)
   await expect(page.locator('svg.massing-sheet [data-room] polygon')).toHaveCount(5)

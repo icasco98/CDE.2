@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
 import { rectangleToPolygon } from '../geometry'
 import type { Room } from '../model'
-import { facesOf, presets, project, roomsInOrder, type Face } from '.'
+import { ELEVATION_DEG, facesOf, presets, project, roomsInOrder, type Face } from '.'
 
 /** Thirty rooms on a six-by-five grid, on three storeys, every other one turned. */
 function rooms(): Room[] {
@@ -43,9 +43,10 @@ const faces: readonly Face[] = rooms().flatMap((room) => facesOf(room, 3, height
 /** What one view change costs: order every face for the new angle and project every corner of it. */
 function draw(azimuth: number): number {
   let drawn = 0
-  for (const group of roomsInOrder(faces, { azimuth })) {
+  const view = { azimuth, elevation: ELEVATION_DEG }
+  for (const group of roomsInOrder(faces, view)) {
     for (const face of group.faces) {
-      for (const corner of face.corners) drawn += project(corner, { azimuth })[0]
+      for (const corner of face.corners) drawn += project(corner, view)[0]
     }
   }
   return drawn

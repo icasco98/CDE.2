@@ -105,7 +105,7 @@ export function Shell() {
           ))}
         </ul>
       )}
-      <main>
+      <main className={`stage-${stageId}`}>
         <Screen />
       </main>
     </>

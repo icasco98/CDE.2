@@ -35,6 +35,11 @@ main,
   padding: 0 1.5rem;
 }
 
+/* The one tab that draws two things side by side is given the width to do it in. */
+main.stage-plan {
+  max-width: 1680px;
+}
+
 .shell {
   padding-top: 1.5rem;
 }

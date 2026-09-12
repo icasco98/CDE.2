@@ -16,14 +16,6 @@ export function extentOf(plot: Polygon, outlines: readonly Polygon[]): Extent {
   }
 }
 
-/** Where a pointer event lands on the sheet, in metres. */
-export function pointerAt(svg: SVGSVGElement, clientX: number, clientY: number): Point {
-  const screen = svg.getScreenCTM()
-  if (!screen) return [0, 0]
-  const at = new DOMPoint(clientX, clientY).matrixTransform(screen.inverse())
-  return [at.x, at.y]
-}
-
 export function pointsOf(polygon: Polygon): string {
   return polygon.map((p) => `${p[0].toFixed(3)},${p[1].toFixed(3)}`).join(' ')
 }

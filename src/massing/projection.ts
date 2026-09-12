@@ -3,30 +3,43 @@ import type { Point } from '../geometry'
 /** A point in sheet metres stood up: x east, y south on the sheet, z up from the ground. */
 export type Point3 = readonly [number, number, number]
 
-/** How far above the horizon the drawing is seen from. Fixed: the orbit is horizontal (decision 16). */
+/** How far above the horizon a mass is read from at a corner preset. */
 export const ELEVATION_DEG = 30
 
-/** Where the viewer stands, in degrees clockwise from north on the sheet. */
-export type View = { readonly azimuth: number }
+/** Looking all but straight down, which reads as a plan while a wall still shows a hair of itself. */
+export const PLAN_ELEVATION_DEG = 89
 
-export type Preset = { readonly id: string; readonly azimuth: number }
+/** The viewer never sinks to the horizon, where a storey would have no height, nor passes overhead, where the walls would vanish. */
+export const MIN_ELEVATION_DEG = 10
+export const MAX_ELEVATION_DEG = PLAN_ELEVATION_DEG
+
+/** Where the viewer stands: degrees clockwise from north on the sheet, and degrees above the horizon. */
+export type View = { readonly azimuth: number; readonly elevation: number }
+
+export type Preset = { readonly id: string; readonly azimuth: number; readonly elevation: number }
 
 /** The four corners a mass is read from, named for the quarter the viewer stands in. */
 export const presets: readonly Preset[] = [
-  { id: 'NE', azimuth: 45 },
-  { id: 'SE', azimuth: 135 },
-  { id: 'SW', azimuth: 225 },
-  { id: 'NW', azimuth: 315 },
+  { id: 'NE', azimuth: 45, elevation: ELEVATION_DEG },
+  { id: 'SE', azimuth: 135, elevation: ELEVATION_DEG },
+  { id: 'SW', azimuth: 225, elevation: ELEVATION_DEG },
+  { id: 'NW', azimuth: 315, elevation: ELEVATION_DEG },
 ]
 
 const RADIANS = Math.PI / 180
-const SIN_UP = Math.sin(ELEVATION_DEG * RADIANS)
-const COS_UP = Math.cos(ELEVATION_DEG * RADIANS)
 
-/** How far a point lies toward the viewer along the sheet, before the elevation is applied. */
-function towards(point: Point3, view: View): number {
-  const angle = view.azimuth * RADIANS
-  return point[0] * Math.sin(angle) - point[1] * Math.cos(angle)
+type Angles = {
+  readonly sin: number
+  readonly cos: number
+  readonly sinUp: number
+  readonly cosUp: number
+}
+
+/** The four numbers a projection needs, taken once for the view rather than once for each corner. */
+function anglesOf(view: View): Angles {
+  const round = view.azimuth * RADIANS
+  const up = view.elevation * RADIANS
+  return { sin: Math.sin(round), cos: Math.cos(round), sinUp: Math.sin(up), cosUp: Math.cos(up) }
 }
 
 /**
@@ -34,14 +47,27 @@ function towards(point: Point3, view: View): number {
  * v runs down the screen, so a point that is higher up or further away is drawn higher.
  */
 export function project(point: Point3, view: View): Point {
-  const angle = view.azimuth * RADIANS
+  const angles = anglesOf(view)
   return [
-    point[0] * Math.cos(angle) + point[1] * Math.sin(angle),
-    towards(point, view) * SIN_UP - point[2] * COS_UP,
+    point[0] * angles.cos + point[1] * angles.sin,
+    (point[0] * angles.sin - point[1] * angles.cos) * angles.sinUp - point[2] * angles.cosUp,
   ]
+}
+
+/**
+ * The point of the plane at height `z` that the drawing puts at `at`. A parallel projection
+ * inverts exactly: the run toward the viewer comes back out of v once the height is taken off it,
+ * and the two sheet axes come back out of that run and u. The viewer is never at the horizon, so
+ * the run is never divided by nothing.
+ */
+export function unproject(at: Point, view: View, z: number): Point {
+  const angles = anglesOf(view)
+  const towards = (at[1] + z * angles.cosUp) / angles.sinUp
+  return [at[0] * angles.cos + towards * angles.sin, at[0] * angles.sin - towards * angles.cos]
 }
 
 /** How far the point lies from the viewer: larger is further away, so the painter starts there. */
 export function depthOf(point: Point3, view: View): number {
-  return -(towards(point, view) * COS_UP + point[2] * SIN_UP)
+  const angles = anglesOf(view)
+  return -((point[0] * angles.sin - point[1] * angles.cos) * angles.cosUp + point[2] * angles.sinUp)
 }

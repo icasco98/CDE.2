@@ -3,6 +3,7 @@ import { outwardWalls, type Point } from '../../geometry'
 import {
   MAX_BUILDING_HEIGHT_M,
   MIN_CLEAR_HEIGHT_M,
+  PLAN_ELEVATION_DEG,
   PLOT_RATIO_PERCENT,
   formulas,
   presets,
@@ -19,6 +20,10 @@ import { northOf, pointsOf } from './frame'
 
 /** The length of the bar the drawing is read against, in metres. */
 const SCALE_M = 5
+
+/** How far above its roof the turn handle stands on the sheet, and how wide its grip is, in metres. */
+const TURN_REACH_M = 1.6
+const TURN_GRIP_M = 0.5
 
 function oneDecimal(value: number): string {
   return value.toFixed(1)
@@ -44,14 +49,19 @@ export function Prism(props: {
   floorArea: number
   faces: readonly Face[]
   selected: boolean
+  /** Whether the room stands on the storey in view, which is drawn full and the rest a shade back. */
+  lit: boolean
   view: View
   /** Which way south lies on the sheet, for the tone of each wall. */
   southward: Point
   onSelect: (event: ReactPointerEvent) => void
+  /** The roof is the face the hand slides the room by, so it takes the pointer for itself. */
+  onGrabTop: (event: ReactPointerEvent) => void
 }) {
   return (
     <g
       data-room={props.roomId}
+      data-storey-lit={props.lit ? 'true' : 'false'}
       className={props.selected ? 'prism prism-selected' : 'prism'}
       onPointerDown={props.onSelect}
     >
@@ -61,8 +71,40 @@ export function Prism(props: {
           key={at}
           points={pointsOf(face.corners, props.view)}
           className={toneOf(face.facing, props.southward)}
+          onPointerDown={face.kind === 'top' ? props.onGrabTop : undefined}
         />
       ))}
+    </g>
+  )
+}
+
+/** The handle that turns the selected room, standing above its roof, clear of every wall. */
+export function TurnHandle({
+  at,
+  view,
+  onGrab,
+}: {
+  at: Point3
+  view: View
+  onGrab: (event: ReactPointerEvent) => void
+}) {
+  // Held above the roof on the sheet rather than above it in the air: looking straight down, a
+  // handle raised in z would be drawn on the roof itself and stand over the grip that slides it.
+  const foot = project(at, view)
+  const head: Point = [foot[0], foot[1] - TURN_REACH_M]
+  return (
+    <g className="turn-handle">
+      <line x1={foot[0]} y1={foot[1]} x2={head[0]} y2={head[1]} className="turn-stem" />
+      <circle
+        cx={head[0]}
+        cy={head[1]}
+        r={TURN_GRIP_M}
+        className="turn-grip"
+        data-turn-handle="true"
+        onPointerDown={onGrab}
+      >
+        <title>Turn the room</title>
+      </circle>
     </g>
   )
 }
@@ -143,22 +185,33 @@ export function ScaleReference({ at, view }: { at: Point; view: View }) {
 }
 
 export function Views(props: {
-  azimuth: number
-  onPreset: (azimuth: number) => void
+  view: View
+  /** Where the viewer stands to draw this plot's north straight up the screen. */
+  planAzimuth: number
+  onGoTo: (view: View) => void
   onFit: () => void
 }) {
+  const standing = (azimuth: number, elevation: number): boolean =>
+    Math.abs(props.view.azimuth - azimuth) < 0.5 && Math.abs(props.view.elevation - elevation) < 0.5
   return (
     <div className="massing-views" role="group" aria-label="View">
       {presets.map((preset) => (
         <button
           key={preset.id}
           type="button"
-          aria-pressed={Math.abs(props.azimuth - preset.azimuth) < 0.5}
-          onClick={() => props.onPreset(preset.azimuth)}
+          aria-pressed={standing(preset.azimuth, preset.elevation)}
+          onClick={() => props.onGoTo({ azimuth: preset.azimuth, elevation: preset.elevation })}
         >
           {preset.id}
         </button>
       ))}
+      <button
+        type="button"
+        aria-pressed={standing(props.planAzimuth, PLAN_ELEVATION_DEG)}
+        onClick={() => props.onGoTo({ azimuth: props.planAzimuth, elevation: PLAN_ELEVATION_DEG })}
+      >
+        Plan
+      </button>
       <button type="button" onClick={props.onFit}>
         Fit
       </button>

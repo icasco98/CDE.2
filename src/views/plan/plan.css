@@ -1,0 +1,80 @@
+.plan {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.plan-bar {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.plan-bar button {
+  font: inherit;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid #b7b1a5;
+  border-radius: 999px;
+  background: #fffdf9;
+  color: inherit;
+  cursor: pointer;
+}
+
+.plan-bar button[aria-pressed='true'] {
+  background: #1f1d1a;
+  border-color: #1f1d1a;
+  color: #faf8f4;
+}
+
+.plan-split {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+
+/*
+ * The two halves are given their share of the width by the handle between them, and each is free
+ * to shrink from it, so a narrow window squeezes both rather than pushing one off the tab.
+ */
+.plan-half {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.plan-sheet {
+  flex: 1 1 var(--sheet-share);
+}
+
+.plan-massing {
+  flex: 1 1 calc(100% - var(--sheet-share));
+}
+
+.plan-handle {
+  flex: none;
+  width: 11px;
+  margin: 0 0.25rem;
+  border-radius: 3px;
+  background: #e2ddd3;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.plan-handle:hover,
+.plan-handle-held {
+  background: #b7b1a5;
+}
+
+/* A phone has no width to divide, so the sheet stands above the massing and the handle goes. */
+@media (max-width: 700px) {
+  .plan-split {
+    flex-direction: column;
+  }
+
+  .plan-half {
+    flex: 1 1 auto;
+  }
+
+  .plan-handle {
+    display: none;
+  }
+}
