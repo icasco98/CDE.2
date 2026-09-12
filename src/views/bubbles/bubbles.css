@@ -1,9 +1,20 @@
+@import '../stage.css';
+
+/* The tab takes the stage's height, not its diagram's: what the lines above leave is what it gets. */
 .bubbles {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  height: 100%;
+  flex: 1 1 0;
   min-height: 0;
+}
+
+/* Every line above the diagram keeps the height it reads at; the diagram takes what they leave. */
+.bubbles-bar,
+.bubbles-hint,
+.bubbles-warning,
+.bubbles-nudge {
+  flex: none;
 }
 
 .bubbles-bar {
@@ -76,12 +87,19 @@
   display: flex;
   align-items: stretch;
   gap: 1rem;
+  /* The height the bar and its lines leave; below the floor the page scrolls rather than show a
+     sliver of a diagram. */
+  flex: 1 1 0;
+  min-height: 320px;
 }
 
+/* The panel scrolls inside its own edge, so a long list of weights never lengthens the tab. */
 .weights-panel {
   flex: none;
   width: 14rem;
   box-sizing: border-box;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -110,12 +128,11 @@
   /* The metres one CSS pixel covers, set by the view on every camera change; every mark that must
      hold its size on the screen is sized from it. */
   --per-px: 0.03;
-  /* A definite height, so the sheet letterboxes inside it rather than growing to the shape of its
-     own drawing and running off the bottom of the screen. */
-  height: 65vh;
-  min-height: 320px;
+  /* The sheet takes the height of the body beside the weights, and letterboxes its drawing inside
+     it rather than growing to the drawing's own shape. */
   flex: 1 1 auto;
   min-width: 0;
+  min-height: 0;
   background: #faf8f4;
   border: 1px solid #e2ddd3;
   border-radius: 4px;
@@ -376,6 +393,7 @@
   font-size: 11px;
 }
 
+/* The spoken proposals give way to the diagram when the window is short, and scroll inside themselves. */
 .proposals {
   margin: 0;
   padding: 0;
@@ -383,6 +401,9 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .proposals li {

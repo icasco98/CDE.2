@@ -1,0 +1,20 @@
+/*
+ * The page is one column from the window down: the header takes the height it asks for and the
+ * stage under it takes what is left, so a drawing is sized by the space there is rather than by a
+ * share of the window. Nothing here is given a fixed height, so a stage too tall for a short window
+ * lengthens the page and scrolls rather than being cut off at the fold.
+ */
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+body > #root,
+main {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}

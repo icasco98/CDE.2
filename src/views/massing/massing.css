@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  height: 100%;
+  flex: 1 1 auto;
   min-height: 0;
 }
 
@@ -11,6 +11,7 @@
   align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
+  flex: none;
 }
 
 .massing-views {
@@ -39,15 +40,17 @@
 .massing-body {
   display: flex;
   gap: 0.75rem;
-  /* A definite height, so the drawing letterboxes inside it rather than growing to its own shape. */
-  height: 65vh;
+  /* The height the bar leaves, so the drawing letterboxes inside it rather than growing to its own
+     shape; below the floor the page scrolls rather than show a sliver of a building. */
+  flex: 1 1 0;
   min-height: 320px;
 }
 
 .massing-sheet {
+  /* The sheet stretches to the body's height, border and all, so its edge is not a pixel past it. */
   flex: 1;
   min-width: 0;
-  height: 100%;
+  min-height: 0;
   background: #faf8f4;
   border: 1px solid #e2ddd3;
   border-radius: 4px;
@@ -59,6 +62,7 @@
 .massing-side {
   width: 17rem;
   flex: none;
+  min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
