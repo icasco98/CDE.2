@@ -73,7 +73,12 @@ A reversal is a new entry, never an edit.
     work that needs judgement (geometry, solver, rule engine, any
     screen a person uses) and on Sonnet for mechanical work fully
     determined by the brief (tooling, scaffolding, formatting). Agents
-    never run on Fable, to conserve it for review.
+    never run on Fable, to conserve it for review. Amended 13 Sep 2026
+    on the owner's word: where a task is judgement over craft, the
+    morph, the settle, anything a client will see and judge, the
+    cofounder says up front that it would outperform an agent and, on
+    the owner's word, builds it itself; agents keep the work a brief
+    fully determines.
 
 16. **Massing is drawn, not rendered.** The massing view is a
     parallel-projection (axonometric) SVG of each storey's footprints
