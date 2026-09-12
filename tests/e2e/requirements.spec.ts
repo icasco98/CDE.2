@@ -198,3 +198,27 @@ test('a two-storey rebuild lays a hallway on each floor, sized from that floor',
   await expect(rowNamed(page, 'Ground Hallway').getByLabel('Target area')).toHaveValue('21.4')
   await expect(rowNamed(page, 'First Hallway').getByLabel('Target area')).toHaveValue('8.2')
 })
+
+test('a storey added and undone takes the stair back down with it', async ({ page }) => {
+  await page.goto('/')
+
+  await page.getByLabel('Kind to add').selectOption('stair')
+  await page.getByRole('button', { name: 'Add room' }).click()
+  await page.getByLabel('Kind to add').selectOption('bedroom')
+  await page.getByRole('button', { name: 'Add room' }).click()
+
+  const stair = rowNamed(page, 'Stair')
+  const bedroom = rowNamed(page, 'Bedroom')
+
+  await page.getByRole('button', { name: 'Add storey' }).click()
+  await expect(bedroom.getByLabel('Storey').locator('option')).toHaveText(['Ground', 'First'])
+  await expect(stair.getByLabel('To').locator('option:checked')).toHaveText('First')
+
+  await page.getByRole('button', { name: 'Undo' }).click()
+
+  await expect(bedroom.getByLabel('Storey').locator('option')).toHaveText(['Ground'])
+  await expect(stair.getByLabel('From').locator('option:checked')).toHaveText('Ground')
+  await expect(stair.getByLabel('To').locator('option:checked')).toHaveText('Ground')
+  // The one undo answered the storey alone: the three rooms added before it are still there.
+  await expect(rowsOf(page)).toHaveCount(3)
+})

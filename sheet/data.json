@@ -1,16 +1,10 @@
 {
-  "revision": 25,
+  "revision": 26,
   "date": "11 Sep 2026",
   "session": "Session 3",
   "repo": "https://github.com/icasco98/CDE.2",
-  "headline": "The run is complete: G0 to G5 and A8 merged. The tool waits for your test. Four small follow-ups are proposed in the plan.",
-  "decide": [
-    {
-      "id": "start-p4-p7",
-      "kind": "start",
-      "text": "Start the four proposed follow-ups P4 to P7: drawings sized to the space left, a circle by target area, refusals out of the way, storey count under undo."
-    }
-  ],
+  "headline": "The four follow-ups P4 to P7 are being built at once. Then the tool waits for your test.",
+  "decide": [],
   "yours": [
     {
       "id": "test3",
@@ -35,36 +29,39 @@
   ],
   "agents": [
     {
-      "task": "G5",
-      "name": "Draw tool",
+      "task": "P4",
+      "name": "Drawings sized to space",
       "model": "Opus",
-      "stage": 4,
-      "pr": 54
+      "stage": 1
     },
     {
-      "task": "G3",
-      "name": "One Plan tab",
-      "model": "Opus",
-      "stage": 4,
-      "pr": 52
+      "task": "P5",
+      "name": "Circle by target area",
+      "model": "Sonnet",
+      "stage": 1
     },
     {
-      "task": "A8",
-      "name": "Export PDF and DXF",
+      "task": "P6",
+      "name": "Refusals out of the way",
+      "model": "Sonnet",
+      "stage": 1
+    },
+    {
+      "task": "P7",
+      "name": "Storey count under undo",
       "model": "Opus",
-      "stage": 4,
-      "pr": 47
+      "stage": 1
     }
   ],
   "stages": ["Briefed", "Building", "Review", "Your merge", "Merged"],
   "done": [
     "Requirements, bubbles and one Plan tab with the massing; every stage edits the same graph.",
-    "Your two tests' fixes all merged: F1 to F4, G0 to G5.",
-    "Export PDF to scale and DXF with true arcs (#47, #54).",
+    "Your two tests' fixes all merged: F1 to F4, G0 to G5. Export PDF and DXF with true arcs.",
+    "P4 to P7 started on your word.",
     "Milestone 1 agent tasks done except A9, the usability run, which needs O3 and O5 from you."
   ],
   "next": [
-    "Your test of the whole tool; comments become the next fix list.",
+    "Review P4 to P7, merge; then your test.",
     "A9 usability run once O3 the known house and O5 the fresh brief exist.",
     "Milestone 2 waits on O4 walls and the forces revisit."
   ]
