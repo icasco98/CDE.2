@@ -1,14 +1,20 @@
 {
-  "revision": 24,
+  "revision": 25,
   "date": "11 Sep 2026",
   "session": "Session 3",
   "repo": "https://github.com/icasco98/CDE.2",
-  "headline": "G3 merged: one Plan tab with the sheet beside the massing. G5 draw tool is the last of the run.",
-  "decide": [],
+  "headline": "The run is complete: G0 to G5 and A8 merged. The tool waits for your test. Four small follow-ups are proposed in the plan.",
+  "decide": [
+    {
+      "id": "start-p4-p7",
+      "kind": "start",
+      "text": "Start the four proposed follow-ups P4 to P7: drawings sized to the space left, a circle by target area, refusals out of the way, storey count under undo."
+    }
+  ],
   "yours": [
     {
-      "id": "test2",
-      "text": "Fetch main, run start, test all four tabs, send comments."
+      "id": "test3",
+      "text": "Fetch main, run start, test all three tabs end to end, send comments."
     },
     {
       "id": "o3",
@@ -24,7 +30,7 @@
     },
     {
       "id": "o7",
-      "text": "O7 \u00b7 Correct the rulebook tables (forces, default connections, room types) when you have time."
+      "text": "O7 \u00b7 Correct the rulebook tables when you have time."
     }
   ],
   "agents": [
@@ -32,7 +38,8 @@
       "task": "G5",
       "name": "Draw tool",
       "model": "Opus",
-      "stage": 1
+      "stage": 4,
+      "pr": 54
     },
     {
       "task": "G3",
@@ -42,23 +49,23 @@
       "pr": 52
     },
     {
-      "task": "G2",
-      "name": "Lay out from bubbles",
+      "task": "A8",
+      "name": "Export PDF and DXF",
       "model": "Opus",
       "stage": 4,
-      "pr": 49
+      "pr": 47
     }
   ],
   "stages": ["Briefed", "Building", "Review", "Your merge", "Merged"],
   "done": [
-    "All four stages merged; F1 to F4, G0, G1, G2, G4 from your tests merged; A8 export merged.",
-    "G3 merged: one Plan tab, editing in the massing, orbit about the building, Plan view, door kind on the sheet (#52).",
-    "G5 started: polygons, vertex editing, arcs and circles with true arcs in the DXF.",
-    "Double-click start scripts (#27)."
+    "Requirements, bubbles and one Plan tab with the massing; every stage edits the same graph.",
+    "Your two tests' fixes all merged: F1 to F4, G0 to G5.",
+    "Export PDF to scale and DXF with true arcs (#47, #54).",
+    "Milestone 1 agent tasks done except A9, the usability run, which needs O3 and O5 from you."
   ],
   "next": [
-    "Review G5, merge; then the run is complete and the tool waits for your test.",
-    "A9 usability run (needs O3 the known house and O5 the fresh brief).",
+    "Your test of the whole tool; comments become the next fix list.",
+    "A9 usability run once O3 the known house and O5 the fresh brief exist.",
     "Milestone 2 waits on O4 walls and the forces revisit."
   ]
 }
