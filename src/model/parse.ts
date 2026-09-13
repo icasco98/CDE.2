@@ -103,6 +103,11 @@ export function parseProject(document: Document): Result<Project> {
             bubble: {
               x: count(nested(raw.bubble, `${at}.bubble`).x, `${at}.bubble.x`),
               y: count(nested(raw.bubble, `${at}.bubble`).y, `${at}.bubble.y`),
+              ...(nested(raw.bubble, `${at}.bubble`).angle === undefined
+                ? {}
+                : {
+                    angle: count(nested(raw.bubble, `${at}.bubble`).angle, `${at}.bubble.angle`),
+                  }),
             },
           }),
       ...(raw.footprint === undefined

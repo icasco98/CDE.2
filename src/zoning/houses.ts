@@ -1,10 +1,11 @@
-import { correctContacts, createState, groundOf, layoutFor, settle } from '../bubbles'
+import { createState, groundOf, layoutFor, settle } from '../bubbles'
 import { area, type Polygon } from '../geometry'
 import {
   createIdGenerator,
   createStore,
   EXTERIOR,
   type Household,
+  type Bubble,
   type Project,
   type Room,
 } from '../model'
@@ -99,7 +100,7 @@ export function villa(
   return store.getState()
 }
 
-/** The project with every bubble where the settle and the contact correction leave it. */
+/** The project with every bubble where the settle leaves it. */
 export function settled(project: Project): Project {
   const ground = groundOf(project.plot, project.site)
   const layout = layoutFor(project.weights)
@@ -117,11 +118,16 @@ export function settled(project: Project): Project {
       .map((edge) => ({ a: edge.a, b: edge.b, storey: edge.storey })),
     ground,
   )
-  const rested = correctContacts(settle(state, layout).state, layout).state
-  const at = new Map(rested.bodies.map((body) => [body.id, { x: body.x, y: body.y }]))
+  const rested = settle(state, layout).state
+  const at = new Map(
+    rested.bodies.map((body) => [
+      body.id,
+      { x: body.x, y: body.y, ...(body.half > 0 ? { angle: body.angle } : {}) },
+    ]),
+  )
   const rooms: readonly Room[] = project.rooms.map((room) => ({
     ...room,
-    ...(at.has(room.id) ? { bubble: at.get(room.id) as { x: number; y: number } } : {}),
+    ...(at.has(room.id) ? { bubble: at.get(room.id) as Bubble } : {}),
   }))
   return { ...project, rooms }
 }

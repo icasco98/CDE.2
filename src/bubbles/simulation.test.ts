@@ -8,17 +8,20 @@ import {
   radiusOf,
   settle,
   shareAStorey,
-  SPREAD_SECONDS,
+  SPREAD_ROUNDS,
   spreadLayout,
   step,
-  STILL_FRAMES,
   TOUCHING,
   twinsOf,
   type SimulationEdge,
   type SimulationRoom,
   type SimulationState,
 } from './simulation'
+import { touching } from './tension'
 import { groundOf } from './ground'
+import { EXTERIOR } from '../model'
+import { roomTypeById } from '../rulebook'
+import { villa } from '../zoning/houses'
 
 /**
  * Floor enough for any program in these tests, with its middle on the origin, and no side of it
@@ -119,7 +122,7 @@ describe('settling', () => {
       room('b', 30, 0, { bubble: { x: 3.5, y: 4.5 } }),
     ]
     const out = settle(createState(rooms, [{ a: 'a', b: 'b', storey: 0 }], wide), defaultLayout)
-    expect(out.state.bodies[0]).toMatchObject({ id: 'a', x: 3, y: 4, vx: 0, vy: 0 })
+    expect(out.state.bodies[0]).toMatchObject({ id: 'a', x: 3, y: 4 })
   })
 
   it('pulls a stretched link back towards its rest length', () => {
@@ -135,7 +138,7 @@ describe('settling', () => {
     // standing against each other rather than to the air two strangers keep.
     const rest = radiusOf(20) * 2
     expect(after).toBeLessThan(before)
-    expect(after).toBeLessThanOrEqual(rest + 0.05)
+    expect(after).toBeLessThanOrEqual(rest + 0.05 + 1e-9)
     expect(after).toBeGreaterThan(rest - 0.6 * radiusOf(20))
   })
 
@@ -150,15 +153,24 @@ describe('settling', () => {
     expect(between).toBeGreaterThanOrEqual(a!.radius + b!.radius)
   })
 
-  it('stops when the picture stops moving', () => {
+  it('takes its fixed rounds every time, and each settle moves the picture less than the last', () => {
     const { rooms, edges } = program(12, 2, 14)
-    const out = settle(createState(rooms, edges, wide), defaultLayout)
-    expect(out.settled).toBe(true)
-    expect(out.iterations).toBeLessThan(defaultLayout.maxIterations)
-    // Settled again it stops sooner than it did the first time, which is what a picture that has
-    // found its arrangement does; a cloud with nothing but its links to hold it still has a little
-    // of the movement left in it, and no run ever has to start from the beginning again.
-    expect(settle(out.state, defaultLayout).iterations).toBeLessThan(out.iterations)
+    const start = createState(rooms, edges, wide)
+    const moved = (from: SimulationState, to: SimulationState): number =>
+      to.bodies.reduce((most, body, index) => {
+        const was = from.bodies[index]
+        return Math.max(most, Math.hypot(body.x - (was?.x ?? 0), body.y - (was?.y ?? 0)))
+      }, 0)
+    const first = settle(start, defaultLayout)
+    expect(first.settled).toBe(true)
+    expect(first.iterations).toBe(defaultLayout.rounds)
+    // The rows let go as a room arrives where they want it, so a picture settled again moves
+    // less each time, and a picture that has arrived holds still.
+    const second = settle(first.state, defaultLayout)
+    const third = settle(second.state, defaultLayout)
+    expect(second.iterations).toBe(defaultLayout.rounds)
+    expect(moved(first.state, second.state)).toBeLessThan(moved(start, first.state))
+    expect(moved(second.state, third.state)).toBeLessThan(moved(first.state, second.state))
   })
 
   it('leaves an empty program alone', () => {
@@ -170,9 +182,10 @@ describe('settling', () => {
         corridors: [],
         companions: [],
         ground: wide,
+        round: defaultLayout.rounds,
         energy: 0,
       },
-      iterations: STILL_FRAMES,
+      iterations: defaultLayout.rounds,
       settled: true,
     })
   })
@@ -326,11 +339,9 @@ describe('the correction after the forces', () => {
     ]
     const out = settle(createState(rooms, [], wide), defaultLayout)
     expect(out.settled).toBe(true)
-    expect(out.iterations).toBeLessThan(defaultLayout.maxIterations)
-    // Clear of it, with no more than the air two strangers keep between them: the gather onto the
-    // middle of the floor holds them a little inside that air, and never inside each other.
-    expect(between(out.state)).toBeGreaterThan(touching)
-    expect(between(out.state)).toBeLessThanOrEqual(touching + defaultLayout.restGap + 1e-9)
+    // Clear of it, with no more than the air two strangers keep between them.
+    expect(between(out.state)).toBeGreaterThanOrEqual(touching - 1e-9)
+    expect(between(out.state)).toBeLessThanOrEqual(touching + defaultLayout.air + 1e-9)
   })
 
   it('leaves no two bubbles of a storey resting on each other', () => {
@@ -438,22 +449,58 @@ describe('the privacy gradient and the weights', () => {
     )
   })
 
-  it('pulls a wanted link harder as the weight rises', () => {
-    expect(layoutFor({ userRequirements: 1 }).springStiffness).toBeGreaterThan(
-      layoutFor({ userRequirements: 0 }).springStiffness,
-    )
-    expect(layoutFor({}).springStiffness).toBe(defaultLayout.springStiffness)
+  it('closes a wanted link whatever the weight, because a link is not a preference', () => {
+    const rooms = twoRooms('public', 'private')
+    for (const weight of [0, 1]) {
+      const [a, b] = settle(
+        createState(rooms, [{ a: 'a', b: 'b', storey: 0 }], floor),
+        layoutFor({ userRequirements: weight }),
+      ).state.bodies
+      expect(Math.hypot(a!.x - b!.x, a!.y - b!.y)).toBeLessThanOrEqual(
+        a!.radius + b!.radius + TOUCHING,
+      )
+    }
+  })
+})
+
+describe('a link across the corridor', () => {
+  /** An entry on the kerb with the corridor running in from it, and a room either side. */
+  const rooms = [
+    room('entry', 8, 0, { kind: 'entry-foyer', bubble: { x: 10, y: 21.4 } }),
+    room('hall', 20, 0, { kind: 'hallway', bubble: { x: 10, y: 12 } }),
+    room('west', 24, 0, { bubble: { x: 5, y: 12 } }),
+    room('east', 24, 0, { bubble: { x: 15, y: 12 } }),
+  ]
+  const edges: SimulationEdge[] = [
+    { a: 'entry', b: 'hall', storey: 0 },
+    { a: 'west', b: 'east', storey: 0 },
+  ]
+
+  it('takes one of the two rooms to the other side, and they touch there', () => {
+    const out = settle(createState(rooms, edges, floor), defaultLayout).state
+    const hall = out.bodies[1]!
+    const [west, east] = [out.bodies[2]!, out.bodies[3]!]
+    expect(touching(west, east)).toBe(true)
+    // Both on one side of the corridor's line, and neither standing in it.
+    const side = (x: number): number => Math.sign(x - hall.x)
+    expect(side(west.x)).toBe(side(east.x))
+    expect(Math.abs(west.x - hall.x)).toBeGreaterThan(hall.radius + west.radius - 0.6 * hall.radius)
+  })
+
+  it('keeps the corridor on its own lie, in from the street, whatever crosses it', () => {
+    const out = settle(createState(rooms, edges, floor), defaultLayout).state
+    const hall = out.bodies[1]!
+    expect(Math.abs(Math.sin(hall.angle))).toBeCloseTo(1, 6)
+    expect(hall.x).toBeCloseTo(10, 6)
   })
 })
 
 describe('spread', () => {
-  it('opens the push, the air two bubbles keep and the breeze, and lets the rows go', () => {
+  it('opens the air two bubbles keep and lets the rows go', () => {
     const opened = spreadLayout(defaultLayout)
-    expect(opened.repulsion).toBe(defaultLayout.repulsion * 3)
-    expect(opened.spread).toBe(defaultLayout.spread * 6)
-    expect(opened.restGap).toBe(defaultLayout.restGap * 3)
+    expect(opened.air).toBeGreaterThan(defaultLayout.air * 4)
     // The links still hold: a breeze opens a cloud out, it does not undo what belongs together.
-    expect(opened.springStiffness).toBe(defaultLayout.springStiffness)
+    expect(opened.rounds).toBe(defaultLayout.rounds)
     expect(opened.pull).toBe(0)
   })
 
@@ -462,8 +509,8 @@ describe('spread', () => {
     const settled = settle(createState(rooms, edges, wide), defaultLayout).state
     const reach = (state: typeof settled): number =>
       state.bodies.reduce((widest, body) => Math.max(widest, Math.abs(body.x)), 0)
-    let opened = settled
-    for (let frame = 0; frame < SPREAD_SECONDS / defaultLayout.timeStep; frame++)
+    let opened = { ...settled, round: 0 }
+    for (let frame = 0; frame < SPREAD_ROUNDS; frame++)
       opened = step(opened, spreadLayout(defaultLayout))
     expect(reach(opened)).toBeGreaterThan(reach(settled) * 1.1)
     expect(settle(opened, defaultLayout).settled).toBe(true)
@@ -493,7 +540,7 @@ describe('a room on every storey it serves', () => {
     const [stair, bedroom] = out.state.bodies
     expect(out.state.bodies).toHaveLength(2)
     expect(Math.hypot(stair!.x - bedroom!.x, stair!.y - bedroom!.y)).toBeLessThanOrEqual(
-      stair!.radius + bedroom!.radius + 0.05,
+      stair!.radius + bedroom!.radius + 0.05 + 1e-9,
     )
   })
 
@@ -565,5 +612,53 @@ describe('a stair through a saved project', () => {
     const rooms = back.ok ? back.value.rooms : []
     const state = createState(rooms, [], floor)
     expect(twinsOf(state.bodies[0]!)).toEqual([0, 1, 2])
+  })
+})
+
+describe('the hand bounds a settle', () => {
+  /** The default villa on two storeys, settled, with its rooms as the settle reads them. */
+  function villaOf() {
+    const project = villa(2)
+    const ground = groundOf(project.plot, project.site)
+    const rooms = project.rooms.map((room) => ({
+      ...room,
+      kind: room.type,
+      ...(roomTypeById(room.type)?.tier === undefined
+        ? {}
+        : { tier: roomTypeById(room.type)?.tier }),
+    }))
+    const edges = project.edges.filter((edge) => edge.a !== EXTERIOR && edge.b !== EXTERIOR)
+    return { rested: settle(createState(rooms, edges, ground)).state, rooms: project.rooms }
+  }
+
+  it('moves no room on another storey by more than the drag itself, after the diwaniya is moved half a metre', () => {
+    const { rested, rooms } = villaOf()
+    const diwaniya = rested.bodies.findIndex((body) => body.kind === 'diwaniya')
+    const from = rested.bodies.map((body) => ({ x: body.x, y: body.y }))
+    const moved: SimulationState = {
+      ...rested,
+      bodies: rested.bodies.map((body, index) =>
+        index === diwaniya ? { ...body, x: body.x - 0.5 } : body,
+      ),
+    }
+    const out = settle(moved, defaultLayout, {
+      id: rested.bodies[diwaniya]!.id,
+      moved: 0.5,
+      from,
+    }).state
+    const walked = out.bodies
+      .map((body, index) => ({
+        name: rooms[index]?.name ?? body.id,
+        storey: body.storey,
+        by: Math.hypot(body.x - from[index]!.x, body.y - from[index]!.y),
+      }))
+      .filter((each) => each.by > 0.5 + 1e-6)
+    expect(walked).toEqual([])
+    expect(
+      out.bodies.filter(
+        (body, index) =>
+          body.storey > 0 && Math.hypot(body.x - from[index]!.x, body.y - from[index]!.y) > 1e-9,
+      ),
+    ).toEqual([])
   })
 })

@@ -57,7 +57,7 @@ function heldBy(state: SimulationState, a: Body, b: Body): string | undefined {
     const wx = (other.x - one.x) / toward
     const wy = (other.y - one.y) / toward
     for (const force of forcesOn({ kind: one.kind, ...(one.tier ? { tier: one.tier } : {}) })) {
-      const [ux, uy] = force.pull(
+      const [px, py] = force.pull(
         { kind: one.kind, ...(one.tier ? { tier: one.tier } : {}) },
         [one.x, one.y],
         {
@@ -73,7 +73,8 @@ function heldBy(state: SimulationState, a: Body, b: Body): string | undefined {
           },
         },
       )
-      if (ux * wx + uy * wy >= -0.3) continue
+      const run = Math.hypot(px, py)
+      if (run < 1e-9 || (px * wx + py * wy) / run >= -0.3) continue
       if (strongest && strongest.strength >= force.strength) continue
       strongest = { id: force.id, strength: force.strength }
     }
@@ -102,6 +103,15 @@ export function readLink(
       realized: false,
       reason: `${nameFor(one.id)} cannot reach ${nameFor(other.id)}: ${nameFor(between.id)} is between them.`,
     }
+  // A room on its kerb is held by a wall, not by a row, and the wall is what the sentence names.
+  const walled = [one, other].find((body) => body.kerb !== undefined)
+  if (walled) {
+    const free = walled === one ? other : one
+    return {
+      realized: false,
+      reason: `${nameFor(free.id)} cannot reach ${nameFor(walled.id)}: ${nameFor(walled.id)} stands on its kerb, and the rooms beside it take the rest of the street.`,
+    }
+  }
   const row = heldBy(state, one, other)
   if (row)
     return {

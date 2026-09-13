@@ -10,8 +10,6 @@ function body(id: string, x: number, y: number, radius = 2, storeysSpanned = 1):
     id,
     x,
     y,
-    vx: 0,
-    vy: 0,
     radius,
     half: 0,
     angle: 0,

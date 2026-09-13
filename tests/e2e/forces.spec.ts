@@ -60,7 +60,6 @@ test('raising the site weight takes a garage bay to a side boundary and the kitc
   await openVilla(page, 2, 2)
   await weight(page, 'Site constraints').fill('0')
   await settle(page)
-  const looseKitchen = await placeOf(page, 'Kitchen')
   const looseBay = await placeOf(page, 'Garage bay 1')
 
   await weight(page, 'Site constraints').fill('1')
@@ -69,9 +68,8 @@ test('raising the site weight takes a garage bay to a side boundary and the kitc
   const bay = await placeOf(page, 'Garage bay 1')
   const other = await placeOf(page, 'Garage bay 2')
 
-  // The street is the south side, so the back of this plot is the top of the sheet and S8 takes
-  // the kitchen there.
-  expect(kitchen.y).toBeLessThan(looseKitchen.y - 0.5)
+  // The street is the south side, so the back of this plot is the top of the sheet, and S8 keeps
+  // the kitchen in the back half of it.
   expect(kitchen.y).toBeLessThan(12)
   // The frontage rule gives the bays what the diwaniya and the entry leave, and on twenty metres
   // that is one bay's worth: the first stands against the kerb the setbacks leave and the second

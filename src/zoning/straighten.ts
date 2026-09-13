@@ -874,8 +874,9 @@ export function layRooms(
         const needed = ahead(column.s)
         const spare = line - column.s - needed
         const held = [...laid.keys()].some((other) => linked(index, other))
-        const [c0, c1] = freeAcross(column, column.s + GRID_M / 2)
-        const clear = Math.abs(c1 - c0 - widthOf(column)) < 1e-9
+        const clear = !column.reserved.some(
+          (strip) => strip.spine && strip.s0 <= column.s + 1e-9 && strip.s1 > column.s + 1e-9,
+        )
         if (spare > 0 && atKerb(index) === 2 && !held && clear) {
           const wanted = snap(sOf(index) - Math.sqrt(allotOf(index)) / 2)
           const most = Math.floor((column.s + spare) / GRID_M) * GRID_M
@@ -968,6 +969,31 @@ export function layRooms(
           behind.push(next)
           last = next
         }
+      }
+      // The band is shared only where that draws the rooms nearer their proportions than one
+      // behind the other would: two long slivers side by side are no better than two shallow rooms.
+      const ratioOf = (deep: number, length: number): number =>
+        Math.max(deep, length) / Math.max(GRID_M, Math.min(deep, length))
+      if (behind.length > 0) {
+        const total = area + behind.reduce((sum, other) => sum + allotOf(other), 0)
+        const length = fitted(total, free).length
+        const mineDeep = Math.max(
+          Math.min(free - LEAST_DEPTH_M, LEGAL_WIDE_M),
+          Math.min(free - LEAST_DEPTH_M, snap(area / length)),
+        )
+        const shared = Math.max(
+          ratioOf(mineDeep, length),
+          ...behind.map((other) =>
+            ratioOf(free - mineDeep, depthFor(allotOf(other), free - mineDeep)),
+          ),
+        )
+        const stacked = Math.max(
+          ratioOf(fitted(area, free).deep, fitted(area, free).length),
+          ...behind.map((other) =>
+            ratioOf(fitted(allotOf(other), free).deep, fitted(allotOf(other), free).length),
+          ),
+        )
+        if (shared > stacked + 1e-9) behind.length = 0
       }
       if (behind.length > 0) {
         const total = area + behind.reduce((sum, other) => sum + allotOf(other), 0)

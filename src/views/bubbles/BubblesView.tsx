@@ -297,7 +297,12 @@ export function BubblesView(props: BubblesViewProps) {
       // inside the buildable line every frame of the drag, so the place to keep is the one it is
       // drawn at when the hand comes off, not the point of the pointer.
       const body = bodies.find((each) => each.id === gesture.id)
-      if (movedRef.current && body) onDropBubble(gesture.id, { x: body.x, y: body.y })
+      if (movedRef.current && body)
+        onDropBubble(gesture.id, {
+          x: body.x,
+          y: body.y,
+          ...(body.half > 0 ? { angle: body.angle } : {}),
+        })
       release(null)
       return
     }

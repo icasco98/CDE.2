@@ -97,9 +97,15 @@ describe('the rows of the rulebook, with coordinates', () => {
     expect(pullOf('S6', { kind: 'maid-room' }, [15, 12], fieldOn(plot))).toEqual([1, 0])
   })
 
-  it('S8 takes the kitchen away from the frontage', () => {
-    expect(pullOf('S8', { kind: 'kitchen' }, middle, fieldOn(plot))).toEqual([0, -1])
-    expect(pullOf('S8', { kind: 'storage' }, middle, fieldOn(plot))).toEqual([0, -1])
+  it('S8 takes the kitchen away from the frontage, and lets go once it is well back', () => {
+    const nearTheStreet: Point = [10, 20]
+    expect(pullOf('S8', { kind: 'kitchen' }, nearTheStreet, fieldOn(plot))).toEqual([0, -1])
+    expect(pullOf('S8', { kind: 'storage' }, nearTheStreet, fieldOn(plot))).toEqual([0, -1])
+    // Deep in the plot the row still points the kitchen back, but no longer with its whole weight.
+    const [x, y] = pullOf('S8', { kind: 'kitchen' }, middle, fieldOn(plot))
+    expect(x).toBe(0)
+    expect(y).toBeLessThan(0)
+    expect(y).toBeGreaterThan(-1)
   })
 
   it('U1 takes the diwaniya and its WC away from the family living room and the bedrooms', () => {
