@@ -182,7 +182,20 @@ A reversal is a new entry, never an edit.
     minimum still does not fit the sheet says the storey's program is
     too big for the plot by that much. The tool never shrinks a room on
     its own. The same fit line stands on the Requirements totals,
-    before a bubble is drawn.
+    before a bubble is drawn. Z5 built the reduction and the manual
+    check: the rooms offered are the fewest by largest slack whose
+    slack covers the spill, a stair and a lift are never offered, and
+    the spill is a packing result, so a click can move it up before
+    the next brings it down; the offer is remade after every click.
+    On the accepted plan a room past the top or under the bottom of
+    its range, a storey past its buildable area, and a house past the
+    Municipality's allowed floor area are each named in one sentence,
+    never refused; the check speaks only after a hand has moved
+    something, so a saved project opens silent. The allowed area reads
+    the ratio table (210%; plus 120 m² from 350 to 400 m²; 800 m² from
+    250 to 349 m²; under 250 m² the plain 210%), the known house its
+    reference case. Open: the lift and the courtyard are counted in
+    the ratio everywhere though the table says not to.
 
 20. **Links are strong, walls are strict, the start is fixed.** A
     link's rest length is touching and its pull is strong, and the
