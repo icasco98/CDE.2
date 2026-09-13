@@ -21,8 +21,8 @@ function milliseconds(work: () => void): number {
   return best
 }
 
-/** The default two-storey villa with a maid: fourteen rooms on its ground floor. */
-const house = settled(villa(2, { maid: true }, startingPlot))
+/** The default two-storey villa with a maid and two cars: fourteen rooms on its ground floor. */
+const house = settled(villa(2, { maid: true, cars: 2 }, startingPlot))
 
 it('partitions and straightens fourteen rooms on a 20 by 25 plot in under 250 ms', () => {
   const rooms = house.rooms.filter((room) => occupiedStoreys(room).includes(0))

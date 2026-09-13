@@ -112,27 +112,32 @@ const suite: readonly Case[] = [
       [0, 28],
     ]),
   },
-  { name: 'the default program on one storey', project: villa(1), offKerb: true },
   {
-    // The reference villa on the starting plot. Seventeen metres of buildable frontage carry the
-    // diwaniya's own eight, the entry's three and a bay's five, which is all of it; the formal
-    // living, which receives off the entry, has a four-metre column of ground behind it and is
-    // nearly seven across, so it reaches the entry by lying into it and into the bay beside it.
-    // Twenty metres of street will not hold a two-car villa with a diwaniya on it and a formal
-    // living off the entry, and this is what that looks like rather than a fault in the physics.
-    name: 'the default program on two storeys',
-    project: villa(2),
-    deep: ['Entry in Formal Living', 'Formal Living in Garage bay 1'],
+    // A whole villa on one floor of the starting plot, with its one bay: the formal living does
+    // not reach the entry, and the kitchen does not reach the dining room, because the ground is
+    // fuller than the settle can pack. The settle rewrite (Z7) is measured on this pair.
+    name: 'the default program on one storey',
+    project: villa(1),
+    offKerb: true,
+    open: ['Entry to Formal Living', 'Kitchen to Dining Room'],
   },
   {
-    // Staff and two cars ask for more ground than the starting plot has, so this one is a
-    // twenty-two by thirty; and staff arrive at a side door, so it is a corner, which gives the
-    // service entrance a kerb of its own. Two links do not close on it, and the gap says why.
+    // The reference villa on the starting plot. Seventeen metres of buildable frontage carry the
+    // diwaniya's own eight, the entry's three and one bay's five, which leaves the formal living,
+    // which receives off the entry, the ground to reach it without lying into anything.
+    name: 'the default program on two storeys',
+    project: villa(2),
+  },
+  {
+    // Staff ask for more ground than the starting plot has, so this one is a twenty-two by
+    // thirty; and staff arrive at a side door, so it is a corner, which gives the service
+    // entrance a kerb of its own. One link does not close on it, and the gap says why.
     name: 'a household with a maid and a driver',
-    // The same shortage of street as the reference villa, and here it opens the links rather than
-    // closing them over one another: the formal living never reaches the entry, and the family
-    // living never reaches the corridor behind it.
-    open: ['Entry to Formal Living', 'Ground Hallway to Family Living'],
+    // The same shortage of street as the reference villa, and here it opens a link rather than
+    // closing it over another: the formal living never reaches the entry, and lies into the
+    // driver's room beside the bay instead.
+    open: ['Entry to Formal Living'],
+    deep: ['Formal Living in Driver Room'],
     project: villa(
       2,
       { maid: true, driver: true },

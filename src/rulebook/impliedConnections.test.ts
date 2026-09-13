@@ -8,7 +8,7 @@ import {
   type ImpliedConnection,
 } from './impliedConnections'
 
-/** The starting household on the starting plot: three bedrooms, two cars, no maid, no driver. */
+/** The starting household on the starting plot: three bedrooms, one car, no maid, no driver. */
 function startingProject(storeys = 1): Project {
   const store = createStore(undefined, { newId: createIdGenerator(7) })
   for (let level = 1; level < storeys; level++) store.actions.addStorey()
@@ -29,7 +29,6 @@ const referenceCase: readonly string[] = [
   'Outside to Entry (main-door, D1)',
   'Outside to Diwaniya (door, D2)',
   'Outside to Garage bay 1 (door, D3)',
-  'Outside to Garage bay 2 (door, D3)',
   'Entry to Formal Living (door, D5)',
   'Hallway to Family Living (door, D6)',
   'Entry to Guest WC (door, D7)',
@@ -48,7 +47,7 @@ const referenceCase: readonly string[] = [
 describe('the reference case: the starting household on the starting plot', () => {
   it('implies exactly the defaults the program implies', () => {
     const project = startingProject()
-    expect(project.rooms).toHaveLength(17)
+    expect(project.rooms).toHaveLength(16)
     expect(named(project, impliedConnections(project.rooms, project.edges))).toEqual(referenceCase)
   })
 

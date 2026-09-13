@@ -194,8 +194,8 @@ test('a two-storey rebuild lays a hallway on each floor, sized from that floor',
 
   await expect(rowNamed(page, 'Ground Hallway').getByLabel('Storey')).toHaveValue('0')
   await expect(rowNamed(page, 'First Hallway').getByLabel('Storey')).toHaveValue('1')
-  // A tenth of the 214 m² downstairs and of the 82 m² of bedrooms and ensuites upstairs.
-  await expect(rowNamed(page, 'Ground Hallway').getByLabel('Target area')).toHaveValue('21.4')
+  // A tenth of the 196 m² downstairs and of the 82 m² of bedrooms and ensuites upstairs.
+  await expect(rowNamed(page, 'Ground Hallway').getByLabel('Target area')).toHaveValue('19.6')
   await expect(rowNamed(page, 'First Hallway').getByLabel('Target area')).toHaveValue('8.2')
 })
 
