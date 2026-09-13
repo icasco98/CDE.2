@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { exported, textOf } from './exporting'
-import { openMass, openSheet } from './plan'
+import { clickInside, openMass, openSheet } from './plan'
 
 /**
  * The house the morph is read on: two storeys, the program rebuilt from the household with the
@@ -75,30 +75,6 @@ async function opened(page: Page): Promise<number[]> {
       Number(circle.getAttribute('r') ?? 0),
     ),
   )
-}
-
-/**
- * A click somewhere really inside a shape. A zone is an orthogonal outline, not a rectangle, so
- * the middle of its box can be in another room; a point of the shape itself is found first.
- */
-async function clickInside(page: Page, selector: string): Promise<void> {
-  const at = await page.evaluate((which) => {
-    const shape = document.querySelector(which)
-    if (!(shape instanceof SVGPolygonElement)) return null
-    const screen = shape.getScreenCTM()
-    if (!screen) return null
-    const box = shape.getBBox()
-    for (let part = 0.5; part > 0.02; part /= 2)
-      for (let x = box.x + part; x < box.x + box.width; x += part)
-        for (let y = box.y + part; y < box.y + box.height; y += part)
-          if (shape.isPointInFill(new DOMPoint(x, y))) {
-            const on = new DOMPoint(x, y).matrixTransform(screen)
-            return { x: on.x, y: on.y }
-          }
-    return null
-  }, selector)
-  if (!at) throw new Error(`${selector} has nothing to click`)
-  await page.mouse.click(at.x, at.y)
 }
 
 function inside(corners: readonly [number, number][], x: number, y: number): boolean {
