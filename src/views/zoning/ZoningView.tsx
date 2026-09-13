@@ -17,14 +17,18 @@ import {
   type Handle,
   type Point,
 } from '../../geometry'
-import { occupiedStoreys, type Room } from '../../model'
+import { occupiedStoreys, type Commit, type Room } from '../../model'
 import {
   blockedRun,
   buildableArea,
   fitSentence,
   listedNames,
+  pastAllowed,
+  pastRange,
+  reductionFor,
   storeyFits,
   storeyLabel,
+  type StoreyFit,
 } from '../../rulebook'
 import {
   fitCamera,
@@ -238,15 +242,24 @@ function centreOf(footprint: Footprint): Point {
   return [bounds.left + bounds.width / 2, bounds.top + bounds.depth / 2]
 }
 
+/**
+ * The fit line for a plan that spills: the areas against the floor, without "fits" beside a plan
+ * that does not, because the two read as a contradiction in one breath. The spill's own number
+ * follows it.
+ */
+function spillSentence(fit: StoreyFit): string {
+  return `${fit.needed} m² of targets on ${fit.buildable} m² buildable`
+}
+
 function keyOf(pair: WallPair): string {
   return `${pair.a}:${pair.b}`
 }
 
 export function ZoningView(props: ZoningViewProps) {
   const { projectId, rooms, edges, storeys, storey, plot, sizes, selected } = props
-  const { onPlace, onPlaceAll, onUnplace, onPin, onConnect, onDisconnect } = props
+  const { onUnplace, onPin, onConnect, onDisconnect } = props
   const { onSelect, onStorey, onSetEdgeKind, onRefuse } = props
-  const { onMorph, onAccept, onBack, proposal, asking } = props
+  const { onMorph, onAccept, onBack, onReduce, proposal, asking } = props
   const svgRef = useRef<SVGSVGElement>(null)
   const sheetRef = useRef<Sheet>(emptySheet)
   /** Whether the drag has done anything yet, so an abandoned one puts back only what it moved and a press that never moved is a click. */
@@ -272,6 +285,23 @@ export function ZoningView(props: ZoningViewProps) {
   const [drawing, setDrawing] = useState<Drawing>(null)
   /** Which tool is waiting on a room, when the hand pressed it with none picked. */
   const [picking, setPicking] = useState<'draw' | 'circle' | null>(null)
+  /**
+   * Whether a hand has reshaped anything on this sheet yet, which is what arms the size check.
+   * A project opened from storage says nothing about what it was saved holding until something in
+   * it has been moved: the check answers for the gesture, and there has not been one.
+   */
+  const [checked, setChecked] = useState(false)
+
+  /** Every committed gesture goes through here, so the one place that arms the check is this one. */
+  const onPlace = (id: string, footprint: Footprint, commit: Commit): void => {
+    if (commit === 'commit') setChecked(true)
+    props.onPlace(id, footprint, commit)
+  }
+
+  const onPlaceAll = (placements: readonly Placement[]): void => {
+    setChecked(true)
+    props.onPlaceAll(placements)
+  }
 
   const here = useMemo(
     () => rooms.filter((room) => occupiedStoreys(room).includes(storey)),
@@ -295,6 +325,7 @@ export function ZoningView(props: ZoningViewProps) {
       placed.map((room) => ({
         id: room.id,
         name: room.name,
+        type: room.type,
         outline: outlineOf(room.footprint),
         measure: exactArea(room.footprint),
       })),
@@ -351,8 +382,81 @@ export function ZoningView(props: ZoningViewProps) {
     typeof window !== 'undefined' && typeof window.matchMedia === 'function'
       ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
       : true
+  const buildableM2 = useMemo(() => area(buildable), [buildable])
+  const plotAreaM2 = useMemo(() => area(plot.polygon), [plot.polygon])
   /** What this storey's targets come to against the floor, with what the proposal spilled past it. */
-  const fit = storeyFits(rooms, area(buildable), storeys).find((each) => each.storey === storey)
+  const fit = storeyFits(rooms, buildableM2, storeys).find((each) => each.storey === storey)
+
+  /** The fewest rooms whose slack would cover what the proposal spills, and the sentence for them. */
+  const reduction = useMemo(
+    () =>
+      proposal === null
+        ? null
+        : reductionFor({
+            rooms: here.map((room) => ({
+              id: room.id,
+              name: room.name,
+              type: room.type,
+              targetArea: room.targetArea,
+            })),
+            overflowM2: proposal.made.overflowM2,
+            buildableM2,
+            plotAreaM2,
+            storey,
+          }),
+    [proposal, here, buildableM2, plotAreaM2, storey],
+  )
+  const offered = useMemo(
+    () => new Set((reduction?.offered ?? []).map((room) => room.id)),
+    [reduction],
+  )
+
+  /** Whether a hand is in the middle of something, which is when the report is held as it is. */
+  const midGesture = gesture !== null || asked !== null || drawing !== null
+
+  /** The rooms a gesture has taken past the range of their kind, each with the limit it passed. */
+  const saidNow = useMemo(
+    () =>
+      checked && proposal === null
+        ? pastRange(
+            standing.map((room) => ({
+              id: room.id,
+              name: room.name,
+              type: room.type,
+              areaM2: room.measure,
+            })),
+            plotAreaM2,
+          )
+        : [],
+    [checked, proposal, standing, plotAreaM2],
+  )
+  /** What the storey and the house stand on, a room counted on every storey it reaches. */
+  const ratioNow = useMemo(() => {
+    if (!checked || proposal !== null) return []
+    const storeyAreaM2 = standing.reduce((sum, room) => sum + room.measure, 0)
+    const houseAreaM2 = rooms
+      .filter(isPlaced)
+      .reduce(
+        (sum, room) =>
+          sum +
+          exactArea(room.footprint) *
+            occupiedStoreys(room).filter((on) => on >= 0 && on < storeys).length,
+        0,
+      )
+    return pastAllowed({ storey, storeyAreaM2, buildableM2, houseAreaM2, plotAreaM2 })
+  }, [checked, proposal, standing, rooms, storey, storeys, buildableM2, plotAreaM2])
+
+  /**
+   * What the check said the last time the hand was still. A sentence coming or going lengthens
+   * the page and the sheet is drawn smaller inside what is left, so the report is held as it was
+   * for as long as a gesture is in flight: the plan never changes scale under the hand moving it.
+   */
+  const heldSaid = useRef({ size: saidNow, ratio: ratioNow })
+  if (!midGesture) heldSaid.current = { size: saidNow, ratio: ratioNow }
+  const sizeSaid = heldSaid.current.size
+  const ratioSaid = heldSaid.current.ratio
+  const pastRangeHere = useMemo(() => new Set(sizeSaid.map((said) => said.id)), [sizeSaid])
+
   const shown = visibleExtent(extent, camera)
   const perPixel = metresPerPixel(extent, camera, box)
 
@@ -972,6 +1076,7 @@ export function ZoningView(props: ZoningViewProps) {
   useEffect(() => {
     setBeforeCarve(new Map())
     setAsked(null)
+    setChecked(false)
   }, [projectId])
 
   /** The sheet is measured rather than guessed, because a mark's size on the screen is a size in its box. */
@@ -1171,6 +1276,16 @@ export function ZoningView(props: ZoningViewProps) {
   function dropSize(): Size {
     const room = gesture?.kind === 'drop' ? rooms.find((entry) => entry.id === gesture.id) : null
     return room ? sizeFor(room) : { width: 1, depth: 1 }
+  }
+
+  /**
+   * A click on an outlined zone: the room's target goes to the bottom of its range and nothing
+   * else does, which is one undo step. The proposal is made again from the same bubbles by
+   * whatever holds it, so nothing changes size here that a click did not ask for.
+   */
+  function reduceRoom(id: string): void {
+    const room = reduction?.offered.find((each) => each.id === id)
+    if (room) onReduce(room.id, room.to)
   }
 
   /** On the room picked, so a click finds the gesture, and under the pointer, so a sweep does too. */
@@ -1389,6 +1504,8 @@ export function ZoningView(props: ZoningViewProps) {
               proposal={proposal}
               names={new Map(rooms.map((room) => [room.id, room.name]))}
               cut={cutMorph}
+              reduce={offered}
+              onReduce={reduceRoom}
             />
           )}
           {showing && marks.tensions.map((mark) => <Tension key={mark.edgeId} mark={mark} />)}
@@ -1410,6 +1527,7 @@ export function ZoningView(props: ZoningViewProps) {
                   room={room}
                   sizes={sizes.get(room.type)}
                   selected={room.id === selected}
+                  pastRange={pastRangeHere.has(room.id)}
                   joined={joined.has(room.id)}
                   onGrab={onGrabRoom}
                   onHover={onHoverRoom}
@@ -1563,29 +1681,49 @@ export function ZoningView(props: ZoningViewProps) {
           />
         </svg>
       </div>
-      {proposal && fit && (
+      {(proposal !== null || sizeSaid.length > 0 || ratioSaid.length > 0) && (
         <dl className="zoning-report">
-          <div className={fit.over ? 'fit-over' : undefined}>
-            <dt>{storeyLabel(storey)}</dt>
-            <dd data-fit="">
-              {proposal.made.overflowM2 > 0
-                ? `${fitSentence(fit)} · ${Math.round(proposal.made.overflowM2)} m² of the plan falls outside the buildable line`
-                : fitSentence(fit)}
-            </dd>
-          </div>
-          {proposal.made.tensions.map((tension) => (
+          {proposal && fit && (
+            <div className={fit.over ? 'fit-over' : undefined}>
+              <dt>{storeyLabel(storey)}</dt>
+              <dd data-fit="">
+                {proposal.made.overflowM2 > 0
+                  ? `${spillSentence(fit)} · ${Math.round(proposal.made.overflowM2)} m² of the plan falls outside the buildable line`
+                  : fitSentence(fit)}
+              </dd>
+            </div>
+          )}
+          {reduction && (
+            <div className="fit-over">
+              <dt>{reduction.offered.length > 0 ? 'Reduce' : 'Too big'}</dt>
+              <dd data-reduce="">{reduction.sentence}</dd>
+            </div>
+          )}
+          {sizeSaid.map((said) => (
+            <div key={said.id} className="fit-over">
+              <dt>Size</dt>
+              <dd data-size-said="">{said.sentence}</dd>
+            </div>
+          ))}
+          {ratioSaid.map((sentence) => (
+            <div key={sentence} className="fit-over">
+              <dt>Ratio</dt>
+              <dd data-ratio-said="">{sentence}</dd>
+            </div>
+          ))}
+          {(proposal?.made.tensions ?? []).map((tension) => (
             <div key={tension.linkId}>
               <dt>Tension</dt>
               <dd data-zone-tension-said="">{tension.sentence}</dd>
             </div>
           ))}
-          {proposal.made.blockedBays.map((id) => (
+          {(proposal?.made.blockedBays ?? []).map((id) => (
             <div key={id} className="fit-over">
               <dt>Finding</dt>
               <dd data-bay-blocked="">{noRun(rooms, id)}</dd>
             </div>
           ))}
-          {proposal.made.unreached.length > 0 && (
+          {proposal !== null && proposal.made.unreached.length > 0 && (
             <div className="fit-over">
               <dt>Finding</dt>
               <dd data-unreached="">

@@ -30,3 +30,16 @@ it('partitions and straightens fourteen rooms on a 20 by 25 plot in under 250 ms
   const took = milliseconds(() => partitionStorey(house, 0))
   expect([rooms.length, took < 250]).toEqual([14, true])
 })
+
+it('makes the proposal again after a room is reduced, inside the same 250 ms', () => {
+  // The click sets one target and the storey is morphed again from the same bubbles, so the
+  // second morph is the one a person waits on between clicking a room and seeing the new plan.
+  const smaller = {
+    ...house,
+    rooms: house.rooms.map((room) =>
+      room.type === 'diwaniya' ? { ...room, targetArea: 45 } : room,
+    ),
+  }
+  const took = milliseconds(() => partitionStorey(smaller, 0))
+  expect(took < 250).toBe(true)
+})

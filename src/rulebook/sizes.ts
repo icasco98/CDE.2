@@ -63,6 +63,17 @@ export function plotBandFor(kindId: string, plotAreaM2: number): Band | undefine
   return row?.bands[kindId]
 }
 
+/**
+ * What the table treats as a normal size for the kind, with the plot band resolved where the kind
+ * reads its size off the plot. A kind whose length is as needed — the hallway — has no range at
+ * all, and nothing that measures a room against one may invent it one.
+ */
+export function rangeFor(kindId: string, plotAreaM2: number): Band | undefined {
+  const range = byId.get(kindId)?.range
+  if (range === byPlotBand) return plotBandFor(kindId, plotAreaM2)
+  return typeof range === 'object' ? range : undefined
+}
+
 /** What a new room of this kind gets: the table's typical, or the middle of its plot band. */
 export function typicalArea(kindId: string, plotAreaM2: number): number {
   const type = byId.get(kindId) ?? byId.get(fallback)

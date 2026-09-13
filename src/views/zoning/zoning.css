@@ -138,6 +138,16 @@
   stroke-width: 3px;
 }
 
+/*
+ * A room a gesture has taken past the range of its kind. It is outlined rather than refused, and
+ * in the same colour as the spill, because both are the plan standing outside a wall of the
+ * rulebook and both are the person's to answer.
+ */
+.zoning-sheet .room-past-range .room-shape {
+  stroke: #a5442c;
+  stroke-width: 2.5px;
+}
+
 .zoning-sheet .room-pinned {
   fill: #e8ddcd;
   stroke-dasharray: 6 3;
@@ -532,6 +542,13 @@
   stroke: #2f6f8f;
   stroke-width: 2px;
   stroke-dasharray: 7 5;
+}
+
+/* A zone the sheet is offering to reduce: outlined, and a click on it takes it to its bottom. */
+.zoning-sheet .zone-reduce {
+  stroke: #a5442c;
+  stroke-width: 3px;
+  cursor: pointer;
 }
 
 .zoning-sheet .morph text {

@@ -17,6 +17,12 @@ export type Proposal = {
   readonly from: ReadonlyMap<string, Point>
   /** Whether this is the first morph of the project, which is the one that explains the walls. */
   readonly first: boolean
+  /**
+   * Whether the zones are to open out of their bubbles. They do when a person asks for the morph;
+   * a proposal made again under them, after a room has been reduced, changes in place instead, so
+   * the overflow, the outlines and the sentence all move at once.
+   */
+  readonly opening: boolean
 }
 
 /**
@@ -70,10 +76,15 @@ export function MorphZones({
   proposal,
   names,
   cut,
+  reduce,
+  onReduce,
 }: {
   proposal: Proposal
   names: ReadonlyMap<string, string>
   cut: boolean
+  /** The rooms the sheet is offering to reduce, by id: each is outlined and each takes a click. */
+  reduce: ReadonlySet<string>
+  onReduce: (id: string) => void
 }) {
   const circles = useRef(new Map<string, SVGCircleElement>())
 
@@ -89,7 +100,7 @@ export function MorphZones({
       for (const [id, circle] of held)
         circle.setAttribute('r', String(Math.max(0.01, (reaches.get(id) ?? 0) * part)))
     }
-    if (cut) {
+    if (cut || !proposal.opening) {
       show(1)
       return
     }
@@ -144,9 +155,24 @@ export function MorphZones({
       )}
       {proposal.made.zones.map((zone) => {
         const middle = centreOf(zone.polygon)
+        const offered = reduce.has(zone.id)
         return (
           <g key={zone.id} data-zone={zone.id} clipPath={`url(#morph-open-${zone.id})`}>
-            <polygon points={pointsOf(zone.polygon)} className="zone" />
+            <polygon
+              points={pointsOf(zone.polygon)}
+              className={offered ? 'zone zone-reduce' : 'zone'}
+              {...(offered ? { 'data-reduce-room': zone.id } : {})}
+              onPointerDown={
+                offered
+                  ? (event) => {
+                      // The press is taken here and nowhere else: it would otherwise reach the
+                      // sheet under the proposal and start a pan across it.
+                      event.stopPropagation()
+                      onReduce(zone.id)
+                    }
+                  : undefined
+              }
+            />
             <text x={middle[0]} y={middle[1] - LABEL_M} className="zone-name">
               {names.get(zone.id) ?? ''}
             </text>

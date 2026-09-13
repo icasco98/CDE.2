@@ -12,12 +12,16 @@ export type {
 export { byPlotBand, freeProportion, lengthAsNeeded } from './types'
 export {
   categoryLabels,
-  plotBandFor,
+  rangeFor,
   roomTypeById,
   spansAllStoreys,
   typesByCategory,
   typicalArea,
 } from './sizes'
+export { allowedFloorArea } from './ratio'
+export { reductionFor, slackOf } from './slack'
+export type { Reduction } from './slack'
+export { pastAllowed, pastRange } from './sizeCheck'
 export { circulationPerStorey, hallwayArea, hallwayFollows, hallwayName } from './circulation'
 export type { StoreyCirculation } from './circulation'
 export { companionName, companionOwners, companionsOf, defaultProgram, standingOf } from './program'

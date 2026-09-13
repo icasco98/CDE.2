@@ -176,6 +176,8 @@ type RoomShapeProps = {
   readonly selected: boolean
   /** Whether the room is drawn inside a join, which carries its wall and its label for it. */
   readonly joined: boolean
+  /** Whether a gesture has taken the room past the range of its kind, which outlines it. */
+  readonly pastRange: boolean
   readonly onGrab: (event: ReactPointerEvent, id: string) => void
   /** The room under the pointer, so the handles on its shared walls show themselves. */
   readonly onHover: (id: string | null) => void
@@ -196,7 +198,9 @@ export const RoomShape = memo(function RoomShape(props: RoomShapeProps) {
   const middle = centroid(outline)
   const label = labelSize(footprint.polygon, room.name)
   const warn =
-    offTarget(measure, room.targetArea) || (sizes ? belowMinimum(footprint, sizes) : false)
+    props.pastRange ||
+    offTarget(measure, room.targetArea) ||
+    (sizes ? belowMinimum(footprint, sizes) : false)
   return (
     <g
       data-room={room.id}
@@ -205,7 +209,13 @@ export const RoomShape = memo(function RoomShape(props: RoomShapeProps) {
       data-name={room.name}
       data-rotation={footprint.rotation.toFixed(1)}
       data-area={measure.toFixed(2)}
-      className={props.selected ? 'room room-selected' : 'room'}
+      className={[
+        'room',
+        props.selected ? 'room-selected' : '',
+        props.pastRange ? 'room-past-range' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       style={{ '--label-m': String(label) } as CSSProperties}
     >
       {/* A joined room keeps its shape to take the pointer and gives up its fill, its wall and
