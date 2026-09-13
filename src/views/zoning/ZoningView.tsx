@@ -28,6 +28,7 @@ import {
   reductionFor,
   storeyFits,
   storeyLabel,
+  type StoreyFit,
 } from '../../rulebook'
 import {
   fitCamera,
@@ -239,6 +240,15 @@ function isPlaced(room: Room): room is Placed {
 function centreOf(footprint: Footprint): Point {
   const bounds = boundingBox(footprint.polygon)
   return [bounds.left + bounds.width / 2, bounds.top + bounds.depth / 2]
+}
+
+/**
+ * The fit line for a plan that spills: the areas against the floor, without "fits" beside a plan
+ * that does not, because the two read as a contradiction in one breath. The spill's own number
+ * follows it.
+ */
+function spillSentence(fit: StoreyFit): string {
+  return `${fit.needed} m² of targets on ${fit.buildable} m² buildable`
 }
 
 function keyOf(pair: WallPair): string {
@@ -1678,7 +1688,7 @@ export function ZoningView(props: ZoningViewProps) {
               <dt>{storeyLabel(storey)}</dt>
               <dd data-fit="">
                 {proposal.made.overflowM2 > 0
-                  ? `${fitSentence(fit)} · ${Math.round(proposal.made.overflowM2)} m² of the plan falls outside the buildable line`
+                  ? `${spillSentence(fit)} · ${Math.round(proposal.made.overflowM2)} m² of the plan falls outside the buildable line`
                   : fitSentence(fit)}
               </dd>
             </div>
