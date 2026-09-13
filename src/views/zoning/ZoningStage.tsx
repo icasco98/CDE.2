@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useState } from 'react'
 import { removedLinks } from '../../app/defaultLinks'
 import { selection, useSelection } from '../../app/selection'
 import { session } from '../../app/session'
@@ -9,6 +9,7 @@ import {
   type Commit,
   type EdgeKind,
   type Endpoint,
+  type Project,
   type Result,
 } from '../../model'
 import { partitionStorey } from '../../zoning'
@@ -51,16 +52,50 @@ export function ZoningStage(props: {
       }),
     )
 
-  const morph = (): void => {
-    const made = partitionStorey(project, storey)
+  /** Where every bubble of the project stands, which is where each zone's circle opens from. */
+  const bubblesOf = (house: Project): ReadonlyMap<string, Point> => {
     const from = new Map<string, Point>()
-    for (const room of project.rooms)
+    for (const room of house.rooms)
       if (room.bubble) from.set(room.id, [room.bubble.x, room.bubble.y])
+    return from
+  }
+
+  const morph = (): void => {
     setMorphing({
       kind: 'shown',
-      proposal: { storey, made, from, first: morphHint.dueFor(project.id) },
+      proposal: {
+        storey,
+        made: partitionStorey(project, storey),
+        from: bubblesOf(project),
+        first: morphHint.dueFor(project.id),
+        opening: true,
+      },
     })
   }
+
+  /**
+   * A standing proposal is made again whenever the house under it changes: a room reduced to the
+   * bottom of its range, or that click undone, gives a new plan from the same bubbles, so the
+   * overflow, the outlines and the sentence move together. It opens without the animation,
+   * because it is the same proposal changing rather than a new one being offered, and it is made
+   * before the browser paints, so no frame ever shows a proposal against a house it did not
+   * come from.
+   */
+  useLayoutEffect(() => {
+    setMorphing((standing) =>
+      standing?.kind === 'shown'
+        ? {
+            kind: 'shown',
+            proposal: {
+              ...standing.proposal,
+              made: partitionStorey(project, standing.proposal.storey),
+              from: bubblesOf(project),
+              opening: false,
+            },
+          }
+        : standing,
+    )
+  }, [project])
 
   const onMorph = (): void => {
     const placed = project.rooms.filter(
@@ -131,6 +166,9 @@ export function ZoningStage(props: {
       onMorph={onMorph}
       onAccept={accept}
       onBack={() => setMorphing(null)}
+      onReduce={(id: string, targetArea: number) =>
+        report(session.actions.setTargetArea(id, targetArea))
+      }
       proposal={morphing?.kind === 'shown' ? morphing.proposal : null}
       asking={morphing?.kind === 'asking' ? morphing.placed : null}
     />

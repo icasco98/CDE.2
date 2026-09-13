@@ -37,6 +37,8 @@ export type ZoningViewProps = {
   readonly onAccept: () => void
   /** Drops the proposal and writes nothing. */
   readonly onBack: () => void
+  /** Sets one room's target to the bottom of its range, which is one undo step of its own. */
+  readonly onReduce: (id: string, targetArea: number) => void
   /** The proposal standing over the sheet, or nothing when there is none. */
   readonly proposal: Proposal | null
   /** How many rooms a morph would replace, while that is being asked; nothing when it is not. */
