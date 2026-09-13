@@ -229,4 +229,38 @@ A reversal is a new entry, never an edit.
     possible (the tension line, with a sentence naming what is in the
     way) or impossible (a finding on the brief). A suite of programs
     known to be feasible, every link realized after the morph, is a
-    test that ships with the tool.
+    test that ships with the tool. Z7 took the discrete correction
+    out: the settle projects every link to touching itself, and a
+    pair the walls keep apart is declared, not walked (see 22).
+
+22. **The settle is ranked, not balanced.** One function a round,
+    in order: the walls first and absolute (the buildable line, the
+    kerb claims, the diwaniya's band, the corridor's near end on its
+    anchor, a bay in tandem, a companion on its owner's perimeter),
+    then every link projected to touching, then the overlap past the
+    quarter projected back, three passes; then the site rows and the
+    gradient as pulls inside what is left, each row a vector of at
+    most one that lets go as its goal nears, the sum capped at a
+    quarter metre a round and fading to nothing by the last round. A
+    pull never undoes a link, a link never crosses a wall: a linked
+    pair with the corridor between them has the freer one mirrored
+    across it. No springs, no velocities, no damping and no tuned
+    threshold: a settle is ninety rounds from wherever the bubbles
+    are, so it is the same twice, and at rest means three rounds
+    within a millimetre. The corridor's lie is stored on its bubble
+    (`angle`), given once (in from the street on the ground, toward
+    the rooms it serves on a floor above, on one of the plot's two
+    ways) and turned after that only by the hand or by the line. The
+    hand bounds a settle: a drag frees the room it moved, its linked
+    neighbours, its companions and whatever it overlaps, holds every
+    other room and every other storey, and lets nothing move further
+    than the drag did, so a nudge is a nudge. The canonical start is
+    a villa before a round has run: the corridor in from the entry,
+    the rooms in two columns beside it by their links, the entry's
+    group across from the bays, the family group across from the
+    diwaniya. On a plot where the bays take the frontage beside the
+    entry, one link on the default program stays open, the entry to
+    the formal living, and is declared with the kerb named as what
+    holds them; the feasible suite carries that one open link and no
+    other. Z7 built it, by the cofounder; the springs of 18 and the
+    walk of 21 are gone.

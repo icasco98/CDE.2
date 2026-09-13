@@ -1,14 +1,14 @@
 {
-  "revision": 29,
+  "revision": 30,
   "date": "13 Sep 2026",
   "session": "Session 4",
   "repo": "https://github.com/icasco98/CDE.2",
-  "headline": "Z4 and Z6 merged: the bubbles morph into rooms with running walls, laid along the spine. Z7, the settle rewrite, is next, by the cofounder.",
+  "headline": "Z7 merged: the settle is one ranked function, walls then links then pulls, the same twice, bounded by the hand. Z5 waits on your word.",
   "decide": [
     {
       "id": "z5",
       "kind": "start",
-      "text": "Z5, fit by reduction and the manual size check, waits on your word; Z7 runs now on the word you gave.",
+      "text": "Z5, fit by reduction and the manual size check, waits on your word. Nothing else runs.",
       "link": "https://github.com/icasco98/CDE.2/blob/main/PLAN.md"
     }
   ],
@@ -60,11 +60,19 @@
       "task": "Z7",
       "name": "The settle rewrite",
       "model": "Cofounder",
-      "stage": 1
+      "stage": 4,
+      "pr": 76
     }
   ],
-  "stages": ["Briefed", "Building", "Review", "Your merge", "Merged"],
+  "stages": [
+    "Briefed",
+    "Building",
+    "Review",
+    "Your merge",
+    "Merged"
+  ],
   "done": [
+    "Z7 (#76): the settle rewritten by the cofounder; walls first, links projected to touching, overlaps past the quarter projected back, site rows as pulls that let go near their goal; ninety rounds, no springs; the corridor's lie stored; a drag settles only what it touched, by no more than it moved; the start lays a villa. 831 unit tests, 147 browser tests.",
     "Z1 (#67): bubbles in plot metres on one plot per storey with the buildable line, one camera with the plan, default connections as edges, a storey move takes the ensuite.",
     "Z2 and Z3 (#69): frontage claimed diwaniya first, garage bays at the kerb or in tandem, the corridor from the entry, forces with your O7 strengths, feasibility findings on the brief, every link touching on the default villa.",
     "Z4 (#71, #73): the morph as a proposal with Accept and Back, the partition with every contact a wall, spill hatched past the line, the straightening's harness.",
@@ -72,7 +80,6 @@
     "O7 first pass (#66); decisions 17 to 21 (#65); the basement as B0 of milestone 2 (#68)."
   ],
   "next": [
-    "Z7, the settle rewrite, by the cofounder: walls, then links, then pulls in one ranked function; the corridor's lie stored; motion bounded by the hand.",
     "Z5 fit by reduction and the manual size check, on your word; then your end-to-end test and A9 with O3 and O5.",
     "Milestone 2 opens with B0 the basement once O4 gives its rules."
   ]

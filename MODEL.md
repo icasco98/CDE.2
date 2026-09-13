@@ -13,7 +13,7 @@ connection from where two walls happen to land.
 |---|---|---|
 | **Project** | `id`, `name`, `storeys`, `heights[]`, `plot`, `site`, `household`, `rooms[]`, `edges[]`, `weights`, `actors[]`, `version` | One JSON document. `site` is the client's two choices, `diwaniyaAtCorner` and `garden` (rear, side or none), which the forces S4 and S5 read. Metres and m². `heights` is the floor-to-floor height of each storey in metres, one entry per storey, 3.5 unless the person changes it; the Municipality's 3 m clear minimum and 15 m maximum are walls in the rulebook, not limits on the field. |
 | **Plot** | `on` (boolean: the boundary binds), `polygon`, `north` (degrees from up), `street` (which edges face a street) | `on` false: the plot is drawn for reference and constrains nothing. A rectangle today, any polygon later; same field either way. |
-| **Room** | `id`, `name`, `type`, `storey`, `storeysSpanned`, `targetArea`, `bubble?`, `footprint?`, `pinned` | `type` keys the room-type table. `bubble` is `{x, y}` in plot metres, the same frame as a footprint, so a bubble and the zone it becomes are one point. `footprint` is `{polygon, rotation, arcs?}`: a rigid polygon in its own frame, turned about its centre, absent while unplaced. `arcs` remembers which runs of the polygon stand for true arcs (each with its centre, radius and direction in the polygon's frame) so a curved wall exports as an arc and its area is exact; the polygon stays what every calculation works on. A stair is a room with `storeysSpanned > 1`. `pinned` means the solver may not move it. |
+| **Room** | `id`, `name`, `type`, `storey`, `storeysSpanned`, `targetArea`, `bubble?`, `footprint?`, `pinned` | `type` keys the room-type table. `bubble` is `{x, y, angle?}` in plot metres, the same frame as a footprint, so a bubble and the zone it becomes are one point; `angle` is a corridor's lie, stored once it has one and turned only by the hand or the buildable line. `footprint` is `{polygon, rotation, arcs?}`: a rigid polygon in its own frame, turned about its centre, absent while unplaced. `arcs` remembers which runs of the polygon stand for true arcs (each with its centre, radius and direction in the polygon's frame) so a curved wall exports as an arc and its area is exact; the polygon stays what every calculation works on. A stair is a room with `storeysSpanned > 1`. `pinned` means the solver may not move it. |
 | **Edge** | `id`, `a`, `b`, `kind`, `storey`, `hint?` | `a`/`b` are room ids, or the singleton `EXTERIOR`. `kind` is `door`, `open` (one space flows into the next) or `main-door` (exactly one per project, from `EXTERIOR`). `hint` is a wall position for drawing; losing it changes nothing. |
 | **Household** | `familySize`, `bedrooms`, `cars`, `maid`, `driver`, `womensReception`, `masterOnGround` | Who the house is for. The room program is generated from it. `masterOnGround` keeps the master bedroom on the ground floor, a common Kuwaiti arrangement for parents. |
 | **Weights** | one number per family of forces: user requirements, site constraints, environmental factors | The person's own priorities on this project. Always on screen. The forces inside each family and their default strengths are in the rulebook. |
@@ -64,12 +64,14 @@ by side. The tool never presents one answer.
 1. **Requirements.** Rooms with target areas, the household, the plot
    with north and street sides, budget, weights.
 2. **Bubbles.** Circles of true area on the plot, one plot per storey,
-   under springs (wanted adjacency), soft repulsion (overlap up to a
-   quarter, never wholly), the site and environmental forces on the
-   plot's coordinates, and the buildable line as a wall. A hallway is
-   an ellipse along the rooms it serves. Damped, deterministic for the
-   same input, pinnable. If a storey's areas cannot fit its buildable
-   area, it says so here and on the Requirements totals.
+   settled by rank each round: the walls first and absolute, then
+   every link projected to touching, then the overlap past the
+   quarter projected back, then the site and environmental rows and
+   the gradient as pulls inside what is left. A hallway is a corridor
+   along the rooms it serves. A settle is a fixed number of rounds,
+   deterministic for the same input, pinnable. If a storey's areas
+   cannot fit its buildable area, it says so here and on the
+   Requirements totals.
 3. **Zoning.** The buildable area partitioned among the bubbles into
    footprints of the target areas (Morph), offered as a proposal to
    accept or send back: Accept places every zone and writes the door
@@ -118,13 +120,23 @@ Each stage adds constraints. None changes the graph.
   reception, then garage bays with what is left, a bay without
   frontage in tandem behind the one before), the diwaniya's band of
   one room's depth, the corridor's near end on the entry or the stair,
-  and a companion on its owner's perimeter are re-applied every step
-  and never traded. The site forces of `rulebook/forces.md` pull
-  inside them; a link pulls to touching and the overlap past the
-  quarter is projected back. A bubble the hand drops is held there
-  until let go.
-- **Settle** runs the solver on unpinned rooms. It is interruptible:
-  grab a room and it pins, the rest continue.
+  a bay in tandem behind the bay before it, and a companion on its
+  owner's perimeter are re-applied every round and never traded. Then
+  every link is projected to touching and the overlap past the quarter
+  projected back, three passes a round; then the site rows of
+  `rulebook/forces.md` and the gradient pull inside what is left, each
+  row a vector of at most one that lets go near its goal, the pull
+  capped at a quarter metre a round and fading to nothing by the last.
+  A pull never undoes a link; a link never crosses a wall (a linked
+  pair the corridor stands between has the freer one mirrored across
+  it). A bubble the hand drops is held there until let go.
+- **Settle** is ninety rounds from wherever the bubbles are, no
+  springs, no velocities, the same twice; at rest is three rounds
+  within a millimetre. A settle after a drag is bounded by the hand:
+  only the dragged room, its linked neighbours, its companions and
+  whatever it overlaps may move, and none further than the drag did;
+  every other room, and every room on another storey, stays. Grab a
+  room mid-settle and it pins; the rest continue.
 - **Undo** covers rooms, edges, plot, storeys, heights, weights and
   household. The project's name, actors and camera are outside it.
 
