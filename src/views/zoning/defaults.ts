@@ -1,5 +1,5 @@
 import { GRID_M, area, boundingBox, type Footprint } from '../../geometry'
-import { byPlotBand, freeProportion, plotBandFor, type RoomType } from '../../rulebook'
+import { freeProportion, rangeFor, type RoomType } from '../../rulebook'
 import { metres2 } from '../requirements/format'
 
 /** Width against depth for a kind whose table row leaves the proportion free. */
@@ -23,15 +23,8 @@ export function proportionOf(type: RoomType | undefined): number {
   return (type.proportion.min + type.proportion.max) / 2
 }
 
-function minAreaOf(type: RoomType | undefined, plotAreaM2: number): number | undefined {
-  if (!type) return undefined
-  if (type.range === byPlotBand) return plotBandFor(type.id, plotAreaM2)?.min
-  if (typeof type.range === 'object') return type.range.min
-  return undefined
-}
-
 export function sizesOf(type: RoomType | undefined, plotAreaM2: number): RoomSizes {
-  const minArea = minAreaOf(type, plotAreaM2)
+  const minArea = type === undefined ? undefined : rangeFor(type.id, plotAreaM2)?.min
   const minWidth = type?.legalFloor?.width
   return {
     proportion: proportionOf(type),

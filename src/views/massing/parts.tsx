@@ -4,7 +4,6 @@ import {
   MAX_BUILDING_HEIGHT_M,
   MIN_CLEAR_HEIGHT_M,
   PLAN_ELEVATION_DEG,
-  PLOT_RATIO_PERCENT,
   formulas,
   presets,
   project,
@@ -15,7 +14,7 @@ import {
 } from '../../massing'
 import type { Plot } from '../../model'
 import { NumberInput } from '../requirements/fields'
-import { storeyLabel } from '../../rulebook'
+import { allowedFloorArea, storeyLabel } from '../../rulebook'
 import { northOf, pointsOf } from './frame'
 
 /** The length of the bar the drawing is read against, in metres. */
@@ -277,7 +276,10 @@ function Figure({
 }
 
 export function Numbers({ envelope, plotArea }: { envelope: Envelope; plotArea: number }) {
-  const over = envelope.plotRatioPercent > PLOT_RATIO_PERCENT
+  // The building ratio is a table, not one percentage: a 400 m² plot is allowed 960 m² and a
+  // 401 m² plot 842.1, so the allowance is read for this plot and the floor measured against it.
+  const allowed = allowedFloorArea(plotArea)
+  const over = plotArea > 0 && envelope.grossFloorArea > allowed
   return (
     <section className="massing-numbers">
       <h3>The envelope</h3>
@@ -297,6 +299,12 @@ export function Numbers({ envelope, plotArea }: { envelope: Envelope; plotArea: 
               : 'no plot drawn'
           }
           formula={formulas.plotRatioPercent}
+        />
+        <Figure
+          name="allowed-floor"
+          label="The ratio allows"
+          value={plotArea > 0 ? `${oneDecimal(allowed)} m²` : 'no plot drawn'}
+          formula={formulas.allowedFloorArea}
         />
         <Figure
           name="wall-area"
@@ -331,7 +339,9 @@ export function Numbers({ envelope, plotArea }: { envelope: Envelope; plotArea: 
         />
       </dl>
       <p className={over ? 'warning' : 'against'}>
-        {`The Municipality allows ${PLOT_RATIO_PERCENT}% of the plot area on a plot of 401 m² and above, and ${MAX_BUILDING_HEIGHT_M} m of height.`}
+        {plotArea > 0
+          ? `The Municipality allows ${oneDecimal(allowed)} m² of floor on a plot of ${oneDecimal(plotArea)} m², and ${MAX_BUILDING_HEIGHT_M} m of height.`
+          : `The Municipality allows ${MAX_BUILDING_HEIGHT_M} m of height; draw a plot for the floor it allows.`}
       </p>
       <h3>Storey by storey</h3>
       <table className="massing-storeys">

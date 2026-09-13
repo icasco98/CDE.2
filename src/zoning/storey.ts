@@ -1,14 +1,7 @@
 import { createState, frontageOf, groundOf, type Body } from '../bubbles'
 import { area as areaOf, outlineOf, type Point, type Polygon } from '../geometry'
 import { EXTERIOR, occupiedStoreys, type Edge, type Plot, type Room, type Site } from '../model'
-import {
-  buildableArea,
-  byPlotBand,
-  companionOwners,
-  kerbFor,
-  plotBandFor,
-  roomTypeById,
-} from '../rulebook'
+import { buildableArea, companionOwners, kerbFor, rangeFor, roomTypeById } from '../rulebook'
 import { partitionOf } from './partition'
 import type { Partition, PartitionLink, PartitionRoom } from './types'
 
@@ -72,15 +65,8 @@ const SQUEEZE = 0.8
  * open — the hallway, whose length is as needed — is held to most of what it asked for instead.
  */
 function floorOf(room: Room, plotAreaM2: number): number {
-  const kind = roomTypeById(room.type)
-  const legal = kind?.legalFloor?.area
-  const range =
-    kind?.range === byPlotBand
-      ? plotBandFor(room.type, plotAreaM2)?.min
-      : typeof kind?.range === 'object'
-        ? kind.range.min
-        : undefined
-  const least = Math.max(legal ?? 0, range ?? 0)
+  const legal = roomTypeById(room.type)?.legalFloor?.area
+  const least = Math.max(legal ?? 0, rangeFor(room.type, plotAreaM2)?.min ?? 0)
   return least > 0 ? Math.min(least, room.targetArea) : room.targetArea * SQUEEZE
 }
 

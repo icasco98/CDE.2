@@ -8,9 +8,6 @@ import {
 } from '../geometry'
 import { occupiedStoreys, type Room } from '../model'
 
-/** Kuwait Municipality, private and model housing, building ratio: 210% of a plot of 401 m² or more. */
-export const PLOT_RATIO_PERCENT = 210
-
 /** Municipality heights: 15 m from the average kerb level to the roof of the second floor. */
 export const MAX_BUILDING_HEIGHT_M = 15
 
@@ -44,6 +41,8 @@ export const formulas = {
   outlinePerimeter: 'The length of that outline, courtyard walls counted with the outer walls.',
   grossFloorArea: 'Every storey’s floor area added up.',
   plotRatioPercent: 'Gross floor area as a percentage of the plot area.',
+  allowedFloorArea:
+    'The Municipality’s building ratio read for this plot: 210% of it, plus 120 m² from 350 to 400 m², and 800 m² from 250 to 349 m².',
   wallArea: 'Each storey’s outline perimeter times that storey’s height, added up.',
   roofArea:
     'Each storey’s outline less what the storey above covers, plus the whole outline of the top storey.',
