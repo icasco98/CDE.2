@@ -1,21 +1,21 @@
 {
-  "revision": 28,
+  "revision": 29,
   "date": "13 Sep 2026",
   "session": "Session 4",
   "repo": "https://github.com/icasco98/CDE.2",
-  "headline": "Z1, Z2 and Z3 merged: the bubbles sit on the plot and settle like a villa. Z4 waits on your word.",
+  "headline": "Z4 and Z6 merged: the bubbles morph into rooms with running walls, laid along the spine. Z7, the settle rewrite, is next, by the cofounder.",
   "decide": [
     {
-      "id": "z4",
+      "id": "z5",
       "kind": "start",
-      "text": "Start Z4 half one, the partition: bubbles become zones with every contact kept, the corridor first, reachability checked.",
+      "text": "Z5, fit by reduction and the manual size check, waits on your word; Z7 runs now on the word you gave.",
       "link": "https://github.com/icasco98/CDE.2/blob/main/PLAN.md"
     }
   ],
   "yours": [
     {
-      "id": "z4",
-      "text": "Say \"start Z4\" for the partition half."
+      "id": "z5",
+      "text": "Say \"start Z5\" for fit by reduction and the manual size check."
     },
     {
       "id": "o3",
@@ -36,29 +36,44 @@
   ],
   "agents": [
     {
-      "task": "Z1",
-      "name": "Plot under the bubbles",
+      "task": "Z4a",
+      "name": "The partition",
       "model": "Opus",
       "stage": 4,
-      "pr": 67
+      "pr": 71
     },
     {
-      "task": "Z2+Z3",
-      "name": "Walls, site forces, corridor",
+      "task": "Z4b",
+      "name": "The straightening",
       "model": "Opus",
       "stage": 4,
-      "pr": 69
+      "pr": 73
+    },
+    {
+      "task": "Z6",
+      "name": "The spine engine",
+      "model": "Cofounder",
+      "stage": 4,
+      "pr": 74
+    },
+    {
+      "task": "Z7",
+      "name": "The settle rewrite",
+      "model": "Cofounder",
+      "stage": 1
     }
   ],
   "stages": ["Briefed", "Building", "Review", "Your merge", "Merged"],
   "done": [
     "Z1 (#67): bubbles in plot metres on one plot per storey with the buildable line, one camera with the plan, default connections as edges, a storey move takes the ensuite.",
     "Z2 and Z3 (#69): frontage claimed diwaniya first, garage bays at the kerb or in tandem, the corridor from the entry, forces with your O7 strengths, feasibility findings on the brief, every link touching on the default villa.",
-    "O7 first pass (#66); decisions 17 to 21 (#65); the basement as B0 of milestone 2 (#68). 741 unit tests, 137 browser tests, all green."
+    "Z4 (#71, #73): the morph as a proposal with Accept and Back, the partition with every contact a wall, spill hatched past the line, the straightening's harness.",
+    "Z6 (#74): the second half rebuilt around the spine by the cofounder; rectangles and Ls only, walls on the grid, every link a door on four of the five suite houses and the one open link declared; one car by default. 831 unit tests, 147 browser tests.",
+    "O7 first pass (#66); decisions 17 to 21 (#65); the basement as B0 of milestone 2 (#68)."
   ],
   "next": [
-    "Z4 half one, the partition, on your word; then half two, the straightening.",
-    "Z5 fit by reduction; then your end-to-end test and A9 with O3 and O5.",
+    "Z7, the settle rewrite, by the cofounder: walls, then links, then pulls in one ranked function; the corridor's lie stored; motion bounded by the hand.",
+    "Z5 fit by reduction and the manual size check, on your word; then your end-to-end test and A9 with O3 and O5.",
     "Milestone 2 opens with B0 the basement once O4 gives its rules."
   ]
 }
