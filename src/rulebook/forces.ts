@@ -32,24 +32,51 @@ export type Force = {
   /** The row's own words, for the sentence a link that cannot close says about what holds it. */
   readonly statement: string
   readonly acts: (room: ForceRoom) => boolean
-  /** Which way the row pulls a room standing here, as a unit vector; no length is no pull. */
+  /**
+   * Which way the row pulls a room standing here, and how hard, as a vector no longer than one:
+   * the whole while the room is far from what the row wants, letting go as it arrives, so a
+   * room the row has satisfied is pulled no further. No length is no pull.
+   */
   readonly pull: (room: ForceRoom, at: Point, field: ForceField) => Point
 }
 
 const nowhere: Point = [0, 0]
 
-function unit(x: number, y: number): Point {
-  const run = Math.hypot(x, y)
-  return run < 1e-9 ? nowhere : [x / run, y / run]
-}
+/** How near its goal a row lets a room come before it lets go, in metres. */
+const NEAR_M = 2
+
+/** How far a room a row pushes away from something is pushed: the whole to here, in metres... */
+const AWAY_M = 8
+
+/** ...and nothing from here, in metres. */
+const CLEAR_M = 16
 
 /** The two vectors together, as one direction: a row that pulls two ways pulls between them. */
 function both(one: Point, other: Point): Point {
-  return unit(one[0] + other[0], one[1] + other[1])
+  const x = one[0] + other[0]
+  const y = one[1] + other[1]
+  const run = Math.hypot(x, y)
+  return run < 1e-9 ? nowhere : [x / Math.max(1, run), y / Math.max(1, run)]
 }
 
+/** Toward a point, the whole way until the last two metres, where the pull lets go. */
 function toward(at: Point, target: Point): Point {
-  return unit(target[0] - at[0], target[1] - at[1])
+  const dx = target[0] - at[0]
+  const dy = target[1] - at[1]
+  const run = Math.hypot(dx, dy)
+  if (run < 1e-9) return nowhere
+  const hold = Math.min(1, run / NEAR_M)
+  return [(dx / run) * hold, (dy / run) * hold]
+}
+
+/** Away from a point: the whole while it is near, and nothing once it is well clear. */
+function awayFrom(at: Point, other: Point): Point {
+  const dx = at[0] - other[0]
+  const dy = at[1] - other[1]
+  const run = Math.hypot(dx, dy)
+  if (run < 1e-9) return nowhere
+  const hold = Math.min(1, Math.max(0, (CLEAR_M - run) / (CLEAR_M - AWAY_M)))
+  return [(dx / run) * hold, (dy / run) * hold]
 }
 
 function towardSide(at: Point, side: PlotSide | undefined): Point {
@@ -72,7 +99,7 @@ function nearestSide(at: Point, sides: readonly PlotSide[]): PlotSide | undefine
 
 function awayFromKinds(at: Point, kinds: readonly string[], field: ForceField): Point {
   const other = field.where(kinds)
-  return other ? toward(other, at) : nowhere
+  return other ? awayFrom(at, other) : nowhere
 }
 
 function towardKinds(at: Point, kinds: readonly string[], field: ForceField): Point {
@@ -172,7 +199,7 @@ export const forces: readonly Force[] = [
     acts: isKind('kitchen', ...serviceRooms),
     pull: (_room, at, field) => {
       const front = field.sides.service
-      return front ? toward(nearestOn(front, at[0], at[1]), at) : nowhere
+      return front ? awayFrom(at, nearestOn(front, at[0], at[1])) : nowhere
     },
   },
   {
@@ -215,7 +242,7 @@ export const forces: readonly Force[] = [
     pull: (_room, at, field) => {
       const rooms = awayFromKinds(at, ['diwaniya', 'formal-living', 'kitchen'], field)
       const front = field.sides.service
-      const street = front ? toward(nearestOn(front, at[0], at[1]), at) : nowhere
+      const street = front ? awayFrom(at, nearestOn(front, at[0], at[1])) : nowhere
       return both(rooms, street)
     },
   },

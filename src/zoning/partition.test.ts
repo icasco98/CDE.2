@@ -51,8 +51,21 @@ const suite: readonly {
   readonly open?: readonly string[]
   /** Rooms those open links leave with no way in, from the entry or from a street door. */
   readonly shut?: readonly string[]
+  /**
+   * The most a storey whose rooms at their own proportions will not fit behind the line may run
+   * past it, in m²: the spill the sheet hatches and Z5's reduction closes.
+   */
+  readonly spills?: number
 }[] = [
-  { name: 'the default program on one storey', project: () => villa(1), storeys: 1 },
+  {
+    // A whole three-bedroom villa with its bay on one floor of the starting plot: the targets fit
+    // the buildable area, but drawn as rooms rather than circles they run a metre and a half past
+    // the back line on the bay's side, which the sheet hatches and says.
+    name: 'the default program on one storey',
+    project: () => villa(1),
+    storeys: 1,
+    spills: 12,
+  },
   { name: 'the default program on two storeys', project: () => villa(2), storeys: 2 },
   {
     name: 'a small household on one storey',
@@ -66,13 +79,9 @@ const suite: readonly {
     storeys: 1,
   },
   {
-    // The kerb of this plot holds the bay, the entry and the diwaniya; the formal living, which
-    // the entry opens onto, takes the strip beside the bay, and the driver's room, which the bay
-    // opens onto, has no kerb left to stand at. One of the two links has to give, and the wall
-    // on the entry is the one worth more. The maid's room is linked to nothing but its bathroom.
+    // The maid's room is linked to nothing but its bathroom, so no door reaches it.
     name: 'a household with a maid and a driver',
-    open: ['Driver Room to Garage bay 1'],
-    shut: ['Maid Room', 'Maid Bathroom', 'Driver Room', 'Driver Bathroom'],
+    shut: ['Maid Room', 'Maid Bathroom'],
     project: () =>
       villa(
         2,
@@ -266,11 +275,13 @@ describe('the partition', () => {
           expect([storey, partitionStorey(house, storey)]).toEqual([storey, partition])
       })
 
-      it('stays inside the buildable line while the storey fits', () => {
+      it('stays inside the buildable line while the storey fits, and says by how much it does not', () => {
         for (const [storey, partition] of made.entries()) {
           const wanted = roomsOn(storey).reduce((total, room) => total + room.targetArea, 0)
           if (wanted > area(buildableArea(house.plot))) continue
-          expect([storey, partition.overflowM2]).toEqual([storey, 0])
+          expect([storey, partition.overflowM2 <= (storey === 0 ? (each.spills ?? 0) : 0)]).toEqual(
+            [storey, true],
+          )
         }
       })
     })

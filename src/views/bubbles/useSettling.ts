@@ -65,7 +65,7 @@ export function useSettling(
           const last = commit === 'commit' && index === bodies.length - 1
           latest.current.onMoveBubble(
             body.id,
-            { x: body.x, y: body.y },
+            { x: body.x, y: body.y, ...(body.half > 0 ? { angle: body.angle } : {}) },
             last ? 'commit' : 'preview',
           )
         }),
@@ -79,8 +79,16 @@ export function useSettling(
     run.begin(createState(program.rooms, program.edges, program.ground))
   }, [run, shape])
 
-  /** A weight moved changes the forces, so the picture is asked to answer them. */
-  useEffect(() => run.look(), [run, config])
+  /**
+   * A weight moved changes the pulls, so the picture is settled again under them; the weights a
+   * tab opens with are not a change, and a picture left at rest is left where it was.
+   */
+  const seen = useRef(config)
+  useEffect(() => {
+    if (seen.current === config) return
+    seen.current = config
+    run.look()
+  }, [run, config])
 
   useEffect(() => () => run.stop(), [run])
 

@@ -4,7 +4,7 @@ import {
   groundOf,
   defaultLayout,
   layoutFor,
-  SPREAD_SECONDS,
+  SPREAD_ROUNDS,
   type Body,
   type LayoutConfig,
   type SimulationRoom,
@@ -236,9 +236,9 @@ describe('the frame loop', () => {
 })
 
 describe('spread', () => {
-  it('holds for one second of simulation time and then is over', () => {
+  it('holds for its rounds and then is over', () => {
     const layout = layoutFor({})
-    const frames = SPREAD_SECONDS / layout.timeStep
+    const frames = SPREAD_ROUNDS
     const rooms = [room('a', { bubble: { x: -6, y: 6 } }), room('b', { bubble: { x: 6, y: 6 } })]
     const { run, clock } = start(rooms, layout)
     run.spread()
@@ -254,7 +254,7 @@ describe('spread', () => {
     const { run, clock, moves } = start(rooms)
     run.spread()
     const ran = clock.run(600)
-    expect(ran).toBeGreaterThan(SPREAD_SECONDS / defaultLayout.timeStep)
+    expect(ran).toBeGreaterThan(SPREAD_ROUNDS)
     expect(clock.waiting()).toBe(0)
     expect(moves.length).toBeGreaterThan(0)
   })

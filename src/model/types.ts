@@ -14,8 +14,11 @@ export type EdgeKind = 'door' | 'open' | 'main-door'
 /** A room id, or the singleton outside. */
 export type Endpoint = string
 
-/** Where a bubble stands, in the plot's own metres: the frame a footprint uses. */
-export type Bubble = { readonly x: number; readonly y: number }
+/**
+ * Where a bubble stands, in the plot's own metres, the frame a footprint uses; and for a
+ * corridor, the way it lies, in radians, which is its own to keep once it has one.
+ */
+export type Bubble = { readonly x: number; readonly y: number; readonly angle?: number }
 
 /** Where a door was last drawn on a wall; losing it changes nothing. */
 export type WallHint = { readonly at: Point }

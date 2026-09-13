@@ -1,6 +1,5 @@
 import { expect, it } from 'vitest'
 import { startingSite } from '../model'
-import { correctContacts } from './correction'
 import {
   createState,
   defaultLayout,
@@ -86,15 +85,11 @@ it('takes a frame of the same program under the plain layout in under a millisec
 
 /**
  * The whole of what one press of Settle now runs for a villa's worth of rooms: the canonical
- * start, the forces and the projection to rest, and then the correction that walks the links that
- * did not close. The budget is two seconds; a villa settles in a tenth of one.
+ * start and every round of the settle. The budget is two seconds; a villa settles in a tenth of one.
  */
-it('settles thirty rooms and corrects their contacts in well under two seconds', () => {
+it('settles thirty rooms in well under two seconds', () => {
   const layout = layoutFor({ userRequirements: 1, siteConstraints: 1 })
-  const whole = (): number => {
-    const out = settle(createState(rooms, edges, floor), layout)
-    return correctContacts(out.state, layout).state.bodies.length
-  }
+  const whole = (): number => settle(createState(rooms, edges, floor), layout).state.bodies.length
   whole()
   const started = performance.now()
   expect(whole()).toBe(30)

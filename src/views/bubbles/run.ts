@@ -1,12 +1,12 @@
 import {
-  correctContacts,
-  restWatch,
+  atRest,
   settle,
-  SPREAD_SECONDS,
+  SPREAD_ROUNDS,
   spreadLayout,
+  squaredLie,
   step,
-  STILL_FRAMES,
   type Body,
+  type Bound,
   type LayoutConfig,
   type Position,
   type SimulationState,
@@ -27,8 +27,18 @@ export const browserFrames: Frames = {
 /** What a drag leaves behind, told where the bubble came to rest once the cloud has stopped. */
 export type Landing = (rest: Position) => void
 
-/** The bubble under the hand, and whether the person was already holding that room in place. */
-type Hand = { readonly id: string; readonly at: Position; readonly held: boolean }
+/**
+ * The bubble under the hand: where the pointer has it, whether the person was already holding
+ * that room in place, where it stood when the drag began, and where everything else stood then,
+ * which is what bounds the settle that follows.
+ */
+type Hand = {
+  readonly id: string
+  readonly at: Position
+  readonly held: boolean
+  readonly start: Position
+  readonly from: readonly Position[]
+}
 
 type RunParts = {
   readonly frames: Frames
@@ -42,7 +52,7 @@ type RunParts = {
 type Run = {
   /** A new picture, because the rooms, the links or the storeys changed. */
   readonly begin: (state: SimulationState) => void
-  /** Something outside the picture changed the forces, such as a weight: look again. */
+  /** Something outside the picture changed the pulls, such as a weight: settle again under them. */
   readonly look: () => void
   /** A bubble under the hand: it goes where the pointer is and the rest answer in the same frame. */
   readonly hold: (id: string, at: Position) => void
@@ -56,17 +66,18 @@ type Run = {
 }
 
 /**
- * The simulation as it runs under the tab: a frame is asked for only while something is moving, so
+ * The settle as it runs under the tab: a frame is asked for only while a settle is under way, so
  * a picture at rest costs nothing, and a whole run previews and records one step when it stops.
+ * A settle is a fixed number of rounds, and a drag bounds the one that follows it.
  */
 export function createRun(parts: RunParts): Run {
   let state = parts.state
   let handle = 0
   let hand: Hand | null = null
+  /** The bound the last drag left on the settle after it, until that settle has run its rounds. */
+  let bound: Bound | null = null
   let landing: { readonly id: string; readonly tell: Landing } | null = null
   let spreadingFrames = 0
-  /** Whether the picture has come to rest, read the one way the whole tool reads it. */
-  const watch = restWatch()
   /** Whether anything has moved since the run last came to rest, so a still picture records no step. */
   let stepped = false
   let moving = false
@@ -81,16 +92,26 @@ export function createRun(parts: RunParts): Run {
   const loose = (next: SimulationState): readonly Body[] =>
     next.bodies.filter((body) => !body.pinned || body.id === hand?.id)
 
-  /** The hand is a pin for as long as it is down: the forces move everything but the bubble held. */
+  /**
+   * The hand is a pin for as long as it is down: the rounds move everything but the bubble held.
+   * A corridor is the exception: its near end is a wall on its anchor, so the hand turns it about
+   * that end rather than carrying it, and the round lays it along the way the hand points.
+   */
   const underHand = (): SimulationState => {
     const held = hand
     if (!held) return state
+    const corridor = state.corridors.find(
+      (each) => state.bodies[each.body]?.id === held.id && each.anchor !== undefined,
+    )
+    const anchor = corridor?.anchor === undefined ? undefined : state.bodies[corridor.anchor]
     return {
       ...state,
       bodies: state.bodies.map((body) =>
-        body.id === held.id
-          ? { ...body, x: held.at.x, y: held.at.y, vx: 0, vy: 0, pinned: true }
-          : body,
+        body.id !== held.id
+          ? body
+          : anchor
+            ? { ...body, angle: Math.atan2(held.at.y - anchor.y, held.at.x - anchor.x) }
+            : { ...body, x: held.at.x, y: held.at.y, pinned: true },
       ),
     }
   }
@@ -103,6 +124,12 @@ export function createRun(parts: RunParts): Run {
       ...next,
       bodies: next.bodies.map((body) => (body.id === held.id ? { ...body, pinned: false } : body)),
     }
+  }
+
+  const boundOf = (): Bound | undefined => {
+    if (!hand) return bound ?? undefined
+    const moved = Math.hypot(hand.at.x - hand.start.x, hand.at.y - hand.start.y)
+    return { id: hand.id, moved, from: hand.from }
   }
 
   const placeOf = (next: SimulationState, id: string): Position | null => {
@@ -128,26 +155,22 @@ export function createRun(parts: RunParts): Run {
   function advance(): boolean {
     const base = parts.layout()
     const config = spreadingFrames > 0 ? spreadLayout(base) : base
-    const next = letGo(step(underHand(), config))
+    let next = letGo(step(underHand(), config, boundOf()))
+    if (spreadingFrames > 0) {
+      spreadingFrames -= 1
+      // The cloud opened, the settle after it starts from its first round.
+      if (spreadingFrames === 0) next = { ...next, round: 0 }
+    }
+    if (next.bodies.some((body, index) => moved(body, state.bodies[index]))) stepped = true
     state = next
-    if (spreadingFrames > 0) spreadingFrames -= 1
-    const stopped = watch.read(next.energy, config.energyThreshold)
-    if (!watch.quiet()) stepped = true
-    const resting = stopped && spreadingFrames === 0
-    if (resting && !hand) {
-      // Only when the picture has stopped: a link that has not closed is walked round to a free
-      // wall and the cloud let settle again, and only then is the picture called at rest.
-      const fixed = correctContacts(next, parts.layout())
-      // Whatever the correction leaves is what the store is told, or the tab would be opened again
-      // on the places the picture had before it and set off moving from them. A hair's breadth is
-      // not a move: a picture already at rest is left alone and nothing is recorded.
-      if (fixed.state.bodies.some((body, index) => moved(body, next.bodies[index]))) stepped = true
-      state = fixed.state
+    const resting = !hand && spreadingFrames === 0 && next.round >= config.rounds
+    if (resting) {
+      bound = null
       finish(state, false)
       return false
     }
     if (stepped || hand) parts.report(loose(next), 'preview')
-    return !resting
+    return true
   }
 
   function tick(): void {
@@ -156,25 +179,10 @@ export function createRun(parts: RunParts): Run {
     else announce(false)
   }
 
+  /** A settle from its first round: the picture has something new to answer. */
   function wake(): void {
-    watch.wake()
+    state = { ...state, round: 0 }
     if (handle !== 0) return
-    announce(true)
-    handle = parts.frames.request(tick)
-  }
-
-  /**
-   * Looks before asking for a frame: the steps that would prove the picture still are taken here
-   * and nothing is scheduled, so a project whose bubbles were left at rest opens at rest.
-   */
-  function look(): void {
-    watch.wake()
-    if (handle !== 0) return
-    for (let taken = 0; taken < STILL_FRAMES; taken++)
-      if (!advance()) {
-        announce(false)
-        return
-      }
     announce(true)
     handle = parts.frames.request(tick)
   }
@@ -187,33 +195,75 @@ export function createRun(parts: RunParts): Run {
   return {
     begin(next) {
       state = next
-      look()
+      bound = null
+      // A picture left at rest opens at rest: it is asked whether it holds still with the pulls
+      // off, and only a picture that would move is settled.
+      if (atRest(state, parts.layout())) {
+        announce(false)
+        return
+      }
+      wake()
     },
-    look,
+    look() {
+      // The pulls changed: the picture is asked whether they move it now, and settled if they do.
+      if (atRest(state, parts.layout(), true)) {
+        announce(false)
+        return
+      }
+      wake()
+    },
     hold(id, at) {
       // A second drag closes the first: the bubble it left is recorded where it lies rather than later.
       if (landing) finish(state, false)
-      hand = hand?.id === id ? { ...hand, at } : { id, at, held: heldInPlace(state, id) }
+      if (hand?.id === id) hand = { ...hand, at }
+      else {
+        const start = placeOf(state, id) ?? at
+        hand = {
+          id,
+          at,
+          held: heldInPlace(state, id),
+          start,
+          from: state.bodies.map((body) => ({ x: body.x, y: body.y })),
+        }
+      }
       wake()
     },
     release(next) {
       const held = hand
       hand = null
+      bound = held ? (boundOf() ?? null) : null
+      if (held) {
+        bound = {
+          id: held.id,
+          moved: Math.hypot(held.at.x - held.start.x, held.at.y - held.start.y),
+          from: held.from,
+        }
+        // A corridor the hand turned is set on one of the plot's two ways when the hand comes off.
+        state = {
+          ...state,
+          bodies: state.bodies.map((body) =>
+            body.id === held.id && body.half > 0
+              ? { ...body, angle: squaredLie(state.ground, body.angle) }
+              : body,
+          ),
+        }
+      }
       landing = next && held ? { id: held.id, tell: next } : null
       wake()
     },
     spread() {
-      spreadingFrames = Math.max(1, Math.round(SPREAD_SECONDS / parts.layout().timeStep))
+      spreadingFrames = SPREAD_ROUNDS
       wake()
     },
     spreading: () => spreadingFrames > 0,
     settleNow() {
       cancel()
       spreadingFrames = 0
+      // Settle now is the person's own asking, so nothing bounds it.
+      bound = null
       const out = settle(underHand(), parts.layout())
-      const fixed = correctContacts(out.state, parts.layout())
-      if (out.iterations > STILL_FRAMES || fixed.corrected > 0) stepped = true
-      state = letGo(fixed.state)
+      state = letGo(out.state)
+      stepped = true
       finish(state, true)
       announce(false)
     },
@@ -230,7 +280,10 @@ const A_HAIR = 1e-4
 
 function moved(body: Body, was: Body | undefined): boolean {
   return (
-    was !== undefined && (Math.abs(body.x - was.x) > A_HAIR || Math.abs(body.y - was.y) > A_HAIR)
+    was !== undefined &&
+    (Math.abs(body.x - was.x) > A_HAIR ||
+      Math.abs(body.y - was.y) > A_HAIR ||
+      Math.abs(body.angle - was.angle) > A_HAIR)
   )
 }
 
