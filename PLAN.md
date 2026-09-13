@@ -76,7 +76,7 @@ only on the owner's word. If approved, A9 waits on Z5.
 |---|---|---|---|
 | O1 | Obtain the current texts: the Municipality's private-housing page (done, PR #1) and the firm's working edition of MEW R-6 (open). | rulebook | in progress |
 | O2 | Room-type table for Kuwaiti villas: areas, aspect ranges, tiers. | A4 | done, PR #3 |
-| O3 | The known house: plot, north, program, the built plan. | A9 | todo |
+| O3 | The known house: plot, north, program, the built plan. | A9 | in progress: drawings received and recorded in `rulebook/known-house.md`; entered as a project in A9 |
 | O4 | Rulebook part 1, walls: setbacks, ratios, heights, basements, spans. Each with source and confidence. | Milestone 2 | todo |
 | O5 | A fresh brief for the usability run. | A9 | todo |
 | O6 | Rulebook part 2, forces: name, element, direction, default strength for Kuwait, source. | Milestone 2 | done as a draft, PR #12 |
