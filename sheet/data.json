@@ -64,13 +64,7 @@
       "pr": 76
     }
   ],
-  "stages": [
-    "Briefed",
-    "Building",
-    "Review",
-    "Your merge",
-    "Merged"
-  ],
+  "stages": ["Briefed", "Building", "Review", "Your merge", "Merged"],
   "done": [
     "Z7 (#76): the settle rewritten by the cofounder; walls first, links projected to touching, overlaps past the quarter projected back, site rows as pulls that let go near their goal; ninety rounds, no springs; the corridor's lie stored; a drag settles only what it touched, by no more than it moved; the start lays a villa. 831 unit tests, 147 browser tests.",
     "Z1 (#67): bubbles in plot metres on one plot per storey with the buildable line, one camera with the plan, default connections as edges, a storey move takes the ensuite.",
