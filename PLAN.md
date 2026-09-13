@@ -92,6 +92,7 @@ approves it, after the fresh brief has run through the tool.
 | P1 | **Intent tags on the brief.** Wishes in plain words, each mapped to a force or a wall, with the tool showing what each one did. | The usability run shows which wishes people actually have. |
 | P2 | **Two entry paths.** A guided sequence for a client beside the architect; the one-page form for the architect alone. Same store. | Needs P1 to have anything to guide through. |
 | P3 | **AI intake.** Paste a client's text brief; the tool proposes rooms, storeys, wishes and edges, and lists every assumption for confirmation. | Must only produce inputs the screen already accepts, so it follows P1. |
+| P8 | **A planned storey.** A checkbox on a storey marks it as planned, not built now: the stair spans it, its rooms and bubbles work as on any storey, the massing draws it hatched, the area line reports the ratio twice, as built now and with the planned storey, and the PDF and DXF include it, labelled planned. Nothing is deleted to print. The fresh brief's second floor for the son who marries later is the case. | Until A9 shows whether adding the storey as a normal one and reading the ratio with it is enough. The owner's ruling: if it is built, it is exported, never left out. |
 
 ## Milestone 2: the rule engine
 
