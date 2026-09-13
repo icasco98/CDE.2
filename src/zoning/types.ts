@@ -94,17 +94,11 @@ export type Partition = {
 /** No cell belongs to a room until one is given it. */
 export const NOBODY = -1
 
-/** The floor being divided: who holds each cell, which cells are settled, and who may take which. */
+/** The floor being divided: who holds each cell, and which cells no band may take. */
 export type Division = {
   readonly grid: Grid
   /** The room holding each cell, by index into the rooms, or `NOBODY`. */
   readonly owner: Int32Array
-  /** A cell a wall put down and no reach may take: the corridor, a kerb claim, a seeded contact. */
+  /** A cell a room standing on another storey holds, which no band may take. */
   readonly fixed: Uint8Array
-  /** The claim over each cell, by index into `claims`, or `NOBODY` where anyone may take it. */
-  readonly claim: Int32Array
-  /** For each claim, the rooms it is reserved to. */
-  readonly claims: (readonly number[])[]
-  /** Whether the storey's targets fit inside the buildable line, which is what lets a cell spill. */
-  readonly fits: boolean
 }

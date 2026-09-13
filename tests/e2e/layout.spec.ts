@@ -148,10 +148,10 @@ test('Morph divides the storey among its bubbles, with no overlap and no gap', a
   }
   expect(gaps).toEqual([])
 
-  // Every link the corridor does not stand across is a door, and both garage bays keep their run:
-  // the second stands in tandem behind the first, on one drive. A link the straightened corridor
-  // does cross cannot be a door — the corridor is laid first and is a wall — and is drawn as the
-  // tension it is, with the sentence that names what is between the two rooms.
+  // Every link the corridor does not stand across is a door, and the garage bay keeps its run to
+  // the street. A link the straightened corridor does cross cannot be a door — the corridor is
+  // laid first and is a wall — and is drawn as the tension it is, with the sentence that names
+  // what is between the two rooms.
   const said = await tensionsOn(page)
   expect(said.length).toBeLessThanOrEqual(2)
   expect(said.filter((sentence) => !/Hallway/.test(sentence))).toEqual([])

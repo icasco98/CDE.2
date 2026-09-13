@@ -12,11 +12,12 @@ async function resting(page: Page) {
 }
 
 /** A villa of this many storeys, rebuilt from the household, with the plot binding. */
-async function openVilla(page: Page, storeys = 2) {
+async function openVilla(page: Page, storeys = 2, cars = 1) {
   await page.goto('/')
   await page.getByLabel('Hold rooms inside the plot').check()
   for (let more = 1; more < storeys; more++)
     await page.getByRole('button', { name: 'Add storey' }).click()
+  if (cars !== 1) await page.getByLabel('Cars').fill(String(cars))
   await page.getByRole('button', { name: /rebuild program from household/i }).click()
   await tab(page, 'Bubbles').click()
   await expect(page.locator('svg g[data-room]').first()).toBeVisible()
@@ -55,7 +56,8 @@ function weight(page: Page, family: string) {
 test('raising the site weight takes a garage bay to a side boundary and the kitchen to the back', async ({
   page,
 }) => {
-  await openVilla(page, 2)
+  // Two cars, so that the second bay shows where the frontage rule stands a bay it cannot hold.
+  await openVilla(page, 2, 2)
   await weight(page, 'Site constraints').fill('0')
   await settle(page)
   const looseKitchen = await placeOf(page, 'Kitchen')
@@ -96,15 +98,21 @@ test('the entry cannot be dragged off the kerb; it slides along it', async ({ pa
       [x, y],
     )
   const from = await on(entry.x, entry.y)
-  // Into the middle of the plot, a long way off the kerb, and across it at the same time.
-  const to = await on(entry.x - 5, 8)
+  // Into the middle of the plot, a long way off the kerb, and across it at the same time — one
+  // way and then the other, because the entry's own stretch of kerb is short and it may already
+  // be resting at one end of it.
+  const left = await on(entry.x - 5, 8)
+  const right = await on(entry.x + 5, 8)
   await page.mouse.move(from.x, from.y)
   await page.mouse.down()
-  await page.mouse.move((from.x + to.x) / 2, (from.y + to.y) / 2)
-  await page.mouse.move(to.x, to.y)
-  const held = await placeOf(page, 'Entry')
-  expect(held.y + held.radius).toBeCloseTo(23, 1)
-  expect(held.x).toBeLessThan(entry.x)
+  await page.mouse.move((from.x + left.x) / 2, (from.y + left.y) / 2)
+  await page.mouse.move(left.x, left.y)
+  const heldLeft = await placeOf(page, 'Entry')
+  await page.mouse.move(right.x, right.y)
+  const heldRight = await placeOf(page, 'Entry')
+  expect(heldLeft.y + heldLeft.radius).toBeCloseTo(23, 1)
+  expect(heldRight.y + heldRight.radius).toBeCloseTo(23, 1)
+  expect(heldLeft.x).toBeLessThan(heldRight.x)
   await page.mouse.up()
   await resting(page)
   const rested = await placeOf(page, 'Entry')

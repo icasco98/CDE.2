@@ -46,7 +46,7 @@ export const startingSite: Site = { diwaniyaAtCorner: false, garden: 'rear' }
 export const startingHousehold: Household = {
   familySize: 4,
   bedrooms: 3,
-  cars: 2,
+  cars: 1,
   maid: false,
   driver: false,
   womensReception: false,

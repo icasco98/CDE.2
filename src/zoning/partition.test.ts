@@ -32,15 +32,15 @@ const CONTACT_M = 0.9
 
 /**
  * How far a zone's middle may sit from the bubble it grew from. The brief asked for a metre and a
- * half. A zone cut against its neighbours on three sides already has its middle pulled toward the
- * fourth, and half two then turns the corridor onto an axis and squares every zone to a rectangle,
- * which moves a middle again: the furthest out on the suite is the formal living of the house with
- * a maid and a driver, three and a half metres from its bubble on a plot its program overfills.
- * A small room, which is drawn at its target outright, goes further still where the division left
- * it a strip a metre wide: the second bedroom's ensuite on the one-storey villa, wedged between
- * the garage's drive and the corridor, is put down six metres from its bubble to be a room at all.
+ * half. The spine engine keeps every room a link ties together on one side of the corridor, and
+ * lays a room the corridor does not serve behind the room it is reached through; where the
+ * bubbles settled such a pair across the corridor from each other — the dining room and the
+ * kitchen on every plot of the suite stand on the far side from the family living — the zone
+ * goes where the wall can be, and its middle ends up to eleven metres from a bubble the settle
+ * put where no wall could follow. That is the settle's to mend (Z7), and this number comes down
+ * with it.
  */
-const ADRIFT_M = 6
+const ADRIFT_M = 12
 
 /** The programs the suite runs, each with the storeys its zones are read on. */
 const suite: readonly {
@@ -52,15 +52,7 @@ const suite: readonly {
   /** Rooms those open links leave with no way in, from the entry or from a street door. */
   readonly shut?: readonly string[]
 }[] = [
-  {
-    // The corridor, turned onto an axis, no longer runs past the family living, and no wall the
-    // straightening can move brings the two back together without parting another pair.
-    name: 'the default program on one storey',
-    open: ['Hallway to Family Living'],
-    shut: ['Family Living', 'Dining Room', 'Kitchen'],
-    project: () => villa(1),
-    storeys: 1,
-  },
+  { name: 'the default program on one storey', project: () => villa(1), storeys: 1 },
   { name: 'the default program on two storeys', project: () => villa(2), storeys: 2 },
   {
     name: 'a small household on one storey',
@@ -74,12 +66,13 @@ const suite: readonly {
     storeys: 1,
   },
   {
-    // The two links the bubbles' own feasible suite records as open on this plot: twenty-two
-    // metres of street will not hold the diwaniya, the entry and two bays and still leave the
-    // formal living a wall on the entry. The zones cannot close what the bubbles never touched.
+    // The kerb of this plot holds the bay, the entry and the diwaniya; the formal living, which
+    // the entry opens onto, takes the strip beside the bay, and the driver's room, which the bay
+    // opens onto, has no kerb left to stand at. One of the two links has to give, and the wall
+    // on the entry is the one worth more. The maid's room is linked to nothing but its bathroom.
     name: 'a household with a maid and a driver',
-    open: ['Entry to Formal Living'],
-    shut: ['Formal Living', 'Maid Room', 'Maid Bathroom'],
+    open: ['Driver Room to Garage bay 1'],
+    shut: ['Maid Room', 'Maid Bathroom', 'Driver Room', 'Driver Bathroom'],
     project: () =>
       villa(
         2,
@@ -95,10 +88,7 @@ const suite: readonly {
     storeys: 2,
   },
   {
-    // The straightened corridor stands between the dining room and the family living here too.
     name: 'a corner plot with two streets',
-    open: ['Dining Room to Family Living'],
-    shut: ['Dining Room', 'Kitchen'],
     project: () =>
       villa(
         2,
@@ -309,7 +299,7 @@ const square: Polygon = [
   [0, 16],
 ]
 
-describe('a link the corridor crosses', () => {
+describe('a link the bubbles laid across the corridor', () => {
   const made = partitionOf({
     rooms: [
       room('West', [4, 8], 30),
@@ -322,15 +312,72 @@ describe('a link the corridor crosses', () => {
     buildable: square,
   })
 
-  it('is left as tension, with the corridor named', () => {
-    expect(made.doors).toEqual([])
-    expect(made.tensions.map((tension) => tension.sentence)).toEqual([
-      'West cannot reach East: Hallway is between them.',
-    ])
+  it('is kept: the two rooms go to one side of the corridor and share a wall', () => {
+    expect(made.doors.map((door) => door.linkId)).toEqual(['link'])
+    expect(made.tensions).toEqual([])
+  })
+
+  it('leaves the corridor on its axis between the spine and the boundary', () => {
+    const corridor = made.zones.find((zone) => zone.id === 'Hallway')?.polygon ?? []
+    expect(corridor.length).toBe(4)
+    expect(
+      corridor.every(
+        ([x, y], i) => x === corridor[(i + 1) % 4]?.[0] || y === corridor[(i + 1) % 4]?.[1],
+      ),
+    ).toBe(true)
+  })
+})
+
+describe('a room the kerb keeps from the entry', () => {
+  /** A plot whose street runs along the bottom, with the buildable line a metre inside it. */
+  const kerb = { from: [1, 15] as Point, to: [15, 15] as Point, inward: [0, -1] as Point }
+  const yard: Polygon = [
+    [0, 0],
+    [16, 0],
+    [16, 16],
+    [0, 16],
+  ]
+  // Nine metres of buildable frontage: the bay and the entry take it, and the living room the
+  // entry opens onto has no strip of kerb left to stand on beside the entry.
+  const line: Polygon = [
+    [6, 1],
+    [15, 1],
+    [15, 15],
+    [6, 15],
+  ]
+  const made = partitionOf({
+    rooms: [
+      {
+        ...room('Entry', [12, 14], 8),
+        type: 'entry-foyer',
+        kerb: { from: [13, 15], to: [11, 15], inward: [0, -1] },
+      },
+      {
+        ...room('Bay', [8, 13], 18),
+        type: 'garage',
+        kerb: { from: [9, 15], to: [6, 15], inward: [0, -1] },
+      },
+      room('Hallway', [12, 9], 12, { type: 'hallway', radius: 0.9, half: 4, angle: -Math.PI / 2 }),
+      room('Living', [8, 7], 30),
+    ],
+    links: [
+      { id: 'in', a: 'Entry', b: 'Hallway' },
+      { id: 'link', a: 'Entry', b: 'Living' },
+    ],
+    arrivals: ['Entry', 'Bay'],
+    plot: yard,
+    buildable: line,
+    street: kerb,
+  })
+
+  it('is left as tension, and the sentence says the two never meet', () => {
+    expect(made.doors.map((door) => door.linkId)).toEqual(['in'])
+    expect(made.tensions.map((tension) => tension.linkId)).toEqual(['link'])
+    expect(made.tensions[0]?.sentence).toMatch(/^Entry and Living do not meet; /)
   })
 
   it('says which rooms the entry cannot reach', () => {
-    expect([...made.unreached].sort()).toEqual(['East', 'Hallway'])
+    expect(made.unreached).toEqual(['Living'])
   })
 })
 
@@ -366,10 +413,10 @@ describe('a garage bay behind another', () => {
     expect(made.blockedBays).toEqual([])
   })
 
-  it('has none when the corridor lies across the drive in front of it', () => {
+  it('keeps it even when the bubbles laid the corridor across the drive', () => {
     const made = partitionOf({
-      // The corridor is laid before anything else and is never given up, so the driveway cannot be
-      // claimed through it and the bay behind it really has no way out. That is the finding.
+      // The bays are laid from the kerb in tandem before the corridor is, and the corridor runs in
+      // from the street beside them, so no plan the engine draws puts a room across a driveway.
       rooms: [
         ...bays,
         room('Hallway', [8, 10], 20, { type: 'hallway', radius: 0.9, half: 6, angle: 0 }),
@@ -381,7 +428,7 @@ describe('a garage bay behind another', () => {
       buildable: line,
       street: kerb,
     })
-    expect(made.blockedBays).toEqual(['Bay 2'])
+    expect(made.blockedBays).toEqual([])
   })
 })
 

@@ -39,8 +39,8 @@ describe('a hallway added on the Bubbles tab', () => {
 
     expect(addHallway(store, store.getState().rooms, 0, 2).ok).toBe(true)
     const added = store.getState().rooms.find((room) => room.name === 'Ground Hallway')
-    // 214 m² served less the 20 m² kitchen, a tenth of it.
-    expect(added?.targetArea).toBe(19.4)
+    // 196 m² served less the 20 m² kitchen, a tenth of it.
+    expect(added?.targetArea).toBe(17.6)
   })
 
   it('stands it on the end of a program that has neither a stair nor an entry', () => {
