@@ -155,9 +155,24 @@ A reversal is a new entry, never an edit.
     it declared: room areas up to a third off, centroids up to 6 m from
     their bubbles, the hallway the leftover, and one rest in three
     costing the family living its door to the corridor. A cell
-    partition repaired into rooms is at its limit there; Z6 rebuilds
-    the second half around the spine, by the cofounder, keeping Z4b's
-    test harness. The result is shown dashed with Accept
+    partition repaired into rooms is at its limit there, so Z6 rebuilt
+    the second half around the spine, keeping Z4b's test harness: the
+    corridor fixed first from the entry on the kerb or the placed
+    stair, a column either side filled with bands from the kerb
+    inward, every room a link ties together on one side, a room the
+    corridor does not serve behind the room it is reached through,
+    the bays in a tandem strip, the stair and the guest WC pockets the
+    next room wraps, a companion cut from its owner's corner or set
+    past its end, small rooms exact on the grid, a crowded column
+    drawn deeper and shorter, and a storey that cannot fit run past
+    the line as spill. On the five suite houses every link is a door
+    and every room reached but one, declared: where the bay, the
+    entry and the diwaniya fill the kerb, the driver's room gives up
+    its bay wall so the formal living keeps its wall on the entry. A
+    link to a tandem bay is the door onto the bay in front. Zones can
+    stand up to twelve metres from bubbles the settle laid across the
+    corridor from their linked room; Z7 brings that down. The default
+    household has one car. The result is shown dashed with Accept
     and Back to bubbles; Accept commits the store once, so one undo
     returns to the bubbles; Back plays the morph in reverse and writes
     nothing. A plan that does not fit is never refused: rooms past the
