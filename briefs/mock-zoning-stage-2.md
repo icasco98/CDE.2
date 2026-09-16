@@ -14,15 +14,15 @@ have heights to work with.
 ## 1. Overlaps by importance, exhaustive settings, colours, two steps
 
 **Overlaps.** The Fix overlaps button goes. The landing switch has two
-positions, Wait and Push, Wait the default. Wait: the dropped room lands
-where it was put, the overlap is tinted and nothing moves. Push: the room
-lower in the program slides aside at once, never shrinking. An overlap is
-settled by right-click on either room: the menu offers, for each of the
-two, "gives way: pushed, trimmed or carved", for that pair only. The
-program's order is the order of importance, changed by dragging a block's
-grip; Push uses it. (Owner's decision, 16 September 2026: Wait was cut in
-the first pass and brought back as the default; Trim and Carve live only
-in the right-click menu.)
+positions, Wait and Push others, Wait the default. Wait: the dropped
+room lands where it was put, the overlap is tinted and nothing moves.
+Push others: the rooms lower in the program slide aside at once, never
+shrinking. An overlap is settled by selecting the zone, or several, and
+right-clicking: Carve below cuts their shape out of the zones under
+them; Push others slides the zones under them aside. Trim is gone. The
+program's order is the order of importance, changed by dragging a
+block's grip; the Push landing uses it. (Owner's decisions, 16
+September 2026.)
 
 - The program order is the order of importance. When two rooms
   overlap, the lower one gives way, pushed, trimmed or carved as the
@@ -83,7 +83,9 @@ makes himself, is met; this one tests stacking and the mass.
   time, and the landing rule applies on the drop. Never up or down;
   storeys change from the program or the menu.
 - One gesture for height: drag the post's knob, or the zone's height
-  slider. The only vertical gesture.
+  slider. The only vertical gesture. The height snaps to the storey,
+  to two storeys and to the height of any other zone, within 15 cm,
+  and the reading says what it snapped to.
 - The knob and the wall handles appear on the selected volume's top
   edges. A pulled wall lines up with a neighbour's wall or corner
   within snapping reach, as on the sheet, with the guide drawn on the
@@ -93,11 +95,13 @@ makes himself, is met; this one tests stacking and the mass.
   other. Volumes carry no names; the selected one is named under the
   view.
 - The camera: drag on empty ground, or anywhere with the middle
-  button or Space held, turns the view; the wheel zooms and turning
+  button or Space held, turns the view, about the selected zones when
+  there are any, else about the plot; the wheel zooms and turning
   never does; four preset views (plan, from the service street, from
   the side street, from the neighbours' corner). A ground shadow under
-  a dragged volume says where it sits. Faces are drawn far to near,
-  so a near volume always covers a far one.
+  a dragged volume says where it sits. Every room is drawn as convex
+  blocks ordered by the wall that parts each pair, far to near, so a
+  near volume always covers a far one.
 
 **Zone height and open to below.** Each zone has a height slider. A
 zone taller than its storey shows on the storey above as its footprint
@@ -112,7 +116,8 @@ stand on a neighbour boundary for at most half that side's length, not
 the whole side; the street side keeps half the frontage and the 15 m
 cap. Every side gets its own budget, read under the sheet and red when
 spent. `rulebook/municipality-private-housing.md` is corrected with
-this brief.
+this brief. The Build to the boundary switch was never used above the
+sheet; it lives in Settings now, Sides and street the default.
 
 
 A storey switch beside the step switch: Ground · First · Second,
