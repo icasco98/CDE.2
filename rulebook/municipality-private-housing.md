@@ -52,9 +52,11 @@ Plots of 750 m² and above:
 
 Building on the boundary:
 
-- Ground floor only, on every side except the service street, where
-  it may occupy up to 50% of the frontage and at most 15 m; parts on
-  the boundary no higher than 5 m above the average kerb of the
+- Ground floor only. On a neighbour side, for at most half that
+  side's length; on the service street, for at most 50% of the
+  frontage and at most 15 m (owner's correction, 16 September 2026:
+  the earlier transcription allowed the whole neighbour side). Parts
+  on the boundary no higher than 5 m above the average kerb of the
   highest internal street, plus a parapet of at most 50 cm.
 - Upper floors never on the boundary, with three exceptions: houses
   originally built attached in government housing schemes; owners

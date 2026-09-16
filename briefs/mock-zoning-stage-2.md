@@ -56,7 +56,51 @@ Esc never changes step. Z and O switch; D still opens Openings.
   The sentence: walk reached of total, unreached rooms, entry and
   diwaniya doors, corridors' door counts. No areas anywhere.
 
-## 2. Storeys in the mock
+## 2. Storeys and massing in the mock
+
+**First objective, above all others: the mass is the plan.** Dragging
+a volume in the 3D view moves that room on its storey's sheet, with the
+same snaps, the same rule on landing and the same pushing of
+neighbours, and the sheet redraws as you drag. Both views are one
+model with two windows on it; either window can be the one you work
+in. The first artifact's objective, the brief for a layout the owner
+makes himself, is met; this one tests stacking and the mass.
+
+**Moving zones in the mass, kept to intuition.**
+
+- One switch, Edit in 3D, on or off. Off, the mass is for looking:
+  turn, zoom, walk round. On, it takes the sheet's gestures and no
+  others.
+- One gesture to move: drag the top of a volume and the room slides on
+  its storey, its footprint moving on the sheet at the same time.
+  Never up or down; storeys change from the program or the menu.
+- One gesture for height: drag the top edge, or the zone's height
+  slider. The only vertical gesture.
+- The knob and the wall handles appear on the selected volume's top
+  face. No new tools. Nothing lives only in 3D: no 3D-only snapping,
+  no free modelling, no vertical faces to grab.
+- Selection is shared between the windows; hover in one lights the
+  other.
+- The camera: drag on empty ground turns the view, wheel zooms, four
+  preset views (plan, from the service street, from the side street,
+  from the neighbours' corner). A ground shadow under a dragged volume
+  says where it sits.
+
+**Zone height and open to below.** Each zone has a height slider. A
+zone taller than its storey shows on the storey above as its footprint
+with an X, "open to below": it takes that space, nothing can be placed
+over it, and it counts once. Shortening it back removes the X.
+
+**Doors.** The Openings step stays as it is so the tool feels whole;
+nothing new is built on it in this stage.
+
+**Rulebook correction (owner, 16 September).** The ground floor may
+stand on a neighbour boundary for at most half that side's length, not
+the whole side; the street side keeps half the frontage and the 15 m
+cap. Every side gets its own budget, read under the sheet and red when
+spent. `rulebook/municipality-private-housing.md` is corrected with
+this brief.
+
 
 A storey switch beside the step switch: Ground · First · Second,
 later. Each storey is its own sheet on the same plot, with the storey
