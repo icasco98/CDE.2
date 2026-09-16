@@ -13,8 +13,16 @@ have heights to work with.
 
 ## 1. Overlaps by importance, exhaustive settings, colours, two steps
 
-**Overlaps.** The Fix overlaps button and the Wait rule go. Overlaps
-are settled by importance, or by hand.
+**Overlaps.** The Fix overlaps button goes. The landing switch has two
+positions, Wait and Push, Wait the default. Wait: the dropped room lands
+where it was put, the overlap is tinted and nothing moves. Push: the room
+lower in the program slides aside at once, never shrinking. An overlap is
+settled by right-click on either room: the menu offers, for each of the
+two, "gives way: pushed, trimmed or carved", for that pair only. The
+program's order is the order of importance, changed by dragging a block's
+grip; Push uses it. (Owner's decision, 16 September 2026: Wait was cut in
+the first pass and brought back as the default; Trim and Carve live only
+in the right-click menu.)
 
 - The program order is the order of importance. When two rooms
   overlap, the lower one gives way, pushed, trimmed or carved as the
@@ -68,23 +76,28 @@ makes himself, is met; this one tests stacking and the mass.
 
 **Moving zones in the mass, kept to intuition.**
 
-- One switch, Edit in 3D, on or off. Off, the mass is for looking:
-  turn, zoom, walk round. On, it takes the sheet's gestures and no
-  others.
-- One gesture to move: drag the top of a volume and the room slides on
-  its storey, its footprint moving on the sheet at the same time.
-  Never up or down; storeys change from the program or the menu.
-- One gesture for height: drag the top edge, or the zone's height
+- One switch, Edit in 3D, on by default. On, the mass takes the
+  sheet's gestures and no others; off, volumes only select.
+- One gesture to move: take a volume by any face and drag; the room
+  slides on its storey, its footprint moving on the sheet at the same
+  time, and the landing rule applies on the drop. Never up or down;
+  storeys change from the program or the menu.
+- One gesture for height: drag the post's knob, or the zone's height
   slider. The only vertical gesture.
 - The knob and the wall handles appear on the selected volume's top
-  face. No new tools. Nothing lives only in 3D: no 3D-only snapping,
-  no free modelling, no vertical faces to grab.
+  edges. A pulled wall lines up with a neighbour's wall or corner
+  within snapping reach, as on the sheet, with the guide drawn on the
+  ground. Right-click a volume for the room's menu, the overlap rows
+  included. No new tools; nothing lives only in 3D.
 - Selection is shared between the windows; hover in one lights the
-  other.
-- The camera: drag on empty ground turns the view, wheel zooms, four
-  preset views (plan, from the service street, from the side street,
-  from the neighbours' corner). A ground shadow under a dragged volume
-  says where it sits.
+  other. Volumes carry no names; the selected one is named under the
+  view.
+- The camera: drag on empty ground, or anywhere with the middle
+  button or Space held, turns the view; the wheel zooms and turning
+  never does; four preset views (plan, from the service street, from
+  the side street, from the neighbours' corner). A ground shadow under
+  a dragged volume says where it sits. Faces are drawn far to near,
+  so a near volume always covers a far one.
 
 **Zone height and open to below.** Each zone has a height slider. A
 zone taller than its storey shows on the storey above as its footprint
