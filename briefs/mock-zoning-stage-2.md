@@ -103,10 +103,27 @@ makes himself, is met; this one tests stacking and the mass.
   blocks ordered by the wall that parts each pair, far to near, so a
   near volume always covers a far one.
 
+**Two storeys (built 16 September, mock version 50).** Ground and
+First, switched above the sheet. The sheet shows one storey; the mass
+shows both, the first standing on the storey height. A room dropped
+lands on the storey in hand; its right-click menu moves it up or down,
+and the sheet follows it. The stair is one room across both storeys.
+Upstairs the ground floor shows faint, the setback holds everywhere,
+the walk starts from the stair, and the sentence adds both storeys
+against the building ratio (210% of the plot). Each of these is a
+switch under Settings, Storeys, with the storey height.
+
 **Zone height and open to below.** Each zone has a height slider. A
 zone taller than its storey shows on the storey above as its footprint
 with an X, "open to below": it takes that space, nothing can be placed
-over it, and it counts once. Shortening it back removes the X.
+over it, walls snap to it, and it counts once. Shortening it back
+removes the X.
+
+**The view holds still.** Nothing on the screen moves on a click. The
+view turns about the selected zones, kept where they are on the
+screen; a preset view or a double-click on empty ground centres it.
+The sentence and the mass's reading have fixed heights so the sheet
+and the mass never shift as they change.
 
 **Doors.** The Openings step stays as it is so the tool feels whole;
 nothing new is built on it in this stage.
