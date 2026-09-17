@@ -32,23 +32,32 @@ https://claude.ai/code/artifact/965cf056-3202-40b1-8303-71753750d775
 (version 53). Read it with the Artifact tool to get the HTML, edit,
 test, and publish back to that same URL. Its store (capability `db`)
 holds `layout/current` (my sheet), `layout/sample` (the sample I saved
-with "This is it"), `settings/current`, `settings/spec` (stage 1
-settings, frozen), and `notes`. The page embeds my 12:38 sheet as
-EMBEDDED and draws it before the store answers.
+with "This is it"), `settings/current`, `settings/spec` (my settings of
+17 September, saved as the stage 2 spec at version 53), and `notes`.
+The page embeds my 12:38 sheet as EMBEDDED and draws it before the
+store answers.
 
-Where we are: stage 1 (zoning and openings) is frozen. Stage 2 step 1
-(overlaps by importance, exhaustive settings, colours, two-step
-toolbar) and the one-storey mass are done and accepted. Decisions
-taken on 16 September: landing switch is Wait or Push others, Wait
-default; overlaps settled by right-click with Carve below or Push
-others, Trim gone; Build to the boundary lives in Settings, Sides and
-street default, ground floor on a neighbour boundary for at most half
-that side, street side half the frontage and at most 15 m; Edit in 3D
-on by default, volumes taken by any face, orbit on empty ground or
-middle button or Space, about the selection; heights snap to the
-storey, two storeys and other zones; the mass is drawn as convex
-blocks ordered by separating walls, proven by a ray-cast check from
-nine angles (zero wrong pixels); volumes carry no names.
+Where we are: stage 1 (zoning and openings) is frozen. Stage 2 is
+built and I like its feel; keep it. What it holds, all decided on 16
+and 17 September: landing switch Wait or Push others, Wait default;
+overlaps settled by right-click with Carve below or Push others; Build
+to the boundary in Settings, Sides and street default, ground floor on
+a neighbour boundary for at most half that side, street side half the
+frontage and at most 15 m; Edit in 3D on by default, volumes taken by
+any face, orbit on empty ground or middle button or Space, about the
+selection, nothing moving on a click; storeys Ground and First with +
+up to three, each with its own height, the mass showing them all; the
+stair one across storeys rising to 18 m, the rulebook's 15 m and its
+stair house; a zone taller than its storey, and a court, show above as
+an X that takes no door; setback hard upstairs; the ratio in the
+sentence; heights by the knob on the post up to 15 m, snapping to the
+floor above and to other zones; walls and corners snap to the setback,
+the boundary, the storeys below and above, and neighbours' walls at
+any angle; Ctrl+C and Ctrl+V copy zones, the menu copies to the storey
+above; street names switch on and off; the mass order is a wall-line
+tree proven by a ray-cast check, zero wrong pixels; volumes carry no
+names; the mass hides and shows from the toolbar; every switch lives
+under Settings, Storeys.
 
 Fixed decisions for the final tool: the solver stays out; advanced
 settings ship, hidden but reachable; draw shapes stay; doors and
