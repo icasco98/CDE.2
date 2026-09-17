@@ -127,6 +127,14 @@ Ctrl+C copies the selected zones, Ctrl+V pastes them, a metre aside on
 the same storey or at the same place on another; the menu copies to
 the storey above in one.
 
+**Version 53 (17 September).** A pulled wall's corners land on the
+walls round it at any angle, within their run, so a turned zone meets
+its neighbours. The height slider is gone: the knob on the post pulls
+a zone up to the building height, 15 m. The stair rises to 18 m, the
+rulebook's 15 m and its stair house; both are settings. Street names
+switch from the mass head too. The owner's settings of 17 September
+are saved as the stage 2 spec, `settings/spec`, mock version 53.
+
 **Planned, not built: neighbours and streets.** The two neighbour
 sides get a worst-case building, a grey box 15 m high with its face on
 the neighbour's setback line, 1.5 m past our boundary, along the whole

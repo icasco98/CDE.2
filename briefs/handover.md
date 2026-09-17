@@ -29,7 +29,7 @@ Working rules, all standing:
 
 The mock "Blocks on the Plot" is the artifact
 https://claude.ai/code/artifact/965cf056-3202-40b1-8303-71753750d775
-(version 52). Read it with the Artifact tool to get the HTML, edit,
+(version 53). Read it with the Artifact tool to get the HTML, edit,
 test, and publish back to that same URL. Its store (capability `db`)
 holds `layout/current` (my sheet), `layout/sample` (the sample I saved
 with "This is it"), `settings/current`, `settings/spec` (stage 1
@@ -57,8 +57,8 @@ view can be worked in; a zone taller than its storey shows on the
 storey above as an X, open to below; my sheet is the default plan with
 "Back to the sample" and "Clear the plan".
 
-Next, in order: (1) my test of the two-storey mock and the fixes it
-brings; (2) freeze stage 2 settings as the spec; (3) windows,
+Next, in order: (1) my test of the mock and the fixes it brings; (2)
+neighbours and streets as planned in the brief; (3) windows,
 circulation and fog of war, one step each, in that order; (4) the brief
 for the final tool from the frozen mock.
 
