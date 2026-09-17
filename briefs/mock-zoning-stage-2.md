@@ -103,8 +103,9 @@ makes himself, is met; this one tests stacking and the mass.
   blocks ordered by the wall that parts each pair, far to near, so a
   near volume always covers a far one.
 
-**Two storeys (built 16 September, mock version 50).** Ground and
-First, switched above the sheet. The sheet shows one storey; the mass
+**Storeys (built 16 and 17 September, mock versions 50 and 51).**
+Ground and First to begin with, switched above the sheet; + adds a
+storey up to the rulebook's three, − takes an empty top one away. The sheet shows one storey; the mass
 shows both, the first standing on the storey height. A room dropped
 lands on the storey in hand; its right-click menu moves it up or down,
 and the sheet follows it. The stair is one room across both storeys.
@@ -116,8 +117,12 @@ switch under Settings, Storeys, with the storey height.
 **Zone height and open to below.** Each zone has a height slider. A
 zone taller than its storey shows on the storey above as its footprint
 with an X, "open to below": it takes that space, nothing can be placed
-over it, walls snap to it, and it counts once. Shortening it back
-removes the X.
+over it, walls snap to it, a wall facing it takes no door, and it
+counts once. Shortening it back removes the X.
+
+**Snapping on the move.** A moved zone's corners land on the setback
+line and the boundary, whatever its angle, as they do when a wall is
+pulled (17 September). The mass is hidden or shown from the toolbar.
 
 **The view holds still.** Nothing on the screen moves on a click. The
 view turns about the selected zones, kept where they are on the
