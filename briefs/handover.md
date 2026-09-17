@@ -29,7 +29,7 @@ Working rules, all standing:
 
 The mock "Blocks on the Plot" is the artifact
 https://claude.ai/code/artifact/965cf056-3202-40b1-8303-71753750d775
-(version 51). Read it with the Artifact tool to get the HTML, edit,
+(version 52). Read it with the Artifact tool to get the HTML, edit,
 test, and publish back to that same URL. Its store (capability `db`)
 holds `layout/current` (my sheet), `layout/sample` (the sample I saved
 with "This is it"), `settings/current`, `settings/spec` (stage 1

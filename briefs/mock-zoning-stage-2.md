@@ -100,8 +100,10 @@ makes himself, is met; this one tests stacking and the mass.
   never does; four preset views (plan, from the service street, from
   the side street, from the neighbours' corner). A ground shadow under
   a dragged volume says where it sits. Every room is drawn as convex
-  blocks ordered by the wall that parts each pair, far to near, so a
-  near volume always covers a far one.
+  blocks sorted by a tree of wall lines, each line parting the blocks
+  and cutting any it crosses, read back to front for the view: exact
+  for any angle, turned rooms and storeys included; blocks that stand
+  over one another go higher last (17 September, version 52).
 
 **Storeys (built 16 and 17 September, mock versions 50 and 51).**
 Ground and First to begin with, switched above the sheet; + adds a
@@ -113,6 +115,25 @@ Upstairs the ground floor shows faint, the setback holds everywhere,
 the walk starts from the stair, and the sentence adds both storeys
 against the building ratio (210% of the plot). Each of these is a
 switch under Settings, Storeys, with the storey height.
+
+**Storey heights, snaps and copies (version 52).** Each storey has
+its own floor-to-floor height in Settings, Storeys. A zone's height
+snaps to the underside of the floor above, to two storeys, and to the
+tops of zones on its own storey. Moving or stretching a zone, its walls
+and corners land on the outlines of the zones one storey down and one
+storey up, a switch. Street names have a switch. A court shows on every
+storey above it as its footprint with an X, "court · open to the sky".
+Ctrl+C copies the selected zones, Ctrl+V pastes them, a metre aside on
+the same storey or at the same place on another; the menu copies to
+the storey above in one.
+
+**Planned, not built: neighbours and streets.** The two neighbour
+sides get a worst-case building, a grey box 15 m high with its face on
+the neighbour's setback line, 1.5 m past our boundary, along the whole
+side. The two street sides get a street, a grey band with a kerb, 12 m
+wide unless the owner says another width. Both in the mass and faint on
+the sheet, each with a switch. Open: whether the neighbour's face sits
+on our boundary instead.
 
 **Zone height and open to below.** Each zone has a height slider. A
 zone taller than its storey shows on the storey above as its footprint
