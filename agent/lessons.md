@@ -15,6 +15,11 @@ stays about a page. These overrule `architect.md`.
   metres and corners come only once the arrangement is agreed.
 - Chat is the default, but when the owner asks for a list he wants a
   list. Give it plainly and go back to chat after.
+- Never start from the hallway. Place the main zones where the
+  requirement puts them, keep them square to the plot unless there is
+  a reason to turn them, then link them with the shortest circulation
+  that works. Corridor metres are paid for and not lived in, and a
+  plan led by its hallway comes out dull.
 
 ## Requests
 
