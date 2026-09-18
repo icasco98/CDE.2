@@ -350,8 +350,8 @@ test('a door is opened and closed again from the sheet, and an open edge is pick
 
 test('the tab opens on the Plan, with the sheet and the massing together', async ({ page }) => {
   await page.goto('/')
-  await expect(tab(page, 'Plan')).toBeVisible()
-  await tab(page, 'Plan').click()
+  await expect(tab(page, 'Plan (old)')).toBeVisible()
+  await tab(page, 'Plan (old)').click()
   await expect(page.locator('svg.zoning-sheet')).toBeVisible()
   await expect(page.locator('svg.massing-sheet')).toBeVisible()
 })
