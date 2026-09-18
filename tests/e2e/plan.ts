@@ -12,24 +12,29 @@ export function tab(page: Page, name: string) {
   return page.locator('nav.tabs').getByRole('button', { name, exact: true })
 }
 
+/** Which half of the Plan tab is shown, asked for on that tab's own bar. */
+export function half(page: Page, name: string) {
+  return page.locator('.plan-bar').getByRole('button', { name, exact: true })
+}
+
 /** The Plan tab with the sheet across the whole width, the massing not drawn beside it. */
 export async function openSheet(page: Page): Promise<void> {
   await tab(page, 'Plan').click()
-  await page.getByRole('button', { name: 'Sheet', exact: true }).click()
+  await half(page, 'Sheet').click()
   await expect(page.locator('svg.zoning-sheet')).toBeVisible()
 }
 
 /** The Plan tab with the massing across the whole width. */
 export async function openMass(page: Page): Promise<void> {
   await tab(page, 'Plan').click()
-  await page.getByRole('button', { name: 'Massing', exact: true }).click()
+  await half(page, 'Massing').click()
   await expect(page.locator('svg.massing-sheet')).toBeVisible()
 }
 
 /** Both halves side by side, which is how the tab opens. */
 export async function openBoth(page: Page): Promise<void> {
   await tab(page, 'Plan').click()
-  await page.getByRole('button', { name: 'Both', exact: true }).click()
+  await half(page, 'Both').click()
   await expect(page.locator('svg.zoning-sheet')).toBeVisible()
   await expect(page.locator('svg.massing-sheet')).toBeVisible()
 }

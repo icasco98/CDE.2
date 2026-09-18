@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { openMass, openSheet, tab } from './plan'
+import { half, openMass, openSheet, tab } from './plan'
 
 type At = { x: number; y: number }
 
@@ -47,7 +47,7 @@ async function openMassing(page: Page): Promise<void> {
   await place(page, 'Kitchen', 5, 5.125)
   await place(page, 'Dining Room', 10.75, 5)
   await expect(page.locator('svg.zoning-sheet [data-room]')).toHaveCount(2)
-  await page.getByRole('button', { name: 'Massing', exact: true }).click()
+  await half(page, 'Massing').click()
   await expect(page.locator('svg.massing-sheet')).toBeVisible()
 }
 
@@ -75,7 +75,7 @@ test('a room clicked here is the room selected in the zoning', async ({ page }) 
     .filter({ has: page.locator('title', { hasText: 'Kitchen' }) })
   await kitchen.click()
   await expect(kitchen).toHaveClass(/prism-selected/)
-  await page.getByRole('button', { name: 'Sheet', exact: true }).click()
+  await half(page, 'Sheet').click()
   await expect(
     page.locator('[data-room]').filter({ has: page.getByText('Kitchen', { exact: true }) }),
   ).toHaveClass(/room-selected/)
