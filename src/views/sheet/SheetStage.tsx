@@ -16,7 +16,10 @@ import {
 } from 'react'
 import {
   RULE_HINT,
+  acrossStoreys,
   addRoom,
+  addStorey,
+  dropTopStorey,
   areaOf,
   bestNeighbour,
   carveBelow,
@@ -57,6 +60,9 @@ import {
   setColor,
   setSetting,
   setSize,
+  setStorey,
+  storeyCountOf,
+  storeyOf,
   turn,
   undo,
   ungroup,
@@ -74,7 +80,9 @@ import {
   type Side4,
 } from '../../sheet'
 import { fitCamera, pointerAt, wheelFactor, zoomAbout, type Camera } from '../camera'
+import { MassView } from './MassView'
 import { Program } from './Program'
+import { Storeys } from './Storeys'
 import { SheetView, sheetExtent, type SheetRead } from './SheetView'
 import {
   EmptyNote,
@@ -118,9 +126,6 @@ import { keyCommand, keyRelease } from './keys'
 import { drawingSentence, measuringSentence, sentenceOf, type Part } from './sentence'
 import './sheet.css'
 
-/** The one storey this screen draws; the storey switch and the mass are their own task. */
-const STOREY = 0
-
 declare global {
   interface Window {
     /** How long each frame of the sheet took to render and commit, for the render-budget test. */
@@ -143,6 +148,9 @@ type TypeIn = {
 
 export function SheetStage() {
   const started = performance.now()
+  // The storey in hand: every gesture and every action on this screen works on it.
+  const [storey, showStorey] = useState(0)
+  const STOREY = storey
   const [doc, setDoc] = useState<Doc>(() => ({
     sheet: localSheet() ?? sampleSheet(),
     history: newHistory(),
@@ -164,8 +172,9 @@ export function SheetStage() {
   const [colouring, setColouring] = useState<{ ids: string[]; value: string } | null>(null)
   const [flash, setFlash] = useState<string | null>(null)
   const [tag, setTag] = useState<{ id: string; x: number; y: number } | null>(null)
+  const [hover, setHover] = useState<string | null>(null)
   const [drawMenuFor, setDrawMenuFor] = useState<string | null>(null)
-  const clipboard = useRef<{ ids: string[]; pastes: number } | null>(null)
+  const clipboard = useRef<{ ids: string[]; storey: number; pastes: number } | null>(null)
   const spaceHeld = useRef(false)
   const touched = useRef(false)
   const svg = useRef<SVGSVGElement | null>(null)
@@ -251,7 +260,7 @@ export function SheetStage() {
       read,
       over: new Set(read.boundary.filter((side) => side.over).map((side) => side.side)),
     }
-  }, [sheet, settings])
+  }, [sheet, settings, STOREY])
 
   const selected = view.rooms.filter((r) => selection.includes(r.id))
 
@@ -268,6 +277,19 @@ export function SheetStage() {
     setDoc(next)
     setFlash(null)
     return true
+  }
+
+  /** The storey switch: what was selected on the storey left behind is let go, as the mock does. */
+  const goStorey = (k: number) => {
+    const to = Math.max(0, Math.min(storeyCountOf(docRef.current.sheet) - 1, Math.floor(k)))
+    showStorey(to)
+    setSelection((was) =>
+      was.filter((id) => placedRooms(docRef.current.sheet, to).some((r) => r.id === id)),
+    )
+    setMenu(null)
+    setPocketPicked(null)
+    setMeasure(null)
+    setDrawing(null)
   }
 
   const pointAt = (clientX: number, clientY: number): Point => {
@@ -724,6 +746,7 @@ export function SheetStage() {
       const over = target instanceof Element ? target.closest('[data-room]') : null
       const id = over instanceof Element ? over.getAttribute('data-room') : null
       const where = inBox(event.clientX, event.clientY)
+      if (hover !== id) setHover(id)
       if (!id) {
         if (tagTimer.current) window.clearTimeout(tagTimer.current)
         if (tag) setTag(null)
@@ -902,8 +925,15 @@ export function SheetStage() {
         return
       }
       case 'copy':
-        clipboard.current = { ids, pastes: 0 }
+        clipboard.current = { ids, storey: STOREY, pastes: 0 }
         setFlash('Copied · Ctrl+V pastes')
+        return
+      case 'setStorey':
+        if (apply(setStorey(sheet, { ids, storey: STOREY, to: choice.to }))) goStorey(choice.to)
+        return
+      case 'copyStorey':
+        if (apply(copyTo(sheet, { ids, storey: STOREY, to: choice.to, shift: 0 })))
+          goStorey(choice.to)
         return
       case 'back':
         apply(sendBack(sheet, { ids }))
@@ -935,7 +965,7 @@ export function SheetStage() {
       switch (command.kind) {
         case 'copy':
           if (ids.length) {
-            clipboard.current = { ids, pastes: 0 }
+            clipboard.current = { ids, storey: STOREY, pastes: 0 }
             setFlash(`${ids.length} zone${ids.length > 1 ? 's' : ''} copied · Ctrl+V pastes`)
             event.preventDefault()
           }
@@ -948,9 +978,9 @@ export function SheetStage() {
           apply(
             copyTo(docRef.current.sheet, {
               ids: held2.ids,
-              storey: STOREY,
+              storey: held2.storey,
               to: STOREY,
-              shift: held2.pastes,
+              shift: held2.storey === STOREY ? held2.pastes : 0,
             }),
           )
           return
@@ -1099,6 +1129,21 @@ export function SheetStage() {
             Measure
           </button>
         </span>
+        <span className="grp">
+          <Storeys
+            sheet={sheet}
+            storey={storey}
+            onStorey={goStorey}
+            onAdd={() => {
+              const n = storeyCountOf(sheet)
+              if (apply(addStorey(sheet))) goStorey(n)
+            }}
+            onDrop={() => {
+              const n = storeyCountOf(sheet)
+              if (apply(dropTopStorey(sheet)) && storey >= n - 1) goStorey(n - 2)
+            }}
+          />
+        </span>
         <span className="grp far">
           <button type="button" onClick={backToSample} title="Put the sample sheet back">
             Back to the sample
@@ -1198,6 +1243,8 @@ export function SheetStage() {
             hold(beginNew(sheet, room.id))
           }}
           onPick={(room) => {
+            if (storeyOf(room) !== storey && !acrossStoreys(room, settings))
+              goStorey(storeyOf(room))
             setSelection([room.id])
             setPocketPicked(null)
             setMenu(null)
@@ -1220,6 +1267,7 @@ export function SheetStage() {
               measure={measure}
               reshaping={reshaping ? reshaping.id : null}
               pocketPicked={pocketPicked}
+              hover={hover}
               panning={!!pan}
               camera={camera}
               svgRef={(element) => {
@@ -1280,6 +1328,9 @@ export function SheetStage() {
                 under={under}
                 canRestore={canRestore(menu.room)}
                 pastSetback={selected.some((r) => outsideBuildable(r, BUILD))}
+                settings={settings}
+                storey={storey}
+                storeys={storeyCountOf(sheet)}
                 onChoose={roomChoice}
               />
             )}
@@ -1339,6 +1390,36 @@ export function SheetStage() {
               />
             )}
           </div>
+          <MassView
+            sheet={sheet}
+            storey={storey}
+            selection={selection}
+            hover={hover}
+            overlaps={view.overlaps}
+            onHover={setHover}
+            onSelect={setSelection}
+            onStorey={goStorey}
+            onBegin={agentBegin}
+            onWrite={agentWrite}
+            onEnd={agentEnd}
+            apply={apply}
+            roomMenu={(room, at) => (
+              <RoomMenu
+                at={at}
+                corner={null}
+                pivotSet={false}
+                room={room}
+                selection={selected.filter((r) => !r.fixed)}
+                under={under}
+                canRestore={canRestore(room)}
+                pastSetback={selected.some((r) => outsideBuildable(r, BUILD))}
+                settings={settings}
+                storey={storey}
+                storeys={storeyCountOf(sheet)}
+                onChoose={roomChoice}
+              />
+            )}
+          />
           <div className="say">
             {parts.map((part, i) => (
               <span key={i} className={part.bad ? 'bad' : undefined}>

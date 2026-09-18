@@ -1,0 +1,243 @@
+/* The mass beside the sheet: the mock's own CSS for the panel, the volumes and their handles. */
+
+.sheet-stage .mass {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--sheet);
+  position: relative;
+}
+
+.sheet-stage .mass.folded {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  border: none;
+  background: none;
+  padding: 4px 0 0 4px;
+}
+
+.sheet-stage .mass-head {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line-2);
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.sheet-stage .mass-head b {
+  font:
+    600 11px 'Archivo',
+    sans-serif;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.sheet-stage .mass-head button {
+  min-height: 24px;
+  padding: 2px 8px;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.sheet-stage .mass-head .views {
+  display: flex;
+  gap: 3px;
+  margin-left: auto;
+}
+
+.sheet-stage .mass-head button.on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.sheet-stage .mass-canvas {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.sheet-stage .mass-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+
+.sheet-stage .mass-svg.editing {
+  cursor: default;
+}
+
+.sheet-stage .mass-foot {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 0 8px;
+  border-top: 1px solid var(--line-2);
+  font-size: 12px;
+  color: var(--ink-2);
+  height: 40px;
+  box-sizing: border-box;
+}
+
+.sheet-stage .m-ground {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+
+.sheet-stage .m-build {
+  fill: none;
+  stroke: var(--build);
+  stroke-width: 1;
+  stroke-dasharray: 5 3;
+}
+
+.sheet-stage .m-strip {
+  fill: var(--build);
+  fill-opacity: 0.08;
+  stroke: none;
+  fill-rule: evenodd;
+}
+
+.sheet-stage .m-face {
+  stroke: none;
+  cursor: move;
+}
+
+.sheet-stage .mass-svg:not(.editing) .m-face {
+  cursor: pointer;
+}
+
+.sheet-stage .m-face.hover {
+  filter: brightness(1.07);
+}
+
+.sheet-stage .m-edge {
+  fill: none;
+  stroke: var(--room-line);
+  stroke-width: 1;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.sheet-stage .m-edge.hover {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+.sheet-stage .m-edge.selected {
+  stroke: var(--select);
+  stroke-width: 2;
+}
+
+.sheet-stage .m-edge.blind {
+  stroke: var(--ink);
+  stroke-width: 1.6;
+}
+
+.sheet-stage .m-edge.breach {
+  stroke: var(--warn);
+  stroke-width: 2.2;
+}
+
+.sheet-stage .m-edge.over {
+  stroke: var(--warn);
+  stroke-width: 1.8;
+}
+
+.sheet-stage .m-edge.over.selected {
+  stroke: var(--select);
+}
+
+.sheet-stage .m-flat {
+  stroke: var(--build);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+  cursor: pointer;
+}
+
+.sheet-stage .m-flat.selected {
+  stroke: var(--select);
+  stroke-width: 2;
+}
+
+.sheet-stage .m-over {
+  fill: var(--warn-soft);
+  stroke: none;
+  pointer-events: none;
+}
+
+.sheet-stage .m-guide {
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+  pointer-events: none;
+}
+
+.sheet-stage .m-shadow {
+  fill: var(--ink);
+  fill-opacity: 0.18;
+  stroke: none;
+}
+
+.sheet-stage .m-street {
+  font:
+    10px 'Archivo',
+    sans-serif;
+  fill: var(--ink-3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: var(--sheet);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.sheet-stage .m-hnd {
+  fill: var(--panel);
+  stroke: var(--select);
+  stroke-width: 1.2;
+  cursor: move;
+}
+
+.sheet-stage .m-hnd:hover {
+  fill: var(--accent-soft);
+}
+
+.sheet-stage .m-post {
+  stroke: var(--select);
+  stroke-width: 1.2;
+  pointer-events: none;
+}
+
+.sheet-stage .m-knob {
+  fill: var(--panel);
+  stroke: var(--select);
+  stroke-width: 1.5;
+  cursor: ns-resize;
+}
+
+.sheet-stage .m-knob.turn {
+  cursor: grab;
+}
+
+.sheet-stage .m-knob:hover {
+  fill: var(--accent-soft);
+}

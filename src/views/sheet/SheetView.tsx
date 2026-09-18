@@ -13,6 +13,12 @@ import {
 import {
   BUILD,
   NORTH,
+  acrossStoreys,
+  allPlaced,
+  centreOfFootprint,
+  ghostsOf,
+  isCourt,
+  isGhost,
   PLOT,
   PLOT_BOX,
   areaOf,
@@ -28,6 +34,7 @@ import {
   r2,
   sideOf,
   square,
+  storeyOf,
   type LabelPlan,
   type Point,
   type Poly,
@@ -105,6 +112,8 @@ type SheetViewProps = {
   measure: Measure | null
   reshaping: string | null
   pocketPicked: number | null
+  /** The room the pointer is over, in the sheet or in the mass: hover is shared between them. */
+  hover: string | null
   panning: boolean
   camera: Camera
   svgRef: (element: SVGSVGElement | null) => void
@@ -165,10 +174,25 @@ function sharedWallOf(r: Room, side: Side4, rooms: Room[], settings: Settings): 
 }
 
 export function SheetView(props: SheetViewProps) {
-  const { sheet, view, selection, drag, drawing, measure, reshaping, on } = props
+  const { sheet, view, selection, drag, drawing, measure, reshaping, hover, on } = props
   const { settings } = sheet
   const background = useMemo(() => <Background settings={settings} />, [settings])
   const shown = view.rooms.map((r) => shownRoom(r, drag))
+  const storey = props.storey
+  // The storey below is drawn faint under the one in hand, and what stands open to below with an X.
+  const under = useMemo(
+    () =>
+      storey > 0 && settings.showUnder
+        ? allPlaced(sheet).filter(
+            (r) =>
+              storeyOf(r) === storey - 1 &&
+              !acrossStoreys(r, settings) &&
+              !isGhost(r, storey, sheet),
+          )
+        : [],
+    [sheet, settings, storey],
+  )
+  const ghosts = useMemo(() => ghostsOf(sheet, storey), [sheet, storey])
   const focusId =
     drag && 'id' in drag && drag.kind !== 'new'
       ? drag.id
@@ -231,6 +255,29 @@ export function SheetView(props: SheetViewProps) {
           <polygon key={`overlap-${i}-${j}`} points={points(poly)} className="overlap-poly" />
         )),
       )}
+      {under.map((r) => (
+        <g key={`under-${r.id}`} className="room under" transform={frameOf(r)}>
+          <path className="body" d={bodyPath(r)} fillRule="evenodd" />
+        </g>
+      ))}
+      {ghosts.map((r) => {
+        const pts = piecesOf(r).flat()
+        const x0 = Math.min(...pts.map((q) => q[0]))
+        const y0 = Math.min(...pts.map((q) => q[1]))
+        const x1 = Math.max(...pts.map((q) => q[0]))
+        const y1 = Math.max(...pts.map((q) => q[1]))
+        const c = centreOfFootprint(r)
+        return (
+          <g key={`below-${r.id}`} className={`room below ${r.cat}`} transform={frameOf(r)}>
+            <path className="body" d={bodyPath(r)} fillRule="evenodd" />
+            <line className="x" x1={p4(x0)} y1={p4(y0)} x2={p4(x1)} y2={p4(y1)} />
+            <line className="x" x1={p4(x1)} y1={p4(y0)} x2={p4(x0)} y2={p4(y1)} />
+            <text className="below-label" x={p4(c[0])} y={p4(c[1] + 0.15)}>
+              {isCourt(r) ? 'court · open to the sky' : 'open to below'}
+            </text>
+          </g>
+        )
+      })}
       {props.storey === 0 &&
         shown
           .filter((r) => !r.fixed && !isOpen(r))
@@ -247,7 +294,7 @@ export function SheetView(props: SheetViewProps) {
         return (
           <g
             key={r.id}
-            className={`room ${r.cat}${picked ? ' selected' : ''}${over ? ' over' : ''}${
+            className={`room ${r.cat}${picked ? ' selected' : ''}${hover === r.id ? ' hover' : ''}${over ? ' over' : ''}${
               drag && 'id' in drag && drag.id === r.id ? ' moving' : ''
             }${r.locked ? ' locked' : ''}${reshaping === r.id ? ' target' : ''}`}
             transform={frameOf(r)}
