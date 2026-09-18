@@ -15,8 +15,8 @@ import {
   type Room,
   type Sheet,
 } from './model'
-import { BUILD, NORTH, PLOT } from './plot'
 import { report, type Report } from './report'
+import { SIDES, type PlotSpec, type Side } from './plot'
 import { allowedBox, outsideBuildable } from './settle'
 
 /** One page function offered to the assistant, in the shape the artifact runtime asks for. */
@@ -99,6 +99,19 @@ export type SheetRead = {
   report: Report
 }
 
+/** Which way a side of the plot faces, in the words the sheet's own frame uses. */
+const sideWord = (side: Side) => (side === 'street' ? 'south' : side)
+
+/** The line a side stands on, so the assistant can say where a boundary is. */
+const sideLine = (plot: PlotSpec, side: Side): string =>
+  side === 'west'
+    ? 'x = 0'
+    : side === 'east'
+      ? `x = ${plot.w}`
+      : side === 'north'
+        ? 'y = 0'
+        : `y = ${plot.h}`
+
 const corners = (box: { x: number; y: number; w: number; h: number }) => ({
   x0: r2(box.x),
   y0: r2(box.y),
@@ -109,17 +122,27 @@ const corners = (box: { x: number; y: number; w: number; h: number }) => ({
 /** The sheet in plain data: the plot, the lines, every room's frame, what waits, and the report. */
 export function sheetRead(sheet: Sheet, storey: number): SheetRead {
   const box = allowedBox(sheet, storey)
+  const { plot } = sheet
   return {
     plot: {
-      w: PLOT.w,
-      h: PLOT.h,
-      serviceStreet: `south, y = ${PLOT.h}`,
-      sideStreet: `east, x = ${PLOT.w}`,
-      neighbours: 'north (y = 0) and west (x = 0)',
-      northArrowTurnedClockwise: `${NORTH}°`,
+      w: plot.w,
+      h: plot.h,
+      serviceStreet: plot.service
+        ? `${sideWord(plot.service)}, ${sideLine(plot, plot.service)}`
+        : 'none',
+      sideStreet:
+        plot.streets
+          .filter((side) => side !== plot.service)
+          .map((side) => `${sideWord(side)}, ${sideLine(plot, side)}`)
+          .join('; ') || 'none',
+      neighbours:
+        SIDES.filter((side) => !plot.streets.includes(side))
+          .map((side) => `${sideWord(side)} (${sideLine(plot, side)})`)
+          .join(' and ') || 'none',
+      northArrowTurnedClockwise: `${plot.north}°`,
     },
     lineTheGroundFloorMayReach: corners(box),
-    setbackLine: corners(BUILD),
+    setbackLine: corners(plot.build),
     storey: storeyNameOf(storey),
     landingRule: sheet.settings.rule,
     importanceOrder: sheet.rooms.filter((r) => !r.extra).map((r) => r.name),

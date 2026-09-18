@@ -11,7 +11,11 @@ import {
   snapPoint,
   wallCandidates,
 } from './snap'
-import { BUILD, NORTH, PLOT_BOX } from './plot'
+import { DEFAULT_PLOT } from './plot'
+
+const BUILD = DEFAULT_PLOT.build
+const NORTH = DEFAULT_PLOT.north
+const PLOT_BOX = DEFAULT_PLOT.box
 import { DEFAULTS, heightCap, heightOf, sheetOf, type Room, type Sheet } from './model'
 import { outlineOf, r2 } from './geometry'
 

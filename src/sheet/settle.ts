@@ -4,7 +4,7 @@
  * own except the landing rule the architect chose.
  */
 
-import { BUILD, PLOT, type Box } from './plot'
+import { type Box } from './plot'
 import {
   ghostsOf,
   isGhost,
@@ -32,11 +32,13 @@ import {
 
 /** Where the ground floor may stand: inside the setback line, or out to the boundary. */
 export function allowedBox(sheet: Sheet, storey: number): Box {
+  const { plot } = sheet
   // upstairs the setback holds everywhere
-  if (storey > 0 && sheet.settings.hardSetback) return BUILD
-  if (sheet.settings.boundary === 'sides') return { x: 0, y: 0, w: PLOT.w, h: BUILD.y + BUILD.h }
-  if (sheet.settings.boundary === 'all') return { x: 0, y: 0, w: PLOT.w, h: PLOT.h }
-  return BUILD
+  if (storey > 0 && sheet.settings.hardSetback) return plot.build
+  if (sheet.settings.boundary === 'sides')
+    return { x: 0, y: 0, w: plot.w, h: plot.build.y + plot.build.h }
+  if (sheet.settings.boundary === 'all') return plot.box
+  return plot.build
 }
 
 export function holdIn(r: Room, box: Box): Room {
@@ -46,15 +48,15 @@ export function holdIn(r: Room, box: Box): Room {
   return { ...r, x: r6(r.x + dx), y: r6(r.y + dy) }
 }
 
-export const holdOnPlot = (r: Room) => holdIn(r, { x: 0, y: 0, w: PLOT.w, h: PLOT.h })
+export const holdOnPlot = (r: Room, sheet: Sheet) => holdIn(r, sheet.plot.box)
 
 /**
  * Where a room is kept: on the plot when rooms may leave the buildable line, else inside the line it
  * may reach; upstairs the setback holds hard, spill or no spill.
  */
 export function hold(r: Room, sheet: Sheet, storey: number): Room {
-  if (storey > 0 && sheet.settings.hardSetback && !isOpen(r)) return holdIn(r, BUILD)
-  if (sheet.settings.allowSpill || isOpen(r)) return holdOnPlot(r)
+  if (storey > 0 && sheet.settings.hardSetback && !isOpen(r)) return holdIn(r, sheet.plot.build)
+  if (sheet.settings.allowSpill || isOpen(r)) return holdOnPlot(r, sheet)
   return holdIn(r, allowedBox(sheet, storey))
 }
 
@@ -130,7 +132,7 @@ export function pushFrom(
         if (!m) continue
         const asked = { ...a, x: r6(a.x + m[0]), y: r6(a.y + m[1]) }
         const off = sheet.settings.allowSpill
-          ? holdOnPlot(asked)
+          ? holdOnPlot(asked, sheet)
           : holdIn(asked, allowedBox(sheet, storey))
         const mx = off.x - a.x
         const my = off.y - a.y
@@ -161,7 +163,9 @@ export function pushFrom(
         if (!m) continue
         next = { ...b, x: r6(b.x + m[0]), y: r6(b.y + m[1]) }
       }
-      next = sheet.settings.allowSpill ? holdOnPlot(next) : holdIn(next, allowedBox(sheet, storey))
+      next = sheet.settings.allowSpill
+        ? holdOnPlot(next, sheet)
+        : holdIn(next, allowedBox(sheet, storey))
       const mx = next.x - b.x
       const my = next.y - b.y
       // a grouped room takes its group along

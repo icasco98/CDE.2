@@ -4,7 +4,6 @@
  * the plot boundary takes none; a shared wall takes one door for both rooms.
  */
 
-import { PLOT } from './plot'
 import {
   doorsOf,
   ghostsOf,
@@ -139,8 +138,8 @@ export function doorAt(
   pl.snapped = kind
   const wp = toWorld(room, pl.p[0], pl.p[1])
   const onBoundary =
-    [0, PLOT.w].some((v) => Math.abs(wp[0] - v) < 0.03) ||
-    [0, PLOT.h].some((v) => Math.abs(wp[1] - v) < 0.03)
+    [0, sheet.plot.w].some((v) => Math.abs(wp[0] - v) < 0.03) ||
+    [0, sheet.plot.h].some((v) => Math.abs(wp[1] - v) < 0.03)
   const wn = worldN(room, pl.n)
   const beyond = [wp[0] + wn[0] * 0.3, wp[1] + wn[1] * 0.3]
   const toVoid = ghostsOf(sheet, storey).some((g) =>

@@ -3,16 +3,7 @@
  * Nothing here renders, and nothing here is a sentence except a refusal in the mock's own words.
  */
 
-import {
-  BUILD,
-  BUILDABLE_AREA,
-  PLOT,
-  RATIO_ALLOWED,
-  SIDES,
-  SIDE_BUDGET,
-  SIDE_NAME,
-  type Side,
-} from './plot'
+import { SIDES, type PlotSpec, type Side } from './plot'
 import {
   allPlaced,
   ghostsOf,
@@ -34,17 +25,17 @@ import { walkTest, type Walk } from './doors'
 const onLine = (v: number, at: number) => Math.abs(v - at) < 0.02
 
 /** A room's walls that lie on the plot boundary, each with the side it is on. */
-export function boundaryWalls(r: Room): (Seg & { side: Side })[] {
+export function boundaryWalls(r: Room, plot: PlotSpec): (Seg & { side: Side })[] {
   const out: (Seg & { side: Side })[] = []
   for (const w of worldWalls(r)) {
     const side: Side | null =
       onLine(w.a[0], 0) && onLine(w.b[0], 0)
         ? 'west'
-        : onLine(w.a[0], PLOT.w) && onLine(w.b[0], PLOT.w)
+        : onLine(w.a[0], plot.w) && onLine(w.b[0], plot.w)
           ? 'east'
           : onLine(w.a[1], 0) && onLine(w.b[1], 0)
             ? 'north'
-            : onLine(w.a[1], PLOT.h) && onLine(w.b[1], PLOT.h)
+            : onLine(w.a[1], plot.h) && onLine(w.b[1], plot.h)
               ? 'street'
               : null
     if (side) out.push({ ...w, side })
@@ -58,7 +49,7 @@ export function sideUsed(sheet: Sheet, side: Side): number {
   const k = side === 'west' || side === 'east' ? 1 : 0 // the coordinate that runs along that side
   for (const r of allPlaced(sheet))
     if (storeyOf(r) === 0 && !r.fixed && !isOpen(r))
-      for (const w of boundaryWalls(r))
+      for (const w of boundaryWalls(r, sheet.plot))
         if (w.side === side) runs.push([Math.min(w.a[k], w.b[k]), Math.max(w.a[k], w.b[k])])
   runs.sort((p, q) => p[0] - q[0])
   let used = 0
@@ -72,7 +63,7 @@ export function sideUsed(sheet: Sheet, side: Side): number {
 }
 
 export const sideOver = (sheet: Sheet, side: Side) =>
-  sideUsed(sheet, side) > SIDE_BUDGET[side] + 1e-6
+  sideUsed(sheet, side) > sheet.plot.budget[side] + 1e-6
 
 export type BoundaryRead = {
   side: Side
@@ -151,11 +142,11 @@ export function report(sheet: Sheet, storey: number): Report {
     storeyName: storeyNameOf(storey),
     placedArea: r2(placedArea),
     askedArea: r2(askedArea),
-    buildableArea: storey === 0 ? BUILDABLE_AREA : BUILD.w * BUILD.h,
+    buildableArea: sheet.plot.buildable,
     floors: floors.map(r2),
     total: r2(total),
-    allowed: RATIO_ALLOWED,
-    overRatio: total > RATIO_ALLOWED + 1e-6,
+    allowed: sheet.plot.allowed,
+    overRatio: total > sheet.plot.allowed + 1e-6,
     ratioRead: !!settings.ratioWarn,
     openToBelow: ghostsOf(sheet, storey).map((r) => (isCourt(r) ? 'the court' : r.name)),
     overlaps: ov.map((o) => ({
@@ -166,10 +157,10 @@ export function report(sheet: Sheet, storey: number): Report {
     spills: p.filter((r) => outsideBuildable(r, box)).map((r) => r.name),
     boundary: SIDES.map((side): BoundaryRead => {
       const used = sideUsed(sheet, side)
-      const budget = SIDE_BUDGET[side]
+      const budget = sheet.plot.budget[side]
       return {
         side,
-        name: SIDE_NAME[side],
+        name: sheet.plot.name[side],
         used: r2(used),
         budget,
         over: used > budget + 1e-6,

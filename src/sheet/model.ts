@@ -1,6 +1,6 @@
 /** The zoning sheet's model: a room, a door, the settings, and the sheet they make. */
 
-import { MAX_STOREYS, STOREY_NAME } from './plot'
+import { DEFAULT_PLOT, MAX_STOREYS, STOREY_NAME, type PlotSpec } from './plot'
 
 export type Point = [number, number]
 export type Poly = Point[]
@@ -50,6 +50,8 @@ export type Room = {
   placed: boolean
   extra?: boolean
   fixed?: boolean
+  /** Kept from a saved sheet that the project's program does not name: it is the sheet's own. */
+  aside?: boolean
 }
 
 export type LandingRule = 'wait' | 'push'
@@ -154,6 +156,8 @@ export type Sheet = {
   rooms: Room[]
   storeyCount: number
   settings: Settings
+  /** The plot under the drawing: the project's where it has one, the fresh brief's otherwise. */
+  plot: PlotSpec
 }
 
 export const RULE_HINT: Record<LandingRule, string> = {
@@ -178,15 +182,18 @@ export const cloneSheet = (sheet: Sheet): Sheet => ({
   rooms: sheet.rooms.map(cloneRoom),
   storeyCount: sheet.storeyCount,
   settings: { ...sheet.settings, colors: { ...sheet.settings.colors } },
+  plot: sheet.plot,
 })
 
 export const sheetOf = (
   rooms: Room[],
   settings: Partial<Settings> = {},
   storeyCount = 2,
+  plot: PlotSpec = DEFAULT_PLOT,
 ): Sheet => ({
   rooms,
   storeyCount,
+  plot,
   settings: {
     ...DEFAULTS,
     ...settings,

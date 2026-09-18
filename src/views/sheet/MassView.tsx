@@ -16,11 +16,8 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from 'react'
 import {
-  BUILD,
   MASS_START,
   MASS_VIEWS,
-  PLOT,
-  PLOT_BOX,
   acrossStoreys,
   allPlaced,
   allowedBox,
@@ -173,7 +170,8 @@ export function MassView(props: MassViewProps) {
     }
   }, [])
 
-  const P = useMemo(() => massProjection(cam, size.W, size.H), [cam, size.W, size.H])
+  const { plot } = sheet
+  const P = useMemo(() => massProjection(cam, size.W, size.H, plot), [cam, size.W, size.H, plot])
 
   const drawn = useMemo(() => {
     const prisms = prismsOf(sheet, P)
@@ -423,18 +421,18 @@ export function MassView(props: MassViewProps) {
             setMenu({ room, at: inBox(event) })
           }}
         >
-          <polygon className="m-ground" points={pointsOf(P, boxCorners(PLOT_BOX), 0)} />
+          <polygon className="m-ground" points={pointsOf(P, boxCorners(plot.box), 0)} />
           {sheet.settings.boundary !== 'off' && (
             <path
               className="m-strip"
               d={`M${pointsOf(P, boxCorners(allowedBox(sheet, storey)), 0).replace(/ /g, 'L')}ZM${pointsOf(
                 P,
-                boxCorners(BUILD),
+                boxCorners(plot.build),
                 0,
               ).replace(/ /g, 'L')}Z`}
             />
           )}
-          <polygon className="m-build" points={pointsOf(P, boxCorners(BUILD), 0)} />
+          <polygon className="m-build" points={pointsOf(P, boxCorners(plot.build), 0)} />
           {shadow && (
             <polygon
               className="m-shadow"
@@ -474,7 +472,7 @@ export function MassView(props: MassViewProps) {
             const fill = r.color ?? sheet.settings.colors[r.cat] ?? '#ddd'
             const lines: [string, string, string][] = []
             const walls = seenWalls(block, P).map((e, j) => {
-              const blind = blindWall(e.a, e.b)
+              const blind = blindWall(e.a, e.b, plot)
               const cls = blind ? (breaches(block.h) ? ' blind breach' : ' blind') : ''
               const a0 = P.to(e.a[0], e.a[1], block.z0)
               const b0 = P.to(e.b[0], e.b[1], block.z0)
@@ -504,7 +502,7 @@ export function MassView(props: MassViewProps) {
                 lines.push([
                   `${p2(a[0])},${p2(a[1])}`,
                   `${p2(b[0])},${p2(b[1])}`,
-                  blindWall(e.a, e.b) && e.facing > 0
+                  blindWall(e.a, e.b, plot) && e.facing > 0
                     ? breaches(block.h)
                       ? ' blind breach'
                       : ' blind'
@@ -537,9 +535,14 @@ export function MassView(props: MassViewProps) {
           {!!sheet.settings.streetLabels &&
             (
               [
-                ['service street', PLOT.w / 2, PLOT.h + 1.4],
-                ['side street', PLOT.w + 1.4, PLOT.h / 2],
-                ['neighbours · north', PLOT.w / 2, -1.2],
+                ...plot.streets.map((side): [string, number, number] => [
+                  side === plot.service ? 'service street' : 'side street',
+                  side === 'west' ? -1.4 : side === 'east' ? plot.w + 1.4 : plot.w / 2,
+                  side === 'north' ? -1.2 : side === 'street' ? plot.h + 1.4 : plot.h / 2,
+                ]),
+                ...(plot.streets.includes('north')
+                  ? []
+                  : ([['neighbours · north', plot.w / 2, -1.2]] as [string, number, number][])),
               ] as [string, number, number][]
             ).map(([label, x, y]) => {
               const p = P.to(x, y, 0)

@@ -4,20 +4,13 @@ import * as sheet from './index'
 /** The surface T2 to T5 and the layout agent drive: every name the sheet offers, and no other. */
 const surface = [
   // the plot
-  'BUILD',
-  'BUILDABLE_AREA',
   'MAX_STOREYS',
-  'NORTH',
-  'PLOT',
-  'PLOT_BOX',
+  'DEFAULT_PLOT',
+  'FRESH_PLOT',
   'RATIO',
-  'RATIO_ALLOWED',
   'SIDES',
-  'SIDE_BUDGET',
-  'SIDE_NAME',
   'STOREY_MARK',
   'STOREY_NAME',
-  'STREET_BUDGET',
   'boxCorners',
   // the model
   'DEFAULTS',
@@ -40,6 +33,7 @@ const surface = [
   'migrate',
   'piecesOf',
   'placedRooms',
+  'plotFrom',
   'rank',
   'ruleOf',
   'sheetOf',

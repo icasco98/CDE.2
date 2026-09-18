@@ -11,16 +11,12 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from 'react'
 import {
-  BUILD,
-  NORTH,
   acrossStoreys,
   allPlaced,
   centreOfFootprint,
   ghostsOf,
   isCourt,
   isGhost,
-  PLOT,
-  PLOT_BOX,
   areaOf,
   bboxOf,
   boundaryWalls,
@@ -40,7 +36,9 @@ import {
   type Poly,
   type Report,
   type Room,
+  type PlotSpec,
   type Seg,
+  type Side,
   type Settings,
   type Sheet,
   type Side4,
@@ -62,12 +60,12 @@ import { Doors, type OpeningsDraw } from './Doors'
 /** How far past the plot the sheet is drawn, so the north arrow and the street names have room. */
 const PAD = 1.6
 
-export const sheetExtent: Extent = {
+export const sheetExtent = (plot: PlotSpec): Extent => ({
   minX: -PAD,
   minY: -PAD,
-  width: PLOT.w + 2 * PAD,
-  height: PLOT.h + 2 * PAD,
-}
+  width: plot.w + 2 * PAD,
+  height: plot.h + 2 * PAD,
+})
 
 /** Everything the sheet draws that is read from the sheet rather than from the hand. */
 export type SheetRead = {
@@ -178,7 +176,8 @@ function sharedWallOf(r: Room, side: Side4, rooms: Room[], settings: Settings): 
 export function SheetView(props: SheetViewProps) {
   const { sheet, view, selection, drag, drawing, measure, reshaping, hover, on } = props
   const { settings } = sheet
-  const background = useMemo(() => <Background settings={settings} />, [settings])
+  const { plot } = sheet
+  const background = useMemo(() => <Background settings={settings} plot={plot} />, [settings, plot])
   const shown = view.rooms.map((r) => shownRoom(r, drag))
   const storey = props.storey
   // The storey below is drawn faint under the one in hand, and what stands open to below with an X.
@@ -209,7 +208,7 @@ export function SheetView(props: SheetViewProps) {
     <svg
       className={`sheet${props.openings ? ' doormode' : ''}${drawing ? ' drawing' : ''}${measure ? ' measuring' : ''}${reshaping ? ' reshaping' : ''}${props.panning ? ' panning' : ''}`}
       ref={props.svgRef}
-      viewBox={viewBoxOf(sheetExtent, props.camera)}
+      viewBox={viewBoxOf(sheetExtent(plot), props.camera)}
       onPointerDown={on.onBackgroundDown}
       onPointerMove={on.onPointerMove}
       onContextMenu={on.onBackgroundMenu}
@@ -284,8 +283,13 @@ export function SheetView(props: SheetViewProps) {
         shown
           .filter((r) => !r.fixed && !isOpen(r))
           .flatMap((r) =>
-            boundaryWalls(r).map((wall, i) => (
-              <BoundaryWall key={`b-${r.id}-${i}`} wall={wall} over={view.over.has(wall.side)} />
+            boundaryWalls(r, plot).map((wall, i) => (
+              <BoundaryWall
+                key={`b-${r.id}-${i}`}
+                wall={wall}
+                over={view.over.has(wall.side)}
+                street={plot.streets.includes(wall.side) ? plot.name[wall.side] : null}
+              />
             )),
           )}
       {shown.map((r) => {
@@ -366,7 +370,7 @@ export function SheetView(props: SheetViewProps) {
         <Fragment>
           {drag.lock.through.map((c, i) => {
             const a = (drag.lock!.angle * Math.PI) / 180
-            const reach = Math.max(PLOT.w, PLOT.h) / 3
+            const reach = Math.max(plot.w, plot.h) / 3
             return (
               <line
                 key={`lock-${i}`}
@@ -429,7 +433,7 @@ export function SheetView(props: SheetViewProps) {
       })}
       <Doors sheet={sheet} storey={storey} rooms={shown} openings={props.openings} />
       {focus && settings.dims !== 'none' && !reshaping && (
-        <Dims room={focus} rooms={shown} settings={settings} typable={!drag} on={on} />
+        <Dims room={focus} rooms={shown} settings={settings} plot={plot} typable={!drag} on={on} />
       )}
       {focus &&
         !focus.locked &&
@@ -468,18 +472,19 @@ const boxOf = (rooms: Room[]) => {
 }
 
 /** The plot, the grid, the setback line and the strip out to the boundary: they change with nothing. */
-function Background({ settings }: { settings: Settings }) {
+function Background({ settings, plot }: { settings: Settings; plot: PlotSpec }) {
   const step = settings.grid > 0 ? settings.grid : 1
   const across: number[] = []
   const down: number[] = []
-  for (let x = 0; x <= PLOT.w + 1e-9; x = r2(x + step)) across.push(x)
-  for (let y = 0; y <= PLOT.h + 1e-9; y = r2(y + step)) down.push(y)
+  const BUILD = plot.build
+  for (let x = 0; x <= plot.w + 1e-9; x = r2(x + step)) across.push(x)
+  for (let y = 0; y <= plot.h + 1e-9; y = r2(y + step)) down.push(y)
   const box =
     settings.boundary === 'off'
       ? null
       : settings.boundary === 'sides'
-        ? { x: 0, y: 0, w: PLOT.w, h: BUILD.y + BUILD.h }
-        : PLOT_BOX
+        ? { x: 0, y: 0, w: plot.w, h: BUILD.y + BUILD.h }
+        : plot.box
   return (
     <Fragment>
       <g className="grid">
@@ -489,7 +494,7 @@ function Background({ settings }: { settings: Settings }) {
             x1={x}
             y1={0}
             x2={x}
-            y2={PLOT.h}
+            y2={plot.h}
             className={Number.isInteger(x) ? 'm' : ''}
           />
         ))}
@@ -498,13 +503,13 @@ function Background({ settings }: { settings: Settings }) {
             key={`y${y}`}
             x1={0}
             y1={y}
-            x2={PLOT.w}
+            x2={plot.w}
             y2={y}
             className={Number.isInteger(y) ? 'm' : ''}
           />
         ))}
       </g>
-      <rect x={0} y={0} width={PLOT.w} height={PLOT.h} className="plot" />
+      <rect x={0} y={0} width={plot.w} height={plot.h} className="plot" />
       {box && (
         <path
           className="strip"
@@ -512,23 +517,9 @@ function Background({ settings }: { settings: Settings }) {
         />
       )}
       <rect x={BUILD.x} y={BUILD.y} width={BUILD.w} height={BUILD.h} className="buildable" />
-      {settings.streetLabels !== 0 && (
-        <Fragment>
-          <text x={PLOT.w / 2} y={PLOT.h + 0.9} textAnchor="middle" className="street">
-            service street
-          </text>
-          <text
-            x={PLOT.w + 0.9}
-            y={PLOT.h / 2}
-            textAnchor="middle"
-            className="street"
-            transform={`rotate(90 ${PLOT.w + 0.9} ${PLOT.h / 2})`}
-          >
-            side street
-          </text>
-        </Fragment>
-      )}
-      <g className="north" transform={`translate(${PLOT.w + 1.3} -0.6) rotate(${NORTH})`}>
+      {settings.streetLabels !== 0 &&
+        plot.streets.map((side) => <StreetLabel key={side} side={side} plot={plot} />)}
+      <g className="north" transform={`translate(${plot.w + 1.3} -0.6) rotate(${plot.north})`}>
         <path d="M0 1.1 L0 -0.6 M-0.25 -0.25 L0 -0.6 L0.25 -0.25" />
         <text x={0} y={1.9} textAnchor="middle">
           N
@@ -538,7 +529,34 @@ function Background({ settings }: { settings: Settings }) {
   )
 }
 
-function BoundaryWall({ wall, over }: { wall: Seg & { side: string }; over: boolean }) {
+/** A street's name written outside the side it runs along. */
+function StreetLabel({ side, plot }: { side: Side; plot: PlotSpec }) {
+  const word = side === plot.service ? 'service street' : 'side street'
+  const along = side === 'west' || side === 'east'
+  const x = side === 'west' ? -0.9 : side === 'east' ? plot.w + 0.9 : plot.w / 2
+  const y = side === 'north' ? -0.9 : side === 'street' ? plot.h + 0.9 : plot.h / 2
+  return (
+    <text
+      x={x}
+      y={y}
+      textAnchor="middle"
+      className="street"
+      transform={along ? `rotate(90 ${x} ${y})` : undefined}
+    >
+      {word}
+    </text>
+  )
+}
+
+function BoundaryWall({
+  wall,
+  over,
+  street,
+}: {
+  wall: Seg & { side: string }
+  over: boolean
+  street: string | null
+}) {
   const length = Math.hypot(wall.b[0] - wall.a[0], wall.b[1] - wall.a[1])
   const mx = (wall.a[0] + wall.b[0]) / 2 - wall.n[0] * 0.28
   const my = (wall.a[1] + wall.b[1]) / 2 - wall.n[1] * 0.28
@@ -553,11 +571,9 @@ function BoundaryWall({ wall, over }: { wall: Seg & { side: string }; over: bool
           textAnchor="middle"
           transform={`rotate(${angle} ${p4(mx)} ${p4(my)})`}
         >
-          {wall.side === 'street'
-            ? 'boundary · service street'
-            : wall.side === 'east'
-              ? 'boundary · side street'
-              : 'boundary · blind'}
+          {street
+            ? `boundary · ${street === 'street boundary' ? 'service street' : 'side street'}`
+            : 'boundary · blind'}
         </text>
       )}
     </g>
@@ -761,18 +777,20 @@ function Dims({
   room,
   rooms,
   settings,
+  plot,
   typable,
   on,
 }: {
   room: Room
   rooms: Room[]
   settings: Settings
+  plot: PlotSpec
   typable: boolean
   on: SheetHandlers
 }) {
   const off = 0.45
   const size = settings.dimSize
-  const gaps = settings.dims === 'all' && square(room) ? gapsRound(room, rooms) : []
+  const gaps = settings.dims === 'all' && square(room) ? gapsRound(room, rooms, plot) : []
   return (
     <Fragment>
       <g className="dim" transform={frameOf(room)}>
@@ -835,13 +853,13 @@ function Dims({
   )
 }
 
-function gapsRound(r: Room, rooms: Room[]) {
+function gapsRound(r: Room, rooms: Room[], plot: PlotSpec) {
   const right = (o: Room) => o.x + o.w
   const bottom = (o: Room) => o.y + o.h
   const others = rooms.filter((o) => o !== r && square(o))
   const spanY = (o: Room) => o.y < bottom(r) && bottom(o) > r.y
   const spanX = (o: Room) => o.x < right(r) && right(o) > r.x
-  const A = PLOT_BOX
+  const A = plot.box
   const list = [
     {
       to: Math.max(A.x, ...others.filter((o) => spanY(o) && right(o) <= r.x + 1e-6).map(right)),

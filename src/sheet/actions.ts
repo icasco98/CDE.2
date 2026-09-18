@@ -4,7 +4,7 @@
  * the mock's own words. The views, the tests and the layout agent all drive these and nothing else.
  */
 
-import { MAX_STOREYS, NORTH, PLOT, type Box } from './plot'
+import { MAX_STOREYS, type Box } from './plot'
 import {
   DEFAULTS,
   acrossStoreys,
@@ -220,8 +220,9 @@ export function place(sheet: Sheet, input: PlaceInput): Change {
     r.y = r6(input.y)
     const sm = snapMove(
       r,
-      wallCandidates(snapRooms(next, input.storey, r), next.settings),
+      wallCandidates(snapRooms(next, input.storey, r), next.settings, next.plot),
       next.settings,
+      next.plot,
     )
     r.x = sm.rect.x
     r.y = sm.rect.y
@@ -252,8 +253,14 @@ export function move(sheet: Sheet, input: MoveInput): Change {
     const cands = wallCandidates(
       snapRooms(next, input.storey, null).filter((o) => !input.ids.includes(o.id)),
       next.settings,
+      next.plot,
     )
-    const sm = snapMove({ ...lead, x: lead.x + dx, y: lead.y + dy }, cands, next.settings)
+    const sm = snapMove(
+      { ...lead, x: lead.x + dx, y: lead.y + dy },
+      cands,
+      next.settings,
+      next.plot,
+    )
     const held = hold(sm.rect, next, input.storey)
     const mx = held.x - lead.x
     const my = held.y - lead.y
@@ -286,10 +293,10 @@ export function turn(sheet: Sheet, input: TurnInput): Change {
     if (!lead) return { ok: false, said: 'nothing to turn' }
     const onStorey = placedRooms(next, input.storey)
     if (input.faceNorth) {
-      const off = norm((lead.angle || 0) - NORTH)
+      const off = norm((lead.angle || 0) - next.plot.north)
       const k = Math.round(off / 90) % 4
       const aligned = Math.abs(off - Math.round(off / 90) * 90) < 0.5
-      const want = aligned ? NORTH + ((k + 1) % 4) * 90 : NORTH
+      const want = aligned ? next.plot.north + ((k + 1) % 4) * 90 : next.plot.north
       if (sel.length === 1 && !input.pivot) setAngle(lead, want)
       else rotateGroup(sel, norm(want - (lead.angle || 0)), input.pivot ?? middleOf(sel))
     } else if (input.quarter) {
@@ -301,7 +308,13 @@ export function turn(sheet: Sheet, input: TurnInput): Change {
         }
       } else rotateGroup(sel, 90, input.pivot ?? middleOf(sel))
     } else {
-      const want = snapAngle(input.angle ?? lead.angle ?? 0, sel, onStorey, next.settings, NORTH)
+      const want = snapAngle(
+        input.angle ?? lead.angle ?? 0,
+        sel,
+        onStorey,
+        next.settings,
+        next.plot.north,
+      )
       if (sel.length === 1 && !input.pivot) setAngle(lead, want.angle)
       else rotateGroup(sel, want.angle - (lead.angle || 0), input.pivot ?? middleOf(sel))
     }
@@ -363,7 +376,7 @@ export function pullWall(sheet: Sheet, input: WallInput): Change {
     const frame = { x: r.x, y: r.y, w: r.w, h: r.h, angle: r.angle || 0 }
     const before = cloneRoom(r)
     const others = snapRooms(next, input.storey, r)
-    const al = alignWall(frame, seg, input.distance, others, next.settings)
+    const al = alignWall(frame, seg, input.distance, others, next.settings, next.plot)
     const g = next.settings.grid || 0.05
     let s = al.guide ? al.s : r2(snapTo(input.distance, g))
     const step = s >= 0 ? g : -g
@@ -441,6 +454,7 @@ export function resize(
       input.distance,
       placedRooms(next, input.storey).filter((o) => o !== r && o !== shared),
       next.settings,
+      next.plot,
     )
     const g = next.settings.grid || 0.05
     const out = al.guide ? al.s : r2(snapTo(input.distance, g))
@@ -715,7 +729,7 @@ export function cutToSetback(sheet: Sheet, input: { ids: string[]; storey: numbe
     const names: string[] = []
     const retired: string[] = []
     for (const r of sel) {
-      const out = cutShapeToSetback(r)
+      const out = cutShapeToSetback(r, next.plot)
       if (!out.cut) continue
       if (!out.room) {
         retired.push(r.name)
@@ -1470,9 +1484,7 @@ export function redo(sheet: Sheet, input: { history: History }): Change & { hist
 
 /** A point a drawing gesture gives, kept on the plot and on the floor. */
 export function drawnPoint(sheet: Sheet, storey: number, at: Point): Point {
-  const box: Box = sheet.settings.allowSpill
-    ? { x: 0, y: 0, w: PLOT.w, h: PLOT.h }
-    : allowedBox(sheet, storey)
+  const box: Box = sheet.settings.allowSpill ? sheet.plot.box : allowedBox(sheet, storey)
   return onPlot(at, box)
 }
 

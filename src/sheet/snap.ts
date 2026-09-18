@@ -4,7 +4,7 @@
  * pull within the snap distance wins, then the nearest again on a direction across it.
  */
 
-import { BUILD, PLOT, PLOT_BOX, type Box } from './plot'
+import { DEFAULT_PLOT, type Box, type PlotSpec } from './plot'
 import {
   acrossStoreys,
   centreOf,
@@ -47,14 +47,21 @@ export type Guide = { x1: number; y1: number; x2: number; y2: number }
 
 export type SnapMark = { corner?: Point; wall?: Seg; line?: boolean }
 
-/** The lines a wall may snap to besides rooms: the setback line, and the plot boundary. */
-export const snapBoxes = (): Box[] => [BUILD, PLOT_BOX]
+/** A guide is drawn right across the sheet, so it is longer than any plot the tool draws. */
+const ACROSS = 200
 
-export function wallCandidates(others: Room[], settings: Settings): Seg[] {
+/** The lines a wall may snap to besides rooms: the setback line, and the plot boundary. */
+export const snapBoxes = (plot: PlotSpec = DEFAULT_PLOT): Box[] => [plot.build, plot.box]
+
+export function wallCandidates(
+  others: Room[],
+  settings: Settings,
+  plot: PlotSpec = DEFAULT_PLOT,
+): Seg[] {
   const out: Seg[] = []
   for (const o of others) for (const w of worldWalls(o)) out.push(w)
   if (settings.snapBuild)
-    for (const B of snapBoxes()) {
+    for (const B of snapBoxes(plot)) {
       out.push(
         { a: [B.x, B.y], b: [B.x, B.y + B.h], n: [-1, 0] },
         { a: [B.x + B.w, B.y], b: [B.x + B.w, B.y + B.h], n: [1, 0] },
@@ -89,6 +96,7 @@ export function alignWall(
   sRaw: number,
   others: Room[],
   settings: Settings,
+  plot: PlotSpec = DEFAULT_PLOT,
 ): { s: number; guide?: Guide; mark?: SnapMark } {
   const F = { ...frame }
   const a = toWorld(F, seg.a[0], seg.a[1])
@@ -152,7 +160,7 @@ export function alignWall(
   // The setback line and the plot boundary: the dragged wall's own corners land on those lines,
   // whatever the wall's angle, and the boundary is there to meet even where building to it is off.
   if (settings.snapBuild)
-    for (const B of snapBoxes()) {
+    for (const B of snapBoxes(plot)) {
       for (const [axis, at] of [
         [0, B.x],
         [0, B.x + B.w],
@@ -174,7 +182,7 @@ export function alignWall(
   if (!best) return { s: sRaw }
   const found: { gap: number; s: number; mark: SnapMark; near: boolean } = best
   const at: Point = [a[0] + n[0] * found.s, a[1] + n[1] * found.s]
-  const reach = PLOT.w + PLOT.h
+  const reach = ACROSS
   const guide = {
     x1: r2(at[0] - u[0] * reach),
     y1: r2(at[1] - u[1] * reach),
@@ -189,6 +197,7 @@ export function snapMove(
   r: Room,
   cands: Seg[],
   settings: Settings,
+  plot: PlotSpec = DEFAULT_PLOT,
 ): { rect: Room; guides: Guide[]; corner?: Point } {
   const guides: Guide[] = []
   if (!(settings.snapDist > 0) || !cands.length) return { rect: gridRest(r, settings), guides }
@@ -213,7 +222,7 @@ export function snapMove(
   const hits: Hit[] = []
   // any corner within reach of the setback line or the boundary lands on it, a turned room too
   if (settings.snapBuild)
-    for (const B of snapBoxes())
+    for (const B of snapBoxes(plot))
       for (const c of worldCorners(r)) {
         for (const [X, nx] of [
           [B.x, -1],
@@ -374,7 +383,7 @@ export function snapHeight(
 export const guideOf = (w: { a: Point; b: Point }): Guide => {
   const u = [w.b[0] - w.a[0], w.b[1] - w.a[1]]
   const L = Math.hypot(u[0]!, u[1]!) || 1
-  const ext = PLOT.w + PLOT.h
+  const ext = ACROSS
   const m = [(w.a[0] + w.b[0]) / 2, (w.a[1] + w.b[1]) / 2]
   return {
     x1: r2(m[0]! - (u[0]! / L) * ext),
@@ -474,7 +483,7 @@ export function snapPoint(
       const off = (from[0] - w.a[0]) * -u[1] + (from[1] - w.a[1]) * u[0]
       if (Math.abs(off) < 0.03 && t >= -0.02 && t <= L + 0.02) rise.push({ w, n: [-u[1], u[0]] })
     }
-  const reach = PLOT.w + PLOT.h
+  const reach = ACROSS
   const squareLine = (o: [number, number, number, number]): Guide => ({
     x1: r2(o[0] - o[2] * reach),
     y1: r2(o[1] - o[3] * reach),

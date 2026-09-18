@@ -88,7 +88,6 @@ import {
   walkTest,
   worldCorners,
   worldPieces,
-  BUILD,
   type Change,
   type DoorRef,
   type DoorType,
@@ -664,7 +663,8 @@ export function SheetStage() {
     const onMove = (event: PointerEvent) => {
       const rect = svg.current?.getBoundingClientRect()
       if (!rect) return
-      const metres = sheetExtent.width / pan.camera.scale / Math.max(1, rect.width)
+      const metres =
+        sheetExtent(docRef.current.sheet.plot).width / pan.camera.scale / Math.max(1, rect.width)
       setCamera({
         ...pan.camera,
         x: pan.camera.x - (event.clientX - pan.from[0]) * metres,
@@ -903,7 +903,10 @@ export function SheetStage() {
       else
         setMenu({
           kind: 'note',
-          note: outsideBuildable({ x: at[0], y: at[1], w: 0, h: 0 } as unknown as Room, BUILD)
+          note: outsideBuildable(
+            { x: at[0], y: at[1], w: 0, h: 0 } as unknown as Room,
+            sheet.plot.build,
+          )
             ? 'Outside the line the ground floor may reach.'
             : 'No room walls this space yet, so there is nothing to give it to.',
           at: where,
@@ -967,7 +970,7 @@ export function SheetStage() {
       event.preventDefault()
       setCamera((was) =>
         zoomAbout(
-          sheetExtent,
+          sheetExtent(sheet.plot),
           was,
           pointAt(event.clientX, event.clientY),
           wheelFactor(event.nativeEvent),
@@ -1766,7 +1769,7 @@ export function SheetStage() {
                   selection={selected.filter((r) => !r.fixed)}
                   under={under}
                   canRestore={canRestore(menu.room)}
-                  pastSetback={selected.some((r) => outsideBuildable(r, BUILD))}
+                  pastSetback={selected.some((r) => outsideBuildable(r, sheet.plot.build))}
                   settings={settings}
                   storey={storey}
                   storeys={storeyCountOf(sheet)}
@@ -1855,7 +1858,7 @@ export function SheetStage() {
                 selection={selected.filter((r) => !r.fixed)}
                 under={under}
                 canRestore={canRestore(room)}
-                pastSetback={selected.some((r) => outsideBuildable(r, BUILD))}
+                pastSetback={selected.some((r) => outsideBuildable(r, sheet.plot.build))}
                 settings={settings}
                 storey={storey}
                 storeys={storeyCountOf(sheet)}

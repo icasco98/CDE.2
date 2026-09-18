@@ -1,22 +1,16 @@
 /** The zoning sheet: its model, its geometry, its actions and its report. */
 
-export type { Box, Side } from './plot'
+export type { Box, PlotShape, PlotSpec, Side } from './plot'
 export {
-  BUILD,
-  BUILDABLE_AREA,
+  DEFAULT_PLOT,
+  FRESH_PLOT,
   MAX_STOREYS,
-  NORTH,
-  PLOT,
-  PLOT_BOX,
   RATIO,
-  RATIO_ALLOWED,
   SIDES,
-  SIDE_BUDGET,
-  SIDE_NAME,
   STOREY_MARK,
   STOREY_NAME,
-  STREET_BUDGET,
   boxCorners,
+  plotFrom,
 } from './plot'
 
 export type {
