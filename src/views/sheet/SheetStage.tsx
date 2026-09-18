@@ -435,18 +435,21 @@ export function SheetStage() {
     return rect ? { x: clientX - rect.left, y: clientY - rect.top } : { x: 0, y: 0 }
   }
 
-  const stepBack = () => {
+  /** Whether there was a step of the sheet's own to take back; the brief's are the project's. */
+  const stepBack = (): boolean => {
     const back = undo(docRef.current.sheet, { history: docRef.current.history })
-    if (!back.result.ok) return
+    if (!back.result.ok) return false
     docRef.current = { sheet: back.sheet, history: back.history }
     setDoc(docRef.current)
+    return true
   }
 
-  const stepForward = () => {
+  const stepForward = (): boolean => {
     const forward = redo(docRef.current.sheet, { history: docRef.current.history })
-    if (!forward.result.ok) return
+    if (!forward.result.ok) return false
     docRef.current = { sheet: forward.sheet, history: forward.history }
     setDoc(docRef.current)
+    return true
   }
 
   // The assistant's changes are not undo steps of their own: one message is one step.
@@ -1288,11 +1291,13 @@ export function SheetStage() {
         }
         case 'undo':
           event.preventDefault()
-          stepBack()
+          // The sheet's own steps come back first; with none left the key is the project's, so a
+          // change to the brief made here is taken back by the same key rather than by two undos.
+          if (stepBack()) event.stopImmediatePropagation()
           return
         case 'redo':
           event.preventDefault()
-          stepForward()
+          if (stepForward()) event.stopImmediatePropagation()
           return
         case 'apply-reshape':
           doneReshape()
@@ -1393,10 +1398,11 @@ export function SheetStage() {
       const command = keyRelease(event)
       if (command?.kind === 'pan-held') spaceHeld.current = command.held
     }
-    window.addEventListener('keydown', onKey)
+    // Caught on the way down, so the sheet answers Ctrl+Z before the shell's project undo does.
+    window.addEventListener('keydown', onKey, true)
     window.addEventListener('keyup', onUp)
     return () => {
-      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('keydown', onKey, true)
       window.removeEventListener('keyup', onUp)
     }
   })

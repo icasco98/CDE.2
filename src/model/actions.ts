@@ -90,11 +90,21 @@ export function createActions(context: Context) {
       storeysSpanned?: number
       /** The room this one stands behind in the program; on the end when it names no room. */
       after?: string
+      /**
+       * The id to keep, for a room that already has one elsewhere — a zone drawn on the sheet whose
+       * program the project is taking up. An id the project already holds is not taken twice.
+       */
+      id?: string
     }): Result<string> {
       if (!positive(input.targetArea)) return badArea
       const project = state()
+      const given =
+        input.id !== undefined &&
+        input.id !== EXTERIOR &&
+        input.id.length > 0 &&
+        !project.rooms.some((each) => each.id === input.id)
       const room = {
-        id: newId('room'),
+        id: given ? input.id! : newId('room'),
         name: input.name ?? input.type,
         type: input.type,
         storey: input.storey ?? 0,

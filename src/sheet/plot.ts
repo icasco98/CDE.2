@@ -18,7 +18,7 @@ export const SIDES: readonly Side[] = ['west', 'north', 'east', 'street']
 const STREET_CAP = 15
 
 /** The plot as the sheet draws one: a rectangle, the sides that face a street, and north. */
-export type PlotShape = {
+export type PlotRect = {
   readonly w: number
   readonly h: number
   /** Degrees the north arrow turns clockwise from the sheet's up. */
@@ -56,7 +56,7 @@ const nameOf = (side: Side, service: Side | null, streets: readonly Side[]): str
       : `${side} boundary`
 
 /** The plot worked out from its shape: the setback, the budgets and the ratio all follow from it. */
-export function plotFrom(shape: PlotShape): PlotSpec {
+export function plotFrom(shape: PlotRect): PlotSpec {
   const streets = SIDES.filter((side) => shape.streets.includes(side))
   // The sheet draws the service street along the south, so a street there is the frontage the
   // house addresses; on a plot with none, the first street it has stands in for it.
@@ -99,7 +99,7 @@ export function plotFrom(shape: PlotShape): PlotSpec {
 }
 
 /** The fresh brief's corner plot, which the sheet stands on until a project hands it another. */
-export const FRESH_PLOT: PlotShape = { w: 20, h: 25, north: 25, streets: ['street', 'east'] }
+export const FRESH_PLOT: PlotRect = { w: 20, h: 25, north: 25, streets: ['street', 'east'] }
 
 export const DEFAULT_PLOT: PlotSpec = plotFrom(FRESH_PLOT)
 

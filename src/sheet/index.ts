@@ -1,7 +1,7 @@
 /** The zoning sheet: its model, its geometry, its actions and its report. */
 
-export type { Box, PlotShape, PlotSpec, Side } from './plot'
-export type { Followed, ProgramRoom } from './program'
+export type { Box, PlotSpec, Side } from './plot'
+export type { ProgramRoom } from './program'
 export { followProgram, roomFromProgram } from './program'
 export {
   DEFAULT_PLOT,

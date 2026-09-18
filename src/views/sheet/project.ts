@@ -10,6 +10,7 @@ import type { Plot, Room as ProjectRoom, Result, Store } from '../../model'
 import { standingOf, typicalArea } from '../../rulebook'
 import {
   KINDS,
+  MAX_STOREYS,
   SIDES,
   followProgram,
   plotFrom,
@@ -140,15 +141,22 @@ const clampStorey = (storey: number, storeys: number) =>
  * has drawn on the sample and then adds a room finds the whole program in Requirements, not one room.
  */
 function takeUpProgram(store: Writing, rooms: readonly Room[]): Result | null {
-  const project = store.getState()
-  if (project.rooms.length > 0) return null
-  for (const r of programRooms(rooms)) {
-    const type = typeFor(r.kind)
+  if (store.getState().rooms.length > 0) return null
+  const program = programRooms(rooms)
+  // The rooms keep their ids and the storeys they stand on, so the drawing is untouched by this.
+  const wanted = Math.min(MAX_STOREYS, Math.max(...program.map((r) => storeyOf(r) + 1), 1))
+  while (store.getState().storeys < wanted) {
+    const grown = store.actions.addStorey()
+    if (!grown.ok) return grown
+  }
+  const storeys = store.getState().storeys
+  for (const r of program) {
     const added = store.actions.addRoom({
-      type,
+      id: r.id,
+      type: typeFor(r.kind),
       name: r.name,
       targetArea: r.target,
-      storey: clampStorey(storeyOf(r), project.storeys),
+      storey: clampStorey(storeyOf(r), storeys),
       storeysSpanned: 1,
     })
     if (!added.ok) return added

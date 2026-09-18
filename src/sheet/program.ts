@@ -86,7 +86,7 @@ const sameRoom = (one: Room, other: Room): boolean =>
   one.extra === other.extra &&
   one.aside === other.aside
 
-export type Followed = {
+type Followed = {
   readonly sheet: Sheet
   /** The rooms the brief does not name, kept aside on the sheet. */
   readonly aside: readonly Room[]
