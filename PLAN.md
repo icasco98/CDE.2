@@ -108,16 +108,18 @@ brief, branch and pull request, on the owner's word.
 
 | # | Task | Depends on | Done when | Status |
 |---|---|---|---|---|
-| T1 | **Actions, report, model.** `actions.ts` and `report.ts` with the model as the mock has it; geometry reused or replaced; reference cases. | A2, A3 | Every action unit-tested; the embedded sheet's report matches the mock's sentence. | todo |
-| T2 | **The zoning sheet over the actions.** Program, drop, move, turn, walls, draw, reshape, pockets, menus, sentence. | T1 | Drop a room and it snaps, lands by the rule, and the sentence updates, headless on the embedded sheet. | todo |
-| T3 | **The Openings step.** Door types, Open wall, select and adjust, the walk test. | T2 | Arm a door, click a wall, it lands a jamb from the corner; the unreached go grey. | todo |
-| T4 | **Storeys and the mass.** Storeys with heights, open to below, the mass drawn by the wall-line tree, Edit in 3D. | T2 | A volume dragged moves its room on the sheet; the ray-cast test passes from six views. | todo |
-| T5 | **Settings, storage, defaults.** Every setting with the spec's values, the few on the surface and the rest under More; the owner's sheet embedded; Back to the sample; Clear the plan. | T2 | Reset to the spec reproduces the mock's settings; a cleared sheet stays cleared across reloads. | todo |
-| T6 | **Export re-pointed.** PDF to scale and DXF per storey from A8. | T4 | A printed sheet measures true; the DXF opens with a layer per storey. | todo |
-| E1 | **The agent over the actions.** Text to zoning plan through `actions.ts`, the report as its feedback, one Undo for a run; the mock's chat line as the model. | T1, T3 | From the fresh brief's program and two sentences, no help: every room placed, no overlaps, inside the line, every room reached, entry and diwaniya doors, under 40 actions. | todo |
+| T1 | **Actions, report, model.** `actions.ts` and `report.ts` with the model as the mock has it; geometry reused or replaced; reference cases. | A2, A3 | Every action unit-tested; the embedded sheet's report matches the mock's sentence. | done, PR #88 |
+| T2 | **The zoning sheet over the actions.** Program, drop, move, turn, walls, draw, reshape, pockets, menus, sentence. | T1 | Drop a room and it snaps, lands by the rule, and the sentence updates, headless on the embedded sheet. | done, PR #89 |
+| T3 | **The Openings step.** Door types, Open wall, select and adjust, the walk test. | T2 | Arm a door, click a wall, it lands a jamb from the corner; the unreached go grey. | done, PR #96 |
+| T4 | **Storeys and the mass.** Storeys with heights, open to below, the mass drawn by the wall-line tree, Edit in 3D. | T2 | A volume dragged moves its room on the sheet; the ray-cast test passes from six views. | done, PR #94 |
+| T5 | **Settings, storage, defaults.** Every setting with the spec's values, the few on the surface and the rest under More; the owner's sheet embedded; Back to the sample; Clear the plan. | T2 | Reset to the spec reproduces the mock's settings; a cleared sheet stays cleared across reloads. | done, PR #93 |
+| T6 | **Export re-pointed.** PDF to scale and DXF per storey from A8. | T4 | A printed sheet measures true; the DXF opens with a layer per storey. | done, PR #95 |
+| E1 | **The agent over the actions.** Text to zoning plan through `actions.ts`, the report as its feedback, one Undo for a run; the mock's chat line as the model. | T1, T3 | From the fresh brief's program and two sentences, no help: every room placed, no overlaps, inside the line, every room reached, entry and diwaniya doors, under 40 actions. | done, PR #90 |
+| T7 | **The program comes from Requirements.** Requirements is the brief, the Sheet follows it, a room added on the Sheet is added back; the plot is data. | T2, A4 | Twelve rooms entered in Requirements are the Sheet's program. | done, PR #97 |
 | W1 | **Windows.** Placed like a door on an outside wall; refused on shared and boundary walls; unlit rooms listed. | T3, T4 | A room with no window and no open wall to one reads unlit. | todo |
 | W2 | **Fog of war.** What a guest sees from the diwaniya door and the family from the family living, read off doors and windows with heights. | W1 | The guest's view on the embedded sheet matches a hand-drawn reference. | todo |
 | W3 | **Circulation drawn.** Actors, routes over doors, an animated walk (B5 re-pointed). | T3 | The route from the street door to the kitchen is drawn and counts its doors. | todo |
+| E2 | **The architect's own hands.** Place a room against another's wall touching; carve or push to settle an overlap it made; take back its own last batch. The chat column scrolls, its deliberation collapsed, its answers short. Its mind is `agent/architect.md` and `agent/lessons.md`. | E1 | From the program and one sentence, no help: every room placed, no overlaps, inside the line, in one or two turns. | todo |
 | N1 | **Neighbours and streets.** 15 m boxes on the neighbours' setback lines and street bands, each with a switch. | T4 | The mass shows the neighbours' boxes; each switch hides its box. | todo |
 
 ## Milestone 2: the rule engine
