@@ -1,0 +1,1045 @@
+/*
+ * The zoning sheet, from the frozen mock. Its own variables are mapped onto the page's colours here
+ * and nowhere else, so the sheet reads the same on paper as it does on screen, light or dark.
+ */
+
+.sheet-stage {
+  --paper: #f3f1ec;
+  --sheet: #fbfaf7;
+  --panel: #ffffff;
+  --ink: #1e2328;
+  --ink-2: #4e555c;
+  --ink-3: #80878e;
+  --line: #cfcbc2;
+  --line-2: #e4e1da;
+  --grid: #e6e3dc;
+  --grid-m: #d8d4cb;
+  --build: #8a5a3c;
+  --accent: #2b57c7;
+  --accent-soft: #dce4f8;
+  --warn: #b4552b;
+  --warn-soft: rgba(180, 85, 43, 0.28);
+  --reception: #e9cbc1;
+  --shared: #ebdbb9;
+  --private: #cbd8e4;
+  --service: #d7d5cf;
+  --circ: #e4d2a8;
+  --open: #fbfaf7;
+  --room-line: #2f4a63;
+  --select: #2b57c7;
+}
+
+@media (prefers-color-scheme: dark) {
+  .sheet-stage:not([data-theme='light']) {
+    --paper: #15181b;
+    --sheet: #1c2024;
+    --panel: #22272c;
+    --ink: #e7e9e4;
+    --ink-2: #b4b9be;
+    --ink-3: #858b92;
+    --line: #3b424a;
+    --line-2: #2c3238;
+    --grid: #262c32;
+    --grid-m: #2f363d;
+    --build: #c99a78;
+    --accent: #8db0f0;
+    --accent-soft: #22314d;
+    --warn: #e48b62;
+    --warn-soft: rgba(228, 139, 98, 0.3);
+    --room-line: #a9c4dd;
+    --select: #8db0f0;
+  }
+}
+
+/* The sheet needs the window's width: the program, the sheet and the legend, not a reading column. */
+main.stage-sheet {
+  max-width: 1680px;
+}
+
+.sheet-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-height: 0;
+  color: var(--ink);
+}
+
+.sheet-stage .head-line {
+  font-size: 13px;
+  color: var(--ink-3);
+  margin: 0;
+}
+
+.sheet-stage .tools {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sheet-stage .tools .grp {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.sheet-stage button {
+  font:
+    600 13px 'Archivo',
+    system-ui,
+    sans-serif;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 5px 9px;
+  cursor: pointer;
+  min-height: 30px;
+}
+
+.sheet-stage button:hover:not(:disabled) {
+  border-color: var(--ink-3);
+}
+
+.sheet-stage button.on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.sheet-stage button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.sheet-stage .behave {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  align-items: center;
+}
+
+.sheet-stage .behave .row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sheet-stage .behave label,
+.sheet-stage .behave .hint {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.sheet-stage .behave .hint {
+  color: var(--ink-3);
+}
+
+.sheet-stage .seg {
+  display: flex;
+  gap: 4px;
+}
+
+.sheet-stage .body-row {
+  display: grid;
+  grid-template-columns: 210px minmax(320px, 1fr);
+  gap: 14px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.sheet-stage aside {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sheet-stage aside h2 {
+  font:
+    600 11px 'Archivo',
+    sans-serif;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--line-2);
+  display: flex;
+  justify-content: space-between;
+}
+
+.sheet-stage .tray {
+  overflow: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-height: 0;
+}
+
+.sheet-stage .tray .item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px 2px 8px;
+  border: 1px solid var(--room-line);
+  border-radius: 3px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  min-height: 26px;
+  overflow: hidden;
+}
+
+.sheet-stage .tray .item.reception {
+  background: var(--reception);
+}
+.sheet-stage .tray .item.shared {
+  background: var(--shared);
+}
+.sheet-stage .tray .item.private {
+  background: var(--private);
+}
+.sheet-stage .tray .item.service {
+  background: var(--service);
+}
+.sheet-stage .tray .item.circulation {
+  background: var(--circ);
+}
+.sheet-stage .tray .item.open {
+  background: var(--open);
+  border-style: dashed;
+}
+
+.sheet-stage .tray .item.hollow {
+  border-style: dashed;
+}
+
+.sheet-stage .tray .item.placed {
+  background: transparent;
+  border-style: solid;
+  border-color: var(--line);
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.sheet-stage .tray .item.placed .swatch {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+}
+
+.sheet-stage .tray .item.placed.reception .swatch {
+  background: var(--reception);
+}
+.sheet-stage .tray .item.placed.shared .swatch {
+  background: var(--shared);
+}
+.sheet-stage .tray .item.placed.private .swatch {
+  background: var(--private);
+}
+.sheet-stage .tray .item.placed.service .swatch {
+  background: var(--service);
+}
+.sheet-stage .tray .item.placed.circulation .swatch {
+  background: var(--circ);
+}
+
+.sheet-stage .tray .item.placed.selected {
+  border-color: var(--select);
+  box-shadow: inset 0 0 0 1px var(--select);
+  opacity: 1;
+}
+
+.sheet-stage .tray .item.grouped {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.sheet-stage .tray .item .grip {
+  width: 10px;
+  color: var(--ink-3);
+  cursor: grab;
+  font-size: 13px;
+  user-select: none;
+  opacity: 0.6;
+}
+
+.sheet-stage .tray .item .n {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.sheet-stage .tray .item .a {
+  font:
+    10.5px 'IBM Plex Mono',
+    ui-monospace,
+    monospace;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.sheet-stage .tray .item .ways button,
+.sheet-stage .tray .item .x {
+  min-height: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 10.5px;
+  font-weight: 500;
+}
+
+.sheet-stage .tray .item .x {
+  width: 18px;
+  padding: 0;
+  font-size: 13px;
+  border: none;
+  background: transparent;
+  color: var(--ink-3);
+}
+
+.sheet-stage .tray .item .x:hover {
+  color: var(--warn);
+}
+
+.sheet-stage .add-room {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border-top: 1px solid var(--line-2);
+}
+
+.sheet-stage .add-room select,
+.sheet-stage .add-room input {
+  font:
+    12px 'Archivo',
+    sans-serif;
+  padding: 4px 6px;
+  min-width: 0;
+}
+
+.sheet-stage .add-room .add-line {
+  display: flex;
+  gap: 4px;
+}
+
+.sheet-stage .add-room .add-line input[type='text'] {
+  flex: 1;
+  min-width: 0;
+}
+
+.sheet-stage .add-room .add-line select {
+  flex: 0 0 78px;
+}
+
+.sheet-stage .add-room .add-line input[type='number'] {
+  flex: 0 0 62px;
+}
+
+.sheet-stage .middle {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 8px;
+}
+
+.sheet-stage .sheet-box {
+  flex: 1;
+  min-height: 420px;
+  background: var(--sheet);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.sheet-stage svg.sheet {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  user-select: none;
+}
+
+/* A fixed height, so a longer sentence never moves the sheet. */
+.sheet-stage .say {
+  font-size: 13.5px;
+  color: var(--ink-2);
+  height: 60px;
+  overflow-y: auto;
+  padding: 0 2px;
+}
+
+.sheet-stage .say b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.sheet-stage .say .bad {
+  color: var(--warn);
+}
+
+.sheet-stage .legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  padding: 0 2px;
+}
+
+.sheet-stage .legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--room-line);
+  vertical-align: -1px;
+  margin-right: 4px;
+}
+
+/* ---------- the marks on the sheet ---------- */
+
+.sheet-stage .grid line {
+  stroke: var(--grid);
+  stroke-width: 0.02;
+}
+
+.sheet-stage .grid line.m {
+  stroke: var(--grid-m);
+  stroke-width: 0.03;
+}
+
+.sheet-stage .plot {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 0.12;
+  pointer-events: none;
+}
+
+.sheet-stage .buildable {
+  fill: none;
+  stroke: var(--build);
+  stroke-width: 0.05;
+  stroke-dasharray: 0.4 0.25;
+  pointer-events: none;
+}
+
+.sheet-stage .strip {
+  fill: var(--build);
+  fill-opacity: 0.08;
+  stroke: none;
+  fill-rule: evenodd;
+  pointer-events: none;
+}
+
+.sheet-stage .bwall {
+  pointer-events: none;
+}
+
+.sheet-stage .bwall line {
+  stroke: var(--ink);
+  stroke-width: 0.2;
+  stroke-linecap: butt;
+}
+
+.sheet-stage .bwall text {
+  font:
+    0.32px 'Archivo',
+    sans-serif;
+  fill: var(--ink-2);
+  letter-spacing: 0.04em;
+}
+
+.sheet-stage .bwall.over line {
+  stroke: var(--warn);
+}
+
+.sheet-stage .bwall.over text {
+  fill: var(--warn);
+}
+
+.sheet-stage .street {
+  font:
+    0.55px 'Archivo',
+    sans-serif;
+  fill: var(--ink-3);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.sheet-stage .north text {
+  font:
+    0.55px 'Archivo',
+    sans-serif;
+  fill: var(--ink-2);
+}
+
+.sheet-stage .north path {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 0.06;
+}
+
+.sheet-stage .room {
+  cursor: grab;
+}
+
+.sheet-stage .room.moving {
+  cursor: grabbing;
+}
+
+.sheet-stage .room path.body {
+  stroke: none;
+  fill-opacity: 0.85;
+}
+
+.sheet-stage .room path.wall {
+  fill: none;
+  stroke: var(--room-line);
+  stroke-width: 0.07;
+  stroke-linecap: square;
+  pointer-events: none;
+}
+
+.sheet-stage .room.reception path.body {
+  fill: var(--reception);
+}
+.sheet-stage .room.shared path.body {
+  fill: var(--shared);
+}
+.sheet-stage .room.private path.body {
+  fill: var(--private);
+}
+.sheet-stage .room.service path.body {
+  fill: var(--service);
+}
+.sheet-stage .room.circulation path.body {
+  fill: var(--circ);
+}
+
+.sheet-stage .room.open path.body {
+  fill: var(--open);
+  fill-opacity: 1;
+}
+
+.sheet-stage .room.open path.wall {
+  stroke: var(--build);
+  stroke-dasharray: 0.3 0.2;
+}
+
+.sheet-stage .room.open text.name {
+  fill: var(--build);
+}
+
+.sheet-stage .room.selected path.wall {
+  stroke: var(--select);
+  stroke-width: 0.12;
+}
+
+.sheet-stage .room.over path.wall {
+  stroke: var(--warn);
+}
+
+.sheet-stage .room:hover path.wall {
+  stroke-width: 0.11;
+}
+
+.sheet-stage .room.locked path.body {
+  fill-opacity: 0.55;
+}
+
+.sheet-stage .room.locked path.wall {
+  stroke: var(--ink-2);
+}
+
+.sheet-stage .lock-mark {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 0.05;
+  pointer-events: none;
+}
+
+.sheet-stage .room text.name {
+  font:
+    500 0.5px 'Archivo',
+    sans-serif;
+  fill: var(--ink);
+  pointer-events: none;
+}
+
+.sheet-stage .room text.area {
+  font:
+    0.42px 'IBM Plex Mono',
+    ui-monospace,
+    monospace;
+  fill: var(--ink-2);
+  pointer-events: none;
+}
+
+.sheet-stage .room text.area.short {
+  fill: var(--warn);
+}
+
+.sheet-stage .room text.area.typable {
+  pointer-events: all;
+  cursor: text;
+  fill: var(--select);
+  text-decoration: underline dotted;
+}
+
+.sheet-stage .room .label.movable text {
+  pointer-events: all;
+  cursor: move;
+}
+
+.sheet-stage .room .label.movable text.name {
+  fill: var(--select);
+}
+
+.sheet-stage .court-hatch {
+  fill: url(#sheet-hatch);
+  pointer-events: none;
+}
+
+.sheet-stage .spill {
+  fill: none;
+  stroke: var(--warn);
+  stroke-width: 0.06;
+  stroke-dasharray: 0.15 0.1;
+  pointer-events: none;
+}
+
+.sheet-stage .overlap-poly {
+  fill: var(--warn-soft);
+  stroke: none;
+  pointer-events: none;
+}
+
+.sheet-stage .guide {
+  stroke: var(--accent);
+  stroke-width: 0.04;
+  stroke-dasharray: 0.2 0.15;
+  pointer-events: none;
+}
+
+.sheet-stage .lock {
+  stroke: var(--accent);
+  stroke-width: 0.05;
+  stroke-dasharray: 0.5 0.25;
+  pointer-events: none;
+}
+
+.sheet-stage .mate {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 0.09;
+  stroke-dasharray: 0.4 0.25;
+  pointer-events: none;
+}
+
+.sheet-stage .group {
+  fill: none;
+  stroke: var(--select);
+  stroke-width: 0.06;
+  stroke-dasharray: 0.35 0.25;
+  pointer-events: none;
+}
+
+.sheet-stage .group-box {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 0.04;
+  stroke-dasharray: 0.3 0.2;
+  pointer-events: none;
+}
+
+.sheet-stage .mark {
+  fill: var(--accent-soft);
+  fill-opacity: 0.4;
+  stroke: var(--accent);
+  stroke-width: 0.05;
+  stroke-dasharray: 0.25 0.2;
+  pointer-events: none;
+}
+
+.sheet-stage .dim text {
+  font:
+    0.4px 'IBM Plex Mono',
+    ui-monospace,
+    monospace;
+  fill: var(--accent);
+  pointer-events: none;
+}
+
+.sheet-stage .dim line {
+  stroke: var(--accent);
+  stroke-width: 0.03;
+  pointer-events: none;
+}
+
+.sheet-stage .dim.gap text {
+  fill: var(--ink-3);
+}
+
+.sheet-stage .dim.gap line {
+  stroke: var(--ink-3);
+  stroke-dasharray: 0.1 0.1;
+}
+
+.sheet-stage .dim text.typable {
+  pointer-events: all;
+  cursor: text;
+}
+
+.sheet-stage .handle {
+  fill: var(--panel);
+  stroke: var(--select);
+  stroke-width: 0.05;
+}
+
+.sheet-stage .handle:hover {
+  fill: var(--accent-soft);
+  stroke-width: 0.09;
+}
+
+.sheet-stage .handle.h {
+  cursor: ew-resize;
+}
+.sheet-stage .handle.v {
+  cursor: ns-resize;
+}
+.sheet-stage .handle.d {
+  cursor: move;
+}
+.sheet-stage .handle.c {
+  cursor: crosshair;
+}
+
+.sheet-stage .handle.shared {
+  fill: var(--select);
+}
+
+.sheet-stage .turn line {
+  stroke: var(--select);
+  stroke-width: 0.04;
+  pointer-events: none;
+}
+
+.sheet-stage .turn circle {
+  fill: var(--panel);
+  stroke: var(--select);
+  stroke-width: 0.06;
+  cursor: grab;
+}
+
+.sheet-stage .turn text {
+  font:
+    0.4px 'IBM Plex Mono',
+    ui-monospace,
+    monospace;
+  fill: var(--select);
+  cursor: text;
+}
+
+.sheet-stage .pivot circle.ring {
+  fill: var(--panel);
+  fill-opacity: 0.85;
+  stroke: var(--select);
+  stroke-width: 0.05;
+  pointer-events: none;
+}
+
+.sheet-stage .pivot line {
+  stroke: var(--select);
+  stroke-width: 0.04;
+  pointer-events: none;
+}
+
+.sheet-stage .ghost rect {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 0.07;
+  stroke-dasharray: 0.25 0.15;
+}
+
+.sheet-stage .pocket {
+  fill: var(--ink-3);
+  fill-opacity: 0.16;
+  stroke: var(--ink-3);
+  stroke-width: 0.04;
+  stroke-dasharray: 0.2 0.15;
+  cursor: pointer;
+}
+
+.sheet-stage .pocket.picked {
+  fill: var(--accent-soft);
+  fill-opacity: 0.7;
+  stroke: var(--accent);
+  stroke-width: 0.08;
+  stroke-dasharray: none;
+}
+
+.sheet-stage .pocket-label {
+  font:
+    0.42px 'IBM Plex Mono',
+    ui-monospace,
+    monospace;
+  fill: var(--ink-2);
+  pointer-events: none;
+  text-anchor: middle;
+}
+
+.sheet-stage .measure line {
+  stroke: var(--warn);
+  stroke-width: 0.05;
+  pointer-events: none;
+}
+
+.sheet-stage .measure circle {
+  fill: var(--warn);
+  pointer-events: none;
+}
+
+.sheet-stage .measure text {
+  font:
+    0.4px 'IBM Plex Mono',
+    ui-monospace,
+    monospace;
+  fill: var(--warn);
+  pointer-events: none;
+}
+
+.sheet-stage svg.sheet.measuring {
+  cursor: crosshair;
+}
+.sheet-stage svg.sheet.drawing {
+  cursor: crosshair;
+}
+.sheet-stage svg.sheet.panning {
+  cursor: grabbing;
+}
+
+.sheet-stage .draw-preview polygon {
+  fill: var(--accent-soft);
+  fill-opacity: 0.5;
+  stroke: var(--accent);
+  stroke-width: 0.06;
+  stroke-dasharray: 0.25 0.15;
+  pointer-events: none;
+}
+
+.sheet-stage .draw-preview circle.dot {
+  fill: var(--accent);
+  stroke: none;
+}
+
+.sheet-stage .draw-preview line {
+  stroke: var(--accent);
+  stroke-width: 0.05;
+}
+
+.sheet-stage .snap-mark {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 0.07;
+  pointer-events: none;
+}
+
+.sheet-stage .snap-mark.corner {
+  fill: var(--panel);
+}
+
+.sheet-stage .snap-ray {
+  stroke: var(--accent);
+  stroke-width: 0.04;
+  stroke-dasharray: 0.3 0.2;
+  fill: none;
+  pointer-events: none;
+}
+
+.sheet-stage .snap-note {
+  font:
+    0.38px 'IBM Plex Mono',
+    ui-monospace,
+    monospace;
+  fill: var(--accent);
+  pointer-events: none;
+}
+
+.sheet-stage svg.sheet.reshaping .room:not(.target) path.body {
+  fill-opacity: 0.12;
+}
+
+.sheet-stage svg.sheet.reshaping .room.target path.wall {
+  stroke: var(--ink);
+  stroke-width: 0.16;
+}
+
+.sheet-stage svg.sheet.drawing .room path.body {
+  fill-opacity: 0.12;
+}
+
+/* ---------- what stands over the sheet ---------- */
+
+.sheet-stage .reshape-bar {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px;
+  z-index: 3;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  flex-wrap: wrap;
+}
+
+.sheet-stage .reshape-bar .who {
+  font:
+    600 12px 'Archivo',
+    sans-serif;
+  color: var(--ink-2);
+  padding: 0 6px 0 4px;
+}
+
+.sheet-stage .reshape-bar button {
+  min-height: 26px;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.sheet-stage .pocket-bar {
+  position: absolute;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 6px 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  z-index: 3;
+}
+
+.sheet-stage .pocket-bar button {
+  min-height: 28px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.sheet-stage .pocket-bar .why {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  max-width: 190px;
+}
+
+.sheet-stage .ctx {
+  position: absolute;
+  z-index: 4;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+  padding: 4px;
+  display: grid;
+  min-width: 200px;
+}
+
+.sheet-stage .ctx button {
+  text-align: left;
+  border: 0;
+  background: transparent;
+  border-radius: 3px;
+  padding: 6px 10px;
+  font-weight: 500;
+  font-size: 12.5px;
+  min-height: 28px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sheet-stage .ctx button:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.sheet-stage .ctx button span.m {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+.sheet-stage .ctx .head {
+  font:
+    600 10.5px 'Archivo',
+    sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 6px 10px 2px;
+}
+
+.sheet-stage .ctx .why {
+  font-size: 11px;
+  color: var(--ink-3);
+  padding: 2px 10px 6px;
+  max-width: 220px;
+}
+
+.sheet-stage .room-tag {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 3px 7px;
+  font-size: 12px;
+  color: var(--ink-2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+}
+
+.sheet-stage .room-tag b {
+  color: var(--ink);
+}
+
+.sheet-stage .typein {
+  position: absolute;
+  z-index: 6;
+  font:
+    12px 'IBM Plex Mono',
+    ui-monospace,
+    monospace;
+  padding: 2px 4px;
+  border: 1px solid var(--accent);
+  border-radius: 2px;
+  background: var(--panel);
+  color: var(--ink);
+  width: 64px;
+}
+
+@media (max-width: 900px) {
+  .sheet-stage .body-row {
+    grid-template-columns: 1fr;
+  }
+}
