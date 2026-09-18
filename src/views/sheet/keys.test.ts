@@ -9,8 +9,12 @@ const idle: KeyWorld = {
   reshaping: false,
   measuring: false,
   dragging: false,
+  openings: false,
+  doorSelected: false,
   grid: 0.25,
 }
+
+const openings: KeyWorld = { ...idle, selected: 0, openings: true, doorSelected: true }
 
 describe('the sheet’s keys', () => {
   it('turns a quarter on R and sends back on Delete', () => {
@@ -69,6 +73,32 @@ describe('the sheet’s keys', () => {
     expect(keyCommand({ key: 'Z', ctrlKey: true, shiftKey: true }, idle)).toEqual({ kind: 'redo' })
     expect(keyCommand({ key: 'c', metaKey: true }, idle)).toEqual({ kind: 'copy' })
     expect(keyCommand({ key: 'v', metaKey: true }, idle)).toEqual({ kind: 'paste' })
+  })
+
+  it('switches step on Z and O, and never on Esc', () => {
+    expect(keyCommand({ key: 'z' }, idle)).toEqual({ kind: 'step', to: 'zoning' })
+    expect(keyCommand({ key: 'O' }, idle)).toEqual({ kind: 'step', to: 'openings' })
+    expect(keyCommand({ key: 'd' }, idle)).toEqual({ kind: 'step', to: 'other' })
+    expect(keyCommand({ key: 'Escape' }, openings)).toEqual({ kind: 'escape' })
+  })
+
+  it('gives the selected door F, H, Space, the arrows and Delete', () => {
+    expect(keyCommand({ key: 'f' }, openings)).toEqual({ kind: 'door-swing' })
+    expect(keyCommand({ key: 'h' }, openings)).toEqual({ kind: 'door-hinge' })
+    expect(keyCommand({ key: ' ' }, openings)).toEqual({ kind: 'door-hinge-or-swing' })
+    expect(keyCommand({ key: 'Delete' }, openings)).toEqual({ kind: 'door-remove' })
+    expect(keyCommand({ key: 'ArrowLeft' }, openings)).toEqual({ kind: 'door-slide', step: -0.25 })
+    expect(keyCommand({ key: 'ArrowUp' }, openings)).toEqual({ kind: 'door-slide', step: -0.25 })
+    expect(keyCommand({ key: 'ArrowRight', shiftKey: true }, openings)).toEqual({
+      kind: 'door-slide',
+      step: 1,
+    })
+  })
+
+  it('leaves F alone in the Openings step with no door in hand, and Space pans', () => {
+    const empty = { ...openings, doorSelected: false }
+    expect(keyCommand({ key: 'f' }, empty)).toBeNull()
+    expect(keyCommand({ key: ' ' }, empty)).toEqual({ kind: 'pan-held', held: true })
   })
 
   it('leaves every key to the box a number is being typed into', () => {

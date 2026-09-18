@@ -16,8 +16,10 @@ import {
 } from 'react'
 import {
   DEFAULTS,
+  DOOR,
   RULE_HINT,
   acrossStoreys,
+  addDoor,
   addRoom,
   addStorey,
   dropTopStorey,
@@ -30,18 +32,27 @@ import {
   combine,
   copyTo,
   cutToSetback,
+  doorAt,
+  doorNear,
+  doorRead,
+  doorsOf,
+  flipDoor,
   fmt,
+  hingeDoor,
   givePocket,
   group,
   insideConvex,
   isOpen,
   labelPlan,
   lock,
+  lostDoors,
   makeCorridor,
   makeCourt,
   mirror,
   move,
+  newDoors,
   newHistory,
+  openWall,
   outsideBuildable,
   overlapsOf,
   place,
@@ -50,8 +61,10 @@ import {
   pushOthers,
   polyArea,
   r2,
+  reattachDoor,
   redo,
   remember,
+  removeDoor,
   removeRoom,
   reorder,
   report,
@@ -60,9 +73,11 @@ import {
   sendBack,
   setArea,
   setColor,
+  setDoorWidth,
   setSetting,
   setSize,
   setStorey,
+  slideDoor,
   sheetOf,
   storeyCountOf,
   storeyOf,
@@ -70,10 +85,14 @@ import {
   undo,
   ungroup,
   unlock,
+  walkTest,
   worldCorners,
   worldPieces,
   BUILD,
   type Change,
+  type DoorRef,
+  type DoorType,
+  type Hit,
   type Memory,
   type Pocket,
   type Point,
@@ -89,13 +108,17 @@ import { Program } from './Program'
 import { Storeys } from './Storeys'
 import { SheetView, sheetExtent, type SheetRead } from './SheetView'
 import {
+  DoorMenu,
   EmptyNote,
   PocketBar,
   PocketMenu,
   RoomMenu,
+  type DoorChoice,
   type PocketChoice,
   type RoomChoice,
 } from './menus'
+import { OpeningsTools } from './OpeningsTools'
+import { beginDoorDrag, doorDragTo, doorDrop, type DoorDrag } from './doorDrag'
 import {
   beginCorner,
   beginGroupTurn,
@@ -142,7 +165,13 @@ import {
 import { SettingsWindow, useSettingsWindow } from './Settings'
 import { colourVars, tabFor } from './settings'
 import { keyCommand, keyRelease } from './keys'
-import { drawingSentence, measuringSentence, sentenceOf, type Part } from './sentence'
+import {
+  drawingSentence,
+  measuringSentence,
+  openingsSentence,
+  sentenceOf,
+  type Part,
+} from './sentence'
 import './sheet.css'
 
 declare global {
@@ -156,6 +185,7 @@ type Doc = { sheet: Sheet; history: ReturnType<typeof newHistory> }
 
 type Menu =
   | { kind: 'room'; room: Room; corner: Point | null; at: { x: number; y: number } }
+  | { kind: 'door'; door: DoorRef; at: { x: number; y: number } }
   | { kind: 'pocket'; pocket: Pocket; at: { x: number; y: number } }
   | { kind: 'note'; note: string; at: { x: number; y: number } }
 
@@ -192,6 +222,14 @@ export function SheetStage() {
   const [flash, setFlash] = useState<string | null>(null)
   const [tag, setTag] = useState<{ id: string; x: number; y: number } | null>(null)
   const [hover, setHover] = useState<string | null>(null)
+  // The step: Zoning edits rooms, Openings edits doors. Esc never changes it.
+  const [step, setStep] = useState<'zoning' | 'openings'>('zoning')
+  const [armed, setArmed] = useState<DoorType | null>(null)
+  const [doorWidth, pickWidth] = useState(DOOR.door.w)
+  const [doorSel, setDoorSel] = useState<DoorRef | null>(null)
+  const [doorHover, setDoorHover] = useState<Hit | null>(null)
+  const [doorDrag, setDoorDrag] = useState<DoorDrag | null>(null)
+  const [lit, setLit] = useState<string | null>(null)
   const [drawMenuFor, setDrawMenuFor] = useState<string | null>(null)
   const [specState, setSpecState] = useState('')
   const settingsWindow = useSettingsWindow()
@@ -204,6 +242,7 @@ export function SheetStage() {
   const svg = useRef<SVGSVGElement | null>(null)
   const box = useRef<HTMLDivElement | null>(null)
   const dragRef = useRef<Drag | null>(null)
+  const doorDragRef = useRef<DoorDrag | null>(null)
   const drawRef = useRef<Drawing | null>(null)
   const docRef = useRef(doc)
   const tagTimer = useRef<number | null>(null)
@@ -270,6 +309,10 @@ export function SheetStage() {
     if (frames.length > 400) frames.splice(0, frames.length - 400)
   })
 
+  const openingsOn = step === 'openings'
+  const doorInHand = doorSel ? doorRead(sheet, STOREY, doorSel) : null
+  const lostCount = openingsOn ? lostDoors(sheet, STOREY).length : 0
+
   // Everything read from the sheet is read once per change, so a drag pays for none of it.
   const view: SheetRead = useMemo(() => {
     const rooms = placedRooms(sheet, STOREY)
@@ -297,8 +340,17 @@ export function SheetStage() {
       pockets: settings.showPockets ? pocketsOf(sheet, STOREY) : [],
       read,
       over: new Set(read.boundary.filter((side) => side.over).map((side) => side.side)),
+      // the walk is read on the sheet only in the step that makes the doors, as the mock reads it
+      walk: openingsOn
+        ? (() => {
+            const walk = walkTest(sheet, STOREY)
+            return walk
+              ? { depth: walk.depth, unreached: new Set(walk.unreached.map((r) => r.id)) }
+              : null
+          })()
+        : null,
     }
-  }, [sheet, settings, STOREY])
+  }, [sheet, settings, STOREY, openingsOn])
 
   const selected = view.rooms.filter((r) => selection.includes(r.id))
 
@@ -432,6 +484,81 @@ export function SheetStage() {
     setDrag(next)
   }
 
+  // ---------- the Openings step ----------
+
+  /** Into Openings: whatever the hand held in Zoning is let go, and every click becomes a wall's. */
+  const goStep = (to: 'zoning' | 'openings') => {
+    if (to === step) return
+    if (reshaping) cancelReshape()
+    setMeasure(null)
+    setDrawing(null)
+    setMenu(null)
+    setPocketPicked(null)
+    setSelection([])
+    setDoorSel(null)
+    setDoorHover(null)
+    setLit(null)
+    setArmed(null)
+    pickWidth(DOOR.door.w)
+    doorDragRef.current = null
+    setDoorDrag(null)
+    setStep(to)
+  }
+
+  const armType = (type: DoorType | null) => {
+    setArmed(type)
+    if (type) pickWidth(DOOR[type].w)
+    setDoorHover(null)
+    setDoorSel(null)
+  }
+
+  /** A click on the sheet in Openings: a door nearby is taken, else the armed type lands on a wall. */
+  const doorClick = (event: ReactPointerEvent) => {
+    if (event.button !== 0) return
+    event.preventDefault()
+    const [x, y] = pointAt(event.clientX, event.clientY)
+    const near = doorNear(docRef.current.sheet, STOREY, x, y, 0.45)
+    if (near) {
+      setDoorSel({ room: near.room, id: near.id })
+      setMenu(null)
+      return
+    }
+    if (!armed) {
+      setDoorSel(null)
+      return
+    }
+    const before = docRef.current.sheet
+    const change =
+      armed === 'open'
+        ? openWall(before, { x, y, storey: STOREY })
+        : addDoor(before, { x, y, type: armed, width: doorWidth, storey: STOREY })
+    if (!apply(change)) {
+      if (!change.result.ok && change.result.said === 'No wall there.') setDoorSel(null)
+      return
+    }
+    setDoorSel(newDoors(before, change.sheet).at(-1) ?? null)
+  }
+
+  /** One door action, the selected door kept in hand wherever it ended up. */
+  const onDoor = (make: (ref: DoorRef) => Change): void => {
+    if (!doorSel) return
+    const held = doorSel
+    const change = make(held)
+    if (!apply(change)) return
+    const owner = change.sheet.rooms.find((r) => doorsOf(r).some((d) => d.id === held.id))
+    setDoorSel(owner ? { room: owner.id, id: held.id } : null)
+  }
+
+  const doorChoice = (choice: DoorChoice) => {
+    const ref = menu?.kind === 'door' ? menu.door : doorSel
+    setMenu(null)
+    if (!ref) return
+    const at = { room: ref.room, door: ref.id }
+    if (choice.kind === 'flip') apply(flipDoor(docRef.current.sheet, at))
+    if (choice.kind === 'hinge') apply(hingeDoor(docRef.current.sheet, at))
+    if (choice.kind === 'remove' && apply(removeDoor(docRef.current.sheet, at))) setDoorSel(null)
+  }
+
   // ---------- the hand, while it holds something ----------
 
   useEffect(() => {
@@ -494,6 +621,43 @@ export function SheetStage() {
     // The listeners read the drag through its ref, so they are set up once per drag, not per frame.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drag !== null])
+
+  useEffect(() => {
+    if (!doorDrag) return
+    const onMove = (event: PointerEvent) => {
+      const held = doorDragRef.current
+      if (!held) return
+      const next = doorDragTo(
+        held,
+        pointAt(event.clientX, event.clientY),
+        docRef.current.sheet,
+        STOREY,
+      )
+      doorDragRef.current = next
+      setDoorDrag(next)
+    }
+    const onUp = () => {
+      const held = doorDragRef.current
+      doorDragRef.current = null
+      setDoorDrag(null)
+      if (!held) return
+      const change = doorDrop(held, docRef.current.sheet, STOREY)
+      if (change && apply(change)) {
+        const owner = change.sheet.rooms.find((r) => doorsOf(r).some((d) => d.id === held.id))
+        setDoorSel(owner ? { room: owner.id, id: held.id } : null)
+      }
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+    }
+    // The listeners read the drag through its ref, so they are set up once per drag, not per frame.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doorDrag !== null])
 
   useEffect(() => {
     if (!pan) return
@@ -588,6 +752,11 @@ export function SheetStage() {
         measureDown(event)
         return
       }
+      if (openingsOn) {
+        event.stopPropagation()
+        doorClick(event)
+        return
+      }
       event.preventDefault()
       event.stopPropagation()
       if (pocketPicked !== null && view.pockets[pocketPicked]) {
@@ -610,7 +779,7 @@ export function SheetStage() {
     onRoomMenu: (room: Room, event: ReactMouseEvent) => {
       event.preventDefault()
       event.stopPropagation()
-      if (drawing || room.fixed) return
+      if (drawing || room.fixed || openingsOn) return
       if (!selection.includes(room.id)) setSelection([room.id])
       const [x, y] = pointAt(event.clientX, event.clientY)
       let corner: { at: Point; d: number } | null = null
@@ -685,6 +854,10 @@ export function SheetStage() {
         drawDown(event)
         return
       }
+      if (openingsOn) {
+        doorClick(event)
+        return
+      }
       const target = event.target
       const background =
         target === event.currentTarget ||
@@ -704,6 +877,7 @@ export function SheetStage() {
     },
     onBackgroundMenu: (event: ReactMouseEvent) => {
       event.preventDefault()
+      if (openingsOn) return
       if (drawing) {
         if (drawing.shape === 'poly' && drawing.pts.length >= 3) finishDrawing(drawing.pts)
         else setDrawing(null)
@@ -739,6 +913,10 @@ export function SheetStage() {
       event.stopPropagation()
       if (drawing) {
         drawDown(event)
+        return
+      }
+      if (openingsOn) {
+        doorClick(event)
         return
       }
       if (measure) {
@@ -797,6 +975,11 @@ export function SheetStage() {
       )
     },
     onPointerMove: (event: ReactPointerEvent) => {
+      if (openingsOn && !doorDrag) {
+        const [x, y] = pointAt(event.clientX, event.clientY)
+        setDoorHover(armed && armed !== 'open' ? doorAt(x, y, doorWidth, sheet, STOREY) : null)
+        return
+      }
       if (drawing && (drawing.shape === 'poly' ? drawing.pts.length : drawing.from)) {
         drawMove(event)
         return
@@ -1027,7 +1210,9 @@ export function SheetStage() {
         polygon: held?.pts.length ?? 0,
         reshaping: !!reshaping,
         measuring: !!measure,
-        dragging: !!dragRef.current,
+        dragging: !!dragRef.current || !!doorDragRef.current,
+        openings: openingsOn,
+        doorSelected: !!doorInHand,
         grid: settings.grid,
       })
       if (!command) return
@@ -1075,7 +1260,44 @@ export function SheetStage() {
         case 'close-polygon':
           if (held) finishDrawing(held.pts)
           return
+        case 'step':
+          goStep(command.to === 'other' ? (openingsOn ? 'zoning' : 'openings') : command.to)
+          return
+        case 'door-swing':
+          onDoor((ref) => flipDoor(docRef.current.sheet, { room: ref.room, door: ref.id }))
+          return
+        case 'door-hinge':
+          onDoor((ref) => hingeDoor(docRef.current.sheet, { room: ref.room, door: ref.id }))
+          return
+        case 'door-hinge-or-swing':
+          event.preventDefault()
+          if (doorInHand?.hinges)
+            onDoor((ref) => hingeDoor(docRef.current.sheet, { room: ref.room, door: ref.id }))
+          else if (doorInHand?.swings)
+            onDoor((ref) => flipDoor(docRef.current.sheet, { room: ref.room, door: ref.id }))
+          return
+        case 'door-slide':
+          event.preventDefault()
+          onDoor((ref) =>
+            slideDoor(docRef.current.sheet, {
+              room: ref.room,
+              door: ref.id,
+              step: command.step,
+            }),
+          )
+          return
+        case 'door-remove':
+          event.preventDefault()
+          onDoor((ref) => removeDoor(docRef.current.sheet, { room: ref.room, door: ref.id }))
+          return
         case 'escape':
+          // Esc never leaves the step: it drops the door in hand, then the type armed
+          if (openingsOn) {
+            if (doorSel) setDoorSel(null)
+            else if (armed) armType(null)
+            else if (menu) setMenu(null)
+            return
+          }
           if (measure) setMeasure(null)
           else if (menu) setMenu(null)
           else if (held) setDrawing(null)
@@ -1137,23 +1359,32 @@ export function SheetStage() {
 
   const parts: Part[] = measure
     ? measuringSentence(measure)
-    : drawing
-      ? drawingSentence({
-          name: sheet.rooms.find((r) => r.id === drawing.id)?.name ?? '',
-          target: sheet.rooms.find((r) => r.id === drawing.id)?.target ?? 0,
-          shape: drawing.shape,
-          area: (() => {
-            const poly = shapePolygon(drawing)
-            return poly ? polyArea(poly) : null
-          })(),
-          snapKind: drawing.snap?.kind ?? null,
-          reshaping: drawing.reshaping,
-          roomArea: (() => {
-            const room = view.rooms.find((r) => r.id === drawing.id)
-            return room ? r2(areaOf(room)) : 0
-          })(),
+    : openingsOn
+      ? openingsSentence(view.read, {
+          armed,
+          width: doorWidth,
+          hover: doorHover ? { why: doorHover.why, snapped: doorHover.pl.snapped ?? null } : null,
+          door: doorInHand,
+          sliding: !!doorDrag?.moved,
+          lost: lostCount,
         })
-      : sentenceOf(view.read, settings)
+      : drawing
+        ? drawingSentence({
+            name: sheet.rooms.find((r) => r.id === drawing.id)?.name ?? '',
+            target: sheet.rooms.find((r) => r.id === drawing.id)?.target ?? 0,
+            shape: drawing.shape,
+            area: (() => {
+              const poly = shapePolygon(drawing)
+              return poly ? polyArea(poly) : null
+            })(),
+            snapKind: drawing.snap?.kind ?? null,
+            reshaping: drawing.reshaping,
+            roomArea: (() => {
+              const room = view.rooms.find((r) => r.id === drawing.id)
+              return room ? r2(areaOf(room)) : 0
+            })(),
+          })
+        : sentenceOf(view.read, settings)
 
   const tagRoom = tag ? view.rooms.find((r) => r.id === tag.id) : null
 
@@ -1171,15 +1402,41 @@ export function SheetStage() {
   const pickedPocket = pocketPicked !== null ? (view.pockets[pocketPicked] ?? null) : null
 
   return (
-    <div className="sheet-stage" style={colourVars(settings)}>
+    <div className={`sheet-stage${openingsOn ? ' openings' : ''}`} style={colourVars(settings)}>
       <p className="head-line">
-        Zoning by hand on the fresh brief&rsquo;s corner plot, 20 × 25 m, service street south, side
-        street east, north turned 25°. Ground floor. Drag a room from the program and drop it where
-        you want it, or draw it; R turns it; a room dropped on another waits, tinted, or pushes the
-        lower one; right-click it to settle the overlap, or right-click an empty space walled in by
-        rooms to give it away, make it a court, or make it a corridor.
+        {openingsOn ? (
+          <>
+            Openings on the ground floor. Rooms fade to outlines and every click is about a wall or
+            a door. Arm a type in the bar and click a wall: the door lands a jamb from the corner or
+            at the middle. Click near a door to select it and drag it to slide it along its wall; a
+            metre off the wall it comes free for another. A shared wall takes one door for both
+            rooms, a wall on the boundary takes none, and Open wall takes out only the stretch two
+            rooms share. Click a room in the list to light its walls.
+          </>
+        ) : (
+          <>
+            Zoning by hand on the fresh brief&rsquo;s corner plot, 20 × 25 m, service street south,
+            side street east, north turned 25°. Ground floor. Drag a room from the program and drop
+            it where you want it, or draw it; R turns it; a room dropped on another waits, tinted,
+            or pushes the lower one; right-click it to settle the overlap, or right-click an empty
+            space walled in by rooms to give it away, make it a court, or make it a corridor.
+          </>
+        )}
       </p>
       <div className="tools">
+        <div className="seg steps">
+          {(['zoning', 'openings'] as const).map((to) => (
+            <button
+              key={to}
+              type="button"
+              className={step === to ? 'on' : ''}
+              title={to === 'zoning' ? 'Z' : 'O'}
+              onClick={() => goStep(to)}
+            >
+              {to === 'zoning' ? 'Zoning' : 'Openings'}
+            </button>
+          ))}
+        </div>
         <span className="grp">
           <button type="button" onClick={stepBack} title="Ctrl+Z">
             Undo
@@ -1245,7 +1502,37 @@ export function SheetStage() {
           </button>
           <span className="state">{specState}</span>
         </span>
-        <span className="grp">
+        {openingsOn && (
+          <OpeningsTools
+            armed={armed}
+            width={doorWidth}
+            door={doorInHand}
+            onArm={armType}
+            onWidth={pickWidth}
+            onSwing={() => doorChoice({ kind: 'flip' })}
+            onHinge={() => doorChoice({ kind: 'hinge' })}
+            onWider={(by) =>
+              onDoor((ref) =>
+                setDoorWidth(docRef.current.sheet, {
+                  room: ref.room,
+                  door: ref.id,
+                  w: (doorInHand?.width ?? DOOR.door.w) + by,
+                }),
+              )
+            }
+            onRemove={() => doorChoice({ kind: 'remove' })}
+            onReattach={() =>
+              onDoor((ref) =>
+                reattachDoor(docRef.current.sheet, {
+                  room: ref.room,
+                  door: ref.id,
+                  storey: STOREY,
+                }),
+              )
+            }
+          />
+        )}
+        <span className="grp room-tools">
           <button
             type="button"
             title="R"
@@ -1359,6 +1646,9 @@ export function SheetStage() {
             setPocketPicked(null)
             setMenu(null)
           }}
+          openings={openingsOn}
+          lit={lit}
+          onLight={(room) => setLit((was) => (was === room.id ? null : room.id))}
           onRemove={(room) => apply(removeRoom(sheet, { id: room.id }))}
           onReorder={(id, before) => apply(reorder(docRef.current.sheet, { id, before }))}
           onDrawMenu={setDrawMenuFor}
@@ -1413,6 +1703,44 @@ export function SheetStage() {
                 reshaping={reshaping ? reshaping.id : null}
                 pocketPicked={pocketPicked}
                 hover={hover}
+                lit={lit}
+                openings={
+                  openingsOn
+                    ? {
+                        selected: doorSel,
+                        armed: armed && armed !== 'open' ? { type: armed, w: doorWidth } : null,
+                        armedAt: doorHover,
+                        draggedTo: doorDrag?.hit ?? null,
+                        dragged: doorDrag ? { type: doorDrag.type, w: doorDrag.w } : null,
+                        onDoorDown: (room, door, event) => {
+                          if (event.button !== 0) return
+                          event.preventDefault()
+                          event.stopPropagation()
+                          setDoorSel({ room: room.id, id: door.id })
+                          setMenu(null)
+                          const began = beginDoorDrag(
+                            docRef.current.sheet,
+                            STOREY,
+                            { room: room.id, id: door.id },
+                            pointAt(event.clientX, event.clientY),
+                          )
+                          doorDragRef.current = began
+                          setDoorDrag(began)
+                        },
+                        onDoorMenu: (room, door, event) => {
+                          event.preventDefault()
+                          event.stopPropagation()
+                          setDoorSel({ room: room.id, id: door.id })
+                          setSelection([])
+                          setMenu({
+                            kind: 'door',
+                            door: { room: room.id, id: door.id },
+                            at: inBox(event.clientX, event.clientY),
+                          })
+                        },
+                      }
+                    : null
+                }
                 panning={!!pan}
                 camera={camera}
                 svgRef={(element) => {
@@ -1452,6 +1780,9 @@ export function SheetStage() {
                   sheet={sheet}
                   onChoose={(choice) => pocketChoice(menu.pocket, choice)}
                 />
+              )}
+              {menu?.kind === 'door' && doorInHand && (
+                <DoorMenu at={menu.at} door={doorInHand} onChoose={doorChoice} />
               )}
               {menu?.kind === 'note' && <EmptyNote at={menu.at} note={menu.note} />}
               {tagRoom && tag && (

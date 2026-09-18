@@ -19,6 +19,14 @@ type KeyCommand =
   | { kind: 'undo' }
   | { kind: 'redo' }
   | { kind: 'quarter-turn' }
+  /** The step switch: Zoning and Openings, never Esc. */
+  | { kind: 'step'; to: 'zoning' | 'openings' | 'other' }
+  | { kind: 'door-swing' }
+  | { kind: 'door-hinge' }
+  /** Space on a door: the hinge changes side, or a door without a hinge swings the other way. */
+  | { kind: 'door-hinge-or-swing' }
+  | { kind: 'door-slide'; step: number }
+  | { kind: 'door-remove' }
 
 /** What a key press means depends on what is in hand. */
 export type KeyWorld = {
@@ -30,6 +38,9 @@ export type KeyWorld = {
   reshaping: boolean
   measuring: boolean
   dragging: boolean
+  /** The Openings step, and whether a door is in hand in it. */
+  openings: boolean
+  doorSelected: boolean
   /** The grid step, which is how far one arrow nudges. */
   grid: number
 }
@@ -57,6 +68,23 @@ export function keyCommand(press: KeyPress, world: KeyWorld): KeyCommand | null 
   if (command && lower === 'v') return { kind: 'paste' }
   if (command && lower === 'z') return press.shiftKey ? { kind: 'redo' } : { kind: 'undo' }
   if (command) return null
+  if (lower === 'z') return { kind: 'step', to: 'zoning' }
+  if (lower === 'o') return { kind: 'step', to: 'openings' }
+  if (lower === 'd') return { kind: 'step', to: 'other' }
+  if (world.openings && world.doorSelected) {
+    if (lower === 'f') return { kind: 'door-swing' }
+    if (lower === 'h') return { kind: 'door-hinge' }
+    if (key === ' ') return { kind: 'door-hinge-or-swing' }
+    if (key === 'Delete' || key === 'Backspace') return { kind: 'door-remove' }
+    const along = arrows[key]
+    if (along)
+      return {
+        kind: 'door-slide',
+        step: (press.shiftKey ? 1 : world.grid || 0.25) * (along[0] + along[1] < 0 ? -1 : 1),
+      }
+  }
+  // Fit stays on its button while doors are in hand, because F swings the one selected
+  if (world.openings && lower === 'f') return null
   if (key === 'Enter' && world.reshaping) return { kind: 'apply-reshape' }
   if (key === 'Escape' && world.reshaping)
     return world.drawing && world.polygon > 0

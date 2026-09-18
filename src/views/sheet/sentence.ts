@@ -3,7 +3,15 @@
  * Nothing here computes a number; every number comes from `report`.
  */
 
-import { fmt, storeyNameOf, type Report, type Settings } from '../../sheet'
+import {
+  DOOR,
+  fmt,
+  storeyNameOf,
+  type DoorRead,
+  type DoorType,
+  type Report,
+  type Settings,
+} from '../../sheet'
 
 /** One clause of the sentence. `lead` is written bold, as the mock writes the storey and the walk. */
 export type Part = { lead?: string; text: string; bad?: boolean }
@@ -85,26 +93,126 @@ export function sentenceOf(read: Report, settings: Settings): Part[] {
     parts.push({
       text: `${read.pockets.count} enclosed ${plural(read.pockets.count, 'space', 'spaces')}, ${fmt(read.pockets.area)} m² together`,
     })
-  const walk = read.walk
-  if (walk) {
-    parts.push({
-      lead: 'Walk',
-      text: `${walk.reached} of ${walk.all} reached from ${walk.from}`,
-    })
-    if (walk.unreached.length)
-      parts.push({ text: `not reached: ${walk.unreached.join(', ')}`, bad: true })
-    if (walk.entryWithoutOutsideDoor)
-      parts.push({ text: `${walk.entryWithoutOutsideDoor} has no door from outside`, bad: true })
-    if (walk.diwaniyaWithoutStreetDoor)
-      parts.push({ text: `${walk.diwaniyaWithoutStreetDoor} has no street door`, bad: true })
-    for (const hall of walk.hallways)
-      parts.push({
-        text: `${hall.name} serves ${hall.doors} ${plural(hall.doors, 'door', 'doors')}`,
-      })
-    if (walk.cannotOpen.length)
-      parts.push({ text: `a door in ${walk.cannotOpen.join(', ')} cannot open`, bad: true })
-  }
+  parts.push(...walkParts(read))
   return parts
+}
+
+/** The walk test, in the mock's words: who is reached, who is not, and what a door cannot do. */
+function walkParts(read: Report): Part[] {
+  const walk = read.walk
+  if (!walk) return []
+  const parts: Part[] = [
+    { lead: 'Walk', text: `${walk.reached} of ${walk.all} reached from ${walk.from}` },
+  ]
+  if (walk.unreached.length)
+    parts.push({ text: `not reached: ${walk.unreached.join(', ')}`, bad: true })
+  if (walk.entryWithoutOutsideDoor)
+    parts.push({ text: `${walk.entryWithoutOutsideDoor} has no door from outside`, bad: true })
+  if (walk.diwaniyaWithoutStreetDoor)
+    parts.push({ text: `${walk.diwaniyaWithoutStreetDoor} has no street door`, bad: true })
+  for (const hall of walk.hallways)
+    parts.push({
+      text: `${hall.name} serves ${hall.doors} ${plural(hall.doors, 'door', 'doors')}`,
+    })
+  if (walk.cannotOpen.length)
+    parts.push({ text: `a door in ${walk.cannotOpen.join(', ')} cannot open`, bad: true })
+  return parts
+}
+
+/** What the Openings step has in hand, which is what its sentence reads. */
+export type OpeningsState = {
+  armed: DoorType | null
+  width: number
+  /** What the wall under the pointer would take, or why it will not. */
+  hover: { why: string | null; snapped: 'jamb' | 'middle' | null } | null
+  door: DoorRead | null
+  sliding: boolean
+  lost: number
+}
+
+/**
+ * The Openings line: what the hand can do next, then the walk, which is this step's whole point.
+ * The mock prints the walk under the Zoning sentence; the step that makes the doors reads it too.
+ */
+export function openingsSentence(read: Report, state: OpeningsState): Part[] {
+  const lead = 'Openings'
+  if (state.sliding)
+    return [
+      {
+        lead,
+        text: 'sliding along the wall; a metre off it, the door comes free for another wall',
+      },
+    ]
+  const lost: Part[] = state.lost
+    ? [
+        {
+          text: `${state.lost} ${state.lost > 1 ? 'doors lost their' : 'door lost its'} wall: click the red ring`,
+          bad: true,
+        },
+      ]
+    : []
+  const door = state.door
+  if (door && !door.onWall)
+    return [
+      {
+        lead,
+        text: `${door.label} on ${door.room} lost its wall · put it on the nearest wall, or remove it`,
+      },
+      ...walkParts(read),
+    ]
+  if (door)
+    return [
+      {
+        lead,
+        text: `${door.label} on ${door.room}, ${fmt(door.width)} m${
+          door.across ? `, shared with ${door.across}` : ', to the outside'
+        }${door.swingsInto ? `, swings into ${door.swingsInto}` : ''} · drag to slide, arrows a grid step${
+          door.swings ? ' · F swing' : ''
+        }${door.hinges ? ', H or Space hinge' : ''} · Delete removes`,
+      },
+      ...walkParts(read),
+    ]
+  const leaves = 'Zoning (Z) leaves the step'
+  if (!state.armed)
+    return [
+      {
+        lead,
+        text: `click near a door to select it, drag to slide it · arm a type in the bar to place doors`,
+      },
+      ...lost,
+      { text: leaves },
+      ...walkParts(read),
+    ]
+  if (state.armed === 'open')
+    return [
+      {
+        lead,
+        text: 'click a wall shared with a neighbour; the stretch they share is taken out, one opening per neighbour, never past a corner · Esc puts the tool down',
+      },
+      ...lost,
+      { text: leaves },
+      ...walkParts(read),
+    ]
+  const caught = state.hover?.why
+    ? null
+    : state.hover?.snapped
+      ? state.hover.snapped === 'middle'
+        ? 'middle of the wall'
+        : 'a jamb from the corner'
+      : null
+  return [
+    {
+      lead,
+      text: `click a wall to place a ${DOOR[state.armed].label.toLowerCase()} of ${fmt(state.width)} m${
+        caught ? ` · ${caught}` : ''
+      }`,
+    },
+    ...(state.hover?.why ? [{ text: state.hover.why, bad: true }] : []),
+    { text: 'click near a door to select it · Esc puts the type down' },
+    ...lost,
+    { text: leaves },
+    ...walkParts(read),
+  ]
 }
 
 /** While a measure is in hand, the sentence reads the measure instead. */

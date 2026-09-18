@@ -56,6 +56,8 @@ import {
   type Measure,
 } from './gestures'
 import { snapWord } from './sentence'
+import { frameOf, p4 } from './shape'
+import { Doors, type OpeningsDraw } from './Doors'
 
 /** How far past the plot the sheet is drawn, so the north arrow and the street names have room. */
 const PAD = 1.6
@@ -76,6 +78,8 @@ export type SheetRead = {
   read: Report
   /** The sides built past their budget, so a boundary wall is drawn in the warning colour. */
   over: Set<string>
+  /** How many doors in each room stands, and which the walk never reaches: the Openings step only. */
+  walk: { depth: Map<string, number>; unreached: Set<string> } | null
 }
 
 export type SheetHandlers = {
@@ -114,16 +118,14 @@ type SheetViewProps = {
   pocketPicked: number | null
   /** The room the pointer is over, in the sheet or in the mass: hover is shared between them. */
   hover: string | null
+  /** The Openings step: the doors answer the hand, and the room lit from the program list. */
+  openings: OpeningsDraw | null
+  lit: string | null
   panning: boolean
   camera: Camera
   svgRef: (element: SVGSVGElement | null) => void
   on: SheetHandlers
 }
-
-const p4 = (v: number) => Number(v.toFixed(4))
-
-const frameOf = (r: Room) =>
-  `translate(${p4(r.x)} ${p4(r.y)}) rotate(${r.angle || 0} ${p4(r.w / 2)} ${p4(r.h / 2)})`
 
 const bodyPath = (r: Room) =>
   piecesOf(r)
@@ -205,7 +207,7 @@ export function SheetView(props: SheetViewProps) {
   const drawn = drawing ? shapePolygon(drawing) : null
   return (
     <svg
-      className={`sheet${drawing ? ' drawing' : ''}${measure ? ' measuring' : ''}${reshaping ? ' reshaping' : ''}${props.panning ? ' panning' : ''}`}
+      className={`sheet${props.openings ? ' doormode' : ''}${drawing ? ' drawing' : ''}${measure ? ' measuring' : ''}${reshaping ? ' reshaping' : ''}${props.panning ? ' panning' : ''}`}
       ref={props.svgRef}
       viewBox={viewBoxOf(sheetExtent, props.camera)}
       onPointerDown={on.onBackgroundDown}
@@ -291,12 +293,15 @@ export function SheetView(props: SheetViewProps) {
         const picked = selection.includes(r.id)
         const plan = view.labels.get(r.id)
         const spill = view.read.spills.includes(r.name)
+        const depth = view.walk?.depth.get(r.id)
         return (
           <g
             key={r.id}
             className={`room ${r.cat}${picked ? ' selected' : ''}${hover === r.id ? ' hover' : ''}${over ? ' over' : ''}${
               drag && 'id' in drag && drag.id === r.id ? ' moving' : ''
-            }${r.locked ? ' locked' : ''}${reshaping === r.id ? ' target' : ''}`}
+            }${r.locked ? ' locked' : ''}${reshaping === r.id ? ' target' : ''}${
+              view.walk?.unreached.has(r.id) ? ' unreached' : ''
+            }${props.lit === r.id ? ' lit' : ''}`}
             transform={frameOf(r)}
             data-room={r.id}
             onPointerDown={(event) => on.onRoomDown(r, event)}
@@ -318,8 +323,15 @@ export function SheetView(props: SheetViewProps) {
               <Label
                 room={r}
                 plan={plan}
+                depth={depth === undefined ? null : `${depth} ${depth === 1 ? 'door' : 'doors'} in`}
                 movable={
-                  picked && selection.length === 1 && !r.fixed && !measure && !reshaping && !drawing
+                  picked &&
+                  selection.length === 1 &&
+                  !r.fixed &&
+                  !measure &&
+                  !reshaping &&
+                  !drawing &&
+                  !props.openings
                 }
                 typable={picked && selection.length === 1 && !r.fixed && !r.locked && !isOpen(r)}
                 on={on}
@@ -415,6 +427,7 @@ export function SheetView(props: SheetViewProps) {
           />
         )
       })}
+      <Doors sheet={sheet} storey={storey} rooms={shown} openings={props.openings} />
       {focus && settings.dims !== 'none' && !reshaping && (
         <Dims room={focus} rooms={shown} settings={settings} typable={!drag} on={on} />
       )}
@@ -554,12 +567,15 @@ function BoundaryWall({ wall, over }: { wall: Seg & { side: string }; over: bool
 function Label({
   room,
   plan,
+  depth,
   movable,
   typable,
   on,
 }: {
   room: Room
   plan: LabelPlan
+  /** How many doors in the room stands, written over its name while the walk is read. */
+  depth: string | null
   movable: boolean
   typable: boolean
   on: SheetHandlers
@@ -586,6 +602,16 @@ function Label({
       >
         {plan.name}
       </text>
+      {depth && (
+        <text
+          className="depth"
+          x={p4(cx)}
+          y={p4(cy - (line ? plan.size * 0.9 + 0.35 : plan.size * 0.5 + 0.4))}
+          textAnchor="middle"
+        >
+          {depth}
+        </text>
+      )}
       {line && (
         <text
           className={`area${short ? ' short' : ''}${typable ? ' typable' : ''}`}
