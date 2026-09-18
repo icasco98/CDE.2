@@ -237,3 +237,11 @@ export {
   ungroup,
   unlock,
 } from './actions'
+
+export type { AgentTool, Desk } from './agent'
+export { layoutTools, sheetRead } from './agent'
+
+export type { Memory } from './memory'
+export { newMemory, readMemory, withFeedback, withNote, withPlan } from './memory'
+
+export { promptFor } from './prompt'
