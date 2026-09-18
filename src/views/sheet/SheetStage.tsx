@@ -65,8 +65,10 @@ import {
   worldPieces,
   BUILD,
   type Change,
+  type Memory,
   type Pocket,
   type Point,
+  type Result,
   type Room,
   type Sheet,
   type Side4,
@@ -109,6 +111,9 @@ import {
   type Measure,
   type Shape,
 } from './gestures'
+import { Chat } from './Chat'
+import { useRuntime } from './claude'
+import { keepMemory, keepSheet, localMemory, localSheet, storedMemory, storedSheet } from './store'
 import { keyCommand, keyRelease } from './keys'
 import { drawingSentence, measuringSentence, sentenceOf, type Part } from './sentence'
 import './sheet.css'
@@ -138,7 +143,11 @@ type TypeIn = {
 
 export function SheetStage() {
   const started = performance.now()
-  const [doc, setDoc] = useState<Doc>(() => ({ sheet: sampleSheet(), history: newHistory() }))
+  const [doc, setDoc] = useState<Doc>(() => ({
+    sheet: localSheet() ?? sampleSheet(),
+    history: newHistory(),
+  }))
+  const [memory, setMemory] = useState<Memory>(() => localMemory())
   const [selection, setSelection] = useState<string[]>([])
   const [drag, setDrag] = useState<Drag | null>(null)
   const [drawing, setDrawing] = useState<Drawing | null>(null)
@@ -158,6 +167,7 @@ export function SheetStage() {
   const [drawMenuFor, setDrawMenuFor] = useState<string | null>(null)
   const clipboard = useRef<{ ids: string[]; pastes: number } | null>(null)
   const spaceHeld = useRef(false)
+  const touched = useRef(false)
   const svg = useRef<SVGSVGElement | null>(null)
   const box = useRef<HTMLDivElement | null>(null)
   const dragRef = useRef<Drag | null>(null)
@@ -169,6 +179,43 @@ export function SheetStage() {
 
   const { sheet } = doc
   const { settings } = sheet
+  const runtime = useRuntime()
+  // Saving waits until the link's store has been read, so an opening sheet cannot overwrite it.
+  const [keeping, setKeeping] = useState(false)
+
+  useEffect(() => {
+    if (!runtime.ready) return
+    const store = runtime.store
+    if (!store) {
+      setKeeping(true)
+      return
+    }
+    let live = true
+    void Promise.all([storedSheet(store), storedMemory(store)]).then(([stored, kept]) => {
+      if (!live) return
+      if (stored && !touched.current) {
+        docRef.current = { sheet: stored, history: newHistory() }
+        setDoc(docRef.current)
+      }
+      if (kept) setMemory(kept)
+      setKeeping(true)
+    })
+    return () => {
+      live = false
+    }
+  }, [runtime.ready, runtime.store])
+
+  useEffect(() => {
+    if (!keeping) return
+    const timer = window.setTimeout(() => keepSheet(sheet, runtime.store), 400)
+    return () => window.clearTimeout(timer)
+  }, [sheet, keeping, runtime.store])
+
+  useEffect(() => {
+    if (!keeping) return
+    const timer = window.setTimeout(() => keepMemory(memory, runtime.store), 400)
+    return () => window.clearTimeout(timer)
+  }, [memory, keeping, runtime.store])
 
   useLayoutEffect(() => {
     const frames = (window.sheetFrames ??= [])
@@ -216,6 +263,7 @@ export function SheetStage() {
     }
     const now = docRef.current
     const next = { sheet: change.sheet, history: remember(now.history, now.sheet) }
+    touched.current = true
     docRef.current = next
     setDoc(next)
     setFlash(null)
@@ -245,6 +293,46 @@ export function SheetStage() {
     if (!forward.result.ok) return
     docRef.current = { sheet: forward.sheet, history: forward.history }
     setDoc(docRef.current)
+  }
+
+  // The assistant's changes are not undo steps of their own: one message is one step.
+  const agentWrite = (change: Change): Result => {
+    if (change.result.ok) {
+      touched.current = true
+      docRef.current = { ...docRef.current, sheet: change.sheet }
+      setDoc(docRef.current)
+    }
+    return change.result
+  }
+
+  const agentBegin = () => {
+    const now = docRef.current
+    docRef.current = { ...now, history: remember(now.history, now.sheet) }
+    setDoc(docRef.current)
+  }
+
+  const agentEnd = (changed: boolean) => {
+    if (changed) return
+    const { past, future } = docRef.current.history
+    docRef.current = { ...docRef.current, history: { past: past.slice(0, -1), future } }
+    setDoc(docRef.current)
+  }
+
+  const backToSample = () => {
+    const now = docRef.current
+    touched.current = true
+    docRef.current = {
+      sheet: sampleSheet(now.sheet.settings),
+      history: remember(now.history, now.sheet),
+    }
+    setDoc(docRef.current)
+    setSelection([])
+    setMenu(null)
+  }
+
+  const clearPlan = () => {
+    if (apply(sendBack(docRef.current.sheet, { ids: docRef.current.sheet.rooms.map((r) => r.id) })))
+      setSelection([])
   }
 
   const hold = (next: Drag | null) => {
@@ -1011,6 +1099,14 @@ export function SheetStage() {
             Measure
           </button>
         </span>
+        <span className="grp far">
+          <button type="button" onClick={backToSample} title="Put the sample sheet back">
+            Back to the sample
+          </button>
+          <button type="button" onClick={clearPlan}>
+            Clear the plan
+          </button>
+        </span>
         <span className="grp">
           <button
             type="button"
@@ -1281,6 +1377,17 @@ export function SheetStage() {
             </span>
           </div>
         </div>
+        <Chat
+          read={() => docRef.current.sheet}
+          write={agentWrite}
+          storey={STOREY}
+          memory={memory}
+          onMemory={setMemory}
+          sample={runtime.sample}
+          ready={runtime.ready}
+          onBegin={agentBegin}
+          onEnd={agentEnd}
+        />
       </div>
     </div>
   )

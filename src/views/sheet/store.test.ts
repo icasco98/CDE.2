@@ -1,0 +1,95 @@
+import { beforeEach, describe, expect, it } from 'vitest'
+import {
+  MEMORY_DOC,
+  MEMORY_KEY,
+  SHEET_DOC,
+  SHEET_KEY,
+  keepMemory,
+  keepSheet,
+  localMemory,
+  localSheet,
+  sheetFrom,
+  sheetKept,
+  storedMemory,
+  storedSheet,
+} from './store'
+import { newMemory, sampleSheet, withNote, type Sheet } from '../../sheet'
+import type { Store } from './claude'
+
+/** A browser's store, as much of one as the tool uses. */
+function fakeLocal(): void {
+  const held = new Map<string, string>()
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => held.get(key) ?? null,
+      setItem: (key: string, value: string) => held.set(key, value),
+      removeItem: (key: string) => held.delete(key),
+    },
+  })
+}
+
+/** The artifact's store: one document per path, last write standing. */
+function fakeStore(): { store: Store; docs: Map<string, Record<string, unknown>> } {
+  const docs = new Map<string, Record<string, unknown>>()
+  return {
+    docs,
+    store: {
+      doc: (path) => ({
+        get: async () => ({ exists: docs.has(path), data: () => docs.get(path) }),
+        set: async (data) => {
+          docs.set(path, data)
+        },
+      }),
+    },
+  }
+}
+
+const placed = (sheet: Sheet) => sheet.rooms.filter((r) => r.placed).length
+
+describe('where the sheet and the memory are kept', () => {
+  beforeEach(fakeLocal)
+
+  it('writes the sheet and the memory to this browser and reads them back', () => {
+    const sheet = sampleSheet()
+    keepSheet(sheet, null)
+    keepMemory(withNote(newMemory(), 'north is 25°', '2026-09-18T11:00:00.000Z'), null)
+    expect(placed(localSheet()!)).toBe(placed(sheet))
+    expect(localMemory().notes[0]!.text).toBe('north is 25°')
+    expect(globalThis.localStorage.getItem(SHEET_KEY)).toContain('Diwaniya')
+    expect(globalThis.localStorage.getItem(MEMORY_KEY)).toContain('north is 25')
+  })
+
+  it('writes to the link’s store as well when there is one', async () => {
+    const { store, docs } = fakeStore()
+    keepSheet(sampleSheet(), store)
+    keepMemory(newMemory(), store)
+    await Promise.resolve()
+    expect(docs.has(SHEET_DOC)).toBe(true)
+    expect(docs.has(MEMORY_DOC)).toBe(true)
+    expect(placed((await storedSheet(store))!)).toBe(17)
+    expect(await storedMemory(store)).toEqual(newMemory())
+  })
+
+  it('does not read back a layout of another program, or nonsense', () => {
+    expect(sheetFrom({ ...sheetKept(sampleSheet()), program: 'another-brief' })).toBeNull()
+    expect(sheetFrom(null)).toBeNull()
+    expect(sheetFrom({ program: 'fresh-brief-2' })).toBeNull()
+    expect(localSheet()).toBeNull()
+    expect(localMemory()).toEqual(newMemory())
+  })
+
+  it('keeps the settings the sheet was saved with', () => {
+    const kept = sheetKept(sampleSheet({ rule: 'push', grid: 0.5 }))
+    const read = sheetFrom(kept)!
+    expect(read.settings.rule).toBe('push')
+    expect(read.settings.grid).toBe(0.5)
+  })
+
+  it('reads back a cleared sheet as cleared, so an emptied plan stays empty', () => {
+    const sheet = sampleSheet()
+    for (const room of sheet.rooms) room.placed = false
+    keepSheet(sheet, null)
+    expect(placed(localSheet()!)).toBe(0)
+  })
+})
