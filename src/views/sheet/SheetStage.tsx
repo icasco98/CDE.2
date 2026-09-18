@@ -214,7 +214,13 @@ export function SheetStage() {
   const program = useMemo(() => programOf(project.rooms), [project.rooms])
   const plot = useMemo(() => plotOf(project.plot), [project.plot])
   const [doc, setDoc] = useState<Doc>(() => ({
-    sheet: followProject(localSheet() ?? sampleSheet(), program, plot),
+    // Nothing saved yet: a project with a brief of its own opens on an empty plot with its program
+    // waiting, and one with no brief opens on the owner's sample, which is the sheet to learn on.
+    sheet: followProject(
+      localSheet() ?? (program.length ? sheetOf([]) : sampleSheet()),
+      program,
+      plot,
+    ),
     history: newHistory(),
   }))
   const [memory, setMemory] = useState<Memory>(() => localMemory())
@@ -1690,9 +1696,10 @@ export function SheetStage() {
           lit={lit}
           onLight={(room) => setLit((was) => (was === room.id ? null : room.id))}
           onRemove={(room) => {
-            // A room the brief names is taken out of the brief; one the sheet keeps aside is its own.
-            if (room.aside) apply(removeRoom(sheet, { id: room.id }))
-            else refuse(removeFromProgram(session, sheet.rooms, room.id))
+            // A room the brief names goes out of the brief as well as off the sheet; one the sheet
+            // keeps aside is its own, and only the sheet has it to lose.
+            if (!room.aside) refuse(removeFromProgram(session, sheet.rooms, room.id))
+            apply(removeRoom(docRef.current.sheet, { id: room.id }))
           }}
           onReorder={(id, before) => refuse(moveInProgram(session, sheet.rooms, id, before))}
           onDrawMenu={setDrawMenuFor}
