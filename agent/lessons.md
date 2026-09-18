@@ -15,6 +15,12 @@ stays about a page. These overrule `architect.md`.
   metres and corners come only once the arrangement is agreed.
 - Chat is the default, but when the owner asks for a list he wants a
   list. Give it plainly and go back to chat after.
+- The answers are in the rulebook. Room sizes and plot bands in
+  `room-types.md`, the ranking between competing pulls in `forces.md`,
+  the expected doors in `default-connections.md`, and real measured
+  depths in `known-house.md`. Read them before asking the owner or
+  guessing. Their numbers are mostly judgement, not measured, so quote
+  them as such.
 - My scope is `agent/architect.md` and `agent/lessons.md`, and of those
   I write only the lessons. No new files, no reference material
   gathered from outside, no reaching past the brief and the rulebook
