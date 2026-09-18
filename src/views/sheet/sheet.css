@@ -369,7 +369,7 @@ body:has(main.stage-sheet) {
 .sheet-stage .middle {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-rows: minmax(420px, 1fr) auto auto;
+  grid-template-rows: minmax(0, 1fr) auto auto;
   min-height: 0;
   gap: 8px;
 }
@@ -381,6 +381,13 @@ body:has(main.stage-sheet) {
 .sheet-stage .middle > .say,
 .sheet-stage .middle > .legend {
   grid-column: 1 / -1;
+}
+
+.sheet-stage .sheet-cell {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 6px;
 }
 
 .sheet-stage .sheet-box {
@@ -968,19 +975,17 @@ body:has(main.stage-sheet) {
 
 /* ---------- what stands over the sheet ---------- */
 
+/* Above the sheet and not over it: on a sheet fitted to the window a floating bar hides the ground
+ * being drawn on. */
 .sheet-stage .reshape-bar {
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
   display: flex;
+  justify-content: center;
   gap: 4px;
   align-items: center;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 4px;
   padding: 4px;
-  z-index: 3;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   flex-wrap: wrap;
 }

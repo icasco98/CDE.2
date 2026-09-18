@@ -1366,25 +1366,7 @@ export function SheetStage() {
           onAdd={(kind, name, area) => apply(addRoom(sheet, { kind, name, area }))}
         />
         <div className="middle">
-          <div className="sheet-box" ref={box}>
-            <SheetView
-              sheet={sheet}
-              storey={STOREY}
-              view={view}
-              selection={selection}
-              drag={drag}
-              drawing={drawing}
-              measure={measure}
-              reshaping={reshaping ? reshaping.id : null}
-              pocketPicked={pocketPicked}
-              hover={hover}
-              panning={!!pan}
-              camera={camera}
-              svgRef={(element) => {
-                svg.current = element
-              }}
-              on={on}
-            />
+          <div className="sheet-cell">
             {(drawing || reshaping) && (
               <div className="reshape-bar">
                 <span className="who">
@@ -1419,86 +1401,106 @@ export function SheetStage() {
                 </button>
               </div>
             )}
-            {pickedPocket && !menu && (
-              <PocketBar
-                at={pocketBarAt(pickedPocket, svg.current, box.current)}
-                pocket={pickedPocket}
-                settings={settings}
-                to={bestNeighbour(pickedPocket, sheet)}
-                onChoose={(choice) => pocketChoice(pickedPocket, choice)}
-              />
-            )}
-            {menu?.kind === 'room' && (
-              <RoomMenu
-                at={menu.at}
-                corner={menu.corner}
-                pivotSet={!!pivot && pivot.key === keyOf(selected.map((r) => r.id))}
-                room={menu.room}
-                selection={selected.filter((r) => !r.fixed)}
-                under={under}
-                canRestore={canRestore(menu.room)}
-                pastSetback={selected.some((r) => outsideBuildable(r, BUILD))}
-                settings={settings}
-                storey={storey}
-                storeys={storeyCountOf(sheet)}
-                onChoose={roomChoice}
-              />
-            )}
-            {menu?.kind === 'pocket' && (
-              <PocketMenu
-                at={menu.at}
-                pocket={menu.pocket}
+            <div className="sheet-box" ref={box}>
+              <SheetView
                 sheet={sheet}
-                onChoose={(choice) => pocketChoice(menu.pocket, choice)}
-              />
-            )}
-            {menu?.kind === 'note' && <EmptyNote at={menu.at} note={menu.note} />}
-            {tagRoom && tag && (
-              <div className="room-tag" style={{ left: `${tag.x}px`, top: `${tag.y}px` }}>
-                <b>{tagRoom.name}</b> ·{' '}
-                {r2(areaOf(tagRoom)) < tagRoom.target - 0.05 ? (
-                  <span className="bad">
-                    {fmt(r2(areaOf(tagRoom)))} of {fmt(tagRoom.target)} m²
-                  </span>
-                ) : (
-                  `${fmt(r2(areaOf(tagRoom)))} m²`
-                )}
-                {tagRoom.locked ? ' · locked' : ''}
-              </div>
-            )}
-            {typeIn && (
-              <input
-                className="typein"
-                autoFocus
-                defaultValue={typeIn.value}
-                style={{ left: `${typeIn.at.x}px`, top: `${typeIn.at.y}px` }}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    const typed = Number.parseFloat(event.currentTarget.value)
-                    setTypeIn(null)
-                    if (Number.isFinite(typed)) apply(typeIn.apply(typed))
-                  }
-                  if (event.key === 'Escape') setTypeIn(null)
+                storey={STOREY}
+                view={view}
+                selection={selection}
+                drag={drag}
+                drawing={drawing}
+                measure={measure}
+                reshaping={reshaping ? reshaping.id : null}
+                pocketPicked={pocketPicked}
+                hover={hover}
+                panning={!!pan}
+                camera={camera}
+                svgRef={(element) => {
+                  svg.current = element
                 }}
-                onBlur={() => setTypeIn(null)}
+                on={on}
               />
-            )}
-            {colouring && (
-              <input
-                type="color"
-                className="typein"
-                aria-label="Colour"
-                autoFocus
-                value={colouring.value}
-                style={{ left: '8px', bottom: '8px', top: 'auto' }}
-                onChange={(event) => {
-                  const value = event.target.value
-                  setColouring({ ...colouring, value })
-                  apply(setColor(docRef.current.sheet, { ids: colouring.ids, color: value }))
-                }}
-                onBlur={() => setColouring(null)}
-              />
-            )}
+              {pickedPocket && !menu && (
+                <PocketBar
+                  at={pocketBarAt(pickedPocket, svg.current, box.current)}
+                  pocket={pickedPocket}
+                  settings={settings}
+                  to={bestNeighbour(pickedPocket, sheet)}
+                  onChoose={(choice) => pocketChoice(pickedPocket, choice)}
+                />
+              )}
+              {menu?.kind === 'room' && (
+                <RoomMenu
+                  at={menu.at}
+                  corner={menu.corner}
+                  pivotSet={!!pivot && pivot.key === keyOf(selected.map((r) => r.id))}
+                  room={menu.room}
+                  selection={selected.filter((r) => !r.fixed)}
+                  under={under}
+                  canRestore={canRestore(menu.room)}
+                  pastSetback={selected.some((r) => outsideBuildable(r, BUILD))}
+                  settings={settings}
+                  storey={storey}
+                  storeys={storeyCountOf(sheet)}
+                  onChoose={roomChoice}
+                />
+              )}
+              {menu?.kind === 'pocket' && (
+                <PocketMenu
+                  at={menu.at}
+                  pocket={menu.pocket}
+                  sheet={sheet}
+                  onChoose={(choice) => pocketChoice(menu.pocket, choice)}
+                />
+              )}
+              {menu?.kind === 'note' && <EmptyNote at={menu.at} note={menu.note} />}
+              {tagRoom && tag && (
+                <div className="room-tag" style={{ left: `${tag.x}px`, top: `${tag.y}px` }}>
+                  <b>{tagRoom.name}</b> ·{' '}
+                  {r2(areaOf(tagRoom)) < tagRoom.target - 0.05 ? (
+                    <span className="bad">
+                      {fmt(r2(areaOf(tagRoom)))} of {fmt(tagRoom.target)} m²
+                    </span>
+                  ) : (
+                    `${fmt(r2(areaOf(tagRoom)))} m²`
+                  )}
+                  {tagRoom.locked ? ' · locked' : ''}
+                </div>
+              )}
+              {typeIn && (
+                <input
+                  className="typein"
+                  autoFocus
+                  defaultValue={typeIn.value}
+                  style={{ left: `${typeIn.at.x}px`, top: `${typeIn.at.y}px` }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      const typed = Number.parseFloat(event.currentTarget.value)
+                      setTypeIn(null)
+                      if (Number.isFinite(typed)) apply(typeIn.apply(typed))
+                    }
+                    if (event.key === 'Escape') setTypeIn(null)
+                  }}
+                  onBlur={() => setTypeIn(null)}
+                />
+              )}
+              {colouring && (
+                <input
+                  type="color"
+                  className="typein"
+                  aria-label="Colour"
+                  autoFocus
+                  value={colouring.value}
+                  style={{ left: '8px', bottom: '8px', top: 'auto' }}
+                  onChange={(event) => {
+                    const value = event.target.value
+                    setColouring({ ...colouring, value })
+                    apply(setColor(docRef.current.sheet, { ids: colouring.ids, color: value }))
+                  }}
+                  onBlur={() => setColouring(null)}
+                />
+              )}
+            </div>
           </div>
           <MassView
             sheet={sheet}
