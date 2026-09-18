@@ -114,6 +114,23 @@ export function createActions(context: Context) {
 
     removeRoom: (id: string): Result => onRoom(id, 'record', (project) => dropRoom(project, id)),
 
+    /**
+     * The order of the rooms is the order of importance, so moving a room in the list is a change to
+     * the design: the room stands before the one named, or last when none is.
+     */
+    moveRoom(id: string, before: string | null): Result {
+      const project = state()
+      const room = findRoom(project, id)
+      if (!room) return missing('room', id)
+      if (before === id)
+        return refused({ code: 'move-before-itself', message: 'a room cannot stand before itself' })
+      const rest = project.rooms.filter((each) => each.id !== id)
+      const at = before === null ? -1 : rest.findIndex((each) => each.id === before)
+      if (before !== null && at < 0) return missing('room', before)
+      const rooms = at < 0 ? [...rest, room] : [...rest.slice(0, at), room, ...rest.slice(at)]
+      return settle({ ...project, rooms })
+    },
+
     rename: (id: string, name: string): Result =>
       onRoom(id, 'record', (project) => patchRoom(project, id, { name })),
 

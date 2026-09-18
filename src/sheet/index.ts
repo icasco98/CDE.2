@@ -1,6 +1,8 @@
 /** The zoning sheet: its model, its geometry, its actions and its report. */
 
 export type { Box, PlotShape, PlotSpec, Side } from './plot'
+export type { Followed, ProgramRoom } from './program'
+export { followProgram, roomFromProgram } from './program'
 export {
   DEFAULT_PLOT,
   FRESH_PLOT,
@@ -201,7 +203,6 @@ export type { Change, History, Result, Side4 } from './actions'
 export {
   HISTORY_CAP,
   addDoor,
-  addRoom,
   addStorey,
   carveBelow,
   clearColor,
@@ -234,7 +235,6 @@ export {
   remember,
   removeDoor,
   removeRoom,
-  reorder,
   reshape,
   resize,
   restOnGrid,

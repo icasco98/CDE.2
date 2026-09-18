@@ -45,7 +45,9 @@ const shapes: [Shape, string, string][] = [
 
 export function Program(props: ProgramProps) {
   const { sheet } = props
-  const list = sheet.rooms.filter((r) => !r.extra)
+  // A room the brief does not name is still on the sheet, so the column shows it, marked as the
+  // sheet's own; a court or a corridor the sheet made is not a room of the program at all.
+  const list = sheet.rooms.filter((r) => !r.extra || r.aside)
   const unplaced = list.filter((r) => !r.placed)
   const upstairs = list.some((r) => r.placed && storeyOf(r) > 0)
 
@@ -87,7 +89,7 @@ export function Program(props: ProgramProps) {
           return (
             <div
               key={room.id}
-              className={`item ${room.cat} ${room.placed ? 'placed' : 'hollow'}${
+              className={`item ${room.cat}${room.aside ? ' aside' : ''} ${room.placed ? 'placed' : 'hollow'}${
                 room.placed &&
                 (props.openings ? props.lit === room.id : props.selection.includes(room.id))
                   ? ' selected'
@@ -96,11 +98,15 @@ export function Program(props: ProgramProps) {
               data-room={room.id}
               style={{ flex: `${room.target} 1 0`, background: room.color ?? undefined }}
               title={
-                props.openings
-                  ? `${room.name}: click to light its walls`
-                  : `${room.name} · ${fmt(room.target)} m² · ${fmt(room.w)} × ${fmt(room.h)} m${
-                      room.placed ? ': click to select it' : ': drag it onto the sheet, or Draw it'
-                    }`
+                room.aside
+                  ? `${room.name} is not in the brief: the × takes it off the sheet`
+                  : props.openings
+                    ? `${room.name}: click to light its walls`
+                    : `${room.name} · ${fmt(room.target)} m² · ${fmt(room.w)} × ${fmt(room.h)} m${
+                        room.placed
+                          ? ': click to select it'
+                          : ': drag it onto the sheet, or Draw it'
+                      }`
               }
               onPointerDown={(event) => {
                 if (event.target instanceof Element && event.target.closest('button')) return
@@ -151,7 +157,11 @@ export function Program(props: ProgramProps) {
               <button
                 type="button"
                 className="x"
-                title={`Remove ${room.name} from the program`}
+                title={
+                  room.aside
+                    ? `Take ${room.name} off the sheet`
+                    : `Remove ${room.name} from the program`
+                }
                 onPointerDown={(event) => event.stopPropagation()}
                 onClick={() => props.onRemove(room)}
               >

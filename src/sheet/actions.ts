@@ -91,7 +91,7 @@ import {
   setDoorWidth as widthOfDoor,
   slideDoor as slideDoorAlong,
 } from './doors'
-import { DOOR, KINDS, KIND_INFO, hasHinge, hasSwing, sizeFor } from './sample'
+import { DOOR, hasHinge, hasSwing, sizeFor } from './sample'
 
 export type Result = {
   ok: boolean
@@ -901,44 +901,7 @@ export function sendBack(sheet: Sheet, input: { ids: string[] }): Change {
   })
 }
 
-export function addRoom(
-  sheet: Sheet,
-  input: { kind: string; name?: string; size?: 'big' | 'medium' | 'small'; area?: number },
-): Change {
-  return edit(sheet, (next) => {
-    const info = KIND_INFO[input.kind]
-    const kind = KINDS[input.kind]
-    if (!info || !kind) return { ok: false, said: `no kind called ${input.kind}` }
-    const [label, lo, hi] = info
-    const target =
-      input.area !== undefined
-        ? input.area
-        : input.size === 'big'
-          ? hi
-          : input.size === 'small'
-            ? lo
-            : r2((lo + hi) / 2)
-    if (!(target > 0)) return { ok: false, said: 'A room needs an area.' }
-    const s = sizeFor(input.kind, target, next.settings)
-    const r: Room = {
-      id: freshId('n', roomIds(next)),
-      name: input.name?.trim() || label,
-      kind: input.kind,
-      cat: kind.cat,
-      target,
-      w: s.w,
-      h: s.h,
-      x: 0,
-      y: 0,
-      angle: 0,
-      pieces: null,
-      placed: false,
-    }
-    next.rooms.push(r)
-    return { ok: true, said: `${r.name} added to the program, ${fmt(target)} m²` }
-  })
-}
-
+/** A room kept aside on the sheet, which the brief does not name, taken off it for good. */
 export function removeRoom(sheet: Sheet, input: { id: string }): Change {
   return edit(sheet, (next) => {
     const r = found(next, input.id)
@@ -946,21 +909,6 @@ export function removeRoom(sheet: Sheet, input: { id: string }): Change {
     if (r.placed) sendBackRoom(next, r)
     next.rooms = next.rooms.filter((o) => o.id !== input.id)
     return { ok: true, said: `${r.name} taken out of the program` }
-  })
-}
-
-/** The program order is the order of importance: a room moved before another, or to the end. */
-export function reorder(sheet: Sheet, input: { id: string; before: string | null }): Change {
-  return edit(sheet, (next) => {
-    const r = found(next, input.id)
-    if (!r) return { ok: false, said: `no room called ${input.id}` }
-    if (input.before === input.id) return { ok: false, said: 'A room cannot move before itself.' }
-    next.rooms = next.rooms.filter((o) => o !== r)
-    const at = input.before ? next.rooms.findIndex((o) => o.id === input.before) : -1
-    if (input.before && at < 0) return { ok: false, said: `no room called ${input.before}` }
-    if (at < 0) next.rooms.push(r)
-    else next.rooms.splice(at, 0, r)
-    return { ok: true, said: `${r.name} is now ${next.rooms.indexOf(r) + 1} in the program` }
   })
 }
 
