@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { openBoth, openMass, openSheet, tab } from './plan'
+import { half, openBoth, openMass, openSheet, tab } from './plan'
 
 type At = { x: number; y: number }
 
@@ -187,20 +187,17 @@ test('a room turned by the handle over its roof turns on the sheet in whole step
 
 test('the three buttons give the tab to one half or share it between them', async ({ page }) => {
   await openTwoRooms(page)
-  await expect(page.getByRole('button', { name: 'Both', exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  )
+  await expect(half(page, 'Both')).toHaveAttribute('aria-pressed', 'true')
 
-  await page.getByRole('button', { name: 'Sheet', exact: true }).click()
+  await half(page, 'Sheet').click()
   await expect(page.locator('svg.zoning-sheet')).toBeVisible()
   await expect(page.locator('svg.massing-sheet')).toHaveCount(0)
 
-  await page.getByRole('button', { name: 'Massing', exact: true }).click()
+  await half(page, 'Massing').click()
   await expect(page.locator('svg.zoning-sheet')).toHaveCount(0)
   await expect(page.locator('svg.massing-sheet')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Both', exact: true }).click()
+  await half(page, 'Both').click()
   const sheet = await page.locator('.plan-sheet').boundingBox()
   const massing = await page.locator('.plan-massing').boundingBox()
   if (!sheet || !massing) throw new Error('a half is not drawn')
@@ -324,7 +321,7 @@ test('a door is opened and closed again from the sheet, and an open edge is pick
   page,
 }) => {
   await openTwoRooms(page)
-  await page.getByRole('button', { name: 'Sheet', exact: true }).click()
+  await half(page, 'Sheet').click()
   // The rulebook gave these two a door when the program was rebuilt, so the sheet carries one
   // already: this test is about picking it and turning it into an opening.
   await expect(page.locator('[data-edge][data-door="door"]')).toHaveCount(1)
@@ -374,8 +371,8 @@ test('the handle between the halves gives one of them more of the tab', async ({
   expect(after.width).toBeLessThan(before.width - 100)
 
   // What the hand set is what Both goes back to, so the massing keeps the room it was given.
-  await page.getByRole('button', { name: 'Sheet', exact: true }).click()
-  await page.getByRole('button', { name: 'Both', exact: true }).click()
+  await half(page, 'Sheet').click()
+  await half(page, 'Both').click()
   const again = await page.locator('svg.zoning-sheet').boundingBox()
   expect(again?.width).toBeCloseTo(after.width, 0)
 })
@@ -392,7 +389,7 @@ test('a handle on the sheet keeps its size on the screen when the window changes
   page,
 }) => {
   await openTwoRooms(page)
-  await page.getByRole('button', { name: 'Sheet', exact: true }).click()
+  await half(page, 'Sheet').click()
   await clickSheet(page, 5, 5.125)
   await expect(roomNamed(page, 'Kitchen')).toHaveClass(/room-selected/)
 

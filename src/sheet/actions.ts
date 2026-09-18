@@ -1064,6 +1064,47 @@ export function clearHeight(sheet: Sheet, input: { id: string }): Change {
   })
 }
 
+// ---------- a room's own colour, and where its name is written ----------
+
+export function setColor(sheet: Sheet, input: { ids: string[]; color: string }): Change {
+  return edit(sheet, (next) => {
+    if (!/^#[0-9a-fA-F]{6}$/.test(input.color))
+      return { ok: false, said: 'A colour is written as #rrggbb.' }
+    const sel = next.rooms.filter((r) => input.ids.includes(r.id) && !r.fixed)
+    if (!sel.length) return { ok: false, said: 'nothing selected' }
+    for (const r of sel) r.color = input.color
+    return { ok: true, said: `${sel.map((r) => r.name).join(', ')} in ${input.color}` }
+  })
+}
+
+export function clearColor(sheet: Sheet, input: { ids: string[] }): Change {
+  return edit(sheet, (next) => {
+    const sel = next.rooms.filter((r) => input.ids.includes(r.id) && r.color)
+    if (!sel.length) return { ok: false, said: 'Those rooms keep their category colour already.' }
+    for (const r of sel) delete r.color
+    return { ok: true, said: `${sel.map((r) => r.name).join(', ')} back to the category colour` }
+  })
+}
+
+/** The name written where the hand put it, as a point in the room's frame. */
+export function setLabel(sheet: Sheet, input: { id: string; at: Point }): Change {
+  return edit(sheet, (next) => {
+    const r = found(next, input.id)
+    if (!r || !r.placed) return { ok: false, said: 'no such room on the sheet' }
+    r.labelAt = [r6(input.at[0]), r6(input.at[1])]
+    return { ok: true, said: `${r.name}: the name moved` }
+  })
+}
+
+export function clearLabel(sheet: Sheet, input: { ids: string[] }): Change {
+  return edit(sheet, (next) => {
+    const sel = next.rooms.filter((r) => input.ids.includes(r.id) && r.labelAt)
+    if (!sel.length) return { ok: false, said: 'Those names lie where they go by themselves.' }
+    for (const r of sel) delete r.labelAt
+    return { ok: true, said: `${sel.map((r) => r.name).join(', ')}: the name goes back` }
+  })
+}
+
 // ---------- enclosed spaces ----------
 
 const pocketAt = (sheet: Sheet, storey: number, index: number): Pocket | null =>
