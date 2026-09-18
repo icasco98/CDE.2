@@ -1,60 +1,42 @@
 import { expect, it } from 'vitest'
-import { rectangleToPolygon } from '../geometry'
-import { PROJECT_VERSION, type Edge, type Project, type Room } from '../model'
-import { startingHousehold, startingSite } from '../model/project'
+import { sheetOf, type Door, type Room, type Sheet } from '../sheet'
 import { dxfOf } from './dxf'
 import { pdfOf } from './sheet'
 
 const on = new Date('2026-09-11T09:00:00Z')
 
-/** Thirty rooms, ten to a storey on a five-by-two grid, each joined to the room on its right. */
-function house(): Project {
+/** Thirty rooms, ten to a storey on a five-by-two grid, each with a door on its east wall. */
+function house(): Sheet {
   const rooms: Room[] = []
-  const edges: Edge[] = []
   for (let storey = 0; storey < 3; storey += 1) {
     for (let index = 0; index < 10; index += 1) {
-      const left = (index % 5) * 6 + 1
-      const top = Math.floor(index / 5) * 5 + 1
-      const id = `room-${storey}-${index}`
+      const door: Door = {
+        id: `d-${storey}-${index}`,
+        type: 'door',
+        w: 0.9,
+        at: [3.5, 2.5],
+        flip: false,
+        hinge: false,
+      }
       rooms.push({
-        id,
+        id: `room-${storey}-${index}`,
         name: `Room ${storey}.${index}`,
-        type: 'bedroom',
+        kind: 'room',
+        cat: 'private',
+        target: 17.5,
+        x: (index % 5) * 3.5 + 1.5,
+        y: Math.floor(index / 5) * 5 + 1.5,
+        w: 3.5,
+        h: 5,
+        angle: 0,
+        pieces: null,
         storey,
-        storeysSpanned: 1,
-        targetArea: 24,
-        pinned: false,
-        footprint: { polygon: rectangleToPolygon({ left, top, width: 6, depth: 5 }), rotation: 0 },
-      })
-      if (index % 5 === 4) continue
-      edges.push({
-        id: `edge-${storey}-${index}`,
-        a: id,
-        b: `room-${storey}-${index + 1}`,
-        kind: 'door',
-        storey,
+        placed: true,
+        doors: [door],
       })
     }
   }
-  return {
-    id: 'project-1',
-    name: 'Thirty rooms',
-    storeys: 3,
-    heights: [3.5, 3.5, 3.5],
-    plot: {
-      on: true,
-      polygon: rectangleToPolygon({ left: 0, top: 0, width: 32, depth: 12 }),
-      north: 0,
-      street: [2],
-    },
-    site: startingSite,
-    household: startingHousehold,
-    rooms,
-    edges,
-    weights: {},
-    actors: [],
-    version: PROJECT_VERSION,
-  }
+  return sheetOf(rooms, {}, 3)
 }
 
 /** The best of five runs after a warm-up, so neither compilation nor a stray collection is charged. */
@@ -69,12 +51,12 @@ function milliseconds(work: () => void): number {
   return best
 }
 
-const project = house()
+const sheet = house()
 
 it('writes the PDF for thirty rooms on three storeys in under 50 ms', () => {
   let bytes = 0
   const took = milliseconds(() => {
-    bytes = pdfOf(project, on).length
+    bytes = pdfOf(sheet, 'Thirty rooms', on).length
   })
   expect(bytes).toBeGreaterThan(1000)
   expect(took).toBeLessThan(50)
@@ -83,7 +65,7 @@ it('writes the PDF for thirty rooms on three storeys in under 50 ms', () => {
 it('writes the DXF for thirty rooms on three storeys in under 50 ms', () => {
   let letters = 0
   const took = milliseconds(() => {
-    letters = dxfOf(project).length
+    letters = dxfOf(sheet).length
   })
   expect(letters).toBeGreaterThan(1000)
   expect(took).toBeLessThan(50)

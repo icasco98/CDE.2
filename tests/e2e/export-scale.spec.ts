@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { exported, openZoning, place } from './exporting'
+import { exported, openSheet } from './exporting'
 import { decodePng, verticalLines } from './png'
 
 /**
@@ -13,8 +13,7 @@ import { decodePng, verticalLines } from './png'
 test.use({ channel: 'chromium', viewport: { width: 1800, height: 1200 } })
 
 test('draws a 20 m plot edge 200 mm wide, to better than half a percent', async ({ page }) => {
-  await openZoning(page)
-  await place(page, 'Kitchen', 5, 5)
+  await openSheet(page)
   const file = join(mkdtempSync(join(tmpdir(), 'export-')), 'sheet.pdf')
   await (await exported(page, 'Export PDF')).saveAs(file)
 
@@ -25,20 +24,24 @@ test('draws a 20 m plot edge 200 mm wide, to better than half a percent', async 
     expect(lines.length).toBeGreaterThanOrEqual(4)
   }).toPass({ timeout: 30000 })
 
-  // The frame and the plot are both centred on the sheet, so every long line has a partner across
-  // the middle; the closest such pair is the plot, the rooms inside it being too short to count.
+  // The plot line is centred on the sheet, as the frame round it is, so it shows as a pair of long
+  // vertical lines an equal distance either side of the middle. The frame is the widest such pair
+  // and the plot the next: the setback line is dashed, so no column of it runs the height, and a
+  // room's walls are far too short to count at all.
   const middle = ((lines[0] ?? 0) + (lines[lines.length - 1] ?? 0)) / 2
-  const spans = lines
+  const paired = lines
     .filter((x) => x < middle)
     .map((x) => {
       const wanted = 2 * middle - x
       const partner = lines.reduce((best, each) =>
         Math.abs(each - wanted) < Math.abs(best - wanted) ? each : best,
       )
-      return partner - x
+      return { span: partner - x, off: Math.abs(partner - wanted) }
     })
+    .filter((pair) => pair.span > 1 && pair.off < 2)
+    .map((pair) => pair.span)
     .sort((a, b) => a - b)
-  const measured = spans[0] ?? 0
+  const measured = paired[0] ?? 0
   const expected = (200 / 25.4) * 96
   const error = Math.abs(measured - expected) / expected
   test.info().annotations.push({

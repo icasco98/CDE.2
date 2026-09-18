@@ -1,4 +1,4 @@
-import type { Point } from '../geometry'
+import type { Point } from '../sheet'
 
 /** 1 pt = 1/72 inch = 0.3528 mm. Points are the unit of everything in a PDF. */
 const POINTS_PER_MM = 72 / 25.4
