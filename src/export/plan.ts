@@ -5,8 +5,6 @@
  */
 
 import {
-  BUILD,
-  PLOT_BOX,
   allPlaced,
   areaOf,
   boxCorners,
@@ -19,6 +17,7 @@ import {
   worldCorners,
   type Box,
   type Point,
+  type Side,
   type Poly,
   type Room,
   type Sheet,
@@ -81,25 +80,37 @@ export function openingsOn(sheet: Sheet, storey: number): readonly Opening[] {
   return openings
 }
 
-export const plotCorners: readonly Point[] = boxCorners(PLOT_BOX)
+export const plotCorners = (sheet: Sheet): readonly Point[] => boxCorners(sheet.plot.box)
 
-export const setbackCorners: readonly Point[] = boxCorners(BUILD)
+export const setbackCorners = (sheet: Sheet): readonly Point[] => boxCorners(sheet.plot.build)
 
-/** The sides on a street, drawn heavy: the service street to the south, the side street to the east. */
-export const streetSides: readonly (readonly [Point, Point])[] = [
-  [
-    [0, PLOT_BOX.h],
-    [PLOT_BOX.w, PLOT_BOX.h],
-  ],
-  [
-    [PLOT_BOX.w, 0],
-    [PLOT_BOX.w, PLOT_BOX.h],
-  ],
-]
+/** The sides on a street, drawn heavy, each as the run of boundary it takes. */
+export function streetSides(sheet: Sheet): readonly (readonly [Point, Point])[] {
+  const { w, h } = sheet.plot
+  const runs: Record<Side, readonly [Point, Point]> = {
+    west: [
+      [0, 0],
+      [0, h],
+    ],
+    east: [
+      [w, 0],
+      [w, h],
+    ],
+    north: [
+      [0, 0],
+      [w, 0],
+    ],
+    street: [
+      [0, h],
+      [w, h],
+    ],
+  }
+  return sheet.plot.streets.map((side) => runs[side])
+}
 
 /** Everything a drawing has to hold: the plot, and every room placed on any storey. */
 export function contentBounds(sheet: Sheet): Box {
-  const corners: Point[] = [...plotCorners]
+  const corners: Point[] = [...plotCorners(sheet)]
   for (const room of allPlaced(sheet)) corners.push(...worldCorners(room))
   const xs = corners.map((corner) => corner[0])
   const ys = corners.map((corner) => corner[1])

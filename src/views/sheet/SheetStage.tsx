@@ -20,7 +20,6 @@ import {
   RULE_HINT,
   acrossStoreys,
   addDoor,
-  addRoom,
   addStorey,
   dropTopStorey,
   areaOf,
@@ -66,7 +65,6 @@ import {
   remember,
   removeDoor,
   removeRoom,
-  reorder,
   report,
   restore,
   sampleSheet,
@@ -88,7 +86,6 @@ import {
   walkTest,
   worldCorners,
   worldPieces,
-  BUILD,
   type Change,
   type DoorRef,
   type DoorType,
@@ -102,6 +99,17 @@ import {
   type Sheet,
   type Side4,
 } from '../../sheet'
+import type { Result as ModelResult } from '../../model'
+import { session } from '../../app/session'
+import { useProject } from '../../app/useProject'
+import {
+  addToProgram,
+  followProject,
+  moveInProgram,
+  plotOf,
+  programOf,
+  removeFromProgram,
+} from './project'
 import { fitCamera, pointerAt, wheelFactor, zoomAbout, type Camera } from '../camera'
 import { MassView } from './MassView'
 import { Program } from './Program'
@@ -200,11 +208,27 @@ export function SheetStage() {
   // The storey in hand: every gesture and every action on this screen works on it.
   const [storey, showStorey] = useState(0)
   const STOREY = storey
+  const project = useProject()
+  // The brief is the project's: its rooms are the program and its plot is the ground, and the sheet
+  // is read from the two on the way in rather than carrying a program of its own.
+  const program = useMemo(() => programOf(project.rooms), [project.rooms])
+  const plot = useMemo(() => plotOf(project.plot), [project.plot])
   const [doc, setDoc] = useState<Doc>(() => ({
-    sheet: localSheet() ?? sampleSheet(),
+    // Nothing saved yet: a project with a brief of its own opens on an empty plot with its program
+    // waiting, and one with no brief opens on the owner's sample, which is the sheet to learn on.
+    sheet: followProject(
+      localSheet() ?? (program.length ? sheetOf([]) : sampleSheet()),
+      program,
+      plot,
+    ),
     history: newHistory(),
   }))
   const [memory, setMemory] = useState<Memory>(() => localMemory())
+  // What the brief says right now, for the reads that happen after the link's store answers.
+  const programRef = useRef(program)
+  const plotRef = useRef(plot)
+  programRef.current = program
+  plotRef.current = plot
   const [selection, setSelection] = useState<string[]>([])
   const [drag, setDrag] = useState<Drag | null>(null)
   const [drawing, setDrawing] = useState<Drawing | null>(null)
@@ -275,10 +299,12 @@ export function SheetStage() {
       if (keptSample) sample.current = keptSample
       if (!touched.current && (stored || saved)) {
         const held = stored ?? docRef.current.sheet
+        const withSettings = saved
+          ? sheetOf(held.rooms, { ...held.settings, ...saved }, held.storeyCount, held.plot)
+          : held
         docRef.current = {
-          sheet: saved
-            ? sheetOf(held.rooms, { ...held.settings, ...saved }, held.storeyCount)
-            : held,
+          // A sheet out of the link's store is reconciled like any other: the project's brief wins.
+          sheet: followProject(withSettings, programRef.current, plotRef.current),
           history: newHistory(),
         }
         setDoc(docRef.current)
@@ -290,6 +316,16 @@ export function SheetStage() {
       live = false
     }
   }, [runtime.ready, runtime.store])
+
+  // Requirements changed while the sheet was open: the project wins, and what it does not name is
+  // kept aside on the sheet rather than thrown away.
+  useEffect(() => {
+    const held = docRef.current.sheet
+    const next = followProject(held, program, plot)
+    if (next === held) return
+    docRef.current = { ...docRef.current, sheet: next }
+    setDoc(docRef.current)
+  }, [program, plot])
 
   useEffect(() => {
     if (!keeping) return
@@ -354,6 +390,12 @@ export function SheetStage() {
 
   const selected = view.rooms.filter((r) => selection.includes(r.id))
 
+  /** A refusal from the project's own actions is read where the sheet's refusals are read. */
+  const refuse = (result: ModelResult): void => {
+    if (!result.ok) setFlash(result.problems.map((trouble) => trouble.message).join(' · '))
+    else setFlash(null)
+  }
+
   const apply = (change: Change | null): boolean => {
     if (!change) return false
     if (!change.result.ok) {
@@ -393,18 +435,21 @@ export function SheetStage() {
     return rect ? { x: clientX - rect.left, y: clientY - rect.top } : { x: 0, y: 0 }
   }
 
-  const stepBack = () => {
+  /** Whether there was a step of the sheet's own to take back; the brief's are the project's. */
+  const stepBack = (): boolean => {
     const back = undo(docRef.current.sheet, { history: docRef.current.history })
-    if (!back.result.ok) return
+    if (!back.result.ok) return false
     docRef.current = { sheet: back.sheet, history: back.history }
     setDoc(docRef.current)
+    return true
   }
 
-  const stepForward = () => {
+  const stepForward = (): boolean => {
     const forward = redo(docRef.current.sheet, { history: docRef.current.history })
-    if (!forward.result.ok) return
+    if (!forward.result.ok) return false
     docRef.current = { sheet: forward.sheet, history: forward.history }
     setDoc(docRef.current)
+    return true
   }
 
   // The assistant's changes are not undo steps of their own: one message is one step.
@@ -664,7 +709,8 @@ export function SheetStage() {
     const onMove = (event: PointerEvent) => {
       const rect = svg.current?.getBoundingClientRect()
       if (!rect) return
-      const metres = sheetExtent.width / pan.camera.scale / Math.max(1, rect.width)
+      const metres =
+        sheetExtent(docRef.current.sheet.plot).width / pan.camera.scale / Math.max(1, rect.width)
       setCamera({
         ...pan.camera,
         x: pan.camera.x - (event.clientX - pan.from[0]) * metres,
@@ -903,7 +949,10 @@ export function SheetStage() {
       else
         setMenu({
           kind: 'note',
-          note: outsideBuildable({ x: at[0], y: at[1], w: 0, h: 0 } as unknown as Room, BUILD)
+          note: outsideBuildable(
+            { x: at[0], y: at[1], w: 0, h: 0 } as unknown as Room,
+            sheet.plot.build,
+          )
             ? 'Outside the line the ground floor may reach.'
             : 'No room walls this space yet, so there is nothing to give it to.',
           at: where,
@@ -967,7 +1016,7 @@ export function SheetStage() {
       event.preventDefault()
       setCamera((was) =>
         zoomAbout(
-          sheetExtent,
+          sheetExtent(sheet.plot),
           was,
           pointAt(event.clientX, event.clientY),
           wheelFactor(event.nativeEvent),
@@ -1242,11 +1291,13 @@ export function SheetStage() {
         }
         case 'undo':
           event.preventDefault()
-          stepBack()
+          // The sheet's own steps come back first; with none left the key is the project's, so a
+          // change to the brief made here is taken back by the same key rather than by two undos.
+          if (stepBack()) event.stopImmediatePropagation()
           return
         case 'redo':
           event.preventDefault()
-          stepForward()
+          if (stepForward()) event.stopImmediatePropagation()
           return
         case 'apply-reshape':
           doneReshape()
@@ -1347,10 +1398,11 @@ export function SheetStage() {
       const command = keyRelease(event)
       if (command?.kind === 'pan-held') spaceHeld.current = command.held
     }
-    window.addEventListener('keydown', onKey)
+    // Caught on the way down, so the sheet answers Ctrl+Z before the shell's project undo does.
+    window.addEventListener('keydown', onKey, true)
     window.addEventListener('keyup', onUp)
     return () => {
-      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('keydown', onKey, true)
       window.removeEventListener('keyup', onUp)
     }
   })
@@ -1649,11 +1701,18 @@ export function SheetStage() {
           openings={openingsOn}
           lit={lit}
           onLight={(room) => setLit((was) => (was === room.id ? null : room.id))}
-          onRemove={(room) => apply(removeRoom(sheet, { id: room.id }))}
-          onReorder={(id, before) => apply(reorder(docRef.current.sheet, { id, before }))}
+          onRemove={(room) => {
+            // A room the brief names goes out of the brief as well as off the sheet; one the sheet
+            // keeps aside is its own, and only the sheet has it to lose.
+            if (!room.aside) refuse(removeFromProgram(session, sheet.rooms, room.id))
+            apply(removeRoom(docRef.current.sheet, { id: room.id }))
+          }}
+          onReorder={(id, before) => refuse(moveInProgram(session, sheet.rooms, id, before))}
           onDrawMenu={setDrawMenuFor}
           onDraw={(id, shape) => startDraw(id, shape)}
-          onAdd={(kind, name, area) => apply(addRoom(sheet, { kind, name, area }))}
+          onAdd={(kind, name, area) =>
+            refuse(addToProgram(session, sheet.rooms, { kind, name, target: area }))
+          }
         />
         <div className="middle">
           <div className="sheet-cell">
@@ -1766,7 +1825,7 @@ export function SheetStage() {
                   selection={selected.filter((r) => !r.fixed)}
                   under={under}
                   canRestore={canRestore(menu.room)}
-                  pastSetback={selected.some((r) => outsideBuildable(r, BUILD))}
+                  pastSetback={selected.some((r) => outsideBuildable(r, sheet.plot.build))}
                   settings={settings}
                   storey={storey}
                   storeys={storeyCountOf(sheet)}
@@ -1855,7 +1914,7 @@ export function SheetStage() {
                 selection={selected.filter((r) => !r.fixed)}
                 under={under}
                 canRestore={canRestore(room)}
-                pastSetback={selected.some((r) => outsideBuildable(r, BUILD))}
+                pastSetback={selected.some((r) => outsideBuildable(r, sheet.plot.build))}
                 settings={settings}
                 storey={storey}
                 storeys={storeyCountOf(sheet)}

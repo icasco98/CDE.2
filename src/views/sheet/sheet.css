@@ -239,6 +239,12 @@ body:has(main.stage-sheet) {
   border-style: dashed;
 }
 
+/* A room the brief does not name: on the sheet, but not one of the rooms it asks for. */
+.sheet-stage .tray .item.aside {
+  border-style: dotted;
+  opacity: 0.6;
+}
+
 .sheet-stage .tray .item.placed {
   background: transparent;
   border-style: solid;

@@ -90,11 +90,21 @@ export function createActions(context: Context) {
       storeysSpanned?: number
       /** The room this one stands behind in the program; on the end when it names no room. */
       after?: string
+      /**
+       * The id to keep, for a room that already has one elsewhere — a zone drawn on the sheet whose
+       * program the project is taking up. An id the project already holds is not taken twice.
+       */
+      id?: string
     }): Result<string> {
       if (!positive(input.targetArea)) return badArea
       const project = state()
+      const given =
+        input.id !== undefined &&
+        input.id !== EXTERIOR &&
+        input.id.length > 0 &&
+        !project.rooms.some((each) => each.id === input.id)
       const room = {
-        id: newId('room'),
+        id: given ? input.id! : newId('room'),
         name: input.name ?? input.type,
         type: input.type,
         storey: input.storey ?? 0,
@@ -113,6 +123,23 @@ export function createActions(context: Context) {
     },
 
     removeRoom: (id: string): Result => onRoom(id, 'record', (project) => dropRoom(project, id)),
+
+    /**
+     * The order of the rooms is the order of importance, so moving a room in the list is a change to
+     * the design: the room stands before the one named, or last when none is.
+     */
+    moveRoom(id: string, before: string | null): Result {
+      const project = state()
+      const room = findRoom(project, id)
+      if (!room) return missing('room', id)
+      if (before === id)
+        return refused({ code: 'move-before-itself', message: 'a room cannot stand before itself' })
+      const rest = project.rooms.filter((each) => each.id !== id)
+      const at = before === null ? -1 : rest.findIndex((each) => each.id === before)
+      if (before !== null && at < 0) return missing('room', before)
+      const rooms = at < 0 ? [...rest, room] : [...rest.slice(0, at), room, ...rest.slice(at)]
+      return settle({ ...project, rooms })
+    },
 
     rename: (id: string, name: string): Result =>
       onRoom(id, 'record', (project) => patchRoom(project, id, { name })),

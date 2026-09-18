@@ -72,6 +72,10 @@ export function sentenceOf(read: Report, settings: Settings): Part[] {
       text: `${read.spills.join(', ')} past the ${settings.boundary === 'off' ? 'buildable line' : 'line the ground floor may reach'}`,
       bad: true,
     })
+  if (read.aside.length)
+    parts.push({
+      text: `${read.aside.length} ${plural(read.aside.length, 'room', 'rooms')} the brief does not name: ${read.aside.join(', ')}`,
+    })
   for (const side of read.boundary) {
     if (!side.read) continue
     parts.push(

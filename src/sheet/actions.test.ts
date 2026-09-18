@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   addDoor,
-  addRoom,
   addStorey,
   carveBelow,
   clearColor,
@@ -34,7 +33,6 @@ import {
   remember,
   removeDoor,
   removeRoom,
-  reorder,
   reshape,
   resize,
   restOnGrid,
@@ -523,35 +521,10 @@ describe('the program', () => {
     expect(sheet.rooms.length).toBe(0)
   })
 
-  it('adds a room of a kind at big, medium or small, or a typed area', () => {
-    const sheet = quiet([])
-    expect(addRoom(sheet, { kind: 'bedroom', size: 'big' }).sheet.rooms[0]!.target).toBe(22)
-    expect(addRoom(sheet, { kind: 'bedroom', size: 'small' }).sheet.rooms[0]!.target).toBe(14)
-    expect(addRoom(sheet, { kind: 'bedroom' }).sheet.rooms[0]!.target).toBe(18)
-    const named = addRoom(sheet, { kind: 'bedroom', name: 'Boys', area: 16 })
-    expect([named.sheet.rooms[0]!.name, named.sheet.rooms[0]!.target]).toEqual(['Boys', 16])
-    expect(addRoom(sheet, { kind: 'nothing' }).result.said).toBe('no kind called nothing')
-  })
-
-  it('removes a room from the program', () => {
+  it('takes a room kept aside off the sheet', () => {
     const sheet = quiet([room()])
     expect(removeRoom(sheet, { id: 'a' }).sheet.rooms.length).toBe(0)
     expect(removeRoom(sheet, { id: 'b' }).result.said).toBe('no room called b')
-  })
-
-  it('reorders the program, which is the order of importance', () => {
-    const sheet = quiet([room({ id: 'a' }), room({ id: 'b' }), room({ id: 'c' })])
-    const out = reorder(sheet, { id: 'c', before: 'a' })
-    expect(out.sheet.rooms.map((r) => r.id)).toEqual(['c', 'a', 'b'])
-    expect(reorder(sheet, { id: 'a', before: null }).sheet.rooms.map((r) => r.id)).toEqual([
-      'b',
-      'c',
-      'a',
-    ])
-    expect(reorder(sheet, { id: 'a', before: 'a' }).result.said).toBe(
-      'A room cannot move before itself.',
-    )
-    expect(reorder(sheet, { id: 'a', before: 'nope' }).result.said).toBe('no room called nope')
   })
 })
 

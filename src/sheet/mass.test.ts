@@ -16,7 +16,9 @@ import {
 import { heightOf, report, sheetOf, snapHeight, storeyCountOf, tallRoom, zTop } from './index'
 import { voidOn, type Room, type Sheet } from './model'
 import { hold, allowedBox } from './settle'
-import { BUILD } from './plot'
+import { DEFAULT_PLOT } from './plot'
+
+const BUILD = DEFAULT_PLOT.build
 
 const room = (over: Partial<Room> = {}): Room => ({
   id: 'a',

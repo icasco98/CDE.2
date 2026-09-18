@@ -91,7 +91,7 @@ describe('the boundary', () => {
       room({ x: 0, y: 2, w: 3, h: 6 }),
       room({ id: 'b', name: 'B', x: 0, y: 5, w: 3, h: 6 }),
     ])
-    expect(boundaryWalls(sheet.rooms[0]!).map((w) => w.side)).toEqual(['west'])
+    expect(boundaryWalls(sheet.rooms[0]!, sheet.plot).map((w) => w.side)).toEqual(['west'])
     expect(sideUsed(sheet, 'west')).toBe(9)
     expect(sideOver(sheet, 'west')).toBe(false)
   })

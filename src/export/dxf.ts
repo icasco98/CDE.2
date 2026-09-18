@@ -3,7 +3,7 @@
  * as ASCII R12 so AutoCAD opens it without a translator.
  */
 
-import { NORTH, fmt, storeyCountOf, type Point, type Sheet } from '../sheet'
+import { fmt, storeyCountOf, type Point, type Sheet } from '../sheet'
 import { contentBounds, openingsOn, plotCorners, setbackCorners, standingOn } from './plan'
 
 /** AutoCAD R12, the last release with a plain, wholly documented ASCII form. */
@@ -235,11 +235,16 @@ function northEntities(at: Point, north: number): readonly Entity[] {
 function entitiesOf(sheet: Sheet): readonly Entity[] {
   const transform = transformFor(sheet)
   const entities: Entity[] = [
-    { kind: 'polyline', layer: PLOT_LAYER, points: plotCorners.map(transform.at), closed: true },
+    {
+      kind: 'polyline',
+      layer: PLOT_LAYER,
+      points: plotCorners(sheet).map(transform.at),
+      closed: true,
+    },
     {
       kind: 'polyline',
       layer: SETBACK_LAYER,
-      points: setbackCorners.map(transform.at),
+      points: setbackCorners(sheet).map(transform.at),
       closed: true,
     },
   ]
@@ -282,7 +287,9 @@ function entitiesOf(sheet: Sheet): readonly Entity[] {
     }
   }
   const { bounds } = transform
-  entities.push(...northEntities([bounds.w + NORTH_CLEAR_M, bounds.h - NORTH_REACH_M], NORTH))
+  entities.push(
+    ...northEntities([bounds.w + NORTH_CLEAR_M, bounds.h - NORTH_REACH_M], sheet.plot.north),
+  )
   return entities
 }
 

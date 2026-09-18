@@ -6,7 +6,7 @@
 import { useState, type PointerEvent as ReactPointerEvent } from 'react'
 import {
   KINDS,
-  KIND_INFO,
+  KIND_LABEL,
   STOREY_MARK,
   acrossStoreys,
   areaOf,
@@ -16,7 +16,9 @@ import {
   type Room,
   type Sheet,
 } from '../../sheet'
+import { rangeFor, typicalArea } from '../../rulebook'
 import { reorderSide, type Shape } from './gestures'
+import { typeFor } from './project'
 
 type ProgramProps = {
   sheet: Sheet
@@ -45,7 +47,9 @@ const shapes: [Shape, string, string][] = [
 
 export function Program(props: ProgramProps) {
   const { sheet } = props
-  const list = sheet.rooms.filter((r) => !r.extra)
+  // A room the brief does not name is still on the sheet, so the column shows it, marked as the
+  // sheet's own; a court or a corridor the sheet made is not a room of the program at all.
+  const list = sheet.rooms.filter((r) => !r.extra || r.aside)
   const unplaced = list.filter((r) => !r.placed)
   const upstairs = list.some((r) => r.placed && storeyOf(r) > 0)
 
@@ -87,7 +91,7 @@ export function Program(props: ProgramProps) {
           return (
             <div
               key={room.id}
-              className={`item ${room.cat} ${room.placed ? 'placed' : 'hollow'}${
+              className={`item ${room.cat}${room.aside ? ' aside' : ''} ${room.placed ? 'placed' : 'hollow'}${
                 room.placed &&
                 (props.openings ? props.lit === room.id : props.selection.includes(room.id))
                   ? ' selected'
@@ -96,11 +100,15 @@ export function Program(props: ProgramProps) {
               data-room={room.id}
               style={{ flex: `${room.target} 1 0`, background: room.color ?? undefined }}
               title={
-                props.openings
-                  ? `${room.name}: click to light its walls`
-                  : `${room.name} · ${fmt(room.target)} m² · ${fmt(room.w)} × ${fmt(room.h)} m${
-                      room.placed ? ': click to select it' : ': drag it onto the sheet, or Draw it'
-                    }`
+                room.aside
+                  ? `${room.name} is not in the brief: the × takes it off the sheet`
+                  : props.openings
+                    ? `${room.name}: click to light its walls`
+                    : `${room.name} · ${fmt(room.target)} m² · ${fmt(room.w)} × ${fmt(room.h)} m${
+                        room.placed
+                          ? ': click to select it'
+                          : ': drag it onto the sheet, or Draw it'
+                      }`
               }
               onPointerDown={(event) => {
                 if (event.target instanceof Element && event.target.closest('button')) return
@@ -151,7 +159,11 @@ export function Program(props: ProgramProps) {
               <button
                 type="button"
                 className="x"
-                title={`Remove ${room.name} from the program`}
+                title={
+                  room.aside
+                    ? `Take ${room.name} off the sheet`
+                    : `Remove ${room.name} from the program`
+                }
                 onPointerDown={(event) => event.stopPropagation()}
                 onClick={() => props.onRemove(room)}
               >
@@ -172,29 +184,33 @@ export function Program(props: ProgramProps) {
           )
         })}
       </div>
-      <AddRoom onAdd={props.onAdd} />
+      <AddRoom onAdd={props.onAdd} plotArea={sheet.plot.w * sheet.plot.h} />
     </aside>
   )
 }
 
-/** A room added to the program: its kind, a name of its own, and a size from the kind's range. */
-function AddRoom({ onAdd }: { onAdd: ProgramProps['onAdd'] }) {
-  const kinds = Object.keys(KIND_INFO).filter((kind) => kind in KINDS)
+/**
+ * A room added to the program: its kind, a name of its own, and a size the room-type table gives
+ * that kind on a plot of this size, so the Sheet asks for what Requirements would have asked for.
+ */
+function AddRoom({ onAdd, plotArea }: { onAdd: ProgramProps['onAdd']; plotArea: number }) {
+  const kinds = Object.keys(KIND_LABEL).filter((kind) => kind in KINDS)
   const [kind, setKind] = useState(kinds[0] ?? 'room')
   const [name, setName] = useState('')
   const [size, setSize] = useState('medium')
   const [area, setArea] = useState('12')
-  const info = KIND_INFO[kind]
+  const type = typeFor(kind)
+  const middle = typicalArea(type, plotArea)
+  // A kind the table gives no range — a hallway, whose length is as needed — has only its typical.
+  const band = rangeFor(type, plotArea)
   const target =
     size === 'custom'
       ? Number(area)
-      : !info
-        ? 0
-        : size === 'big'
-          ? info[2]
-          : size === 'small'
-            ? info[1]
-            : r2((info[1] + info[2]) / 2)
+      : size === 'big'
+        ? (band?.max ?? middle)
+        : size === 'small'
+          ? (band?.min ?? middle)
+          : r2(middle)
   return (
     <div className="add-room">
       <label>
@@ -204,7 +220,7 @@ function AddRoom({ onAdd }: { onAdd: ProgramProps['onAdd'] }) {
         <select aria-label="Kind" value={kind} onChange={(event) => setKind(event.target.value)}>
           {kinds.map((key) => (
             <option key={key} value={key}>
-              {KIND_INFO[key]![0]}
+              {KIND_LABEL[key]}
             </option>
           ))}
         </select>

@@ -8,7 +8,7 @@ import {
   type SheetRead,
 } from './agent'
 import { sampleSheet } from './sample'
-import { PLOT } from './plot'
+import { DEFAULT_PLOT } from './plot'
 import type { Sheet } from './model'
 
 /** A desk over one sheet in hand, as the chat column keeps one while a message runs. */
@@ -74,8 +74,8 @@ describe('the tools the assistant is given', () => {
       moves: [{ name: 'Bedroom', x: 40, y: 40 }],
     }) as { sheet: SheetRead }
     const bedroom = out.sheet.placed.find((r) => r.name === 'Bedroom')!
-    expect(bedroom.x + bedroom.w).toBeLessThanOrEqual(PLOT.w + 1e-6)
-    expect(bedroom.y + bedroom.h).toBeLessThanOrEqual(PLOT.h + 1e-6)
+    expect(bedroom.x + bedroom.w).toBeLessThanOrEqual(DEFAULT_PLOT.w + 1e-6)
+    expect(bedroom.y + bedroom.h).toBeLessThanOrEqual(DEFAULT_PLOT.h + 1e-6)
   })
 
   it('reports the overlaps a room dropped on others leaves, under the waiting rule', () => {

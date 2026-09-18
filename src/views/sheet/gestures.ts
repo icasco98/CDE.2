@@ -6,7 +6,6 @@
  */
 
 import {
-  NORTH,
   alignWall,
   bboxOf,
   canonicalise,
@@ -49,6 +48,7 @@ import {
   type Poly,
   type Room,
   type Seg,
+  type PlotSpec,
   type Settings,
   type SnapKind,
   type Sheet,
@@ -138,6 +138,7 @@ const candidatesFor = (sheet: Sheet, storey: number, except: string[]): Seg[] =>
   wallCandidates(
     snapRooms(sheet, storey, null).filter((o) => !except.includes(o.id)),
     sheet.settings,
+    sheet.plot,
   )
 
 // ---------- dropped from the program ----------
@@ -293,7 +294,7 @@ export function dragTo(drag: Drag, at: Point, mods: Mods, sheet: Sheet, storey: 
   switch (drag.kind) {
     case 'new': {
       const base = { ...drag.room, x: at[0] - drag.room.w / 2, y: at[1] - drag.room.h / 2 }
-      const snap = snapMove(base, candidatesFor(sheet, storey, []), settings)
+      const snap = snapMove(base, candidatesFor(sheet, storey, []), settings, sheet.plot)
       return {
         ...drag,
         started: true,
@@ -322,6 +323,7 @@ export function dragTo(drag: Drag, at: Point, mods: Mods, sheet: Sheet, storey: 
         { ...lead, x: lead.x + dx, y: lead.y + dy },
         candidatesFor(sheet, storey, drag.ids),
         settings,
+        sheet.plot,
       )
       const held = hold(snap.rect, sheet, storey)
       const mx = held.x - lead.x
@@ -344,7 +346,14 @@ export function dragTo(drag: Drag, at: Point, mods: Mods, sheet: Sheet, storey: 
       const r = roomById(sheet, drag.id)
       if (!r) return drag
       const distance = alongNormal(r, drag.seg, at, drag.start)
-      const pulled = pulledWall(r, drag.seg, distance, snapRooms(sheet, storey, r), settings)
+      const pulled = pulledWall(
+        r,
+        drag.seg,
+        distance,
+        snapRooms(sheet, storey, r),
+        settings,
+        sheet.plot,
+      )
       return {
         ...drag,
         distance,
@@ -402,7 +411,7 @@ export function dragTo(drag: Drag, at: Point, mods: Mods, sheet: Sheet, storey: 
       if (!r) return drag
       const [cx, cy] = centreOf(r)
       const want = norm((Math.atan2(at[1] - cy, at[0] - cx) * 180) / Math.PI + 90)
-      const snap = snapAngle(want, [r], placedRooms(sheet, storey), settings, NORTH)
+      const snap = snapAngle(want, [r], placedRooms(sheet, storey), settings, sheet.plot.north)
       const clone = cloneRoom(r)
       clone.angle = snap.angle
       return {
@@ -427,7 +436,13 @@ export function dragTo(drag: Drag, at: Point, mods: Mods, sheet: Sheet, storey: 
       const was = sel[0]!.angle || 0
       const turned =
         (Math.atan2(at[1] - drag.pivot[1], at[0] - drag.pivot[0]) * 180) / Math.PI - drag.startAngle
-      const snap = snapAngle(was + turned, sel, placedRooms(sheet, storey), settings, NORTH)
+      const snap = snapAngle(
+        was + turned,
+        sel,
+        placedRooms(sheet, storey),
+        settings,
+        sheet.plot.north,
+      )
       rotateGroup(sel, snap.angle - was, drag.pivot)
       return {
         ...drag,
@@ -466,6 +481,7 @@ function pulledWall(
   distance: number,
   others: Room[],
   settings: Settings,
+  plot: PlotSpec,
 ): { room: Room | null; guide?: Guide; corner: Point | null } {
   const aligned = alignWall(
     { x: r.x, y: r.y, w: r.w, h: r.h, angle: r.angle || 0 },
@@ -473,6 +489,7 @@ function pulledWall(
     distance,
     others,
     settings,
+    plot,
   )
   const grid = settings.grid || 0.05
   let s = aligned.guide ? aligned.s : r2(snapTo(distance, grid))
@@ -503,6 +520,7 @@ function resized(
     distance,
     placedRooms(sheet, storey).filter((o) => o.id !== r.id && o.id !== shared?.id),
     sheet.settings,
+    sheet.plot,
   )
   const grid = sheet.settings.grid || 0.05
   const out = aligned.guide ? aligned.s : r2(snapTo(distance, grid))

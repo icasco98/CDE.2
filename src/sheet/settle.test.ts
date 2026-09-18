@@ -12,7 +12,10 @@ import {
   settle,
   yieldTo,
 } from './settle'
-import { BUILD, PLOT } from './plot'
+import { DEFAULT_PLOT } from './plot'
+
+const BUILD = DEFAULT_PLOT.build
+const PLOT = DEFAULT_PLOT
 import { sheetOf, type Room } from './model'
 import { areaOf, r2 } from './geometry'
 

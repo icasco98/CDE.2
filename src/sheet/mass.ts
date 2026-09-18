@@ -4,7 +4,7 @@
  * Nothing here draws; the view reads these and makes an element of each face.
  */
 
-import { PLOT } from './plot'
+import { DEFAULT_PLOT, type PlotSpec } from './plot'
 import {
   allPlaced,
   heightCap,
@@ -95,12 +95,17 @@ export type MassProjection = {
  * The camera as one parallel projection. The scale comes from the plot's diagonal alone, so turning
  * or tilting never zooms the mass; only the wheel does.
  */
-export function massProjection(cam: MassCamera, W = 600, H = 400): MassProjection {
+export function massProjection(
+  cam: MassCamera,
+  W = 600,
+  H = 400,
+  plot: PlotSpec = DEFAULT_PLOT,
+): MassProjection {
   const th = rad(cam.theta)
   const ph = rad(cam.phi)
-  const cx = PLOT.w / 2
-  const cy = PLOT.h / 2
-  const diag = Math.hypot(PLOT.w, PLOT.h)
+  const cx = plot.w / 2
+  const cy = plot.h / 2
+  const diag = Math.hypot(plot.w, plot.h)
   const s = Math.min((W - 40) / diag, (H - 40) / (diag * 0.85)) * cam.zoom
   const ox = W / 2 + cam.px
   const oy = H / 2 + 1.6 * s * Math.cos(ph) + cam.py
@@ -147,7 +152,7 @@ export function worldLoop(r: Room): Poly {
 /** What the view turns about: the middle of what is selected, else the middle of the plot. */
 export function massPivot(sheet: Sheet, ids: string[]): [number, number, number] {
   const sel = allPlaced(sheet).filter((r) => ids.includes(r.id) && !r.fixed)
-  if (!sel.length) return [PLOT.w / 2, PLOT.h / 2, 0]
+  if (!sel.length) return [sheet.plot.w / 2, sheet.plot.h / 2, 0]
   let x0 = Infinity
   let y0 = Infinity
   let x1 = -Infinity
@@ -187,14 +192,15 @@ export type Prism = {
   onOutline: (p: Point, q: Point) => boolean
 }
 
-const onPlotEdge = (p: Point) =>
+const onPlotEdge = (p: Point, plot: PlotSpec) =>
   Math.abs(p[0]) < 0.03 ||
-  Math.abs(p[0] - PLOT.w) < 0.03 ||
+  Math.abs(p[0] - plot.w) < 0.03 ||
   Math.abs(p[1]) < 0.03 ||
-  Math.abs(p[1] - PLOT.h) < 0.03
+  Math.abs(p[1] - plot.h) < 0.03
 
 /** A wall along the plot boundary: blind, and over 5 m a breach of the rulebook. */
-export const blindWall = (a: Point, b: Point) => onPlotEdge(a) && onPlotEdge(b)
+export const blindWall = (a: Point, b: Point, plot: PlotSpec = DEFAULT_PLOT) =>
+  onPlotEdge(a, plot) && onPlotEdge(b, plot)
 
 export const breaches = (top: number) => top > BLIND_BREACH + 0.001
 

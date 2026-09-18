@@ -8,7 +8,7 @@
 
 import { area, boundingBox, centroid, edgesOf, signedArea } from '../geometry/polygon'
 export type { Point, Poly } from './model'
-import { BUILD, PLOT, type Box } from './plot'
+import { DEFAULT_PLOT, type Box, type PlotSpec } from './plot'
 import { centreOf, piecesOf, square, type Frame, type Point, type Poly, type Room } from './model'
 
 export const r2 = (v: number) => Math.round(v * 100) / 100
@@ -600,11 +600,10 @@ export function cutBy(target: Room, cutter: Room): Room | null {
 /** The room less everything past the setback line, where it stands. */
 export function cutToSetback(
   room: Room,
-  build: Box = BUILD,
-  plot = PLOT,
+  plot: PlotSpec = DEFAULT_PLOT,
 ): { room: Room | null; cut: boolean } {
   const r = room
-  const B = build
+  const B = plot.build
   const M = 5
   const strips: Poly[] = [
     [

@@ -3,16 +3,7 @@
  * the setback line, the rooms and their areas, the doors as gaps, north, a scale bar and a title.
  */
 
-import {
-  NORTH,
-  RATIO,
-  fmt,
-  report,
-  storeyCountOf,
-  storeyNameOf,
-  type Point,
-  type Sheet,
-} from '../sheet'
+import { RATIO, fmt, report, storeyCountOf, storeyNameOf, type Point, type Sheet } from '../sheet'
 import { mm, writePdf, type Draw, type Page } from './pdf'
 import {
   contentBounds,
@@ -176,6 +167,7 @@ function titleBlock(input: {
   readonly placement: Placement
   readonly date: string
   readonly figures: readonly string[]
+  readonly north: number
 }): readonly Draw[] {
   const left = mm(MARGIN_MM) + mm(4)
   const upper = mm(MARGIN_MM) + mm(9.5)
@@ -203,7 +195,10 @@ function titleBlock(input: {
       [mm(PAGE_W_MM - MARGIN_MM) - mm(20), drawingArea.bottom],
       RULE_STROKE,
     ),
-    ...northArrow([mm(PAGE_W_MM - MARGIN_MM) - mm(7), mm(MARGIN_MM + TITLE_BLOCK_MM / 2)], NORTH),
+    ...northArrow(
+      [mm(PAGE_W_MM - MARGIN_MM) - mm(7), mm(MARGIN_MM + TITLE_BLOCK_MM / 2)],
+      input.north,
+    ),
   ]
 }
 
@@ -230,11 +225,13 @@ function doorGap(opening: Opening, placement: Placement): Draw {
   }
 }
 
-function plotDraws(placement: Placement): readonly Draw[] {
+function plotDraws(sheet: Sheet, placement: Placement): readonly Draw[] {
   return [
-    path(plotCorners.map(placement.at), true, PLOT_STROKE),
-    path(setbackCorners.map(placement.at), true, SETBACK_STROKE),
-    ...streetSides.map(([from, to]) => line(placement.at(from), placement.at(to), STREET_STROKE)),
+    path(plotCorners(sheet).map(placement.at), true, PLOT_STROKE),
+    path(setbackCorners(sheet).map(placement.at), true, SETBACK_STROKE),
+    ...streetSides(sheet).map(([from, to]) =>
+      line(placement.at(from), placement.at(to), STREET_STROKE),
+    ),
   ]
 }
 
@@ -260,7 +257,7 @@ function storeyPage(input: {
   const { sheet, storey, placement } = input
   const standing = standingOn(sheet, storey)
   const drawing: Draw[] = [
-    ...plotDraws(placement),
+    ...plotDraws(sheet, placement),
     ...roomDraws(standing, placement),
     ...openingsOn(sheet, storey).map((opening) => doorGap(opening, placement)),
   ]
@@ -286,6 +283,7 @@ function storeyPage(input: {
         placement,
         date: input.date,
         figures: figureLines(sheet, storey),
+        north: sheet.plot.north,
       }),
     ],
   }
