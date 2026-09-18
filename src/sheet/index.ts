@@ -62,8 +62,29 @@ export {
   storeyNameOf,
   storeyOf,
   tallRoom,
+  zBase,
   zTop,
 } from './model'
+
+export type { MassCamera, MassEdge, MassProjection, MassViewName, Prism } from './mass'
+export {
+  BLIND_BREACH,
+  MASS_START,
+  MASS_VIEWS,
+  blindWall,
+  breaches,
+  heightFromDrag,
+  lookFrom,
+  massPivot,
+  massProjection,
+  orderPrisms,
+  prismsOf,
+  recentred,
+  seenWalls,
+  turnedBy,
+  worldLoop,
+  zoomedBy,
+} from './mass'
 
 export type { Seg } from './geometry'
 export {
