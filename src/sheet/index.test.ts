@@ -147,6 +147,12 @@ const surface = [
   'openWallOn',
   'slideDoorAlong',
   'walkTest',
+  // the Openings step
+  'doorDrawing',
+  'doorNear',
+  'doorRead',
+  'lostDoors',
+  'newDoors',
   // labels
   'initialsOf',
   'labelPlan',

@@ -1224,15 +1224,18 @@ const findDoor = (sheet: Sheet, roomId: string, doorId: string) => {
   return { r, d }
 }
 
-/** Slid along its wall, or dropped on another wall when the point is off this one. */
+/**
+ * Slid along its wall, or dropped on another wall when the point is off this one. `only` holds the
+ * door on one room's wall, so a slide along a shared wall does not hand the door to the neighbour.
+ */
 export function moveDoor(
   sheet: Sheet,
-  input: { room: string; door: string; x: number; y: number; storey: number },
+  input: { room: string; door: string; x: number; y: number; storey: number; only?: string },
 ): Change {
   return edit(sheet, (next) => {
     const { r, d } = findDoor(next, input.room, input.door)
     if (!r || !d) return { ok: false, said: 'no such door' }
-    const hit = doorAt(input.x, input.y, d.w, next, input.storey)
+    const hit = doorAt(input.x, input.y, d.w, next, input.storey, found(next, input.only ?? ''))
     if (!hit) return { ok: false, said: 'No wall there.' }
     if (hit.why) return { ok: false, said: hit.why }
     r.doors = doorsOf(r).filter((o) => o !== d)

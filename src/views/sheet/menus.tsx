@@ -12,6 +12,7 @@ import {
   type Point,
   type Pocket,
   type Room,
+  type DoorRead,
   type Settings,
   type Sheet,
 } from '../../sheet'
@@ -289,6 +290,40 @@ export function EmptyNote(props: { at: MenuAt; note: string }) {
       <div className="why" style={{ maxWidth: '240px' }}>
         {props.note}
       </div>
+    </div>
+  )
+}
+
+export type DoorChoice = { kind: 'flip' } | { kind: 'hinge' } | { kind: 'remove' }
+
+/** The right-click menu on a door: swing, hinge, remove. */
+export function DoorMenu(props: {
+  at: MenuAt
+  door: DoorRead
+  onChoose: (choice: DoorChoice) => void
+}) {
+  const { door } = props
+  return (
+    <div className="ctx" style={style(props.at)} onPointerDown={(e) => e.stopPropagation()}>
+      <div className="head">
+        {door.label} · {door.room}
+      </div>
+      {door.swings && (
+        <button type="button" onClick={() => props.onChoose({ kind: 'flip' })}>
+          Swing the other way
+          <span className="m">
+            {door.swingsInto === door.room ? `out of ${door.room}` : `into ${door.room}`}
+          </span>
+        </button>
+      )}
+      {door.hinges && (
+        <button type="button" onClick={() => props.onChoose({ kind: 'hinge' })}>
+          Hinge on the other side
+        </button>
+      )}
+      <button type="button" onClick={() => props.onChoose({ kind: 'remove' })}>
+        Remove<span className="m">Delete</span>
+      </button>
     </div>
   )
 }

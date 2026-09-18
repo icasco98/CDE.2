@@ -26,6 +26,10 @@ type ProgramProps = {
   drawMenuFor: string | null
   onNewDown: (room: Room, event: ReactPointerEvent) => void
   onPick: (room: Room) => void
+  /** In the Openings step the column is a room list: a click lights that room's walls. */
+  openings: boolean
+  lit: string | null
+  onLight: (room: Room) => void
   onRemove: (room: Room) => void
   onReorder: (id: string, before: string | null) => void
   onDrawMenu: (id: string | null) => void
@@ -84,20 +88,29 @@ export function Program(props: ProgramProps) {
             <div
               key={room.id}
               className={`item ${room.cat} ${room.placed ? 'placed' : 'hollow'}${
-                room.placed && props.selection.includes(room.id) ? ' selected' : ''
+                room.placed &&
+                (props.openings ? props.lit === room.id : props.selection.includes(room.id))
+                  ? ' selected'
+                  : ''
               }${room.group ? ' grouped' : ''}`}
               data-room={room.id}
               style={{ flex: `${room.target} 1 0`, background: room.color ?? undefined }}
-              title={`${room.name} · ${fmt(room.target)} m² · ${fmt(room.w)} × ${fmt(room.h)} m${
-                room.placed ? ': click to select it' : ': drag it onto the sheet, or Draw it'
-              }`}
+              title={
+                props.openings
+                  ? `${room.name}: click to light its walls`
+                  : `${room.name} · ${fmt(room.target)} m² · ${fmt(room.w)} × ${fmt(room.h)} m${
+                      room.placed ? ': click to select it' : ': drag it onto the sheet, or Draw it'
+                    }`
+              }
               onPointerDown={(event) => {
                 if (event.target instanceof Element && event.target.closest('button')) return
-                if (room.placed) return
+                if (room.placed || props.openings) return
                 props.onNewDown(room, event)
               }}
               onClick={() => {
-                if (room.placed) props.onPick(room)
+                if (!room.placed) return
+                if (props.openings) props.onLight(room)
+                else props.onPick(room)
               }}
             >
               <span
