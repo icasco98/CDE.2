@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { half, openSheet, tab } from './plan'
+import { tab } from './tabs'
 
 /** The forces run while the tab is open, so nothing on the sheet is measured until it stops. */
 async function resting(page: Page) {
@@ -300,31 +300,6 @@ test('a default connection the designer removes is not made again by adding a ro
   await tab(page, 'Bubbles').click()
   await resting(page)
   await expect.poll(() => linkedPairs(page)).not.toContain('Dining Room to Kitchen')
-})
-
-test('the bubbles and the plan frame the same plot, and a zoom on one is on the other', async ({
-  page,
-}) => {
-  await openBubbles(page)
-  const fitted = await page.locator('svg.bubbles-sheet').getAttribute('viewBox')
-  expect(fitted).toBeTruthy()
-  await openSheet(page)
-  expect(await page.locator('svg.zoning-sheet').getAttribute('viewBox')).toBe(fitted)
-
-  // A wheel notch on the plan is on the bubbles when the tab is opened again.
-  const sheet = await page.locator('svg.zoning-sheet').boundingBox()
-  if (!sheet) throw new Error('the plan has no sheet')
-  await page.mouse.move(sheet.x + sheet.width / 2, sheet.y + sheet.height / 2)
-  await page.mouse.wheel(0, -300)
-  await expect(page.locator('svg.zoning-sheet')).not.toHaveAttribute('viewBox', fitted ?? '')
-  const closer = await page.locator('svg.zoning-sheet').getAttribute('viewBox')
-  await tab(page, 'Bubbles').click()
-  await expect(page.locator('svg.bubbles-sheet')).toHaveAttribute('viewBox', closer ?? '')
-
-  // And Fit on the bubbles is the whole plot on the plan again.
-  await page.getByRole('button', { name: 'Fit' }).click()
-  await openSheet(page)
-  expect(await page.locator('svg.zoning-sheet').getAttribute('viewBox')).toBe(fitted)
 })
 
 test('a bubble dragged past the buildable line comes to rest inside it', async ({ page }) => {
@@ -888,21 +863,7 @@ test('a stair set from First to Second is drawn on the upper storeys only', asyn
   await expect(page.locator(`[data-room="${stair}"][data-twin="1"]`)).toHaveCount(1)
 })
 
-/** Where a point in metres on the zoning sheet lands on the screen. */
-async function onZoningSheet(page: Page, x: number, y: number) {
-  return page.evaluate(
-    ([mx, my]) => {
-      const sheet = document.querySelector('svg.zoning-sheet')
-      const screen = sheet instanceof SVGSVGElement ? sheet.getScreenCTM() : null
-      if (!screen) throw new Error('there is no sheet')
-      const point = new DOMPoint(mx, my).matrixTransform(screen)
-      return { x: point.x, y: point.y }
-    },
-    [x, y],
-  )
-}
-
-test('a stair from Ground to Second is three bubbles here and one prism in the massing', async ({
+test('a stair from Ground to Second is three bubbles, one on each storey it stands through', async ({
   page,
 }) => {
   await openWithStair(page, 3)
@@ -913,25 +874,6 @@ test('a stair from Ground to Second is three bubbles here and one prism in the m
 
   await setSpan(page, 'Stair', 'Ground', 'Second')
   await expect(page.locator(`[data-room="${stair}"]`)).toHaveCount(3)
-
-  await openSheet(page)
-  const tray = page
-    .locator('[data-tray]')
-    .filter({ hasText: /^Stair/ })
-    .first()
-  const from = await tray.boundingBox()
-  if (!from) throw new Error('the Stair is not in the tray')
-  await drag(
-    page,
-    { x: from.x + from.width / 2, y: from.y + from.height / 2 },
-    await onZoningSheet(page, 5, 5),
-  )
-  await expect(page.locator('svg.zoning-sheet [data-room]')).toHaveCount(1)
-
-  await half(page, 'Massing').click()
-  // One room standing through three storeys is one prism, not three: four walls and a roof.
-  await expect(page.locator('svg.massing-sheet [data-room]')).toHaveCount(1)
-  await expect(page.locator('svg.massing-sheet [data-room] polygon')).toHaveCount(5)
 })
 
 /** The button on the bar, which the one on a nudge does not answer to: that one names its storey. */

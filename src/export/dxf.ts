@@ -1,16 +1,10 @@
-import {
-  arcRun,
-  boundingBox,
-  centroid,
-  exactArea,
-  sheetArcs,
-  type Arc,
-  type Footprint,
-  type Point,
-  type Polygon,
-} from '../geometry'
-import type { Project } from '../model'
-import { contentBounds, doorsOn, openingMetres, round1, standingOn } from './plan'
+/**
+ * The DXF: the same plan as the printed sheet, in metres, with a layer per storey, written by hand
+ * as ASCII R12 so AutoCAD opens it without a translator.
+ */
+
+import { NORTH, fmt, storeyCountOf, type Point, type Sheet } from '../sheet'
+import { contentBounds, openingsOn, plotCorners, setbackCorners, standingOn } from './plan'
 
 /** AutoCAD R12, the last release with a plain, wholly documented ASCII form. */
 const ACAD_VERSION = 'AC1009'
@@ -41,14 +35,6 @@ export type Entity =
       readonly at: Point
       readonly text: string
       readonly height: number
-    }
-  | {
-      readonly kind: 'arc'
-      readonly layer: string
-      readonly centre: Point
-      readonly radius: number
-      readonly fromDegrees: number
-      readonly toDegrees: number
     }
 
 /** A group code and its value on their own lines, which is the whole of the ASCII DXF form. */
@@ -94,15 +80,6 @@ function entityText(entity: Entity): string {
         group(40, entity.height) +
         tag(1, entity.text)
       )
-    case 'arc':
-      return (
-        tag(0, 'ARC') +
-        tag(8, entity.layer) +
-        point([10, 20, 30], entity.centre) +
-        group(40, entity.radius) +
-        group(50, entity.fromDegrees) +
-        group(51, entity.toDegrees)
-      )
   }
 }
 
@@ -114,21 +91,17 @@ function pointsOf(entity: Entity): readonly Point[] {
       return [entity.from, entity.to]
     case 'text':
       return [entity.at]
-    case 'arc':
-      return [
-        [entity.centre[0] - entity.radius, entity.centre[1] - entity.radius],
-        [entity.centre[0] + entity.radius, entity.centre[1] + entity.radius],
-      ]
   }
 }
 
 function extentsOf(entities: readonly Entity[]): { readonly min: Point; readonly max: Point } {
   const all = entities.flatMap(pointsOf)
   if (all.length === 0) return { min: [0, 0], max: [0, 0] }
-  const bounds = boundingBox(all)
+  const xs = all.map((at) => at[0])
+  const ys = all.map((at) => at[1])
   return {
-    min: [bounds.left, bounds.top],
-    max: [bounds.left + bounds.width, bounds.top + bounds.depth],
+    min: [Math.min(...xs), Math.min(...ys)],
+    max: [Math.max(...xs), Math.max(...ys)],
   }
 }
 
@@ -197,6 +170,7 @@ export function writeDxf(input: {
 }
 
 const PLOT_LAYER = 'PLOT'
+const SETBACK_LAYER = 'SETBACK'
 const NORTH_LAYER = 'NORTH'
 
 function roomsLayer(storey: number): string {
@@ -217,20 +191,25 @@ function layersFor(storeys: number): readonly Layer[] {
     { name: doorsLayer(storey), colour: 1 },
     { name: textLayer(storey), colour: 8 },
   ]).flat()
-  return [{ name: PLOT_LAYER, colour: 7 }, ...perStorey, { name: NORTH_LAYER, colour: 7 }]
+  return [
+    { name: PLOT_LAYER, colour: 7 },
+    { name: SETBACK_LAYER, colour: 5 },
+    ...perStorey,
+    { name: NORTH_LAYER, colour: 7 },
+  ]
 }
 
 /**
  * The sheet runs y down in metres and DXF runs y up, so a sheet point `(x, y)` is written
- * `(x - left, foot - y)`: the plot's bounding box lands with its south-west corner on the origin
+ * `(x - left, foot - y)`: the drawing's bounding box lands with its south-west corner on the origin
  * and the plan reads the way it does on screen, with north pointing as it is drawn.
  */
-function transformFor(project: Project) {
-  const bounds = contentBounds(project)
-  const foot = bounds.top + bounds.depth
+function transformFor(sheet: Sheet) {
+  const bounds = contentBounds(sheet)
+  const foot = bounds.y + bounds.h
   return {
     bounds,
-    at: (p: Point): Point => [p[0] - bounds.left, foot - p[1]],
+    at: (p: Point): Point => [p[0] - bounds.x, foot - p[1]],
   }
 }
 
@@ -253,134 +232,60 @@ function northEntities(at: Point, north: number): readonly Entity[] {
   ]
 }
 
-/** An angle in DXF's own space, in whole degrees of turn from east, never negative. */
-function degreesAt(centre: Point, at: Point): number {
-  const turn = (Math.atan2(at[1] - centre[1], at[0] - centre[0]) * 180) / Math.PI
-  return turn < 0 ? turn + 360 : turn
-}
-
-/**
- * One remembered arc as an ARC entity. DXF sweeps an arc counterclockwise in its own y-up space,
- * and the sheet's y runs down, so a wall drawn clockwise on the plan arrives the other way round
- * and its two ends are written swapped. An arc that runs the whole way round is a closed circle.
- */
-function arcEntity(arc: Arc, outline: Polygon, layer: string, at: (p: Point) => Point): Entity {
-  const centre = at(arc.centre)
-  const run = arcRun(arc, outline.length)
-  const first = run[0] ?? 0
-  const last = run[run.length - 1] ?? 0
-  const start = at(outline[first] ?? arc.centre)
-  const end = at(outline[last] ?? arc.centre)
-  const whole = first === last
-  return {
-    kind: 'arc',
-    layer,
-    centre,
-    radius: arc.radius,
-    fromDegrees: whole ? 0 : degreesAt(centre, arc.clockwise ? end : start),
-    toDegrees: whole ? 360 : degreesAt(centre, arc.clockwise ? start : end),
-  }
-}
-
-/**
- * A room's outline split at the ends of its arcs: every remembered curve is written as one ARC
- * and what is left between them as open polylines, all on the room's own layer, so AutoCAD shows
- * a true curve rather than the fifty short chords the tool calculates with.
- */
-function roomEntities(
-  footprint: Footprint,
-  outline: Polygon,
-  layer: string,
-  at: (p: Point) => Point,
-): readonly Entity[] {
-  const arcs = sheetArcs(footprint)
-  const corners = outline.length
-  if (arcs.length === 0 || corners < 3)
-    return [{ kind: 'polyline', layer, points: outline.map(at), closed: true }]
-  const curved = new Array<boolean>(corners).fill(false)
-  for (const arc of arcs) {
-    const run = arcRun(arc, corners)
-    for (let step = 0; step + 1 < run.length; step += 1) curved[run[step] ?? 0] = true
-  }
-  const entities: Entity[] = arcs.map((arc) => arcEntity(arc, outline, layer, at))
-  // The walk starts at the first straight wall whose neighbour behind it is curved, so a run that
-  // would otherwise be split by the end of the list is written as the one polyline it is.
-  const opens = curved.findIndex((wall, index) => !wall && curved[(index - 1 + corners) % corners])
-  if (opens < 0) return entities
-  const runs: number[][] = []
-  let run: number[] | null = null
-  for (let step = 0; step < corners; step += 1) {
-    const wall = (opens + step) % corners
-    if (curved[wall]) {
-      run = null
-      continue
-    }
-    if (!run) {
-      run = [wall]
-      runs.push(run)
-    }
-    run.push((wall + 1) % corners)
-  }
-  for (const straight of runs) {
-    entities.push({
+function entitiesOf(sheet: Sheet): readonly Entity[] {
+  const transform = transformFor(sheet)
+  const entities: Entity[] = [
+    { kind: 'polyline', layer: PLOT_LAYER, points: plotCorners.map(transform.at), closed: true },
+    {
       kind: 'polyline',
-      layer,
-      points: straight.map((corner) => at(outline[corner] ?? [0, 0])),
-      closed: false,
-    })
-  }
-  return entities
-}
-
-function entitiesOf(project: Project): readonly Entity[] {
-  const transform = transformFor(project)
-  const entities: Entity[] = []
-  if (project.plot.polygon.length >= 3) {
-    entities.push({
-      kind: 'polyline',
-      layer: PLOT_LAYER,
-      points: project.plot.polygon.map(transform.at),
+      layer: SETBACK_LAYER,
+      points: setbackCorners.map(transform.at),
       closed: true,
-    })
-  }
-  for (let storey = 0; storey < Math.max(1, project.storeys); storey += 1) {
-    const standing = standingOn(project.rooms, storey)
-    for (const { outline, footprint } of standing) {
-      entities.push(...roomEntities(footprint, outline, roomsLayer(storey), transform.at))
+    },
+  ]
+  for (let storey = 0; storey < storeyCountOf(sheet); storey += 1) {
+    const standing = standingOn(sheet, storey)
+    for (const { loops } of standing) {
+      for (const loop of loops) {
+        entities.push({
+          kind: 'polyline',
+          layer: roomsLayer(storey),
+          points: loop.map(transform.at),
+          closed: true,
+        })
+      }
     }
-    for (const { outline, room, footprint } of standing) {
+    for (const { room, labelAt, area } of standing) {
       entities.push({
         kind: 'text',
         layer: textLayer(storey),
-        at: transform.at(centroid(outline)),
+        at: transform.at(labelAt),
         // ASCII only, so the file reads the same in every CAD program: "m2", not "m²".
-        text: `${room.name} ${round1(exactArea(footprint))} m2`,
+        text: `${room.name} ${fmt(area)} m2`,
         height: TEXT_HEIGHT_M,
       })
     }
-    for (const mark of doorsOn(project, storey, standing)) {
-      const run = openingMetres(mark.kind) / 2
+    for (const opening of openingsOn(sheet, storey)) {
+      const run = opening.width / 2
       entities.push({
         kind: 'line',
         layer: doorsLayer(storey),
-        from: transform.at([mark.at[0] - mark.along[0] * run, mark.at[1] - mark.along[1] * run]),
-        to: transform.at([mark.at[0] + mark.along[0] * run, mark.at[1] + mark.along[1] * run]),
+        from: transform.at([
+          opening.at[0] - opening.along[0] * run,
+          opening.at[1] - opening.along[1] * run,
+        ]),
+        to: transform.at([
+          opening.at[0] + opening.along[0] * run,
+          opening.at[1] + opening.along[1] * run,
+        ]),
       })
     }
   }
   const { bounds } = transform
-  entities.push(
-    ...northEntities(
-      [bounds.width + NORTH_CLEAR_M, bounds.depth - NORTH_REACH_M],
-      project.plot.north,
-    ),
-  )
+  entities.push(...northEntities([bounds.w + NORTH_CLEAR_M, bounds.h - NORTH_REACH_M], NORTH))
   return entities
 }
 
-export function dxfOf(project: Project): string {
-  return writeDxf({
-    layers: layersFor(Math.max(1, project.storeys)),
-    entities: entitiesOf(project),
-  })
+export function dxfOf(sheet: Sheet): string {
+  return writeDxf({ layers: layersFor(storeyCountOf(sheet)), entities: entitiesOf(sheet) })
 }

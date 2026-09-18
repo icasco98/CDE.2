@@ -1,40 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import { rectangleToPolygon, type Polygon } from '../geometry'
-import { PROJECT_VERSION, type Project, type Room } from '../model'
-import { startingHousehold, startingPlot, startingSite } from '../model/project'
+import { sheetOf, type Room, type Sheet } from '../sheet'
 import { contentStreamOf, type Page } from './pdf'
 import { sheetPages } from './sheet'
 
 const on = new Date('2026-09-11T09:00:00Z')
+const title = 'Al Rai villa'
 
-function project(extra: Partial<Project> = {}): Project {
+function room(name: string, box: { x: number; y: number; w: number; h: number }): Room {
   return {
-    id: 'project-1',
-    name: 'Al Rai villa',
-    storeys: 1,
-    heights: [3.5],
-    plot: startingPlot,
-    site: startingSite,
-    household: startingHousehold,
-    rooms: [],
-    edges: [],
-    weights: {},
-    actors: [],
-    version: PROJECT_VERSION,
-    ...extra,
-  }
-}
-
-function room(id: string, polygon: Polygon, storey = 0): Room {
-  return {
-    id,
-    name: id,
-    type: 'bedroom',
-    storey,
-    storeysSpanned: 1,
-    targetArea: 20,
-    pinned: false,
-    footprint: { polygon, rotation: 0 },
+    id: name,
+    name,
+    kind: 'room',
+    cat: 'private',
+    target: 20,
+    angle: 0,
+    pieces: null,
+    placed: true,
+    ...box,
   }
 }
 
@@ -43,6 +25,8 @@ function streamOf(pages: readonly Page[], index: number): string {
   if (!page) throw new Error(`there is no page ${index}`)
   return contentStreamOf(page)
 }
+
+const pagesOf = (sheet: Sheet): readonly Page[] => sheetPages(sheet, title, on)
 
 type Run = { readonly width: number; readonly height: number }
 
@@ -76,7 +60,7 @@ function twoDecimals(value: number): number {
   return Number(value.toFixed(2))
 }
 
-/** The plot on a sheet: the one long path 20 wide for every 25 deep, as the starting plot is. */
+/** The plot on a sheet: the one long path 20 wide for every 25 deep, as the plot is. */
 function plotRun(stream: string): Run {
   const run = pathRuns(stream).find(
     (each) =>
@@ -87,8 +71,8 @@ function plotRun(stream: string): Run {
 }
 
 describe('the plan measures true at the scale it states', () => {
-  it('draws the starting 20 × 25 m plot 566.93 by 708.66 pt at 1:100', () => {
-    const stream = streamOf(sheetPages(project(), on), 0)
+  it('draws the 20 × 25 m plot 566.93 by 708.66 pt at 1:100', () => {
+    const stream = streamOf(pagesOf(sheetOf([], {}, 1)), 0)
     const plot = plotRun(stream)
     expect(twoDecimals(plot.width)).toBe(566.93)
     expect(twoDecimals(plot.height)).toBe(708.66)
@@ -96,9 +80,9 @@ describe('the plan measures true at the scale it states', () => {
   })
 
   it('halves both to 283.46 by 354.33 pt when the drawing falls to 1:200', () => {
-    // A room 5 m south of the plot makes the drawing 30 m deep, which 1:100 has no paper for.
-    const outside = room('South wing', rectangleToPolygon({ left: 0, top: 26, width: 6, depth: 4 }))
-    const stream = streamOf(sheetPages(project({ rooms: [outside] }), on), 0)
+    // A room 1 m south of the plot makes the drawing 30 m deep, which 1:100 has no paper for.
+    const outside = room('South wing', { x: 0, y: 26, w: 6, h: 4 })
+    const stream = streamOf(pagesOf(sheetOf([outside], {}, 1)), 0)
     const plot = plotRun(stream)
     expect(twoDecimals(plot.width * 2)).toBe(566.93)
     expect(twoDecimals(plot.height * 2)).toBe(708.66)
@@ -109,31 +93,44 @@ describe('the plan measures true at the scale it states', () => {
 })
 
 describe('the set of sheets', () => {
-  it('gives every storey a page and adds one for the envelope numbers', () => {
-    const pages = sheetPages(project({ storeys: 3, heights: [3.5, 3.5, 3] }), on)
-    expect(pages).toHaveLength(4)
-    expect(streamOf(pages, 3)).toContain('(Envelope numbers')
+  it('gives every storey a page and no more', () => {
+    const pages = pagesOf(sheetOf([], {}, 3))
+    expect(pages).toHaveLength(3)
+    expect(streamOf(pages, 2)).toContain('(Second floor plan')
     expect(pages.every((page) => twoDecimals(page.width) === 1190.55)).toBe(true)
     expect(pages.every((page) => twoDecimals(page.height) === 841.89)).toBe(true)
   })
 
   it('says so in the drawing area when no room is placed', () => {
-    expect(streamOf(sheetPages(project(), on), 0)).toContain('(No rooms placed) Tj')
+    expect(streamOf(pagesOf(sheetOf([], {}, 1)), 0)).toContain('(No rooms placed) Tj')
   })
 
   it('letters a placed room with its name and its area, and stops saying there are none', () => {
-    const kitchen = room('Kitchen', rectangleToPolygon({ left: 2, top: 3, width: 5, depth: 4 }))
-    const stream = streamOf(sheetPages(project({ rooms: [kitchen] }), on), 0)
+    const stream = streamOf(
+      pagesOf(sheetOf([room('Kitchen', { x: 2, y: 3, w: 5, h: 4 })], {}, 1)),
+      0,
+    )
     expect(stream).toContain('(Kitchen) Tj')
     expect(stream).toContain('(20 m\\262) Tj')
     expect(stream).not.toContain('(No rooms placed) Tj')
   })
 
-  it('carries the envelope numbers for the whole house in the title block', () => {
-    const kitchen = room('Kitchen', rectangleToPolygon({ left: 2, top: 3, width: 5, depth: 4 }))
-    const stream = streamOf(sheetPages(project({ rooms: [kitchen] }), on), 0)
-    expect(stream).toContain('Gross floor 20 m\\262')
-    expect(stream).toContain('ratio 4%')
+  it('carries the storey’s figures and the whole house against the ratio in the title block', () => {
+    const stream = streamOf(
+      pagesOf(sheetOf([room('Kitchen', { x: 2, y: 3, w: 5, h: 4 })], {}, 1)),
+      0,
+    )
     expect(stream).toContain('(Al Rai villa) Tj')
+    expect(stream).toContain(
+      '(Placed 20 m\\262 of 20 m\\262 asked \\267 buildable 365.5 m\\262) Tj',
+    )
+    expect(stream).toContain('(All storeys 20 m\\262 of 1050 m\\262 allowed at 210%) Tj')
+  })
+
+  it('draws the setback line dashed, inside the plot and clear of it', () => {
+    const stream = streamOf(pagesOf(sheetOf([], {}, 1)), 0)
+    expect(stream).toContain('[5.000 3.000] 0 d')
+    const setback = pathRuns(stream).find((run) => Math.abs(run.width - 17 * (566.929 / 20)) < 0.01)
+    expect(setback?.height).toBeCloseTo(21.5 * (708.661 / 25), 1)
   })
 })

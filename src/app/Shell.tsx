@@ -103,7 +103,7 @@ export function Shell() {
             >
               Save file
             </button>
-            <ExportMenu project={project} />
+            {stageId === 'sheet' && <ExportMenu title={project.name} />}
             <button type="button" onClick={() => session.undo()} disabled={!session.canUndo()}>
               Undo
             </button>

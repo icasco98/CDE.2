@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { tab } from './plan'
+import { tab } from './tabs'
 
 /*
  * The walls and the site forces as a person meets them: what the sliders do to the picture, what a
