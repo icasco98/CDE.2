@@ -2,16 +2,24 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
   MEMORY_DOC,
   MEMORY_KEY,
+  SETTINGS_DOC,
   SHEET_DOC,
   SHEET_KEY,
+  SPEC_DOC,
   keepMemory,
   keepSheet,
+  keepSpec,
   localMemory,
+  localSample,
   localSheet,
+  localSpec,
   sheetFrom,
   sheetKept,
   storedMemory,
+  storedSample,
+  storedSettings,
   storedSheet,
+  storedSpec,
 } from './store'
 import { newMemory, sampleSheet, withNote, type Sheet } from '../../sheet'
 import type { Store } from './claude'
@@ -84,6 +92,27 @@ describe('where the sheet and the memory are kept', () => {
     const read = sheetFrom(kept)!
     expect(read.settings.rule).toBe('push')
     expect(read.settings.grid).toBe(0.5)
+  })
+
+  it('writes the settings on their own as well, so a link that keeps them reads them back', async () => {
+    const { store, docs } = fakeStore()
+    keepSheet(sampleSheet({ grid: 1, rule: 'push' }), store)
+    await Promise.resolve()
+    expect(docs.has(SETTINGS_DOC)).toBe(true)
+    expect((await storedSettings(store))!.grid).toBe(1)
+    expect((await storedSettings(store))!.rule).toBe('push')
+  })
+
+  it('round trips the spec and the sample This is it saved', async () => {
+    const { store, docs } = fakeStore()
+    const sheet = sampleSheet({ jamb: 0.3, boundary: 'sides' })
+    keepSpec(sheet, store)
+    await Promise.resolve()
+    expect(docs.has(SPEC_DOC)).toBe(true)
+    expect(localSpec()).toMatchObject({ jamb: 0.3, boundary: 'sides' })
+    expect(placed(localSample()!)).toBe(placed(sheet))
+    expect(await storedSpec(store)).toMatchObject({ jamb: 0.3, boundary: 'sides' })
+    expect(placed((await storedSample(store))!)).toBe(placed(sheet))
   })
 
   it('reads back a cleared sheet as cleared, so an emptied plan stays empty', () => {

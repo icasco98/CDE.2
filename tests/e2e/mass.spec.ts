@@ -35,7 +35,10 @@ async function onSheet(page: Page, mx: number, my: number): Promise<At> {
 }
 
 async function centreOf(page: Page, selector: string): Promise<At> {
-  const box = await page.locator(selector).first().boundingBox()
+  const at = page.locator(selector).first()
+  // The program column scrolls on its own, so a block low in it is brought into view first.
+  await at.scrollIntoViewIfNeeded()
+  const box = await at.boundingBox()
   if (!box) throw new Error(`nothing to aim at: ${selector}`)
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
 }
