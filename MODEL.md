@@ -23,8 +23,12 @@ Invariants: an edge joins two rooms that share a storey, or a stair
 with a room on any storey it spans. One edge per unordered pair per
 storey. Deleting a room deletes its edges. `EXTERIOR` is never a room.
 A room is placed (has a footprint) or unplaced, never half. Footprints
-on one storey never overlap. Bubbles on one storey may overlap by up
-to a quarter of the smaller one's area, never wholly.
+on one storey may overlap only while an overlap is unsettled; an
+unsettled overlap is always drawn and named in the sentence, never
+silent, and is settled by the hand (the lower room in the program
+gives way: pushed or carved) or by the landing rule the person chose.
+Bubbles on one storey may overlap by up to a quarter of the smaller
+one's area, never wholly.
 
 ## Reference tables (code, one copy each)
 
@@ -72,13 +76,14 @@ by side. The tool never presents one answer.
    deterministic for the same input, pinnable. If a storey's areas
    cannot fit its buildable area, it says so here and on the
    Requirements totals.
-3. **Zoning.** The buildable area partitioned among the bubbles into
-   footprints of the target areas (Morph), offered as a proposal to
-   accept or send back: Accept places every zone and writes the door
-   hints in one transaction, Back writes nothing, spilling past the
-   buildable line is shown rather than refused; then rooms dragged,
-   rotated, reshaped and carved by hand; an unrealised edge shown as
-   tension between two rooms.
+3. **Zoning.** Nothing transfers from the bubble sheet: the zoning
+   sheet opens on the sample plan or empty, and every zone stands where
+   the hand put it, dropped from the program or drawn. Rooms dragged,
+   turned, reshaped and carved by hand on a plot with the Municipality
+   setbacks, the mass beside the sheet as the same model in a second
+   window; doors are drawn on walls in the Openings step and are the
+   edges. The Morph and its proposal are retired (owner, 17 September
+   2026).
 4. **Massing.** The same graph stood up: storeys, heights, envelope as
    the union of rooms, drawn in parallel projection with its numbers
    (floor area, envelope, roof, volume) beside it.
