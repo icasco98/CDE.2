@@ -87,6 +87,10 @@ main.stage-sheet {
   flex-wrap: wrap;
 }
 
+.sheet-stage .tools .grp.far {
+  margin-left: auto;
+}
+
 .sheet-stage button {
   font:
     600 13px 'Archivo',
@@ -145,7 +149,7 @@ main.stage-sheet {
 
 .sheet-stage .body-row {
   display: grid;
-  grid-template-columns: 210px minmax(320px, 1fr);
+  grid-template-columns: 210px minmax(320px, 1fr) 300px;
   gap: 14px;
   flex: 1 1 auto;
   min-height: 0;

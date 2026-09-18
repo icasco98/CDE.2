@@ -208,6 +208,15 @@ const surface = [
   'undo',
   'ungroup',
   'unlock',
+  // the assistant's tools, its memory and its prompt
+  'layoutTools',
+  'newMemory',
+  'promptFor',
+  'readMemory',
+  'sheetRead',
+  'withFeedback',
+  'withNote',
+  'withPlan',
 ]
 
 it('offers every name the screens and the agent drive, and no other', () => {
