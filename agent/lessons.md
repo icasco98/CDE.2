@@ -13,6 +13,8 @@ stays about a page. These overrule `architect.md`.
 - Stay at the level the conversation is at. Concept is relationships —
   who is next to whom, who must not meet, what faces the street. Walls,
   metres and corners come only once the arrangement is agreed.
+- Chat is the default, but when the owner asks for a list he wants a
+  list. Give it plainly and go back to chat after.
 
 ## Requests
 
