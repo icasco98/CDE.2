@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   DOOR,
   KINDS,
-  KIND_INFO,
+  KIND_LABEL,
   PROGRAM,
   PROGRAM_TAG,
   freshRooms,
@@ -25,10 +25,10 @@ describe('the program', () => {
     expect(PROGRAM.filter(([, kind]) => KINDS[kind]!.cat === 'open').length).toBe(4)
   })
 
-  it('gives every kind a category and a range', () => {
+  it('gives every kind a category and a name on the sheet', () => {
     expect(KINDS['diwaniya']!.cat).toBe('reception')
-    expect(KIND_INFO['diwaniya']).toEqual(['Diwaniya', 45, 60])
-    expect(KIND_INFO['hallway']![1]).toBe(6)
+    expect(KIND_LABEL['diwaniya']).toBe('Diwaniya')
+    expect(KIND_LABEL['hallway']).toBe('Hallway')
   })
 
   it('sizes a room from its target: the width on the quarter metre, the depth exact', () => {

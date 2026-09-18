@@ -187,7 +187,7 @@ export { boundaryWalls, report, sideOver, sideUsed } from './report'
 export {
   DOOR,
   KINDS,
-  KIND_INFO,
+  KIND_LABEL,
   PROGRAM,
   PROGRAM_TAG,
   freshRooms,

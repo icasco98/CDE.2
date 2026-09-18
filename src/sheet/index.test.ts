@@ -161,7 +161,7 @@ const surface = [
   // the program and the sample
   'DOOR',
   'KINDS',
-  'KIND_INFO',
+  'KIND_LABEL',
   'PROGRAM',
   'PROGRAM_TAG',
   'freshRooms',
