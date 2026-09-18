@@ -4,7 +4,9 @@ import {
   addRoom,
   addStorey,
   carveBelow,
+  clearColor,
   clearHeight,
+  clearLabel,
   combine,
   copyTo,
   cutToSetback,
@@ -40,8 +42,10 @@ import {
   sendBack,
   sendBackRoom,
   setArea,
+  setColor,
   setDoorWidth,
   setHeight,
+  setLabel,
   setSetting,
   setSize,
   setStorey,
@@ -853,5 +857,44 @@ describe('the sheet under the actions', () => {
   it('keeps a drawn point on the plot and rests a room on the grid', () => {
     expect(drawnPoint(sheetOf([]), 0, [-4, 40])).toEqual([0, 25])
     expect(restOnGrid(room({ x: 6.1, y: 6.1 }), DEFAULTS).x).toBe(6)
+  })
+})
+
+describe('a room’s own colour and where its name is written', () => {
+  it('gives the selected rooms a colour and puts them back to their category’s', () => {
+    const sheet = quiet([room()])
+    const out = setColor(sheet, { ids: ['a'], color: '#123456' })
+    expect(out.result.ok).toBe(true)
+    expect(roomOf(out.sheet, 'a').color).toBe('#123456')
+    expect(clearColor(out.sheet, { ids: ['a'] }).sheet.rooms[0]!.color).toBeUndefined()
+  })
+
+  it('refuses a colour that is not written as #rrggbb, and a reset with nothing to reset', () => {
+    const sheet = quiet([room()])
+    expect(setColor(sheet, { ids: ['a'], color: 'blue' }).result).toEqual({
+      ok: false,
+      said: 'A colour is written as #rrggbb.',
+    })
+    expect(clearColor(sheet, { ids: ['a'] }).result.ok).toBe(false)
+    expect(setColor(sheet, { ids: ['nope'], color: '#123456' }).result.ok).toBe(false)
+  })
+
+  it('writes the name where the hand put it, and puts it back by itself', () => {
+    const sheet = quiet([room()])
+    const out = setLabel(sheet, { id: 'a', at: [1.5, 2] })
+    expect(roomOf(out.sheet, 'a').labelAt).toEqual([1.5, 2])
+    expect(clearLabel(out.sheet, { ids: ['a'] }).sheet.rooms[0]!.labelAt).toBeUndefined()
+    expect(clearLabel(sheet, { ids: ['a'] }).result).toEqual({
+      ok: false,
+      said: 'Those names lie where they go by themselves.',
+    })
+  })
+
+  it('refuses to write the name of a room that is not on the sheet', () => {
+    const sheet = quiet([room({ placed: false })])
+    expect(setLabel(sheet, { id: 'a', at: [1, 1] }).result).toEqual({
+      ok: false,
+      said: 'no such room on the sheet',
+    })
   })
 })
