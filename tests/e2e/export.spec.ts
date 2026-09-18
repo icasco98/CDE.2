@@ -3,6 +3,8 @@ import { exported, openSheet, textOf } from './exporting'
 
 test('the two buttons hand over a PDF and a DXF of the sheet as it stands', async ({ page }) => {
   await openSheet(page)
+  // One zoning tool, not two: Requirements, Bubbles and the Sheet the export is taken from.
+  await expect(page.locator('nav.tabs button')).toHaveText(['Requirements', 'Bubbles', 'Sheet'])
   const rooms = await page.locator('svg.sheet g.room[data-room]:not(.under)').count()
   expect(rooms).toBeGreaterThan(4)
 
@@ -15,8 +17,8 @@ test('the two buttons hand over a PDF and a DXF of the sheet as it stands', asyn
   const drawing = await textOf(dxf)
   expect(drawing.startsWith('0\nSECTION')).toBe(true)
   expect(drawing.endsWith('0\nEOF\n')).toBe(true)
-  // One opening per room outline on the ground storey's rooms layer, so the rooms on screen split
-  // the file in as many pieces, and the ground storey has a layer of its own to hold them.
+  // The ground storey has a rooms layer of its own, with at least one closed outline on it for
+  // every room the sheet is showing.
   expect(drawing).toContain('0\nLAYER\n2\nS0-ROOMS\n')
   expect(drawing.split('0\nPOLYLINE\n8\nS0-ROOMS\n').length - 1).toBeGreaterThanOrEqual(rooms)
 })

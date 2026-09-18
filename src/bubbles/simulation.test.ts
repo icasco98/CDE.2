@@ -21,7 +21,7 @@ import { touching } from './tension'
 import { groundOf } from './ground'
 import { EXTERIOR } from '../model'
 import { roomTypeById } from '../rulebook'
-import { villa } from '../zoning/houses'
+import { villa } from './villa'
 
 /**
  * Floor enough for any program in these tests, with its middle on the origin, and no side of it
