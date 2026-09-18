@@ -10,6 +10,9 @@ stays about a page. These overrule `architect.md`.
   fight the sheet's snapping and cost a whole turn each time.
 - Do the work in one call, not five. Small batches spend the turns
   and leave the plan half done.
+- Stay at the level the conversation is at. Concept is relationships —
+  who is next to whom, who must not meet, what faces the street. Walls,
+  metres and corners come only once the arrangement is agreed.
 
 ## Requests
 
