@@ -179,6 +179,9 @@ export {
   walkTest,
 } from './doors'
 
+export type { DoorDrawing, DoorRead, DoorRef, Leaf } from './openings'
+export { doorDrawing, doorNear, doorRead, lostDoors, newDoors } from './openings'
+
 export type { LabelPlan } from './labels'
 export { initialsOf, labelPlan, obstaclesOf, spanThrough } from './labels'
 
