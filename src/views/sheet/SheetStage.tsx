@@ -15,6 +15,7 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from 'react'
 import {
+  DEFAULTS,
   RULE_HINT,
   acrossStoreys,
   addRoom,
@@ -23,6 +24,7 @@ import {
   areaOf,
   bestNeighbour,
   carveBelow,
+  cloneRoom,
   clearColor,
   clearLabel,
   combine,
@@ -61,6 +63,7 @@ import {
   setSetting,
   setSize,
   setStorey,
+  sheetOf,
   storeyCountOf,
   storeyOf,
   turn,
@@ -76,6 +79,7 @@ import {
   type Point,
   type Result,
   type Room,
+  type Settings,
   type Sheet,
   type Side4,
 } from '../../sheet'
@@ -121,7 +125,22 @@ import {
 } from './gestures'
 import { Chat } from './Chat'
 import { useRuntime } from './claude'
-import { keepMemory, keepSheet, localMemory, localSheet, storedMemory, storedSheet } from './store'
+import {
+  keepMemory,
+  keepSheet,
+  keepSpec,
+  localMemory,
+  localSample,
+  localSheet,
+  localSpec,
+  storedMemory,
+  storedSample,
+  storedSettings,
+  storedSheet,
+  storedSpec,
+} from './store'
+import { SettingsWindow, useSettingsWindow } from './Settings'
+import { colourVars, tabFor } from './settings'
 import { keyCommand, keyRelease } from './keys'
 import { drawingSentence, measuringSentence, sentenceOf, type Part } from './sentence'
 import './sheet.css'
@@ -174,6 +193,11 @@ export function SheetStage() {
   const [tag, setTag] = useState<{ id: string; x: number; y: number } | null>(null)
   const [hover, setHover] = useState<string | null>(null)
   const [drawMenuFor, setDrawMenuFor] = useState<string | null>(null)
+  const [specState, setSpecState] = useState('')
+  const settingsWindow = useSettingsWindow()
+  // The owner's spec and sample as last saved by This is it: this browser's, then the link's store's.
+  const spec = useRef<Partial<Settings> | null>(localSpec())
+  const sample = useRef<Sheet | null>(localSample())
   const clipboard = useRef<{ ids: string[]; storey: number; pastes: number } | null>(null)
   const spaceHeld = useRef(false)
   const touched = useRef(false)
@@ -200,10 +224,24 @@ export function SheetStage() {
       return
     }
     let live = true
-    void Promise.all([storedSheet(store), storedMemory(store)]).then(([stored, kept]) => {
+    void Promise.all([
+      storedSheet(store),
+      storedMemory(store),
+      storedSettings(store),
+      storedSpec(store),
+      storedSample(store),
+    ]).then(([stored, kept, saved, keptSpec, keptSample]) => {
       if (!live) return
-      if (stored && !touched.current) {
-        docRef.current = { sheet: stored, history: newHistory() }
+      if (keptSpec) spec.current = keptSpec
+      if (keptSample) sample.current = keptSample
+      if (!touched.current && (stored || saved)) {
+        const held = stored ?? docRef.current.sheet
+        docRef.current = {
+          sheet: saved
+            ? sheetOf(held.rooms, { ...held.settings, ...saved }, held.storeyCount)
+            : held,
+          history: newHistory(),
+        }
         setDoc(docRef.current)
       }
       if (kept) setMemory(kept)
@@ -342,14 +380,46 @@ export function SheetStage() {
 
   const backToSample = () => {
     const now = docRef.current
+    const saved = sample.current
     touched.current = true
     docRef.current = {
-      sheet: sampleSheet(now.sheet.settings),
+      sheet: saved
+        ? sheetOf(saved.rooms.map(cloneRoom), now.sheet.settings, saved.storeyCount)
+        : sampleSheet(now.sheet.settings),
       history: remember(now.history, now.sheet),
     }
     setDoc(docRef.current)
     setSelection([])
     setMenu(null)
+  }
+
+  /** This is it: the settings now are the spec, and the sheet now is the sample. */
+  const thisIsIt = () => {
+    const now = docRef.current.sheet
+    keepSpec(now, runtime.store)
+    spec.current = { ...now.settings }
+    sample.current = now
+    setSpecState('Saved as the spec.')
+  }
+
+  /** Every setting back to the spec, each through its own action, so each is validated and held. */
+  const resetSpec = () => {
+    const saved = spec.current
+    if (!saved) {
+      setSpecState('No spec saved yet.')
+      return
+    }
+    let held = docRef.current.sheet
+    for (const [name, value] of Object.entries(saved)) {
+      if (name === 'colors') {
+        for (const [category, colour] of Object.entries(value as Record<string, string>))
+          held = setSetting(held, { name: `color.${category}`, value: colour }).sheet
+        continue
+      }
+      held = setSetting(held, { name, value: value as string | number }).sheet
+    }
+    apply({ sheet: held, result: { ok: true, said: 'Back to the spec.' } })
+    setSpecState('Back to the spec.')
   }
 
   const clearPlan = () => {
@@ -1101,7 +1171,7 @@ export function SheetStage() {
   const pickedPocket = pocketPicked !== null ? (view.pockets[pocketPicked] ?? null) : null
 
   return (
-    <div className="sheet-stage">
+    <div className="sheet-stage" style={colourVars(settings)}>
       <p className="head-line">
         Zoning by hand on the fresh brief&rsquo;s corner plot, 20 × 25 m, service street south, side
         street east, north turned 25°. Ground floor. Drag a room from the program and drop it where
@@ -1128,6 +1198,20 @@ export function SheetStage() {
           >
             Measure
           </button>
+          <button
+            type="button"
+            className={settingsWindow.open ? 'on' : ''}
+            title="Every setting of the sheet"
+            onClick={() => {
+              if (!settingsWindow.open)
+                settingsWindow.setTab(
+                  tabFor(drawing || reshaping ? 'drawing' : 'zoning', settingsWindow.tab),
+                )
+              settingsWindow.setOpen(!settingsWindow.open)
+            }}
+          >
+            ⚙ Settings
+          </button>
         </span>
         <span className="grp">
           <Storeys
@@ -1151,6 +1235,15 @@ export function SheetStage() {
           <button type="button" onClick={clearPlan}>
             Clear the plan
           </button>
+          <button
+            type="button"
+            className="primary"
+            onClick={thisIsIt}
+            title="The settings now are the spec; the sheet now is the sample"
+          >
+            This is it
+          </button>
+          <span className="state">{specState}</span>
         </span>
         <span className="grp">
           <button
@@ -1232,6 +1325,23 @@ export function SheetStage() {
           </div>
         </div>
       </div>
+      {settingsWindow.open && (
+        <SettingsWindow
+          settings={settings}
+          tab={settingsWindow.tab}
+          onTab={settingsWindow.setTab}
+          onChange={(name, value) => apply(setSetting(docRef.current.sheet, { name, value }))}
+          onStandardColours={() => {
+            let held = docRef.current.sheet
+            for (const [category, colour] of Object.entries(DEFAULTS.colors))
+              held = setSetting(held, { name: `color.${category}`, value: colour }).sheet
+            apply({ sheet: held, result: { ok: true, said: 'The standard colours are back.' } })
+          }}
+          onResetSpec={resetSpec}
+          onClose={() => settingsWindow.setOpen(false)}
+          specState={specState}
+        />
+      )}
       <div className="body-row">
         <Program
           sheet={sheet}
