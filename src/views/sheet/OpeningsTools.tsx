@@ -22,6 +22,10 @@ type OpeningsToolsProps = {
 
 export function OpeningsTools(props: OpeningsToolsProps) {
   const { door } = props
+  const width = (typed: string) => {
+    const metres = Number.parseFloat(typed)
+    if (metres >= 0.6 && metres <= 3) props.onWidth(r2(metres))
+  }
   return (
     <span className="grp place">
       {TYPES.map((type) => (
@@ -42,10 +46,12 @@ export function OpeningsTools(props: OpeningsToolsProps) {
           min={0.6}
           max={3}
           step={0.1}
-          value={props.width}
-          onChange={(event) => {
-            const typed = Number.parseFloat(event.target.value)
-            if (typed >= 0.6 && typed <= 3) props.onWidth(r2(typed))
+          // the field is the hand's, until it is left or Enter is pressed, so a half-typed number stands
+          key={props.width}
+          defaultValue={props.width}
+          onBlur={(event) => width(event.currentTarget.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') width(event.currentTarget.value)
           }}
         />
         m

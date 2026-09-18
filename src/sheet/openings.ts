@@ -93,9 +93,17 @@ const sweepOf = (h: Point, e: Point, f: Point): 0 | 1 =>
 
 /**
  * A door on its wall: the wall opened, the leaf and its swing, the panels of a sliding door, the
- * jambs of an opening and the mark of a street door.
+ * jambs of an opening and the mark of a street door. The room across the wall is looked up only for
+ * a leaf that swings that way, which is the only one it can be in the way of.
  */
-export function doorDrawing(r: Room, d: Door, pl: Place, across: Room | null): DoorDrawing {
+export function doorDrawing(
+  r: Room,
+  d: Door,
+  pl: Place,
+  sheet: Sheet,
+  storey: number,
+): DoorDrawing {
+  const across = d.flip && hasSwing(d) ? doorAcross(r, pl, sheet, storey) : null
   const [px, py] = pl.p
   const [ux, uy] = pl.u
   const [nx, ny] = pl.n

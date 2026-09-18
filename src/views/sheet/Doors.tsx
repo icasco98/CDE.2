@@ -11,7 +11,6 @@ import {
 import {
   doorDrawing,
   doorPlace,
-  doorAcross,
   doorsOf,
   toWorld,
   type Door,
@@ -85,7 +84,7 @@ export function Doors(props: DoorsProps) {
                 <DoorMark
                   key={d.id}
                   door={d}
-                  drawing={doorDrawing(r, d, pl, doorAcross(r, pl, sheet, storey))}
+                  drawing={doorDrawing(r, d, pl, sheet, storey)}
                   picked={picked}
                   on={
                     openings
@@ -108,7 +107,8 @@ export function Doors(props: DoorsProps) {
               armed.room,
               preview(openings.armed.type, openings.armed.w),
               armed.pl,
-              doorAcross(armed.room, armed.pl, sheet, storey),
+              sheet,
+              storey,
             )}
             picked={false}
             on={null}
@@ -125,7 +125,8 @@ export function Doors(props: DoorsProps) {
                 dragged.room,
                 preview(openings.dragged.type, openings.dragged.w),
                 dragged.pl,
-                doorAcross(dragged.room, dragged.pl, sheet, storey),
+                sheet,
+                storey,
               )}
               picked={false}
               on={null}
@@ -217,7 +218,8 @@ function DoorMark({
       {drawing.streetMark && (
         <polygon className="street-mark" points={points(drawing.streetMark)} />
       )}
-      {!faint &&
+      {/* the wide transparent lines a click lands on, drawn only in the step that answers one */}
+      {on &&
         drawing.hits.map((hit, i) =>
           hit.length === 2 && hit[0] && hit[1] ? (
             <line

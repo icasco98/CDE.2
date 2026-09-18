@@ -3,7 +3,7 @@ import { doorDrawing, doorNear, doorRead, lostDoors, newDoors } from './openings
 import { addDoor, removeDoor } from './actions'
 import { doorPlace } from './doors'
 import { toWorld } from './geometry'
-import { doorsOf, placedRooms, type Door, type Room } from './model'
+import { doorsOf, placedRooms, sheetOf, type Door, type Room } from './model'
 import { sampleSheet } from './sample'
 
 const named = (name: string) => {
@@ -62,7 +62,7 @@ describe('a door’s drawing', () => {
   it('opens the wall the door’s width, from a jamb short of the corner', () => {
     const r = named('Kitchen')
     const d = doorsOf(r).find((o) => o.at[1] === 0)!
-    const drawing = doorDrawing(r, d, place(r, d), null)
+    const drawing = doorDrawing(r, d, place(r, d), sampleSheet(), 0)
     const [a, b] = drawing.gap
     expect(Math.hypot(b[0] - a[0], b[1] - a[1])).toBeCloseTo(0.9, 6)
   })
@@ -70,11 +70,13 @@ describe('a door’s drawing', () => {
   it('gives a plain door one leaf of its width and a double door two halves', () => {
     const r = named('Kitchen')
     const plain = doorsOf(r)[0]!
-    expect(doorDrawing(r, plain, place(r, plain), null).leaves).toHaveLength(1)
-    expect(doorDrawing(r, plain, place(r, plain), null).leaves[0]!.arc.radius).toBeCloseTo(0.9, 6)
+    expect(doorDrawing(r, plain, place(r, plain), sampleSheet(), 0).leaves).toHaveLength(1)
+    expect(
+      doorDrawing(r, plain, place(r, plain), sampleSheet(), 0).leaves[0]!.arc.radius,
+    ).toBeCloseTo(0.9, 6)
     const entry = named('Entry')
     const street2 = doorsOf(entry).find((o) => o.type === 'street2')!
-    const both = doorDrawing(entry, street2, place(entry, street2), null)
+    const both = doorDrawing(entry, street2, place(entry, street2), sampleSheet(), 0)
     expect(both.leaves).toHaveLength(2)
     expect(both.leaves[0]!.arc.radius).toBeCloseTo(street2.w / 2, 6)
     expect(both.streetMark).not.toBeNull()
@@ -83,12 +85,12 @@ describe('a door’s drawing', () => {
   it('gives a sliding door two panels and two jambs and no leaf, an opening jambs alone', () => {
     const r = named('Diwaniya')
     const sliding = doorsOf(r).find((o) => o.type === 'sliding')!
-    const slid = doorDrawing(r, sliding, place(r, sliding), null)
+    const slid = doorDrawing(r, sliding, place(r, sliding), sampleSheet(), 0)
     expect(slid.leaves).toEqual([])
     expect(slid.panels).toHaveLength(2)
     expect(slid.jambs).toHaveLength(2)
     const opening = doorsOf(r).find((o) => o.type === 'opening')!
-    const open = doorDrawing(r, opening, place(r, opening), null)
+    const open = doorDrawing(r, opening, place(r, opening), sampleSheet(), 0)
     expect(open.leaves).toEqual([])
     expect(open.panels).toEqual([])
     expect(open.jambs).toHaveLength(2)
@@ -97,7 +99,7 @@ describe('a door’s drawing', () => {
   it('marks an opened wall with its own line and nothing else', () => {
     const r = named('Stair')
     const d = doorsOf(r).find((o) => o.type === 'open')!
-    const drawing = doorDrawing(r, d, place(r, d), null)
+    const drawing = doorDrawing(r, d, place(r, d), sampleSheet(), 0)
     expect(drawing.openMark).not.toBeNull()
     expect(drawing.leaves).toEqual([])
     expect(drawing.jambs).toEqual([])
@@ -123,8 +125,8 @@ describe('a door’s drawing', () => {
     }
     const inward: Door = { id: 'd1', type: 'door', w: 0.9, at: [1.5, 0], flip: false, hinge: false }
     const out: Door = { ...inward, flip: true }
-    expect(doorDrawing(niche, inward, place(niche, inward), null).blocked).toBe(true)
-    expect(doorDrawing(niche, out, place(niche, out), null).blocked).toBe(false)
+    expect(doorDrawing(niche, inward, place(niche, inward), sheetOf([niche]), 0).blocked).toBe(true)
+    expect(doorDrawing(niche, out, place(niche, out), sheetOf([niche]), 0).blocked).toBe(false)
   })
 })
 
