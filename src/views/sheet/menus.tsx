@@ -4,9 +4,11 @@
  */
 
 import {
+  acrossStoreys,
   courtWhy,
   fmt,
   isOpen,
+  storeyNameOf,
   type Point,
   type Pocket,
   type Room,
@@ -34,6 +36,9 @@ export type RoomChoice =
   | { kind: 'labelReset' }
   | { kind: 'restore' }
   | { kind: 'copy' }
+  /** One storey up or down, the room's place kept; a copy leaves the original where it stands. */
+  | { kind: 'setStorey'; to: number }
+  | { kind: 'copyStorey'; to: number }
   | { kind: 'back' }
 
 type RoomMenuProps = {
@@ -47,6 +52,10 @@ type RoomMenuProps = {
   under: { names: string[]; can: boolean }
   canRestore: boolean
   pastSetback: boolean
+  settings: Settings
+  /** The storey in hand and how many the plan has, for the rows that send a room up or down. */
+  storey: number
+  storeys: number
   onChoose: (choice: RoomChoice) => void
 }
 
@@ -187,6 +196,38 @@ export function RoomMenu(props: RoomMenuProps) {
       <button type="button" onClick={() => props.onChoose({ kind: 'copy' })}>
         Copy<span className="m">Ctrl+C · Ctrl+V pastes</span>
       </button>
+      {sel.some((o) => !acrossStoreys(o, props.settings)) && (
+        <>
+          {props.storey < props.storeys - 1 && (
+            <>
+              <button
+                type="button"
+                onClick={() => props.onChoose({ kind: 'copyStorey', to: props.storey + 1 })}
+              >
+                Copy to the {storeyNameOf(props.storey + 1).toLowerCase()} storey
+                <span className="m">a copy, same place, one storey up</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => props.onChoose({ kind: 'setStorey', to: props.storey + 1 })}
+              >
+                Move up to the {storeyNameOf(props.storey + 1).toLowerCase()} storey
+                <span className="m">same place, one storey up</span>
+              </button>
+            </>
+          )}
+          {props.storey > 0 && (
+            <button
+              type="button"
+              onClick={() => props.onChoose({ kind: 'setStorey', to: props.storey - 1 })}
+            >
+              Move down to the {storeyNameOf(props.storey - 1).toLowerCase()}
+              {props.storey === 1 ? '' : ' storey'}
+              <span className="m">same place, one storey down</span>
+            </button>
+          )}
+        </>
+      )}
       <button type="button" onClick={() => props.onChoose({ kind: 'back' })}>
         Send back to the tray<span className="m">Delete</span>
       </button>

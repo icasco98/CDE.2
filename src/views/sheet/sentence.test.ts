@@ -88,6 +88,17 @@ describe('the sentence under the sheet', () => {
     expect(snapWord('nothing at all')).toBe('free')
   })
 
+  it('reads both storeys against the 1050 m² the ratio allows, and marks it when over', () => {
+    const two = { ...report(sheet, 1), floors: [344, 120], total: 464 }
+    expect(text(sentenceOf(two, DEFAULTS))).toContain(
+      'ground 344 + first 120 = 464 m² of 1050 m² the ratio allows',
+    )
+    const over = { ...two, floors: [600, 600], total: 1200, overRatio: true }
+    const parts = sentenceOf(over, DEFAULTS)
+    expect(text(parts)).toContain('over the 1050 m² the ratio allows')
+    expect(parts.some((part) => part.bad && part.text.includes('ratio allows'))).toBe(true)
+  })
+
   it('leaves the ratio unread when the setting is off', () => {
     const quiet = { ...DEFAULTS, ratioWarn: 0 }
     const read = { ...report(sheet, 0), floors: [344, 120], total: 464, ratioRead: false }

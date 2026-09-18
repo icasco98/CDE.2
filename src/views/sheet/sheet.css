@@ -353,11 +353,22 @@ main.stage-sheet {
   flex: 0 0 62px;
 }
 
+/* The sheet and the mass stand side by side over the sentence; hidden, the sheet takes the width. */
 .sheet-stage .middle {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: minmax(420px, 1fr) auto auto;
   min-height: 0;
   gap: 8px;
+}
+
+.sheet-stage .middle:has(> .mass.folded) {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.sheet-stage .middle > .say,
+.sheet-stage .middle > .legend {
+  grid-column: 1 / -1;
 }
 
 .sheet-stage .sheet-box {
@@ -547,6 +558,52 @@ main.stage-sheet {
 
 .sheet-stage .room.open text.name {
   fill: var(--build);
+}
+
+/* The storey below, drawn faint under the one in hand, and what stands open to below on it. */
+.sheet-stage .room.under path.body {
+  fill: none;
+  stroke: var(--ink-3);
+  stroke-width: 0.03;
+  stroke-dasharray: 0.2 0.12;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.sheet-stage .room.below path.body {
+  fill: var(--paper);
+  stroke: var(--ink-2);
+  stroke-width: 0.05;
+  stroke-dasharray: 0.25 0.12;
+  pointer-events: none;
+}
+
+.sheet-stage .room.below .x {
+  stroke: var(--ink-3);
+  stroke-width: 0.04;
+  pointer-events: none;
+}
+
+.sheet-stage .room.below .below-label {
+  font:
+    0.4px 'Archivo',
+    sans-serif;
+  fill: var(--ink-3);
+  text-anchor: middle;
+  pointer-events: none;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Hover is shared with the mass: the room under the pointer there reads as under it here. */
+.sheet-stage .room.hover path.wall {
+  stroke: var(--accent);
+}
+
+.sheet-stage .seg.storeys button.on {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
 }
 
 .sheet-stage .room.selected path.wall {
