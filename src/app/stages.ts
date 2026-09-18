@@ -14,5 +14,5 @@ export const stages: readonly Stage[] = [
   { id: 'requirements', label: 'Requirements', component: RequirementsScreen },
   { id: 'bubbles', label: 'Bubbles', component: BubblesStage },
   { id: 'sheet', label: 'Sheet', component: SheetStage },
-  { id: 'plan', label: 'Plan', component: PlanStage },
+  { id: 'plan', label: 'Plan (old)', component: PlanStage },
 ]
