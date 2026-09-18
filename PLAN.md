@@ -81,6 +81,7 @@ only on the owner's word. If approved, A9 waits on Z5.
 | O5 | A fresh brief for the usability run. | A9 | done, `rulebook/fresh-brief.md` |
 | O6 | Rulebook part 2, forces: name, element, direction, default strength for Kuwait, source. | Milestone 2 | done as a draft, PR #12 |
 | O7 | Revisit the forces: correct strengths, add and remove forces, mark rows `sourced` once the known house and the firm's practice confirm them. Repeats whenever a source arrives. | B1, C1 | in progress, first pass done (PR #66) |
+| O8 | A Kuwait weather file (EPW) for Kuwait Airport or KISR's coastal station, from KISR or the Meteorological Center; the public copies were withdrawn. | Milestone 5 | todo |
 
 ### Proposed, not approved
 
@@ -93,6 +94,31 @@ approves it, after the fresh brief has run through the tool.
 | P2 | **Two entry paths.** A guided sequence for a client beside the architect; the one-page form for the architect alone. Same store. | Needs P1 to have anything to guide through. |
 | P3 | **AI intake.** Paste a client's text brief; the tool proposes rooms, storeys, wishes and edges, and lists every assumption for confirmation. | Must only produce inputs the screen already accepts, so it follows P1. |
 | P8 | **A planned storey.** A checkbox on a storey marks it as planned, not built now: the stair spans it, its rooms and bubbles work as on any storey, the massing draws it hatched, the area line reports the ratio twice, as built now and with the planned storey, and the PDF and DXF include it, labelled planned. Nothing is deleted to print. The fresh brief's second floor for the son who marries later is the case. | Until A9 shows whether adding the storey as a normal one and reading the ratio with it is enough. The owner's ruling: if it is built, it is exported, never left out. |
+| P9 | **The five analysis questions.** Written before milestone 5, each with a reference case: west sun on facades, court shade, roof gain, glazing per facade against the MEW code, cross-ventilation. Ladybug is asked exactly these. | Needs O8 and the frozen mass to have something to measure. |
+| P10 | **Multi-objective optimisation at the massing level.** Few knobs (orientation, footprint proportions, storey heights, court position, setback use); rules as constraints never traded; the output a front of massings, each with its five numbers and what it gave up, for the architect to choose from. | Needs P9's numbers to have reference cases first; its own milestone after 5. |
+
+### The final tool from the frozen mock
+
+The zoning mock "Blocks on the Plot" was frozen by the owner on
+17 September 2026 (version 55) and is the specification for the
+zoning sheet and the mass; `briefs/final-tool.md` is the brief. Built
+actions first: every change to the model is one named call the
+screens, the tests and the agent all use. Each T task gets its own
+brief, branch and pull request, on the owner's word.
+
+| # | Task | Depends on | Done when | Status |
+|---|---|---|---|---|
+| T1 | **Actions, report, model.** `actions.ts` and `report.ts` with the model as the mock has it; geometry reused or replaced; reference cases. | A2, A3 | Every action unit-tested; the embedded sheet's report matches the mock's sentence. | todo |
+| T2 | **The zoning sheet over the actions.** Program, drop, move, turn, walls, draw, reshape, pockets, menus, sentence. | T1 | Drop a room and it snaps, lands by the rule, and the sentence updates, headless on the embedded sheet. | todo |
+| T3 | **The Openings step.** Door types, Open wall, select and adjust, the walk test. | T2 | Arm a door, click a wall, it lands a jamb from the corner; the unreached go grey. | todo |
+| T4 | **Storeys and the mass.** Storeys with heights, open to below, the mass drawn by the wall-line tree, Edit in 3D. | T2 | A volume dragged moves its room on the sheet; the ray-cast test passes from six views. | todo |
+| T5 | **Settings, storage, defaults.** Every setting with the spec's values, the few on the surface and the rest under More; the owner's sheet embedded; Back to the sample; Clear the plan. | T2 | Reset to the spec reproduces the mock's settings; a cleared sheet stays cleared across reloads. | todo |
+| T6 | **Export re-pointed.** PDF to scale and DXF per storey from A8. | T4 | A printed sheet measures true; the DXF opens with a layer per storey. | todo |
+| E1 | **The agent over the actions.** Text to zoning plan through `actions.ts`, the report as its feedback, one Undo for a run; the mock's chat line as the model. | T1, T3 | From the fresh brief's program and two sentences, no help: every room placed, no overlaps, inside the line, every room reached, entry and diwaniya doors, under 40 actions. | todo |
+| W1 | **Windows.** Placed like a door on an outside wall; refused on shared and boundary walls; unlit rooms listed. | T3, T4 | A room with no window and no open wall to one reads unlit. | todo |
+| W2 | **Fog of war.** What a guest sees from the diwaniya door and the family from the family living, read off doors and windows with heights. | W1 | The guest's view on the embedded sheet matches a hand-drawn reference. | todo |
+| W3 | **Circulation drawn.** Actors, routes over doors, an animated walk (B5 re-pointed). | T3 | The route from the street door to the kitchen is drawn and counts its doors. | todo |
+| N1 | **Neighbours and streets.** 15 m boxes on the neighbours' setback lines and street bands, each with a switch. | T4 | The mass shows the neighbours' boxes; each switch hides its box. | todo |
 
 ## Milestone 2: the rule engine
 
