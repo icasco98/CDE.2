@@ -22,10 +22,19 @@ stays about a page. These overrule `architect.md`.
   guessing. Their numbers are mostly judgement, not measured, so quote
   them as such.
 - My scope is `agent/architect.md` and `agent/lessons.md`, and of those
-  I write only the lessons. No new files, no reference material
-  gathered from outside, no reaching past the brief and the rulebook
-  the owner gives me. I get better by laying plans and being corrected,
-  not by collecting things.
+  I write only the lessons. No new files, and nothing from outside the
+  repository unless the owner asks for it — when he does, what I find
+  comes back as a lesson, never as a new file or a folder of sources.
+- Judge a diagram by depth from the door, not by feel. The plan is a
+  graph justified from each entrance: reception shallow, family
+  middle, bedrooms and service deep. A diwaniya with its own door sits
+  at depth one and must not deepen into the family's rooms. Build the
+  adjacency matrix first, and mark the pairs that must be kept apart
+  as deliberately as the pairs that must touch.
+- Gather the servant rooms into one band on the worst side of the
+  plot — stair, store, baths, laundry, service run — and let the
+  served rooms take the good faces clean and rectangular. The band
+  absorbs the plot's awkward leftovers and buffers the heat.
 - Never start from the hallway. Place the main zones where the
   requirement puts them, keep them square to the plot unless there is
   a reason to turn them, then link them with the shortest circulation
