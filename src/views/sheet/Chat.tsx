@@ -1,13 +1,15 @@
 /**
- * The chat column: the log, one line to write in, Say, and Keep this plan. The assistant works the
- * sheet through the same actions as the hand, so everything it does is one Undo.
+ * The chat column: the log, a box to write in that grows with what is typed, Say, and Keep this
+ * plan. The architect works the sheet through the same actions as the hand, so everything it does is
+ * one Undo.
  */
 
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import {
   withFeedback,
   withNote,
   withPlan,
+  withRequest,
   type Change,
   type Desk,
   type Memory,
@@ -17,6 +19,9 @@ import {
 import { runMessage } from './agentRun'
 import type { Sample } from './claude'
 import './chat.css'
+
+/** How tall the box grows before it scrolls: a few lines of the log's own type. */
+const LINES_SHOWN = 92
 
 type Who = 'you' | 'page' | 'quiet' | 'bad'
 
@@ -44,6 +49,7 @@ export function Chat(props: ChatProps) {
   const [value, setValue] = useState('')
   const [busy, setBusy] = useState(false)
   const log = useRef<HTMLDivElement | null>(null)
+  const box = useRef<HTMLTextAreaElement | null>(null)
   const nextId = useRef(0)
   const held = useRef(memory)
   held.current = memory
@@ -51,6 +57,14 @@ export function Chat(props: ChatProps) {
   useEffect(() => {
     if (log.current) log.current.scrollTop = log.current.scrollHeight
   }, [lines])
+
+  // The box is as tall as what is typed, up to a few lines, and scrolls beyond that.
+  useEffect(() => {
+    const held = box.current
+    if (!held) return
+    held.style.height = 'auto'
+    held.style.height = `${Math.min(held.scrollHeight, LINES_SHOWN)}px`
+  }, [value])
 
   const add = (who: Who, text: string, working = false): number => {
     const id = ++nextId.current
@@ -66,8 +80,8 @@ export function Chat(props: ChatProps) {
     onMemory(next)
   }
 
-  const say = async (event: FormEvent) => {
-    event.preventDefault()
+  const say = async (event?: FormEvent) => {
+    event?.preventDefault()
     const text = value.trim()
     if (!text || busy) return
     setValue('')
@@ -89,7 +103,9 @@ export function Chat(props: ChatProps) {
       read,
       write,
       say: (line) => add('page', line),
-      note: (note) => keep(withNote(held.current, note, new Date().toISOString())),
+      note: (note, replaces) =>
+        keep(withNote(held.current, note, new Date().toISOString(), replaces)),
+      request: (asked) => keep(withRequest(held.current, asked, new Date().toISOString())),
     }
     const run = await runMessage({
       sample,
@@ -108,6 +124,13 @@ export function Chat(props: ChatProps) {
     else add('page', run.text)
     setBusy(false)
     onEnd(JSON.stringify(read().rooms) !== before)
+  }
+
+  /** Enter says it; Shift+Enter is a line of its own, so a sentence can be read back. */
+  const onKey = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) return
+    event.preventDefault()
+    void say()
   }
 
   return (
@@ -130,13 +153,15 @@ export function Chat(props: ChatProps) {
         Keep this plan
       </button>
       <form onSubmit={say}>
-        <input
-          type="text"
+        <textarea
+          ref={box}
+          rows={1}
           aria-label="Say something to the assistant"
           placeholder="Ask it to lay out the ground floor"
           autoComplete="off"
           value={value}
           onChange={(event) => setValue(event.target.value)}
+          onKeyDown={onKey}
         />
         <button type="submit" disabled={busy || !value.trim()}>
           Say

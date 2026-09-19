@@ -1,9 +1,18 @@
 /**
- * One message: the prompt is built, the assistant is asked with the sheet's tools in its hand, its
- * answer streams back, and a failure becomes a line with its code and a plain sentence.
+ * One message: the prompt is built, the architect is asked with the sheet's tools in its hand, its
+ * answer streams back, and a failure becomes a line with its code and a plain sentence. A run that
+ * changed the sheet and wrote nothing down is asked once, before it answers, for its lessons.
  */
 
-import { layoutTools, promptFor, sheetRead, type Desk, type Memory } from '../../sheet'
+import {
+  LESSONS_ASK,
+  layoutTools,
+  promptFor,
+  sheetRead,
+  type AgentTool,
+  type Desk,
+  type Memory,
+} from '../../sheet'
 import type { Sample } from './claude'
 
 type Run = { text: string } | { error: string }
@@ -46,12 +55,32 @@ type RunInput = {
   signal?: AbortSignal
 }
 
+/** The commands, in the order they matter, cut to what this view will carry. */
+const toolsFor = (desk: Desk, storey: number, most: number | undefined): AgentTool[] => {
+  const tools = layoutTools(desk, storey)
+  return most && most < tools.length ? tools.slice(0, most) : tools
+}
+
 export async function runMessage(input: RunInput): Promise<Run> {
   const prompt = promptFor({
     read: sheetRead(input.desk.read(), input.storey),
     memory: input.memory,
     text: input.text,
   })
+  // What the architect wrote down in this message, and the sheet as it stood before it worked.
+  let wrote = 0
+  const desk: Desk = {
+    ...input.desk,
+    note: (text, replaces) => {
+      wrote++
+      input.desk.note(text, replaces)
+    },
+    request: (text) => {
+      wrote++
+      input.desk.request(text)
+    },
+  }
+  const before = JSON.stringify(input.desk.read().rooms)
   try {
     let limits: { tools?: { maxCount: number } } | null = null
     try {
@@ -60,16 +89,51 @@ export async function runMessage(input: RunInput): Promise<Run> {
       // a view that cannot say what it allows is asked anyway; the call itself refuses if it must
     }
     if (limits && !limits.tools) return { error: errorSaid('tools_unavailable', '') }
+    const most = limits?.tools?.maxCount
     const answer = await input.sample([{ role: 'user', content: prompt }], {
-      tools: layoutTools(input.desk, input.storey),
+      tools: toolsFor(desk, input.storey, most),
       modelTier: 'default',
       cache: false,
       onText: ({ text }) => input.onText(text),
       ...(input.signal ? { signal: input.signal } : {}),
     })
-    return { text: answer.text || 'Done.' }
+    const text = answer.text || 'Done.'
+    if (!wrote && JSON.stringify(input.desk.read().rooms) !== before)
+      await askForLessons(input, desk, prompt, text)
+    return { text }
   } catch (thrown) {
     const { code, message } = errorOf(thrown)
     return { error: errorSaid(code, message) }
+  }
+}
+
+/**
+ * The one question at the end of a run that changed the sheet and left no lesson behind: the same
+ * turns, its own answer, and the ask. It writes through `remember`; a failure here is left alone,
+ * because the owner has their answer either way.
+ */
+async function askForLessons(
+  input: RunInput,
+  desk: Desk,
+  prompt: string,
+  answer: string,
+): Promise<void> {
+  const remember = layoutTools(desk, input.storey).filter((tool) => tool.name === 'remember')
+  try {
+    await input.sample(
+      [
+        { role: 'user', content: prompt },
+        { role: 'assistant', content: answer },
+        { role: 'user', content: LESSONS_ASK },
+      ],
+      {
+        tools: remember,
+        modelTier: 'default',
+        cache: false,
+        ...(input.signal ? { signal: input.signal } : {}),
+      },
+    )
+  } catch {
+    // a lesson the architect could not be asked for is a lesson lost, not a message failed
   }
 }
