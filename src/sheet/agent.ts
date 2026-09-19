@@ -331,7 +331,7 @@ type Done = { landed: string[]; changed: Changed; house: SheetRead }
  * batches it has written in this message are kept here, so it can take its own last one back.
  */
 export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
-  const batches: { sheet: Sheet; said: string }[] = []
+  const batches: { sheet: Sheet; said: string; storey: number }[] = []
 
   /** One tool call: the sheet before it is kept, and the house and what changed come back. */
   const batch = (storey: number, label: (sheet: Sheet) => string, work: () => string[]): Done => {
@@ -339,7 +339,7 @@ export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
     const landed = work()
     const after = desk.read()
     const said = label(after)
-    if (after !== before) batches.push({ sheet: before, said })
+    if (after !== before) batches.push({ sheet: before, said, storey })
     const changed = changesBetween(before, after, storey)
     desk.say(short(`${said} · ${landed.join(' · ')}`))
     return { landed, changed, house: sheetRead(after, onScreen) }
@@ -515,7 +515,7 @@ export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
         return {
           tookBack: true,
           was: last.said,
-          changed: changesBetween(before, desk.read(), onScreen),
+          changed: changesBetween(before, desk.read(), last.storey),
           house: sheetRead(desk.read(), onScreen),
         }
       },
