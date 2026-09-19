@@ -1,7 +1,7 @@
 /**
- * The one turn the assistant reads: how it should work and how it should speak, the sheet as it
- * stands, its own memory, and what the owner just said. It is trimmed to stay inside the runtime's
- * prompt cap, oldest memory first.
+ * The turns the architect reads: how it works and how it speaks, the lessons it has written, the
+ * commands it has asked for, the house as it stands, and what the owner just said. It is trimmed to
+ * stay inside the runtime's prompt cap, oldest memory first.
  */
 
 import type { SheetRead } from './agent'
@@ -12,9 +12,15 @@ export const PROMPT_CAP = 60_000
 
 export const AGENT_BRIEF = [
   "You lay out a Kuwaiti villa's zoning plan on the sheet in front of the owner, through the tools,",
-  "the way an architect's hand would. Coordinates are plot metres, x east, y south; a room's x,y is",
-  "its frame's top-left corner. Work in the order of importance, most important first, several rooms",
-  'a call, and read the sheet after each batch.',
+  "the way an architect's hand would. Work in the order of importance, most important first, a whole",
+  'job in one call rather than five small ones, and read the house after each batch.',
+  '',
+  'You see the whole house, every storey at once, and you see how the rooms stand to each other: who',
+  'shares a run of wall and how long it is, who only meets at a corner, and who stands a sliver',
+  'apart. Reason in those terms. Put a room against a named wall of another room and let the tool',
+  'work out where that is; every command takes the storey by name, and working on one storey never',
+  "moves the owner's view. Settle an overlap you made, and take back your own last batch when it made",
+  'the plan worse rather than patching forward.',
   '',
   'The logic of the house: the diwaniya group (the diwaniya, its WC and its prep kitchen) stands on',
   'the street with its own street door; the entry is on the street with the formal living beside it;',
@@ -25,8 +31,22 @@ export const AGENT_BRIEF = [
   'Zones only: no doors, no heights, no storeys.',
   '',
   'How you speak: chat, at most five short lines, no headings and no numbered steps. Name rooms by',
-  'their program names. Ask one question at a time when you are unsure, and never write a paragraph.',
+  'their program names. Never give a coordinate or a dimension in the chat: say where a room stands',
+  'by what it stands against. Ask one question when something is unclear rather than guessing, and',
+  'never write a paragraph.',
 ].join('\n')
+
+/**
+ * What the chat asks for once at the end of a run in which the architect wrote nothing down, so a
+ * lesson and a want are not lost with the message.
+ */
+export const LESSONS_ASK = [
+  'Before you finish: write down what this turn taught you and what it left you without.',
+  'Call remember once for each lesson, in your own words, one line, with `replaces` set to the older',
+  'line when the new one supersedes it, and call remember with `request` for a command you lacked.',
+  'Do not write again a lesson or a request you already hold. Then answer with the word done and',
+  'nothing else: the owner has your answer already.',
+].join(' ')
 
 const planLine = (plan: MemorySent['plans'][number]) =>
   `${plan.name}: ${plan.rooms
@@ -35,12 +55,21 @@ const planLine = (plan: MemorySent['plans'][number]) =>
 
 function body(sent: MemorySent, read: SheetRead, text: string): string {
   const parts = [AGENT_BRIEF]
+  if (sent.lessons.length)
+    parts.push(
+      `What you have learned, which overrules everything above:\n- ${sent.lessons.join('\n- ')}`,
+    )
+  if (sent.requests.length)
+    parts.push(
+      `Commands you have asked for, and where each stands:\n- ${sent.requests
+        .map((asked) => `${asked.text} (${asked.state})`)
+        .join('\n- ')}`,
+    )
   if (sent.feedback.length)
     parts.push(`What the owner has said before, oldest first:\n- ${sent.feedback.join('\n- ')}`)
-  if (sent.notes.length) parts.push(`What you noted for yourself:\n- ${sent.notes.join('\n- ')}`)
   if (sent.plans.length)
     parts.push(`Plans the owner kept:\n- ${sent.plans.map(planLine).join('\n- ')}`)
-  parts.push(`The sheet now: ${JSON.stringify(read)}`)
+  parts.push(`The house now: ${JSON.stringify(read)}`)
   parts.push(`The owner says: ${text}`)
   return parts.join('\n\n')
 }
@@ -54,11 +83,12 @@ export function promptFor(input: { read: SheetRead; memory: Memory; text: string
   let prompt = body(held, input.read, input.text)
   while (
     bytes(prompt) > PROMPT_CAP &&
-    (held.feedback.length || held.notes.length || held.plans.length)
+    (held.feedback.length || held.lessons.length || held.plans.length || held.requests.length)
   ) {
     held = {
       feedback: held.feedback.slice(1),
-      notes: held.notes.slice(1),
+      lessons: held.lessons.slice(1),
+      requests: held.requests.slice(1),
       plans: held.plans.slice(1),
     }
     prompt = body(held, input.read, input.text)

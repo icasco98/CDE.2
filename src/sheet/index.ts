@@ -256,10 +256,22 @@ export {
   unlock,
 } from './actions'
 
-export type { AgentTool, Desk } from './agent'
-export { layoutTools, sheetRead } from './agent'
+export type { Apart, Meetings, Sharing } from './meetings'
+export { meetingsOf } from './meetings'
+
+export type { Along, Standing, WallName } from './against'
+export { standAgainst } from './against'
+
+export type { Changed } from './changes'
+export { changesBetween } from './changes'
+
+export type { AgentTool, Desk, SheetRead, StoreyRead } from './agent'
+export { layoutTools, sheetRead, storeyNamed } from './agent'
+
+export type { Request } from './lessons'
+export { startingLessons, startingRequests } from './lessons'
 
 export type { Memory } from './memory'
-export { newMemory, readMemory, withFeedback, withNote, withPlan } from './memory'
+export { newMemory, readMemory, withFeedback, withNote, withPlan, withRequest } from './memory'
 
-export { promptFor } from './prompt'
+export { LESSONS_ASK, promptFor } from './prompt'

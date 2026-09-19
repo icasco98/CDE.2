@@ -1,11 +1,13 @@
 /**
  * The assistant's memory, kept by the tool and sent with every message, so the owner meets one
- * assistant across sessions and versions: what they said, what it noted for itself, and the plans
- * they kept. Nothing here reads a store; it is the shape and the bounds.
+ * assistant across sessions and versions: what they said, the lessons it wrote for itself, the
+ * commands it asked for and the plans they kept. Nothing here reads a store; it is the shape and
+ * the bounds. The lessons it starts with are the page it ships with; these are what it adds.
  */
 
 import { allPlaced, storeyNameOf, storeyOf, type Sheet } from './model'
 import { r2 } from './geometry'
+import { startingLessons, startingRequests, type Request, type RequestState } from './lessons'
 
 type Line = { at: string; text: string }
 
@@ -14,7 +16,10 @@ type PlanRoom = { name: string; x: number; y: number; w: number; h: number; angl
 
 type Plan = { at: string; name: string; rooms: PlanRoom[] }
 
-export type Memory = { feedback: Line[]; plans: Plan[]; notes: Line[] }
+/** A command the architect asked for, and where the cofounder has left it. */
+type Asked = { at: string; text: string; state: RequestState }
+
+export type Memory = { feedback: Line[]; plans: Plan[]; notes: Line[]; requests: Asked[] }
 
 export const PLANS_KEPT = 5
 export const FEEDBACK_SENT = 30
@@ -26,7 +31,12 @@ export const TEXT_CAP = 400
 /** Lines kept in the store, so the browser's store cannot grow without end. */
 export const LINES_KEPT = 200
 
-export const newMemory = (): Memory => ({ feedback: [], plans: [], notes: [] })
+/** The lessons stay about a page: this many lines, and this many characters of them. */
+export const NOTES_KEPT = 24
+export const PAGE_CAP = 2400
+export const REQUESTS_KEPT = 12
+
+export const newMemory = (): Memory => ({ feedback: [], plans: [], notes: [], requests: [] })
 
 const trim = (text: unknown) =>
   String(text ?? '')
@@ -41,10 +51,52 @@ export const withFeedback = (memory: Memory, text: string, at: string): Memory =
   feedback: added(memory.feedback, trim(text), at),
 })
 
-export const withNote = (memory: Memory, text: string, at: string): Memory => ({
-  ...memory,
-  notes: added(memory.notes, trim(text), at),
-})
+/** The lessons cut back to a page, the oldest going first. */
+function aPage(notes: Line[]): Line[] {
+  const held = notes.slice(-NOTES_KEPT)
+  while (held.length > 1 && held.reduce((sum, line) => sum + line.text.length + 3, 0) > PAGE_CAP)
+    held.shift()
+  return held
+}
+
+/** The line a new one is written over: the same words, or the opening of them. */
+const sameLesson = (held: string, over: string) => {
+  const a = held.trim().toLowerCase()
+  const b = over.trim().toLowerCase()
+  return !!b && (a === b || a.startsWith(b) || b.startsWith(a))
+}
+
+/**
+ * A lesson written into the memory. One that supersedes an older line replaces it where it stood,
+ * so the page never piles up two versions of the same rule.
+ */
+export function withNote(memory: Memory, text: string, at: string, replaces?: string): Memory {
+  const line = { at, text: trim(text) }
+  if (!line.text) return memory
+  const over = replaces ? trim(replaces) : ''
+  const stood = memory.notes.findIndex((held) =>
+    over ? sameLesson(held.text, over) : held.text === line.text,
+  )
+  const notes =
+    stood >= 0
+      ? memory.notes.map((held, i) => (i === stood ? line : held))
+      : [...memory.notes, line].slice(-LINES_KEPT)
+  return { ...memory, notes: aPage(notes) }
+}
+
+/** A command the architect says it lacked, kept once with its state. */
+export function withRequest(memory: Memory, text: string, at: string): Memory {
+  const want = trim(text)
+  if (!want) return memory
+  if (memory.requests.some((held) => sameLesson(held.text, want))) return memory
+
+  return {
+    ...memory,
+    requests: [...memory.requests, { at, text: want, state: 'open' as RequestState }].slice(
+      -REQUESTS_KEPT,
+    ),
+  }
+}
 
 export const planRooms = (sheet: Sheet, storey: number): PlanRoom[] =>
   allPlaced(sheet)
@@ -115,7 +167,15 @@ export function readMemory(value: unknown): Memory {
     })
   return {
     feedback: lines('feedback').slice(-LINES_KEPT),
-    notes: lines('notes').slice(-LINES_KEPT),
+    notes: aPage(lines('notes')),
+    requests: (Array.isArray(held.requests) ? (held.requests as unknown[]) : [])
+      .flatMap((entry) => {
+        const line = lineOf(entry)
+        const state = (entry as { state?: unknown } | null)?.state
+        const held: RequestState = state === 'built' || state === 'refused' ? state : 'open'
+        return line ? [{ ...line, state: held }] : []
+      })
+      .slice(-REQUESTS_KEPT),
     plans: (Array.isArray(held.plans) ? (held.plans as unknown[]) : [])
       .flatMap((entry) => {
         const plan = planOf(entry)
@@ -125,11 +185,24 @@ export function readMemory(value: unknown): Memory {
   }
 }
 
-export type MemorySent = { feedback: string[]; notes: string[]; plans: Plan[] }
+export type MemorySent = {
+  feedback: string[]
+  /** The page it ships with and the lines it has written since, as one list. */
+  lessons: string[]
+  requests: Request[]
+  plans: Plan[]
+}
 
-/** What goes into a prompt: the last lines only, each within its cap, and the kept plans. */
+/** What goes into a prompt: the lessons, the requests with their state, the last lines, the plans. */
 export const memorySent = (memory: Memory): MemorySent => ({
   feedback: memory.feedback.slice(-FEEDBACK_SENT).map((line) => trim(line.text)),
-  notes: memory.notes.slice(-NOTES_SENT).map((line) => trim(line.text)),
+  lessons: [
+    ...startingLessons(),
+    ...memory.notes.slice(-NOTES_SENT).map((line) => trim(line.text)),
+  ],
+  requests: [
+    ...startingRequests(),
+    ...memory.requests.map((held) => ({ text: held.text, state: held.state })),
+  ],
   plans: memory.plans.slice(-PLANS_KEPT),
 })

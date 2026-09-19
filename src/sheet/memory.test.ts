@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   FEEDBACK_SENT,
+  NOTES_KEPT,
   NOTES_SENT,
+  PAGE_CAP,
   PLANS_KEPT,
   TEXT_CAP,
   memorySent,
@@ -11,6 +13,7 @@ import {
   withFeedback,
   withNote,
   withPlan,
+  withRequest,
   type Memory,
 } from './memory'
 import { sampleSheet } from './sample'
@@ -43,11 +46,48 @@ describe('the assistant memory', () => {
     expect(rooms.every((r) => Number.isFinite(r.x) && Number.isFinite(r.y))).toBe(true)
   })
 
-  it('sends the last thirty owner lines and the last twenty notes', () => {
+  it('sends the last thirty owner lines, and the lessons it starts with before its own', () => {
     const sent = memorySent(filled(50))
     expect(sent.feedback).toHaveLength(FEEDBACK_SENT)
-    expect(sent.notes).toHaveLength(NOTES_SENT)
     expect(sent.feedback[FEEDBACK_SENT - 1]).toBe('owner line 49')
+    expect(sent.lessons.length).toBeGreaterThan(NOTES_SENT)
+    expect(sent.lessons[0]).toContain('Place rooms against each other')
+    expect(sent.lessons[sent.lessons.length - 1]).toBe('note 49')
+  })
+
+  it('keeps the lessons to about a page, the oldest going first', () => {
+    const memory = filled(80)
+    expect(memory.notes.length).toBeLessThanOrEqual(NOTES_KEPT)
+    expect(memory.notes.reduce((sum, line) => sum + line.text.length + 3, 0)).toBeLessThanOrEqual(
+      PAGE_CAP,
+    )
+    expect(memory.notes[memory.notes.length - 1]!.text).toBe('note 79')
+  })
+
+  it('writes a lesson over the older line it supersedes, where that line stood', () => {
+    let memory = withNote(newMemory(), 'the dining room is never the small one', at(0))
+    memory = withNote(memory, 'the garden goes west', at(1))
+    memory = withNote(
+      memory,
+      'the dining room is never the small one: take area from the kitchen',
+      at(2),
+      'the dining room is never the small one',
+    )
+    expect(memory.notes).toHaveLength(2)
+    expect(memory.notes[0]!.text).toContain('take area from the kitchen')
+    expect(memory.notes[1]!.text).toBe('the garden goes west')
+  })
+
+  it('keeps a request once, with its state, and sends it after the ones it shipped with', () => {
+    let memory = withRequest(newMemory(), 'let me place a door', at(0))
+    memory = withRequest(memory, 'let me place a door as well', at(1))
+    expect(memory.requests).toEqual([{ at: at(0), text: 'let me place a door', state: 'open' }])
+    const sent = memorySent(memory)
+    expect(sent.requests[0]!.state).toBe('built')
+    expect(sent.requests[sent.requests.length - 1]).toEqual({
+      text: 'let me place a door',
+      state: 'open',
+    })
   })
 
   it('cuts a pasted line to its cap', () => {
@@ -64,8 +104,8 @@ describe('the assistant memory', () => {
     )
     expect(readMemory(JSON.parse(JSON.stringify(memory)))).toEqual(memory)
     expect(readMemory('not memory at all')).toEqual(newMemory())
-    expect(readMemory({ feedback: [{ text: '' }, 42], notes: null, plans: [7] }).feedback).toEqual(
-      [],
-    )
+    expect(
+      readMemory({ feedback: [{ text: '' }, 42], notes: null, plans: [7], requests: 'no' }),
+    ).toEqual(newMemory())
   })
 })
