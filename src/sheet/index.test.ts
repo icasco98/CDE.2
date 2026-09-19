@@ -226,7 +226,8 @@ const surface = [
   'undo',
   'ungroup',
   'unlock',
-  // the assistant's tools, its memory and its prompt
+  // the architect's tools, its memory and its prompt
+  'LESSONS_ASK',
   'layoutTools',
   'newMemory',
   'promptFor',
@@ -235,6 +236,7 @@ const surface = [
   'withFeedback',
   'withNote',
   'withPlan',
+  'withRequest',
 ]
 
 it('offers every name the screens and the agent drive, and no other', () => {

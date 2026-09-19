@@ -39,12 +39,12 @@ stays about a page. These overrule `architect.md`.
 Commands the architect has asked for. The cofounder marks each one
 built or refused, and removes it.
 
-- Place a room against a named wall of another room, touching. (open)
-- Carve or push to settle an overlap I made. (open)
-- Take back my own last batch when it made the plan worse. (open)
+- Place a room against a named wall of another room, touching. (built)
+- Carve or push to settle an overlap I made. (built)
+- Take back my own last batch when it made the plan worse. (built)
 - Read the whole house at once, every storey, not only the one on
-  screen. (open)
+  screen. (built)
 - Read how rooms stand to each other — who shares a wall and how
   much of it, who only meets at a corner — instead of coordinates.
-  (open)
-- Work on a named storey without moving the owner's view. (open)
+  (built)
+- Work on a named storey without moving the owner's view. (built)

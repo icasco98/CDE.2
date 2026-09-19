@@ -1,5 +1,7 @@
 import { expect, it } from 'vitest'
 import { report } from './report'
+import { sheetRead } from './agent'
+import { meetingsOf } from './meetings'
 import { pocketsOf } from './pockets'
 import { sampleSheet } from './sample'
 import { MASS_START, massProjection, orderPrisms, prismsOf } from './mass'
@@ -22,6 +24,21 @@ it('reads the embedded sheet’s report inside 5 ms', () => {
   const taken = milliseconds(() => report(sheet, 0))
   console.log(`report on the embedded sheet: ${taken.toFixed(2)} ms, budget 5 ms`)
   expect(taken).toBeLessThan(10)
+})
+
+it('reads how the embedded sheet’s rooms stand to each other inside 5 ms', () => {
+  const taken = milliseconds(() => meetingsOf(sheet, 0))
+  console.log(`meetingsOf on the embedded sheet: ${taken.toFixed(2)} ms, budget 5 ms`)
+  expect(taken).toBeLessThan(10)
+})
+
+it('reads the whole house inside 15 ms, and it fits in one tool result', () => {
+  const taken = milliseconds(() => sheetRead(sheet, 0))
+  const bytes = new TextEncoder().encode(JSON.stringify(sheetRead(sheet, 0))).length
+  console.log(`the whole house: ${taken.toFixed(2)} ms, budget 15 ms; ${bytes} bytes of 32 KB`)
+  expect(taken).toBeLessThan(30)
+  // the runtime carries at most 32 KB back from one tool call
+  expect(bytes).toBeLessThan(32_768)
 })
 
 it('finds the embedded sheet’s enclosed spaces inside 20 ms', () => {

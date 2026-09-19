@@ -72,19 +72,25 @@
 
 .sheet-stage .chat form {
   display: flex;
+  align-items: flex-end;
   gap: 6px;
 }
 
-.sheet-stage .chat input[type='text'] {
+.sheet-stage .chat textarea {
   flex: 1 1 auto;
+  box-sizing: border-box;
   min-width: 0;
   font: inherit;
   font-size: 12.5px;
+  line-height: 1.45;
   padding: 4px 6px;
   color: var(--ink);
   background: var(--sheet);
   border: 1px solid var(--line);
   border-radius: 3px;
+  resize: none;
+  overflow-y: auto;
+  max-height: 92px;
 }
 
 .sheet-stage .chat .keep {
