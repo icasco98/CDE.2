@@ -33,7 +33,7 @@ import {
 } from './model'
 import { report, type Report } from './report'
 import { MAX_STOREYS, SIDES, STOREY_NAME, type PlotSpec, type Side } from './plot'
-import { allowedBox, outsideBuildable } from './settle'
+import { allowedBox, outsideBuildable, overlapsOf } from './settle'
 
 /** One page function offered to the architect, in the shape the artifact runtime asks for. */
 export type AgentTool = {
@@ -247,7 +247,8 @@ const sized = (w: number, h: number) => w > 0.5 && h > 0.5 && w < 30 && h < 30
  * the rule.
  */
 function putRoom(desk: Desk, storey: number, r: Room, wanted: Partial<Standing>): string {
-  const { x, y } = wanted
+  const x = Number(wanted.x)
+  const y = Number(wanted.y)
   if (!Number.isFinite(x) || !Number.isFinite(y)) return `${r.name}: x and y are needed`
   const w = Number(wanted.w)
   const h = Number(wanted.h)
@@ -255,8 +256,8 @@ function putRoom(desk: Desk, storey: number, r: Room, wanted: Partial<Standing>)
   if (!r.placed) {
     const put = place(desk.read(), {
       id: r.id,
-      x: x!,
-      y: y!,
+      x,
+      y,
       storey,
       ...(angle !== undefined && Number.isFinite(angle) ? { angle } : {}),
       ...(sized(w, h) ? { w, h } : {}),
@@ -273,7 +274,7 @@ function putRoom(desk: Desk, storey: number, r: Room, wanted: Partial<Standing>)
   }
   const now = desk.read().rooms.find((o) => o.id === r.id)
   if (!now) return `${r.name} is no longer on the sheet`
-  return desk.write(move(desk.read(), { ids: [r.id], dx: x! - now.x, dy: y! - now.y, storey })).said
+  return desk.write(move(desk.read(), { ids: [r.id], dx: x - now.x, dy: y - now.y, storey })).said
 }
 
 /** One room asked for by name and coordinates, as `place_rooms` takes them. */
@@ -480,19 +481,15 @@ export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
             const other = input.with === undefined ? null : roomNamed(sheet, input.with)
             if (input.with !== undefined && !other)
               return [`no room called ${String(input.with ?? '')}`]
-            const overlap = report(sheet, storey).overlaps.find(
-              (o) =>
-                (o.a === one.name || o.b === one.name) &&
-                (!other || o.a === other.name || o.b === other.name),
+            const overlap = overlapsOf(sheet, storey).find(
+              (o) => (o.a === one || o.b === one) && (!other || o.a === other || o.b === other),
             )
             if (!overlap) return [`nothing lies under ${one.name}`]
-            const pair = [overlap.a, overlap.b]
-              .map((name) => roomNamed(sheet, name))
-              .filter((r): r is Room => !!r)
-            const keeps = pair.reduce((best, r) => (rank(r, sheet) < rank(best, sheet) ? r : best))
-            const input_ = { ids: [keeps.id], storey }
+            // the room higher in the order of importance keeps its shape; the lower one gives way
+            const keeps = rank(overlap.a, sheet) <= rank(overlap.b, sheet) ? overlap.a : overlap.b
+            const settling = { ids: [keeps.id], storey }
             const done = desk.write(
-              how === 'push' ? pushOthers(sheet, input_) : carveBelow(sheet, input_),
+              how === 'push' ? pushOthers(sheet, settling) : carveBelow(sheet, settling),
             )
             return [`${keeps.name} kept its shape · ${done.said}`]
           },
