@@ -20,9 +20,6 @@ import { runMessage } from './agentRun'
 import type { Sample } from './claude'
 import './chat.css'
 
-/** How tall the box grows before it scrolls: a few lines of the log's own type. */
-const LINES_SHOWN = 92
-
 type Who = 'you' | 'page' | 'quiet' | 'bad'
 
 type Line = { id: number; who: Who; text: string; working?: boolean }
@@ -58,12 +55,12 @@ export function Chat(props: ChatProps) {
     if (log.current) log.current.scrollTop = log.current.scrollHeight
   }, [lines])
 
-  // The box is as tall as what is typed, up to a few lines, and scrolls beyond that.
+  // The box is as tall as what is typed; the style sheet holds it to a few lines and scrolls past.
   useEffect(() => {
     const held = box.current
     if (!held) return
     held.style.height = 'auto'
-    held.style.height = `${Math.min(held.scrollHeight, LINES_SHOWN)}px`
+    held.style.height = `${held.scrollHeight}px`
   }, [value])
 
   const add = (who: Who, text: string, working = false): number => {
