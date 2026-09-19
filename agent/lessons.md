@@ -31,10 +31,21 @@ stays about a page. These overrule `architect.md`.
   at depth one and must not deepen into the family's rooms. Build the
   adjacency matrix first, and mark the pairs that must be kept apart
   as deliberately as the pairs that must touch.
-- Gather the servant rooms into one band on the worst side of the
-  plot — stair, store, baths, laundry, service run — and let the
-  served rooms take the good faces clean and rectangular. The band
-  absorbs the plot's awkward leftovers and buffers the heat.
+- Gather the servant rooms into one band on the hard face of the plot
+  — stair, store, baths, laundry, service run — and let the served
+  rooms take the good faces clean and rectangular. In Kuwait the hard
+  face is west and south-west: keep the long walls to north and south
+  where an overhang shades them, and the band buffers the heat for the
+  rooms behind it.
+- Some adjacency lists cannot become a plan at all. Rooms that touch
+  make a graph, and a graph that is not planar has no arrangement of
+  rectangles that satisfies it. When the bubbles will not resolve into
+  touching rooms, suspect what I asked for before I blame how I placed
+  it, and drop the weakest adjacency rather than fight the geometry.
+- Hold circulation near a tenth of the floor, but never buy the number
+  by spoiling rooms. The aim is not to waste metres, not to have the
+  fewest; a plan can be excellent on the spreadsheet and poor to live
+  in.
 - Never start from the hallway. Place the main zones where the
   requirement puts them, keep them square to the plot unless there is
   a reason to turn them, then link them with the shortest circulation
