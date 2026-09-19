@@ -47,21 +47,26 @@ function facingRun(m: Seg, o: Seg): Run | null {
   return { along: Math.min(m1, o1) - Math.max(m0, o0), apart }
 }
 
+/** A room as this reading needs it: its name, and the walls it shows where it stands. */
+type Shown = { name: string; walls: Seg[] }
+
+const shown = (r: Room): Shown => ({ name: r.name, walls: worldWalls(r) })
+
 /** The closest two rooms' corners come to each other. */
-function cornerGap(a: Room, b: Room): number {
+function cornerGap(a: Shown, b: Shown): number {
   let least = Infinity
-  for (const wa of worldWalls(a))
-    for (const wb of worldWalls(b))
+  for (const wa of a.walls)
+    for (const wb of b.walls)
       least = Math.min(least, Math.hypot(wa.a[0] - wb.a[0], wa.a[1] - wb.a[1]))
   return least
 }
 
 /** How one pair of rooms stands: the wall they share, else how they all but touch, else nothing. */
-export function meetingOf(a: Room, b: Room): Sharing | Apart | null {
+function meetingBetween(a: Shown, b: Shown): Sharing | Apart | null {
   let shared = 0
   let gap = Infinity
-  for (const m of worldWalls(a))
-    for (const o of worldWalls(b)) {
+  for (const m of a.walls)
+    for (const o of b.walls) {
       const run = facingRun(m, o)
       if (!run) continue
       if (run.apart <= TOUCHING) {
@@ -76,16 +81,20 @@ export function meetingOf(a: Room, b: Room): Sharing | Apart | null {
   return null
 }
 
+export const meetingOf = (a: Room, b: Room): Sharing | Apart | null =>
+  meetingBetween(shown(a), shown(b))
+
 const isSharing = (met: Sharing | Apart): met is Sharing => !('how' in met)
 
 /** Every pair on the storey that meets, longest shared wall first, then the pairs that all but do. */
 export function meetingsOf(sheet: Sheet, storey: number): Meetings {
-  const rooms = placedRooms(sheet, storey)
+  // the walls of each room are worked out once, not once for every pair it could meet
+  const rooms = placedRooms(sheet, storey).map(shown)
   const sharing: Sharing[] = []
   const apart: Apart[] = []
   for (let i = 0; i < rooms.length; i++)
     for (let j = i + 1; j < rooms.length; j++) {
-      const met = meetingOf(rooms[i]!, rooms[j]!)
+      const met = meetingBetween(rooms[i]!, rooms[j]!)
       if (!met) continue
       if (isSharing(met)) sharing.push(met)
       else apart.push(met)

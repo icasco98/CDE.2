@@ -142,7 +142,8 @@ export type SheetRead = {
   importanceOrder: string[]
   storeys: StoreyRead[]
   waiting: WaitingRead[]
-  house: { floorAreas: number[]; total: number; allowed: number; overRatio: boolean }
+  /** The floor area of each storey and of the house, against what the ratio allows. */
+  totals: { floorAreas: number[]; total: number; allowed: number; overRatio: boolean }
 }
 
 /** Which way a side of the plot faces, in the words the sheet's own frame uses. */
@@ -229,7 +230,7 @@ export function sheetRead(sheet: Sheet, onScreen: number): SheetRead {
     waiting: sheet.rooms
       .filter((r) => !r.extra && !r.placed)
       .map((r) => ({ name: r.name, kind: r.kind, target: r.target, w: r.w, h: r.h })),
-    house: {
+    totals: {
       floorAreas: ground.floors,
       total: ground.total,
       allowed: ground.allowed,
@@ -332,10 +333,11 @@ export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
   const batches: { sheet: Sheet; said: string }[] = []
 
   /** One tool call: the sheet before it is kept, and the house and what changed come back. */
-  const batch = (storey: number, said: string, work: () => string[]): Done => {
+  const batch = (storey: number, label: (sheet: Sheet) => string, work: () => string[]): Done => {
     const before = desk.read()
     const landed = work()
     const after = desk.read()
+    const said = label(after)
     if (after !== before) batches.push({ sheet: before, said })
     const changed = changesBetween(before, after, storey)
     desk.say(short(`${said} · ${landed.join(' · ')}`))
@@ -393,10 +395,13 @@ export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
       execute: (input) => {
         const storey = storeyNamed(input.storey, onScreen)
         const asked = Array.isArray(input.placements) ? input.placements : []
-        return batch(storey, `placed against · ${storeyNameOf(storey)}`, () =>
-          asked
-            .slice(0, MOVES_PER_CALL)
-            .map((one) => onePlacing(desk, storey, (one ?? {}) as Record<string, unknown>)),
+        return batch(
+          storey,
+          () => `placed against · ${storeyNameOf(storey)}`,
+          () =>
+            asked
+              .slice(0, MOVES_PER_CALL)
+              .map((one) => onePlacing(desk, storey, (one ?? {}) as Record<string, unknown>)),
         )
       },
     },
@@ -436,7 +441,7 @@ export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
         const moves = Array.isArray(input.moves) ? input.moves : []
         return batch(
           storey,
-          `placed ${placedCount(desk.read(), storey)} of ${askedCount(desk.read())}`,
+          (sheet) => `placed ${placedCount(sheet, storey)} of ${askedCount(sheet)}`,
           () =>
             moves
               .slice(0, MOVES_PER_CALL)
@@ -465,29 +470,33 @@ export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
       execute: (input) => {
         const storey = storeyNamed(input.storey, onScreen)
         const how = String(input.how ?? '').toLowerCase() === 'push' ? 'push' : 'carve'
-        return batch(storey, `settled by ${how}`, () => {
-          const sheet = desk.read()
-          const one = roomNamed(sheet, input.room)
-          if (!one) return [`no room called ${String(input.room ?? '')}`]
-          const other = input.with === undefined ? null : roomNamed(sheet, input.with)
-          if (input.with !== undefined && !other)
-            return [`no room called ${String(input.with ?? '')}`]
-          const overlap = report(sheet, storey).overlaps.find(
-            (o) =>
-              (o.a === one.name || o.b === one.name) &&
-              (!other || o.a === other.name || o.b === other.name),
-          )
-          if (!overlap) return [`nothing lies under ${one.name}`]
-          const pair = [overlap.a, overlap.b]
-            .map((name) => roomNamed(sheet, name))
-            .filter((r): r is Room => !!r)
-          const keeps = pair.reduce((best, r) => (rank(r, sheet) < rank(best, sheet) ? r : best))
-          const input_ = { ids: [keeps.id], storey }
-          const done = desk.write(
-            how === 'push' ? pushOthers(sheet, input_) : carveBelow(sheet, input_),
-          )
-          return [`${keeps.name} kept its shape · ${done.said}`]
-        })
+        return batch(
+          storey,
+          () => `settled by ${how}`,
+          () => {
+            const sheet = desk.read()
+            const one = roomNamed(sheet, input.room)
+            if (!one) return [`no room called ${String(input.room ?? '')}`]
+            const other = input.with === undefined ? null : roomNamed(sheet, input.with)
+            if (input.with !== undefined && !other)
+              return [`no room called ${String(input.with ?? '')}`]
+            const overlap = report(sheet, storey).overlaps.find(
+              (o) =>
+                (o.a === one.name || o.b === one.name) &&
+                (!other || o.a === other.name || o.b === other.name),
+            )
+            if (!overlap) return [`nothing lies under ${one.name}`]
+            const pair = [overlap.a, overlap.b]
+              .map((name) => roomNamed(sheet, name))
+              .filter((r): r is Room => !!r)
+            const keeps = pair.reduce((best, r) => (rank(r, sheet) < rank(best, sheet) ? r : best))
+            const input_ = { ids: [keeps.id], storey }
+            const done = desk.write(
+              how === 'push' ? pushOthers(sheet, input_) : carveBelow(sheet, input_),
+            )
+            return [`${keeps.name} kept its shape · ${done.said}`]
+          },
+        )
       },
     },
     {
@@ -556,17 +565,21 @@ export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
       execute: (input) => {
         const storey = storeyNamed(input.storey, onScreen)
         const names = Array.isArray(input.rooms) ? input.rooms : []
-        return batch(storey, 'sent back', () => {
-          const ids: string[] = []
-          const said: string[] = []
-          for (const name of names) {
-            const r = roomNamed(desk.read(), name)
-            if (r && r.placed) ids.push(r.id)
-            else said.push(`${String(name ?? '')} was not on the sheet`)
-          }
-          if (ids.length) said.unshift(desk.write(sendBack(desk.read(), { ids })).said)
-          return said.length ? said : ['nothing to send back']
-        })
+        return batch(
+          storey,
+          () => 'sent back',
+          () => {
+            const ids: string[] = []
+            const said: string[] = []
+            for (const name of names) {
+              const r = roomNamed(desk.read(), name)
+              if (r && r.placed) ids.push(r.id)
+              else said.push(`${String(name ?? '')} was not on the sheet`)
+            }
+            if (ids.length) said.unshift(desk.write(sendBack(desk.read(), { ids })).said)
+            return said.length ? said : ['nothing to send back']
+          },
+        )
       },
     },
   ]

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { chatBox as chatLine, log, memoryReader, openSheet, say } from './agent'
 
 /**
  * The chat column on the Sheet, with a fake runtime injected before the page loads: its `sample`
@@ -44,32 +45,7 @@ async function fakeRuntime(page: Page): Promise<void> {
   })
 }
 
-/** The memory read after the save has had its moment, so a test never reads a stale store. */
-async function memoryReader(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    Object.assign(window, {
-      settled: async () => {
-        await new Promise((go) => window.setTimeout(go, 700))
-        return JSON.parse(window.localStorage.getItem('cde.agent.memory') ?? '{}')
-      },
-    })
-  })
-}
-
-async function openSheet(page: Page): Promise<void> {
-  await page.goto('/')
-  await page.locator('nav.tabs').getByRole('button', { name: 'Sheet', exact: true }).click()
-  await page.locator('svg.sheet').waitFor()
-}
-
-const log = (page: Page) => page.locator('.chat .log')
-const chatLine = (page: Page) => page.getByLabel('Say something to the assistant')
 const room = (page: Page, id: string) => page.locator(`svg.sheet g.room[data-room="${id}"]`)
-
-async function say(page: Page, text: string): Promise<void> {
-  await chatLine(page).fill(text)
-  await page.locator('.chat').getByRole('button', { name: 'Say' }).click()
-}
 
 const median = (numbers: number[]): number => {
   const sorted = [...numbers].sort((a, b) => a - b)
@@ -185,17 +161,9 @@ test.describe('the assistant on the sheet', () => {
   })
 })
 
-type Kept = {
-  feedback: { text: string }[]
-  notes: { text: string }[]
-  plans: { name: string; rooms: unknown[] }[]
-}
-
 declare global {
   interface Window {
     releaseAgent: () => void
     sheetFrames?: number[]
-    /** The memory as the browser holds it, once the debounced save has run. */
-    settled: () => Promise<Kept>
   }
 }

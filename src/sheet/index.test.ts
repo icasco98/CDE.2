@@ -226,20 +226,13 @@ const surface = [
   'undo',
   'ungroup',
   'unlock',
-  // how the rooms stand to each other, and where a room goes when it is put against a wall
-  'meetingsOf',
-  'standAgainst',
-  'changesBetween',
-  // the architect's tools, its lessons, its memory and its prompt
+  // the architect's tools, its memory and its prompt
   'LESSONS_ASK',
   'layoutTools',
   'newMemory',
   'promptFor',
   'readMemory',
   'sheetRead',
-  'startingLessons',
-  'startingRequests',
-  'storeyNamed',
   'withFeedback',
   'withNote',
   'withPlan',

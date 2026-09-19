@@ -77,7 +77,7 @@ describe('the tools the architect is given', () => {
     })
     expect(ground(read).lineTheGroundFloorMayReach).toEqual({ x0: 0, y0: 0, x1: 20, y1: 25 })
     expect(read.onScreen).toBe('Ground')
-    expect(read.house.total).toBeCloseTo(343.96, 2)
+    expect(read.totals.total).toBeCloseTo(343.96, 2)
     expect(table.said[0]).toContain('read the house')
   })
 
@@ -89,7 +89,7 @@ describe('the tools the architect is given', () => {
     expect(read.storeys).toHaveLength(2)
     expect(read.storeys[1]!.placed.map((r) => r.name)).toContain('Formal Living')
     expect(read.onScreen).toBe('Ground')
-    expect(read.house.floorAreas).toHaveLength(2)
+    expect(read.totals.floorAreas).toHaveLength(2)
   })
 
   it('says how the rooms stand to each other on the embedded sheet', () => {
@@ -112,7 +112,7 @@ describe('the tools the architect is given', () => {
     expect(bedroom!.x).toBe(11.39)
     expect(out.landed[0]).toContain('Bedroom at')
     expect(out.changed.moves).toEqual([{ room: 'Bedroom', how: 'placed' }])
-    expect(table.said[0]).toContain('placed 17 of 18')
+    expect(table.said[0]).toContain('placed 18 of 18')
   })
 
   it('holds a room asked for past the plot inside the line', () => {
