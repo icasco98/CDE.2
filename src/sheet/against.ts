@@ -5,10 +5,10 @@
  */
 
 import { fmt, norm, r2, worldWalls, type Seg } from './geometry'
+import type { Point, Room } from './model'
 
 /** A rounded zero is a zero, whichever way the arithmetic came out. */
 const flat = (v: number) => (v === 0 ? 0 : v)
-import type { Point, Room } from './model'
 
 /** The side of a room a wall faces, in the sheet's own frame: x runs east, y runs south. */
 export type WallName = 'north' | 'south' | 'east' | 'west'
