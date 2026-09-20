@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { errorSaid, runMessage } from './agentRun'
 import {
+  NOTHING_PLACED,
   newMemory,
   sampleSheet,
   type Change,
@@ -158,6 +159,42 @@ describe('one message to the assistant', () => {
     expect(calls).toHaveLength(1)
     await run('nothing')
     expect(calls).toHaveLength(2)
+  })
+
+  it('adds a line when the answer claims a change no command made', async () => {
+    const table = desk()
+    const narrating = (async () => ({
+      text: 'I turned the kitchen and made the space behind it a court.',
+      truncated: false,
+    })) as Sample
+    const narrated = await runMessage({
+      sample: narrating,
+      desk: table.at,
+      storey: 0,
+      memory: newMemory(),
+      text: 'turn the kitchen',
+      onText: () => {},
+    })
+    expect(narrated).toEqual({
+      text: 'I turned the kitchen and made the space behind it a court.',
+      note: NOTHING_PLACED,
+    })
+    // a command that ran leaves the answer alone, whatever it says
+    const working = (async (_input, options) => {
+      options?.tools
+        ?.find((tool) => tool.name === 'do')
+        ?.execute({ deeds: [{ verb: 'turn', room: 'Store', quarter: true }] })
+      return { text: 'I turned the store.', truncated: false }
+    }) as Sample
+    const did = await runMessage({
+      sample: working,
+      desk: desk().at,
+      storey: 0,
+      memory: newMemory(),
+      text: 'turn the store',
+      onText: () => {},
+    })
+    expect(did).toEqual({ text: 'I turned the store.' })
   })
 
   it('says stopped, busy and not allowed in plain words, and keeps an unknown code', () => {

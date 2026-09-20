@@ -1,14 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import {
-  MOVES_PER_CALL,
-  layoutTools,
-  roomNamed,
-  sheetRead,
-  storeyNamed,
-  type Desk,
-  type SheetRead,
-  type StoreyRead,
-} from './agent'
+import { MOVES_PER_CALL, layoutTools, sheetRead, type SheetRead, type StoreyRead } from './agent'
+import { roomNamed, storeyNamed, type Desk } from './desk'
 import { sampleSheet } from './sample'
 import { DEFAULT_PLOT } from './plot'
 import { setStorey } from './actions'
@@ -48,7 +40,7 @@ const toolNamed = (tools: ReturnType<typeof layoutTools>, name: string) => {
 type Done = { landed: string[]; changed: Changed; house: SheetRead }
 
 describe('the tools the architect is given', () => {
-  it('offers its commands, each description under 900 bytes', () => {
+  it('offers seven commands, each description under 1000 bytes', () => {
     const tools = layoutTools(desk().at, 0)
     expect(tools.map((t) => t.name)).toEqual([
       'read_sheet',
@@ -57,10 +49,13 @@ describe('the tools the architect is given', () => {
       'settle',
       'take_back',
       'remember',
-      'send_back',
+      'do',
     ])
+    // the runtime carries a handful of tools; `do` carries the verbs so the count stays where it was
     for (const tool of tools)
-      expect(new TextEncoder().encode(tool.description).length).toBeLessThan(900)
+      expect(new TextEncoder().encode(tool.description).length).toBeLessThan(
+        tool.name === 'do' ? 1000 : 900,
+      )
   })
 
   it('reads the whole house: the frames, the waiting rooms and the report of each storey', () => {
@@ -166,8 +161,13 @@ describe('the tools the architect is given', () => {
   it('takes a room back to the program and leaves it waiting', () => {
     const table = desk()
     const tools = layoutTools(table.at, 0)
-    const out = toolNamed(tools, 'send_back').execute({ rooms: ['Kitchen', 'Bedroom'] }) as Done
-    expect(out.landed).toContain('Bedroom was not on the sheet')
+    const out = toolNamed(tools, 'do').execute({
+      deeds: [
+        { verb: 'send_back', rooms: ['Kitchen'] },
+        { verb: 'send_back', rooms: ['Bedroom'] },
+      ],
+    }) as Done
+    expect(out.landed[1]).toContain('Bedroom is not on the sheet yet')
     expect(out.house.waiting.map((r) => r.name).sort()).toEqual(['Bedroom', 'Kitchen'])
     expect(ground(out.house).placed.some((r) => r.name === 'Kitchen')).toBe(false)
     expect(out.changed.moves).toEqual([{ room: 'Kitchen', how: 'sent back' }])

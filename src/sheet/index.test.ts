@@ -228,6 +228,8 @@ const surface = [
   'unlock',
   // the architect's tools, its memory and its prompt
   'LESSONS_ASK',
+  'NOTHING_PLACED',
+  'claimsChange',
   'layoutTools',
   'newMemory',
   'promptFor',
