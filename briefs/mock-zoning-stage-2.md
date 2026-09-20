@@ -13,8 +13,16 @@ have heights to work with.
 
 ## 1. Overlaps by importance, exhaustive settings, colours, two steps
 
-**Overlaps.** The Fix overlaps button and the Wait rule go. Overlaps
-are settled by importance, or by hand.
+**Overlaps.** The Fix overlaps button goes. The landing switch has two
+positions, Wait and Push others, Wait the default. Wait: the dropped
+room lands where it was put, the overlap is tinted and nothing moves.
+Push others: the rooms lower in the program slide aside at once, never
+shrinking. An overlap is settled by selecting the zone, or several, and
+right-clicking: Carve below cuts their shape out of the zones under
+them; Push others slides the zones under them aside. Trim is gone. The
+program's order is the order of importance, changed by dragging a
+block's grip; the Push landing uses it. (Owner's decisions, 16
+September 2026.)
 
 - The program order is the order of importance. When two rooms
   overlap, the lower one gives way, pushed, trimmed or carved as the
@@ -68,28 +76,88 @@ makes himself, is met; this one tests stacking and the mass.
 
 **Moving zones in the mass, kept to intuition.**
 
-- One switch, Edit in 3D, on or off. Off, the mass is for looking:
-  turn, zoom, walk round. On, it takes the sheet's gestures and no
-  others.
-- One gesture to move: drag the top of a volume and the room slides on
-  its storey, its footprint moving on the sheet at the same time.
-  Never up or down; storeys change from the program or the menu.
-- One gesture for height: drag the top edge, or the zone's height
-  slider. The only vertical gesture.
+- One switch, Edit in 3D, on by default. On, the mass takes the
+  sheet's gestures and no others; off, volumes only select.
+- One gesture to move: take a volume by any face and drag; the room
+  slides on its storey, its footprint moving on the sheet at the same
+  time, and the landing rule applies on the drop. Never up or down;
+  storeys change from the program or the menu.
+- One gesture for height: drag the post's knob, or the zone's height
+  slider. The only vertical gesture. The height snaps to the storey,
+  to two storeys and to the height of any other zone, within 15 cm,
+  and the reading says what it snapped to.
 - The knob and the wall handles appear on the selected volume's top
-  face. No new tools. Nothing lives only in 3D: no 3D-only snapping,
-  no free modelling, no vertical faces to grab.
+  edges. A pulled wall lines up with a neighbour's wall or corner
+  within snapping reach, as on the sheet, with the guide drawn on the
+  ground. Right-click a volume for the room's menu, the overlap rows
+  included. No new tools; nothing lives only in 3D.
 - Selection is shared between the windows; hover in one lights the
-  other.
-- The camera: drag on empty ground turns the view, wheel zooms, four
-  preset views (plan, from the service street, from the side street,
-  from the neighbours' corner). A ground shadow under a dragged volume
-  says where it sits.
+  other. Volumes carry no names; the selected one is named under the
+  view.
+- The camera: drag on empty ground, or anywhere with the middle
+  button or Space held, turns the view, about the selected zones when
+  there are any, else about the plot; the wheel zooms and turning
+  never does; four preset views (plan, from the service street, from
+  the side street, from the neighbours' corner). A ground shadow under
+  a dragged volume says where it sits. Every room is drawn as convex
+  blocks sorted by a tree of wall lines, each line parting the blocks
+  and cutting any it crosses, read back to front for the view: exact
+  for any angle, turned rooms and storeys included; blocks that stand
+  over one another go higher last (17 September, version 52).
+
+**Storeys (built 16 and 17 September, mock versions 50 and 51).**
+Ground and First to begin with, switched above the sheet; + adds a
+storey up to the rulebook's three, − takes an empty top one away. The sheet shows one storey; the mass
+shows both, the first standing on the storey height. A room dropped
+lands on the storey in hand; its right-click menu moves it up or down,
+and the sheet follows it. The stair is one room across both storeys.
+Upstairs the ground floor shows faint, the setback holds everywhere,
+the walk starts from the stair, and the sentence adds both storeys
+against the building ratio (210% of the plot). Each of these is a
+switch under Settings, Storeys, with the storey height.
+
+**Storey heights, snaps and copies (version 52).** Each storey has
+its own floor-to-floor height in Settings, Storeys. A zone's height
+snaps to the underside of the floor above, to two storeys, and to the
+tops of zones on its own storey. Moving or stretching a zone, its walls
+and corners land on the outlines of the zones one storey down and one
+storey up, a switch. Street names have a switch. A court shows on every
+storey above it as its footprint with an X, "court · open to the sky".
+Ctrl+C copies the selected zones, Ctrl+V pastes them, a metre aside on
+the same storey or at the same place on another; the menu copies to
+the storey above in one.
+
+**Version 53 (17 September).** A pulled wall's corners land on the
+walls round it at any angle, within their run, so a turned zone meets
+its neighbours. The height slider is gone: the knob on the post pulls
+a zone up to the building height, 15 m. The stair rises to 18 m, the
+rulebook's 15 m and its stair house; both are settings. Street names
+switch from the mass head too. The owner's settings of 17 September
+are saved as the stage 2 spec, `settings/spec`, mock version 53.
+
+**Planned, not built: neighbours and streets.** The two neighbour
+sides get a worst-case building, a grey box 15 m high with its face on
+the neighbour's setback line, 1.5 m past our boundary, along the whole
+side. The two street sides get a street, a grey band with a kerb, 12 m
+wide unless the owner says another width. Both in the mass and faint on
+the sheet, each with a switch. Open: whether the neighbour's face sits
+on our boundary instead.
 
 **Zone height and open to below.** Each zone has a height slider. A
 zone taller than its storey shows on the storey above as its footprint
 with an X, "open to below": it takes that space, nothing can be placed
-over it, and it counts once. Shortening it back removes the X.
+over it, walls snap to it, a wall facing it takes no door, and it
+counts once. Shortening it back removes the X.
+
+**Snapping on the move.** A moved zone's corners land on the setback
+line and the boundary, whatever its angle, as they do when a wall is
+pulled (17 September). The mass is hidden or shown from the toolbar.
+
+**The view holds still.** Nothing on the screen moves on a click. The
+view turns about the selected zones, kept where they are on the
+screen; a preset view or a double-click on empty ground centres it.
+The sentence and the mass's reading have fixed heights so the sheet
+and the mass never shift as they change.
 
 **Doors.** The Openings step stays as it is so the tool feels whole;
 nothing new is built on it in this stage.
@@ -99,7 +167,8 @@ stand on a neighbour boundary for at most half that side's length, not
 the whole side; the street side keeps half the frontage and the 15 m
 cap. Every side gets its own budget, read under the sheet and red when
 spent. `rulebook/municipality-private-housing.md` is corrected with
-this brief.
+this brief. The Build to the boundary switch was never used above the
+sheet; it lives in Settings now, Sides and street the default.
 
 
 A storey switch beside the step switch: Ground · First · Second,
