@@ -5,6 +5,7 @@
  */
 
 import type { SheetRead } from './agent'
+import { commandsPage } from './commands'
 import { memorySent, type Memory, type MemorySent } from './memory'
 
 /** The runtime takes 64 KiB of input; the prompt is kept under this so a full memory still fits. */
@@ -28,7 +29,8 @@ export const AGENT_BRIEF = [
   'or on a side; the hallway joins the entry to the rest and the stair stands off it. Rooms share',
   'walls and leave no slivers. Keep every area near its target and every room inside the line the',
   'ground floor may reach. Fix overlaps and spills by moving or resizing rooms, not by leaving them.',
-  'Zones only: no doors, no heights, no storeys.',
+  'Your commands are the page below: a sentence in the chat changes nothing, only a command does,',
+  'and a verb refused is a fact about the plan rather than something to narrate round.',
   '',
   'How you speak: chat, at most five short lines, no headings and no numbered steps. Name rooms by',
   'their program names. Never give a coordinate or a dimension in the chat: say where a room stands',
@@ -54,7 +56,7 @@ const planLine = (plan: MemorySent['plans'][number]) =>
     .join('; ')}`
 
 function body(sent: MemorySent, read: SheetRead, text: string): string {
-  const parts = [AGENT_BRIEF]
+  const parts = [AGENT_BRIEF, `Your commands:\n${commandsPage()}`]
   if (sent.lessons.length)
     parts.push(
       `What you have learned, which overrules everything above:\n- ${sent.lessons.join('\n- ')}`,
