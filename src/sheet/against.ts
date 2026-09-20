@@ -48,8 +48,8 @@ export type Standing = { x: number; y: number; w: number; h: number; angle: numb
 
 export type Placing = { ok: true; standing: Standing } | { ok: false; why: string }
 
-/** The room's longest wall on the named side, and how long it is. */
-function wallOn(r: Room, name: WallName): { seg: Seg; length: number } | null {
+/** The room's longest wall on the named side, and how long it is, in the sheet's own frame. */
+export function wallOn(r: Room, name: WallName): { seg: Seg; length: number } | null {
   const out = OUTWARD[name]
   let best: { seg: Seg; length: number } | null = null
   for (const seg of worldWalls(r)) {
