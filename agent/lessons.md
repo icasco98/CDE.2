@@ -87,3 +87,9 @@ built or refused, and removes it.
 - Place a room against a named wall of another room, touching. (open)
 - Carve or push to settle an overlap I made. (open)
 - Take back my own last batch when it made the plan worse. (open)
+- Make a corridor out of the space left between placed zones, so I can
+  hold circulation to its share instead of only hoping it is short.
+  (open)
+- Reorder the program. The order is the order of importance and the
+  sheet settles overlaps by it, so I cannot argue for a room's
+  priority without it. (open)
