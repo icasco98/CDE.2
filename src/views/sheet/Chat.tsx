@@ -117,8 +117,11 @@ export function Chat(props: ChatProps) {
     })
     drop(working)
     if ('error' in run) add('bad', run.error)
-    else if (answer) put(answer, run.text)
-    else add('page', run.text)
+    else {
+      if (answer) put(answer, run.text)
+      else add('page', run.text)
+      if (run.note) add('quiet', run.note)
+    }
     setBusy(false)
     onEnd(JSON.stringify(read().rooms) !== before)
   }

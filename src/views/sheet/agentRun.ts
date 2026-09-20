@@ -6,6 +6,8 @@
 
 import {
   LESSONS_ASK,
+  NOTHING_PLACED,
+  claimsChange,
   layoutTools,
   promptFor,
   sheetRead,
@@ -15,7 +17,8 @@ import {
 } from '../../sheet'
 import type { Sample } from './claude'
 
-type Run = { text: string } | { error: string }
+/** The answer, and the one line the log adds under it when the answer claims what no command did. */
+type Run = { text: string; note?: string } | { error: string }
 
 const plain: Record<string, string> = {
   cancelled: 'stopped: nothing more was asked of the model.',
@@ -67,10 +70,16 @@ export async function runMessage(input: RunInput): Promise<Run> {
     memory: input.memory,
     text: input.text,
   })
-  // What the architect wrote down in this message, and the sheet as it stood before it worked.
+  // What the architect wrote down in this message, what it changed, and the sheet before it worked.
   let wrote = 0
+  let ran = 0
   const desk: Desk = {
     ...input.desk,
+    write: (change) => {
+      const out = input.desk.write(change)
+      if (out.ok) ran++
+      return out
+    },
     note: (text, replaces) => {
       wrote++
       input.desk.note(text, replaces)
@@ -100,7 +109,7 @@ export async function runMessage(input: RunInput): Promise<Run> {
     const text = answer.text || 'Done.'
     if (!wrote && JSON.stringify(input.desk.read().rooms) !== before)
       await askForLessons(input, desk, prompt, text)
-    return { text }
+    return { text, ...(!ran && claimsChange(text) ? { note: NOTHING_PLACED } : {}) }
   } catch (thrown) {
     const { code, message } = errorOf(thrown)
     return { error: errorSaid(code, message) }

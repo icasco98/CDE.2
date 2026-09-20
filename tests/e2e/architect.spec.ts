@@ -170,6 +170,81 @@ test('one Ctrl+Z takes back everything a message did', async ({ page }) => {
   await expect(store).toHaveText(before ?? '')
 })
 
+test('a turn and a court asked for in one call are both done on the sheet', async ({ page }) => {
+  await fakeArchitect(page, {
+    first: [
+      {
+        tool: 'do',
+        input: {
+          deeds: [
+            { verb: 'turn', room: 'Store', degrees: 45 },
+            { verb: 'court', between: ['Entry', 'Formal Living'] },
+          ],
+        },
+      },
+    ],
+    text: 'Store turned, and the space by the entry is a court.',
+  })
+  await openSheet(page)
+  const store = page.locator('svg.sheet g.room[data-room="r15"]')
+  await expect(page.locator('svg.sheet path.court-hatch')).toHaveCount(0)
+  await say(page, 'turn the store and make that space a court')
+
+  await expect(log(page).getByText(/did · Ground/)).toBeVisible()
+  // both deeds stand on the sheet: the store is turned and the space is hatched as a court
+  await expect(store).toHaveAttribute('transform', /rotate\(45/)
+  await expect(page.locator('svg.sheet path.court-hatch')).toHaveCount(1)
+  const [read] = await readings(page)
+  expect(read!.landed[0]).toBe('turn · Store at 45°')
+  expect(read!.landed[1]).toContain('court · court ')
+})
+
+test('an answer that claims a change no command made says so in the log', async ({ page }) => {
+  await fakeArchitect(page, {
+    first: [],
+    text: 'I turned the kitchen and moved the store behind it.',
+  })
+  await openSheet(page)
+  await say(page, 'turn the kitchen and move the store behind it')
+
+  await expect(
+    log(page).getByText('I turned the kitchen and moved the store behind it.'),
+  ).toBeVisible()
+  await expect(
+    log(page).getByText('Nothing was placed: no command ran this message.'),
+  ).toBeVisible()
+  // nothing on the sheet moved, and no undo step was left behind
+  await expect(page.locator('svg.sheet g.room[data-room="r8"]')).toHaveAttribute(
+    'transform',
+    /translate\(1.5 16.37\)/,
+  )
+})
+
+test('a verb on another storey leaves the storey the owner is looking at', async ({ page }) => {
+  await fakeArchitect(page, {
+    first: [
+      { tool: 'do', input: { deeds: [{ verb: 'storey', rooms: ['Store'], to: 'First' }] } },
+      {
+        tool: 'do',
+        input: { deeds: [{ verb: 'turn', room: 'Store', degrees: 45 }], storey: 'First' },
+      },
+    ],
+    text: 'Store upstairs and turned.',
+  })
+  await openSheet(page)
+  const switcher = page.locator('.seg.storeys button[data-storey="0"]')
+  await expect(switcher).toHaveClass(/on/)
+  await say(page, 'send the store upstairs and turn it')
+
+  await expect(log(page).getByText('Store upstairs and turned.')).toBeVisible()
+  await expect(switcher).toHaveClass(/on/)
+  await expect(page.locator('svg.sheet g.room[data-room="r15"]')).toHaveCount(0)
+  await expect(page.locator('.tray .item', { hasText: 'Store' }).locator('.st')).toHaveText('1st')
+  const upstairs = (await readings(page)).at(-1)!
+  expect(upstairs.landed).toEqual(['turn · Store at 45°'])
+  expect(upstairs.house.onScreen).toBe('Ground')
+})
+
 test('the chat box grows with what is typed, and Shift+Enter makes a line', async ({ page }) => {
   await fakeArchitect(page, { first: [] })
   await openSheet(page)
