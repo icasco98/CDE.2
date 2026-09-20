@@ -4,19 +4,11 @@
  * and nothing here talks to the model.
  */
 
-import {
-  carveBelow,
-  move,
-  place,
-  pushOthers,
-  sendBack,
-  setSize,
-  turn,
-  type Change,
-  type Result,
-} from './actions'
+import { carveBelow, move, place, pushOthers, setSize, turn } from './actions'
 import { alongNamed, standAgainst, wallNamed, type Standing } from './against'
 import { changesBetween, type Changed } from './changes'
+import { roomNamed, storeyNamed, type Desk } from './desk'
+import { doDeed, type Deed } from './verbs'
 import { areaOf, r2 } from './geometry'
 import { meetingsOf, type Apart, type Sharing } from './meetings'
 import {
@@ -32,7 +24,7 @@ import {
   type Sheet,
 } from './model'
 import { report, type Report } from './report'
-import { MAX_STOREYS, SIDES, STOREY_NAME, type PlotSpec, type Side } from './plot'
+import { SIDES, type PlotSpec, type Side } from './plot'
 import { allowedBox, outsideBuildable, overlapsOf } from './settle'
 
 /** One page function offered to the architect, in the shape the artifact runtime asks for. */
@@ -47,53 +39,11 @@ export type AgentTool = {
   execute: (input: Record<string, unknown>) => unknown
 }
 
-/**
- * The sheet the architect works on: it reads the sheet as it stands, writes one action at a time,
- * says a line in the log, and writes its lessons and its requests into its memory.
- */
-export type Desk = {
-  read: () => Sheet
-  write: (change: Change) => Result
-  say: (line: string) => void
-  /** A lesson in its own words; `replaces` names the older line this one is written over. */
-  note: (text: string, replaces?: string) => void
-  /** A command it lacked. */
-  request: (text: string) => void
-}
-
 export const MOVES_PER_CALL = 40
 
 const SAY_CAP = 80
 
 const short = (text: string) => (text.length > SAY_CAP ? `${text.slice(0, SAY_CAP - 1)}…` : text)
-
-/** A room by the name the architect used: the program's name, the start of it, or its kind. */
-export function roomNamed(sheet: Sheet, name: unknown): Room | null {
-  const want = String(name ?? '')
-    .trim()
-    .toLowerCase()
-  if (!want) return null
-  const rooms = sheet.rooms.filter((r) => !r.extra)
-  return (
-    rooms.find((r) => r.name.toLowerCase() === want) ??
-    rooms.find((r) => r.name.toLowerCase().startsWith(want)) ??
-    rooms.find((r) => r.kind === want) ??
-    null
-  )
-}
-
-/** A storey by its name, so a command works where the architect says and not where the owner looks. */
-export function storeyNamed(value: unknown, fallback: number): number {
-  const want = String(value ?? '')
-    .trim()
-    .toLowerCase()
-  if (!want) return fallback
-  const named = STOREY_NAME.findIndex((name) => name.toLowerCase() === want)
-  if (named >= 0) return named
-  const number = Number(want)
-  if (Number.isFinite(number)) return Math.max(0, Math.min(MAX_STOREYS - 1, Math.floor(number)))
-  return fallback
-}
 
 type PlacedRead = {
   name: string
@@ -547,35 +497,47 @@ export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
       },
     },
     {
-      name: 'send_back',
+      name: 'do',
       description:
-        'Take rooms off the sheet, back to the program, by name: {rooms:[names]}. Their shape and ' +
-        'turn go with them. Returns which went back and the house.',
+        'Every other verb of the tool, in a list applied in order: deeds:[{verb, …}]. ' +
+        "turn{room, degrees|quarter:true|face:'north'}; mirror{room, axis:x|y}; " +
+        'resize{room, w, h | area}; reshape{room, polygon:[[x,y]…] in plot metres}; ' +
+        'carve{room, out_of: the room it is taken out of}; push{room: what lies under it slides ' +
+        'aside}; court{between:[the rooms round the enclosed space]}; corridor{between}; ' +
+        'give{between, to}; combine{rooms:[names], into: the one that survives}; lock{rooms}; ' +
+        'unlock{rooms}; group{rooms}; ungroup{rooms}; height{room, metres}; ' +
+        'storey{rooms, to: a storey by name}; copy{room, to}; cut{room: past the setback}; ' +
+        'restore{room}; door{room, wall:north|south|east|west, type:door|double|sliding|opening|' +
+        'street|street2, along: 0–1 of the way along that wall}; open_wall{room, wall, along}; ' +
+        'send_back{rooms}. Each deed says what it did, or refuses with the reason and changes ' +
+        'nothing while the rest of the list still runs. storey: by name, the one on screen by default.',
       inputSchema: {
         type: 'object',
         properties: {
-          rooms: { type: 'array', items: { type: 'string' } },
+          deeds: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                verb: { type: 'string' },
+                room: { type: 'string' },
+                rooms: { type: 'array', items: { type: 'string' } },
+              },
+              required: ['verb'],
+            },
+          },
           storey: { type: 'string' },
         },
-        required: ['rooms'],
+        required: ['deeds'],
       },
       execute: (input) => {
         const storey = storeyNamed(input.storey, onScreen)
-        const names = Array.isArray(input.rooms) ? input.rooms : []
+        const deeds = Array.isArray(input.deeds) ? input.deeds : []
         return batch(
           storey,
-          () => 'sent back',
-          () => {
-            const ids: string[] = []
-            const said: string[] = []
-            for (const name of names) {
-              const r = roomNamed(desk.read(), name)
-              if (r && r.placed) ids.push(r.id)
-              else said.push(`${String(name ?? '')} was not on the sheet`)
-            }
-            if (ids.length) said.unshift(desk.write(sendBack(desk.read(), { ids })).said)
-            return said.length ? said : ['nothing to send back']
-          },
+          () => `did · ${storeyNameOf(storey)}`,
+          () =>
+            deeds.slice(0, MOVES_PER_CALL).map((one) => doDeed(desk, storey, (one ?? {}) as Deed)),
         )
       },
     },

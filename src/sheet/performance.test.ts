@@ -5,6 +5,8 @@ import { meetingsOf } from './meetings'
 import { pocketsOf } from './pockets'
 import { sampleSheet } from './sample'
 import { MASS_START, massProjection, orderPrisms, prismsOf } from './mass'
+import { doDeed } from './verbs'
+import type { Desk } from './desk'
 
 /** The best of five runs after a warm-up, so neither compilation nor a stray collection is charged. */
 function milliseconds(work: () => void): number {
@@ -62,4 +64,35 @@ it('sorts the mass’s wall-line tree inside 4 ms for 60 prisms', () => {
   const taken = milliseconds(() => orderPrisms(prisms, P))
   console.log(`the wall-line tree for ${prisms.length} prisms: ${taken.toFixed(2)} ms, budget 4 ms`)
   expect(taken).toBeLessThan(8)
+})
+
+it('applies a list of ten deeds inside 60 ms', () => {
+  const deeds = [
+    { verb: 'turn', room: 'Store', quarter: true },
+    { verb: 'mirror', room: 'Kitchen', axis: 'x' },
+    { verb: 'resize', room: 'Guest WC', w: 3, h: 3 },
+    { verb: 'lock', rooms: ['Store'] },
+    { verb: 'unlock', rooms: ['Store'] },
+    { verb: 'group', rooms: ['Kitchen', 'Store'] },
+    { verb: 'ungroup', rooms: ['Kitchen'] },
+    { verb: 'height', room: 'Dining Room', metres: 4 },
+    { verb: 'court', between: ['Maid Room', 'Stair'] },
+    { verb: 'storey', rooms: ['Store'], to: 'First' },
+  ]
+  const taken = milliseconds(() => {
+    let held = sheet
+    const at: Desk = {
+      read: () => held,
+      write: (change) => {
+        if (change.result.ok) held = change.sheet
+        return change.result
+      },
+      say: () => {},
+      note: () => {},
+      request: () => {},
+    }
+    for (const deed of deeds) doDeed(at, 0, deed)
+  })
+  console.log(`ten deeds on the embedded sheet: ${taken.toFixed(2)} ms, budget 60 ms`)
+  expect(taken).toBeLessThan(120)
 })

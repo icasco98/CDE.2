@@ -256,10 +256,14 @@ export {
   unlock,
 } from './actions'
 
-export type { AgentTool, Desk } from './agent'
+export type { AgentTool } from './agent'
 export { layoutTools, sheetRead } from './agent'
+
+export type { Desk } from './desk'
 
 export type { Memory } from './memory'
 export { newMemory, readMemory, withFeedback, withNote, withPlan, withRequest } from './memory'
 
 export { LESSONS_ASK, promptFor } from './prompt'
+
+export { NOTHING_PLACED, claimsChange } from './honesty'
