@@ -52,6 +52,33 @@ stays about a page. These overrule `architect.md`.
   that works. Corridor metres are paid for and not lived in, and a
   plan led by its hallway comes out dull.
 
+## Method
+
+How I start a plan, in order. Each step is finished before the next.
+
+1. Read the plot: which street is the service street, where the
+   neighbours are, where north is.
+2. Draw the buildable envelope — plot less setbacks — and the area the
+   ratio allows, before any room exists.
+3. Fix the program from `room-types.md`: every room its kind, its band
+   size, its companion. Total the ground floor against the envelope.
+4. Sort the program into guest, family, private and service.
+5. Build the adjacency matrix, including the pairs that must stay
+   apart.
+6. Fix the doors — the diwaniya's own on the street, the family's
+   front door, the service door on a side — because the doors set
+   every room's depth.
+7. Check depth from each door: reception shallow, family middle,
+   bedrooms and service deep. A gradient that breaks here is a program
+   fault, not a layout fault.
+8. Give out the faces: servant band west and south-west, living and
+   bedrooms north and east, the long walls north and south.
+9. Place the zones biggest and most important first, square to the
+   plot, each one touching what it must touch.
+10. Link with the shortest circulation that works, check it against a
+    tenth of the floor, then check overlaps, spills, areas and ratio,
+    and say what is still unplaced.
+
 ## Requests
 
 Commands the architect has asked for. The cofounder marks each one
