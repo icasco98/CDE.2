@@ -156,9 +156,10 @@ function summary() {
       const numbers = Object.entries(record.numbers)
         .map(([name, value]) => `${name} ${value}`)
         .join('; ')
+      const commands = record.calls.filter((c) => c.tool !== 'read_sheet').length
       lines.push(
         `- **${task.key}-${n}** ${record.pass ? 'PASS' : 'FAIL'} · ` +
-          `${record.calls.filter((c) => c.tool !== 'read_sheet').length} commands · ${numbers}`,
+          `${commands} command${commands === 1 ? '' : 's'} · ${numbers}`,
       )
     }
   mkdirSync(resultsDir, { recursive: true })
