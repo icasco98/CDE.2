@@ -1,0 +1,807 @@
+{
+  "task": "t14-own-mistake",
+  "run": 1,
+  "onScreen": 0,
+  "told": true,
+  "calls": [
+    {
+      "tool": "read_sheet",
+      "input": {},
+      "result": {
+        "plot": {
+          "w": 20,
+          "h": 25,
+          "serviceStreet": "south, y = 25",
+          "sideStreet": "east, x = 20",
+          "neighbours": "west (x = 0) and north (y = 0)",
+          "northArrowTurnedClockwise": "25°"
+        },
+        "setbackLine": {
+          "x0": 1.5,
+          "y0": 1.5,
+          "x1": 18.5,
+          "y1": 23
+        },
+        "onScreen": "Ground",
+        "landingRule": "wait",
+        "importanceOrder": [
+          "Diwaniya",
+          "Entry Foyer",
+          "Store"
+        ],
+        "storeys": [
+          {
+            "storey": "Ground",
+            "lineTheGroundFloorMayReach": {
+              "x0": 0,
+              "y0": 0,
+              "x1": 20,
+              "y1": 25
+            },
+            "placed": [
+              {
+                "name": "Entry Foyer",
+                "kind": "entry-foyer",
+                "storey": "Ground",
+                "x": 7,
+                "y": 4,
+                "w": 7,
+                "h": 4,
+                "angle": 0,
+                "area": 28,
+                "target": 28,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Store",
+                "kind": "store",
+                "storey": "Ground",
+                "x": 10,
+                "y": 8,
+                "w": 5,
+                "h": 4,
+                "angle": 0,
+                "area": 20,
+                "target": 20,
+                "height": 3.5,
+                "doors": 0
+              }
+            ],
+            "sharing": [
+              {
+                "rooms": [
+                  "Entry Foyer",
+                  "Store"
+                ],
+                "metres": 4
+              }
+            ],
+            "allButTouching": [],
+            "report": {
+              "storey": 0,
+              "storeyName": "Ground",
+              "placedArea": 48,
+              "askedArea": 78,
+              "buildableArea": 365.5,
+              "floors": [
+                48,
+                0
+              ],
+              "total": 48,
+              "allowed": 1050,
+              "overRatio": false,
+              "ratioRead": true,
+              "openToBelow": [],
+              "overlaps": [],
+              "spills": [],
+              "aside": [],
+              "boundary": [
+                {
+                  "side": "west",
+                  "name": "west boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "north",
+                  "name": "north boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "east",
+                  "name": "side-street boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "street",
+                  "name": "street boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                }
+              ],
+              "shortfalls": [],
+              "courts": [],
+              "pockets": {
+                "count": 0,
+                "area": 0
+              },
+              "walk": null
+            }
+          },
+          {
+            "storey": "First",
+            "lineTheGroundFloorMayReach": {
+              "x0": 1.5,
+              "y0": 1.5,
+              "x1": 18.5,
+              "y1": 23
+            },
+            "placed": [],
+            "sharing": [],
+            "allButTouching": [],
+            "report": {
+              "storey": 1,
+              "storeyName": "First",
+              "placedArea": 0,
+              "askedArea": 78,
+              "buildableArea": 365.5,
+              "floors": [
+                48,
+                0
+              ],
+              "total": 48,
+              "allowed": 1050,
+              "overRatio": false,
+              "ratioRead": true,
+              "openToBelow": [],
+              "overlaps": [],
+              "spills": [],
+              "aside": [],
+              "boundary": [
+                {
+                  "side": "west",
+                  "name": "west boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "north",
+                  "name": "north boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "east",
+                  "name": "side-street boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "street",
+                  "name": "street boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                }
+              ],
+              "shortfalls": [],
+              "courts": [],
+              "pockets": {
+                "count": 0,
+                "area": 0
+              },
+              "walk": null
+            }
+          }
+        ],
+        "waiting": [
+          {
+            "name": "Diwaniya",
+            "kind": "diwaniya",
+            "target": 30,
+            "w": 6,
+            "h": 5
+          }
+        ],
+        "totals": {
+          "floorAreas": [
+            48,
+            0
+          ],
+          "total": 48,
+          "allowed": 1050,
+          "overRatio": false
+        }
+      }
+    },
+    {
+      "tool": "place_against",
+      "input": {
+        "placements": [
+          {
+            "room": "Diwaniya",
+            "against": "Entry Foyer",
+            "wall": "south",
+            "along": "start"
+          }
+        ]
+      },
+      "result": {
+        "landed": [
+          "Diwaniya at 7,8 6×5 · against Entry Foyer's south wall"
+        ],
+        "changed": {
+          "moves": [
+            {
+              "room": "Diwaniya",
+              "how": "placed"
+            }
+          ],
+          "newOverlaps": [
+            {
+              "rooms": [
+                "Diwaniya",
+                "Store"
+              ],
+              "area": 12
+            }
+          ],
+          "newSpills": []
+        },
+        "house": {
+          "plot": {
+            "w": 20,
+            "h": 25,
+            "serviceStreet": "south, y = 25",
+            "sideStreet": "east, x = 20",
+            "neighbours": "west (x = 0) and north (y = 0)",
+            "northArrowTurnedClockwise": "25°"
+          },
+          "setbackLine": {
+            "x0": 1.5,
+            "y0": 1.5,
+            "x1": 18.5,
+            "y1": 23
+          },
+          "onScreen": "Ground",
+          "landingRule": "wait",
+          "importanceOrder": [
+            "Diwaniya",
+            "Entry Foyer",
+            "Store"
+          ],
+          "storeys": [
+            {
+              "storey": "Ground",
+              "lineTheGroundFloorMayReach": {
+                "x0": 0,
+                "y0": 0,
+                "x1": 20,
+                "y1": 25
+              },
+              "placed": [
+                {
+                  "name": "Diwaniya",
+                  "kind": "diwaniya",
+                  "storey": "Ground",
+                  "x": 7,
+                  "y": 8,
+                  "w": 6,
+                  "h": 5,
+                  "angle": 0,
+                  "area": 30,
+                  "target": 30,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Entry Foyer",
+                  "kind": "entry-foyer",
+                  "storey": "Ground",
+                  "x": 7,
+                  "y": 4,
+                  "w": 7,
+                  "h": 4,
+                  "angle": 0,
+                  "area": 28,
+                  "target": 28,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Store",
+                  "kind": "store",
+                  "storey": "Ground",
+                  "x": 10,
+                  "y": 8,
+                  "w": 5,
+                  "h": 4,
+                  "angle": 0,
+                  "area": 20,
+                  "target": 20,
+                  "height": 3.5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [
+                {
+                  "rooms": [
+                    "Diwaniya",
+                    "Entry Foyer"
+                  ],
+                  "metres": 6
+                },
+                {
+                  "rooms": [
+                    "Entry Foyer",
+                    "Store"
+                  ],
+                  "metres": 4
+                }
+              ],
+              "allButTouching": [],
+              "report": {
+                "storey": 0,
+                "storeyName": "Ground",
+                "placedArea": 78,
+                "askedArea": 78,
+                "buildableArea": 365.5,
+                "floors": [
+                  78,
+                  0
+                ],
+                "total": 78,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [
+                  {
+                    "a": "Diwaniya",
+                    "b": "Store",
+                    "area": 12
+                  }
+                ],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            },
+            {
+              "storey": "First",
+              "lineTheGroundFloorMayReach": {
+                "x0": 1.5,
+                "y0": 1.5,
+                "x1": 18.5,
+                "y1": 23
+              },
+              "placed": [],
+              "sharing": [],
+              "allButTouching": [],
+              "report": {
+                "storey": 1,
+                "storeyName": "First",
+                "placedArea": 0,
+                "askedArea": 78,
+                "buildableArea": 365.5,
+                "floors": [
+                  78,
+                  0
+                ],
+                "total": 78,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            }
+          ],
+          "waiting": [],
+          "totals": {
+            "floorAreas": [
+              78,
+              0
+            ],
+            "total": 78,
+            "allowed": 1050,
+            "overRatio": false
+          }
+        }
+      }
+    },
+    {
+      "tool": "settle",
+      "input": {
+        "room": "Diwaniya",
+        "with": "Store",
+        "how": "push"
+      },
+      "result": {
+        "landed": [
+          "Diwaniya kept its shape · the zones under it slid aside"
+        ],
+        "changed": {
+          "moves": [
+            {
+              "room": "Store",
+              "how": "moved",
+              "metres": 3
+            }
+          ],
+          "newOverlaps": [],
+          "newSpills": []
+        },
+        "house": {
+          "plot": {
+            "w": 20,
+            "h": 25,
+            "serviceStreet": "south, y = 25",
+            "sideStreet": "east, x = 20",
+            "neighbours": "west (x = 0) and north (y = 0)",
+            "northArrowTurnedClockwise": "25°"
+          },
+          "setbackLine": {
+            "x0": 1.5,
+            "y0": 1.5,
+            "x1": 18.5,
+            "y1": 23
+          },
+          "onScreen": "Ground",
+          "landingRule": "wait",
+          "importanceOrder": [
+            "Diwaniya",
+            "Entry Foyer",
+            "Store"
+          ],
+          "storeys": [
+            {
+              "storey": "Ground",
+              "lineTheGroundFloorMayReach": {
+                "x0": 0,
+                "y0": 0,
+                "x1": 20,
+                "y1": 25
+              },
+              "placed": [
+                {
+                  "name": "Diwaniya",
+                  "kind": "diwaniya",
+                  "storey": "Ground",
+                  "x": 7,
+                  "y": 8,
+                  "w": 6,
+                  "h": 5,
+                  "angle": 0,
+                  "area": 30,
+                  "target": 30,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Entry Foyer",
+                  "kind": "entry-foyer",
+                  "storey": "Ground",
+                  "x": 7,
+                  "y": 4,
+                  "w": 7,
+                  "h": 4,
+                  "angle": 0,
+                  "area": 28,
+                  "target": 28,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Store",
+                  "kind": "store",
+                  "storey": "Ground",
+                  "x": 13,
+                  "y": 8,
+                  "w": 5,
+                  "h": 4,
+                  "angle": 0,
+                  "area": 20,
+                  "target": 20,
+                  "height": 3.5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [
+                {
+                  "rooms": [
+                    "Diwaniya",
+                    "Entry Foyer"
+                  ],
+                  "metres": 6
+                },
+                {
+                  "rooms": [
+                    "Diwaniya",
+                    "Store"
+                  ],
+                  "metres": 4
+                },
+                {
+                  "rooms": [
+                    "Entry Foyer",
+                    "Store"
+                  ],
+                  "metres": 1
+                }
+              ],
+              "allButTouching": [],
+              "report": {
+                "storey": 0,
+                "storeyName": "Ground",
+                "placedArea": 78,
+                "askedArea": 78,
+                "buildableArea": 365.5,
+                "floors": [
+                  78,
+                  0
+                ],
+                "total": 78,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            },
+            {
+              "storey": "First",
+              "lineTheGroundFloorMayReach": {
+                "x0": 1.5,
+                "y0": 1.5,
+                "x1": 18.5,
+                "y1": 23
+              },
+              "placed": [],
+              "sharing": [],
+              "allButTouching": [],
+              "report": {
+                "storey": 1,
+                "storeyName": "First",
+                "placedArea": 0,
+                "askedArea": 78,
+                "buildableArea": 365.5,
+                "floors": [
+                  78,
+                  0
+                ],
+                "total": 78,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            }
+          ],
+          "waiting": [],
+          "totals": {
+            "floorAreas": [
+              78,
+              0
+            ],
+            "total": 78,
+            "allowed": 1050,
+            "overRatio": false
+          }
+        }
+      }
+    }
+  ]
+}

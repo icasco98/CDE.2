@@ -1,0 +1,841 @@
+{
+  "task": "t19-long-list",
+  "title": "A long list, one bad deed",
+  "run": 1,
+  "instruction": "Turn the diwaniya a quarter, lock the stair, bring the kitchen down to twelve square metres, give the family living a door on its north wall, make the space in the plot's north-east corner between the store and the maid's bath a court, move the maid's room upstairs, make the entry foyer four metres tall, and take the laundry off the sheet.",
+  "pass": true,
+  "numbers": {
+    "the diwaniya turned a quarter": true,
+    "the stair is locked": true,
+    "the kitchen, m²": 11.98,
+    "doors on the family living": 1,
+    "the maid's room stands on storey": 1,
+    "the entry foyer, m tall": 4,
+    "the laundry is on the sheet": false,
+    "the seven that can be done, done": 7,
+    "courts on the sheet": 0,
+    "the corner space before, m²": 3,
+    "the corner space now, m²": 3,
+    "the tool's reason in the results": true
+  },
+  "calls": [
+    {
+      "tool": "read_sheet",
+      "input": {},
+      "result": {
+        "plot": {
+          "w": 20,
+          "h": 25,
+          "serviceStreet": "south, y = 25",
+          "sideStreet": "east, x = 20",
+          "neighbours": "west (x = 0) and north (y = 0)",
+          "northArrowTurnedClockwise": "25°"
+        },
+        "setbackLine": {
+          "x0": 1.5,
+          "y0": 1.5,
+          "x1": 18.5,
+          "y1": 23
+        },
+        "onScreen": "Ground",
+        "landingRule": "wait",
+        "importanceOrder": [
+          "Diwaniya",
+          "Entry Foyer",
+          "Family Living",
+          "Kitchen",
+          "Stair",
+          "Store",
+          "Maid Bath",
+          "Maid Room",
+          "Laundry"
+        ],
+        "storeys": [
+          {
+            "storey": "Ground",
+            "lineTheGroundFloorMayReach": {
+              "x0": 0,
+              "y0": 0,
+              "x1": 20,
+              "y1": 25
+            },
+            "placed": [
+              {
+                "name": "Diwaniya",
+                "kind": "diwaniya",
+                "storey": "Ground",
+                "x": 1.5,
+                "y": 18,
+                "w": 7,
+                "h": 5,
+                "angle": 0,
+                "area": 35,
+                "target": 35,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Entry Foyer",
+                "kind": "entry-foyer",
+                "storey": "Ground",
+                "x": 12,
+                "y": 13,
+                "w": 6,
+                "h": 4,
+                "angle": 0,
+                "area": 24,
+                "target": 24,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Family Living",
+                "kind": "family-living",
+                "storey": "Ground",
+                "x": 12,
+                "y": 6,
+                "w": 8,
+                "h": 6,
+                "angle": 0,
+                "area": 48,
+                "target": 48,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Kitchen",
+                "kind": "kitchen",
+                "storey": "Ground",
+                "x": 2,
+                "y": 10,
+                "w": 6,
+                "h": 5,
+                "angle": 0,
+                "area": 30,
+                "target": 30,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Stair",
+                "kind": "stair",
+                "storey": "Ground",
+                "x": 9,
+                "y": 13,
+                "w": 2.5,
+                "h": 6,
+                "angle": 0,
+                "area": 15,
+                "target": 15,
+                "height": 7,
+                "doors": 0
+              },
+              {
+                "name": "Store",
+                "kind": "store",
+                "storey": "Ground",
+                "x": 12,
+                "y": 0,
+                "w": 6.5,
+                "h": 4,
+                "angle": 0,
+                "area": 26,
+                "target": 26,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Maid Bath",
+                "kind": "maid-bath",
+                "storey": "Ground",
+                "x": 18.5,
+                "y": 2,
+                "w": 1.5,
+                "h": 2,
+                "angle": 0,
+                "area": 3,
+                "target": 3,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Maid Room",
+                "kind": "maid-room",
+                "storey": "Ground",
+                "x": 14.5,
+                "y": 19,
+                "w": 4,
+                "h": 4,
+                "angle": 0,
+                "area": 16,
+                "target": 16,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Laundry",
+                "kind": "laundry",
+                "storey": "Ground",
+                "x": 2,
+                "y": 2,
+                "w": 3,
+                "h": 4,
+                "angle": 0,
+                "area": 12,
+                "target": 12,
+                "height": 3.5,
+                "doors": 0
+              }
+            ],
+            "sharing": [
+              {
+                "rooms": [
+                  "Store",
+                  "Maid Bath"
+                ],
+                "metres": 2
+              }
+            ],
+            "allButTouching": [
+              {
+                "rooms": [
+                  "Diwaniya",
+                  "Stair"
+                ],
+                "how": "a gap",
+                "metres": 0.5
+              },
+              {
+                "rooms": [
+                  "Entry Foyer",
+                  "Stair"
+                ],
+                "how": "a gap",
+                "metres": 0.5
+              }
+            ],
+            "report": {
+              "storey": 0,
+              "storeyName": "Ground",
+              "placedArea": 209,
+              "askedArea": 209,
+              "buildableArea": 365.5,
+              "floors": [
+                209,
+                0
+              ],
+              "total": 209,
+              "allowed": 1050,
+              "overRatio": false,
+              "ratioRead": true,
+              "openToBelow": [],
+              "overlaps": [],
+              "spills": [],
+              "aside": [],
+              "boundary": [
+                {
+                  "side": "west",
+                  "name": "west boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "north",
+                  "name": "north boundary",
+                  "used": 6.5,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                },
+                {
+                  "side": "east",
+                  "name": "side-street boundary",
+                  "used": 8,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                },
+                {
+                  "side": "street",
+                  "name": "street boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                }
+              ],
+              "shortfalls": [],
+              "courts": [],
+              "pockets": {
+                "count": 0,
+                "area": 0
+              },
+              "walk": null
+            }
+          },
+          {
+            "storey": "First",
+            "lineTheGroundFloorMayReach": {
+              "x0": 1.5,
+              "y0": 1.5,
+              "x1": 18.5,
+              "y1": 23
+            },
+            "placed": [],
+            "sharing": [],
+            "allButTouching": [],
+            "report": {
+              "storey": 1,
+              "storeyName": "First",
+              "placedArea": 15,
+              "askedArea": 209,
+              "buildableArea": 365.5,
+              "floors": [
+                209,
+                0
+              ],
+              "total": 209,
+              "allowed": 1050,
+              "overRatio": false,
+              "ratioRead": true,
+              "openToBelow": [],
+              "overlaps": [],
+              "spills": [],
+              "aside": [],
+              "boundary": [
+                {
+                  "side": "west",
+                  "name": "west boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "north",
+                  "name": "north boundary",
+                  "used": 6.5,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                },
+                {
+                  "side": "east",
+                  "name": "side-street boundary",
+                  "used": 8,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                },
+                {
+                  "side": "street",
+                  "name": "street boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                }
+              ],
+              "shortfalls": [],
+              "courts": [],
+              "pockets": {
+                "count": 0,
+                "area": 0
+              },
+              "walk": {
+                "reached": 1,
+                "all": 1,
+                "unreached": [],
+                "from": "the stair",
+                "hallways": [],
+                "entryWithoutOutsideDoor": null,
+                "diwaniyaWithoutStreetDoor": null,
+                "cannotOpen": []
+              }
+            }
+          }
+        ],
+        "waiting": [],
+        "totals": {
+          "floorAreas": [
+            209,
+            0
+          ],
+          "total": 209,
+          "allowed": 1050,
+          "overRatio": false
+        }
+      }
+    },
+    {
+      "tool": "do",
+      "input": {
+        "deeds": [
+          {
+            "verb": "turn",
+            "room": "Diwaniya",
+            "quarter": true
+          },
+          {
+            "verb": "height",
+            "room": "Entry Foyer",
+            "metres": 4
+          },
+          {
+            "verb": "door",
+            "room": "Family Living",
+            "wall": "north",
+            "type": "door",
+            "along": 0.5
+          },
+          {
+            "verb": "resize",
+            "room": "Kitchen",
+            "area": 12
+          },
+          {
+            "verb": "lock",
+            "rooms": [
+              "Stair"
+            ]
+          },
+          {
+            "verb": "court",
+            "between": [
+              "Store",
+              "Maid Bath"
+            ]
+          },
+          {
+            "verb": "storey",
+            "rooms": [
+              "Maid Room"
+            ],
+            "to": "First"
+          },
+          {
+            "verb": "send_back",
+            "rooms": [
+              "Laundry"
+            ]
+          }
+        ]
+      },
+      "result": {
+        "landed": [
+          "turn · Diwaniya at 0°",
+          "height · Entry Foyer 4 m",
+          "door · Door on Family Living, middle of the wall",
+          "resize · Kitchen 12 m²",
+          "lock · Stair locked in place",
+          "court refused · 3 m² is under the 9 m² a court needs.",
+          "storey · Maid Room on the first storey",
+          "send back · sent back: Laundry"
+        ],
+        "changed": {
+          "moves": [
+            {
+              "room": "Diwaniya",
+              "how": "reshaped"
+            },
+            {
+              "room": "Kitchen",
+              "how": "reshaped"
+            },
+            {
+              "room": "Laundry",
+              "how": "sent back"
+            }
+          ],
+          "newOverlaps": [],
+          "newSpills": []
+        },
+        "house": {
+          "plot": {
+            "w": 20,
+            "h": 25,
+            "serviceStreet": "south, y = 25",
+            "sideStreet": "east, x = 20",
+            "neighbours": "west (x = 0) and north (y = 0)",
+            "northArrowTurnedClockwise": "25°"
+          },
+          "setbackLine": {
+            "x0": 1.5,
+            "y0": 1.5,
+            "x1": 18.5,
+            "y1": 23
+          },
+          "onScreen": "Ground",
+          "landingRule": "wait",
+          "importanceOrder": [
+            "Diwaniya",
+            "Entry Foyer",
+            "Family Living",
+            "Kitchen",
+            "Stair",
+            "Store",
+            "Maid Bath",
+            "Maid Room",
+            "Laundry"
+          ],
+          "storeys": [
+            {
+              "storey": "Ground",
+              "lineTheGroundFloorMayReach": {
+                "x0": 0,
+                "y0": 0,
+                "x1": 20,
+                "y1": 25
+              },
+              "placed": [
+                {
+                  "name": "Diwaniya",
+                  "kind": "diwaniya",
+                  "storey": "Ground",
+                  "x": 2.5,
+                  "y": 17,
+                  "w": 5,
+                  "h": 7,
+                  "angle": 0,
+                  "area": 35,
+                  "target": 35,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Entry Foyer",
+                  "kind": "entry-foyer",
+                  "storey": "Ground",
+                  "x": 12,
+                  "y": 13,
+                  "w": 6,
+                  "h": 4,
+                  "angle": 0,
+                  "area": 24,
+                  "target": 24,
+                  "height": 4,
+                  "doors": 0
+                },
+                {
+                  "name": "Family Living",
+                  "kind": "family-living",
+                  "storey": "Ground",
+                  "x": 12,
+                  "y": 6,
+                  "w": 8,
+                  "h": 6,
+                  "angle": 0,
+                  "area": 48,
+                  "target": 48,
+                  "height": 3.5,
+                  "doors": 1
+                },
+                {
+                  "name": "Kitchen",
+                  "kind": "kitchen",
+                  "storey": "Ground",
+                  "x": 3.11,
+                  "y": 10.92,
+                  "w": 3.79,
+                  "h": 3.16,
+                  "angle": 0,
+                  "area": 11.98,
+                  "target": 30,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Stair",
+                  "kind": "stair",
+                  "storey": "Ground",
+                  "x": 9,
+                  "y": 13,
+                  "w": 2.5,
+                  "h": 6,
+                  "angle": 0,
+                  "area": 15,
+                  "target": 15,
+                  "height": 7,
+                  "doors": 0,
+                  "locked": true
+                },
+                {
+                  "name": "Store",
+                  "kind": "store",
+                  "storey": "Ground",
+                  "x": 12,
+                  "y": 0,
+                  "w": 6.5,
+                  "h": 4,
+                  "angle": 0,
+                  "area": 26,
+                  "target": 26,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Maid Bath",
+                  "kind": "maid-bath",
+                  "storey": "Ground",
+                  "x": 18.5,
+                  "y": 2,
+                  "w": 1.5,
+                  "h": 2,
+                  "angle": 0,
+                  "area": 3,
+                  "target": 3,
+                  "height": 3.5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [
+                {
+                  "rooms": [
+                    "Store",
+                    "Maid Bath"
+                  ],
+                  "metres": 2
+                }
+              ],
+              "allButTouching": [
+                {
+                  "rooms": [
+                    "Entry Foyer",
+                    "Stair"
+                  ],
+                  "how": "a gap",
+                  "metres": 0.5
+                }
+              ],
+              "report": {
+                "storey": 0,
+                "storeyName": "Ground",
+                "placedArea": 162.98,
+                "askedArea": 209,
+                "buildableArea": 365.5,
+                "floors": [
+                  162.98,
+                  31
+                ],
+                "total": 193.98,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 6.5,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 8,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [
+                  {
+                    "name": "Kitchen",
+                    "area": 11.98,
+                    "target": 30
+                  }
+                ],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": {
+                  "reached": 1,
+                  "all": 7,
+                  "unreached": [
+                    "Diwaniya",
+                    "Entry Foyer",
+                    "Kitchen",
+                    "Stair",
+                    "Store",
+                    "Maid Bath"
+                  ],
+                  "from": "outside",
+                  "hallways": [],
+                  "entryWithoutOutsideDoor": "Entry Foyer",
+                  "diwaniyaWithoutStreetDoor": "Diwaniya",
+                  "cannotOpen": []
+                }
+              }
+            },
+            {
+              "storey": "First",
+              "lineTheGroundFloorMayReach": {
+                "x0": 1.5,
+                "y0": 1.5,
+                "x1": 18.5,
+                "y1": 23
+              },
+              "placed": [
+                {
+                  "name": "Maid Room",
+                  "kind": "maid-room",
+                  "storey": "First",
+                  "x": 14.5,
+                  "y": 19,
+                  "w": 4,
+                  "h": 4,
+                  "angle": 0,
+                  "area": 16,
+                  "target": 16,
+                  "height": 3.5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [],
+              "allButTouching": [],
+              "report": {
+                "storey": 1,
+                "storeyName": "First",
+                "placedArea": 31,
+                "askedArea": 209,
+                "buildableArea": 365.5,
+                "floors": [
+                  162.98,
+                  31
+                ],
+                "total": 193.98,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [
+                  "Entry Foyer"
+                ],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 6.5,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 8,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": {
+                  "reached": 1,
+                  "all": 2,
+                  "unreached": [
+                    "Maid Room"
+                  ],
+                  "from": "the stair",
+                  "hallways": [],
+                  "entryWithoutOutsideDoor": null,
+                  "diwaniyaWithoutStreetDoor": null,
+                  "cannotOpen": []
+                }
+              }
+            }
+          ],
+          "waiting": [
+            {
+              "name": "Laundry",
+              "kind": "laundry",
+              "target": 12,
+              "w": 4,
+              "h": 3
+            }
+          ],
+          "totals": {
+            "floorAreas": [
+              162.98,
+              31
+            ],
+            "total": 193.98,
+            "allowed": 1050,
+            "overRatio": false
+          }
+        }
+      }
+    }
+  ],
+  "said": [
+    "read the house · 9 rooms asked for",
+    "did · Ground · turn · Diwaniya at 0° · height · Entry Foyer 4 m · door · Door o…"
+  ],
+  "notes": [],
+  "requests": [],
+  "lastWords": "Done, except for one deed the sheet wouldn't take.\n\n- Turned the diwaniya a quarter, locked the stair, moved the maid's room upstairs.\n- Kitchen is now about 12 m², family living has a door on its north wall, entry foyer stands 4 m tall, and the laundry is sent back to the program.\n- The court between the store and maid's bath was refused — that corner is only 3 m², short of the 9 m² a court needs.\n- I'd give that sliver to the store instead, if you want it closed in — say the word and I'll do it."
+}

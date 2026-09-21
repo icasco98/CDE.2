@@ -1,0 +1,3 @@
+The Store landed at 14.5,1.5 — held inside the setback line, not at the plot boundary I asked for. The First storey may only reach the setback line (1.5–18.5, 1.5–23), not the plot edge the Ground floor can touch, so "right up to the boundary" isn't available upstairs — the tool snapped it in to the setback instead of refusing outright. I placed the Store there since that's as close to the north-east corner as the First storey permits.
+
+The store now sits in the north-east corner of the buildable area on First, tight against the setback line — but not the plot boundary itself, since upper floors must set back there. Want me to keep it there, or move it to the ground floor where the boundary is actually reachable?

@@ -1,0 +1,3 @@
+Laundry is now shrunk to 3×4.5 (13.5 m²) and snapped flush against Store's east wall, sharing 4.5 m of wall — no gap, no overlap. Total 1048.56 vs allowed 1050, ratio holds and every room from the tray is placed.
+
+Store stands off the Kitchen's south wall (30 m², at target) with Laundry beside it, both at the back near the service street. Placing the tray at full target sizes would have broken the ratio by about 9 m², so I cut Laundry down to 13.5 m² — well under its 24 m² target, since it's last in the room order and a shortfall there costs the plan least. Nothing waiting, no overlaps or spills.

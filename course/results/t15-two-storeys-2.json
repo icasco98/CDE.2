@@ -1,0 +1,2095 @@
+{
+  "task": "t15-two-storeys",
+  "title": "Two storeys at once",
+  "run": 2,
+  "instruction": "Put the master bedroom upstairs against the stair, and the family living on the ground against the same stair.",
+  "pass": true,
+  "numbers": {
+    "the master stands on storey": 1,
+    "the family living stands on storey": 0,
+    "the master shares with the stair upstairs, m": 5,
+    "the family living shares with the stair, m": 6,
+    "the storey the desk shows": 0,
+    "the stair stands where it stood": true
+  },
+  "calls": [
+    {
+      "tool": "read_sheet",
+      "input": {},
+      "result": {
+        "plot": {
+          "w": 20,
+          "h": 25,
+          "serviceStreet": "south, y = 25",
+          "sideStreet": "east, x = 20",
+          "neighbours": "west (x = 0) and north (y = 0)",
+          "northArrowTurnedClockwise": "25°"
+        },
+        "setbackLine": {
+          "x0": 1.5,
+          "y0": 1.5,
+          "x1": 18.5,
+          "y1": 23
+        },
+        "onScreen": "Ground",
+        "landingRule": "wait",
+        "importanceOrder": [
+          "Stair",
+          "Master Bedroom",
+          "Family Living"
+        ],
+        "storeys": [
+          {
+            "storey": "Ground",
+            "lineTheGroundFloorMayReach": {
+              "x0": 0,
+              "y0": 0,
+              "x1": 20,
+              "y1": 25
+            },
+            "placed": [
+              {
+                "name": "Stair",
+                "kind": "stair",
+                "storey": "Ground",
+                "x": 9,
+                "y": 10,
+                "w": 2.5,
+                "h": 6,
+                "angle": 0,
+                "area": 15,
+                "target": 15,
+                "height": 7,
+                "doors": 0
+              }
+            ],
+            "sharing": [],
+            "allButTouching": [],
+            "report": {
+              "storey": 0,
+              "storeyName": "Ground",
+              "placedArea": 15,
+              "askedArea": 70,
+              "buildableArea": 365.5,
+              "floors": [
+                15,
+                0
+              ],
+              "total": 15,
+              "allowed": 1050,
+              "overRatio": false,
+              "ratioRead": true,
+              "openToBelow": [],
+              "overlaps": [],
+              "spills": [],
+              "aside": [],
+              "boundary": [
+                {
+                  "side": "west",
+                  "name": "west boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "north",
+                  "name": "north boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "east",
+                  "name": "side-street boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "street",
+                  "name": "street boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                }
+              ],
+              "shortfalls": [],
+              "courts": [],
+              "pockets": {
+                "count": 0,
+                "area": 0
+              },
+              "walk": null
+            }
+          },
+          {
+            "storey": "First",
+            "lineTheGroundFloorMayReach": {
+              "x0": 1.5,
+              "y0": 1.5,
+              "x1": 18.5,
+              "y1": 23
+            },
+            "placed": [],
+            "sharing": [],
+            "allButTouching": [],
+            "report": {
+              "storey": 1,
+              "storeyName": "First",
+              "placedArea": 15,
+              "askedArea": 70,
+              "buildableArea": 365.5,
+              "floors": [
+                15,
+                0
+              ],
+              "total": 15,
+              "allowed": 1050,
+              "overRatio": false,
+              "ratioRead": true,
+              "openToBelow": [],
+              "overlaps": [],
+              "spills": [],
+              "aside": [],
+              "boundary": [
+                {
+                  "side": "west",
+                  "name": "west boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "north",
+                  "name": "north boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "east",
+                  "name": "side-street boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "street",
+                  "name": "street boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                }
+              ],
+              "shortfalls": [],
+              "courts": [],
+              "pockets": {
+                "count": 0,
+                "area": 0
+              },
+              "walk": {
+                "reached": 1,
+                "all": 1,
+                "unreached": [],
+                "from": "the stair",
+                "hallways": [],
+                "entryWithoutOutsideDoor": null,
+                "diwaniyaWithoutStreetDoor": null,
+                "cannotOpen": []
+              }
+            }
+          }
+        ],
+        "waiting": [
+          {
+            "name": "Master Bedroom",
+            "kind": "master-bedroom",
+            "target": 25,
+            "w": 5,
+            "h": 5
+          },
+          {
+            "name": "Family Living",
+            "kind": "family-living",
+            "target": 30,
+            "w": 6,
+            "h": 5
+          }
+        ],
+        "totals": {
+          "floorAreas": [
+            15,
+            0
+          ],
+          "total": 15,
+          "allowed": 1050,
+          "overRatio": false
+        }
+      }
+    },
+    {
+      "tool": "place_against",
+      "input": {
+        "placements": [
+          {
+            "room": "Master Bedroom",
+            "against": "Stair",
+            "wall": "east",
+            "along": "start"
+          }
+        ],
+        "storey": "First"
+      },
+      "result": {
+        "landed": [
+          "Stair stands on the Ground storey, not the First"
+        ],
+        "changed": {
+          "moves": [],
+          "newOverlaps": [],
+          "newSpills": []
+        },
+        "house": {
+          "plot": {
+            "w": 20,
+            "h": 25,
+            "serviceStreet": "south, y = 25",
+            "sideStreet": "east, x = 20",
+            "neighbours": "west (x = 0) and north (y = 0)",
+            "northArrowTurnedClockwise": "25°"
+          },
+          "setbackLine": {
+            "x0": 1.5,
+            "y0": 1.5,
+            "x1": 18.5,
+            "y1": 23
+          },
+          "onScreen": "Ground",
+          "landingRule": "wait",
+          "importanceOrder": [
+            "Stair",
+            "Master Bedroom",
+            "Family Living"
+          ],
+          "storeys": [
+            {
+              "storey": "Ground",
+              "lineTheGroundFloorMayReach": {
+                "x0": 0,
+                "y0": 0,
+                "x1": 20,
+                "y1": 25
+              },
+              "placed": [
+                {
+                  "name": "Stair",
+                  "kind": "stair",
+                  "storey": "Ground",
+                  "x": 9,
+                  "y": 10,
+                  "w": 2.5,
+                  "h": 6,
+                  "angle": 0,
+                  "area": 15,
+                  "target": 15,
+                  "height": 7,
+                  "doors": 0
+                }
+              ],
+              "sharing": [],
+              "allButTouching": [],
+              "report": {
+                "storey": 0,
+                "storeyName": "Ground",
+                "placedArea": 15,
+                "askedArea": 70,
+                "buildableArea": 365.5,
+                "floors": [
+                  15,
+                  0
+                ],
+                "total": 15,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            },
+            {
+              "storey": "First",
+              "lineTheGroundFloorMayReach": {
+                "x0": 1.5,
+                "y0": 1.5,
+                "x1": 18.5,
+                "y1": 23
+              },
+              "placed": [],
+              "sharing": [],
+              "allButTouching": [],
+              "report": {
+                "storey": 1,
+                "storeyName": "First",
+                "placedArea": 15,
+                "askedArea": 70,
+                "buildableArea": 365.5,
+                "floors": [
+                  15,
+                  0
+                ],
+                "total": 15,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": {
+                  "reached": 1,
+                  "all": 1,
+                  "unreached": [],
+                  "from": "the stair",
+                  "hallways": [],
+                  "entryWithoutOutsideDoor": null,
+                  "diwaniyaWithoutStreetDoor": null,
+                  "cannotOpen": []
+                }
+              }
+            }
+          ],
+          "waiting": [
+            {
+              "name": "Master Bedroom",
+              "kind": "master-bedroom",
+              "target": 25,
+              "w": 5,
+              "h": 5
+            },
+            {
+              "name": "Family Living",
+              "kind": "family-living",
+              "target": 30,
+              "w": 6,
+              "h": 5
+            }
+          ],
+          "totals": {
+            "floorAreas": [
+              15,
+              0
+            ],
+            "total": 15,
+            "allowed": 1050,
+            "overRatio": false
+          }
+        }
+      }
+    },
+    {
+      "tool": "place_against",
+      "input": {
+        "placements": [
+          {
+            "room": "Master Bedroom",
+            "against": "Stair",
+            "wall": "east",
+            "along": "start"
+          }
+        ]
+      },
+      "result": {
+        "landed": [
+          "Master Bedroom at 11.5,10 5×5 · against Stair's east wall"
+        ],
+        "changed": {
+          "moves": [
+            {
+              "room": "Master Bedroom",
+              "how": "placed"
+            }
+          ],
+          "newOverlaps": [],
+          "newSpills": []
+        },
+        "house": {
+          "plot": {
+            "w": 20,
+            "h": 25,
+            "serviceStreet": "south, y = 25",
+            "sideStreet": "east, x = 20",
+            "neighbours": "west (x = 0) and north (y = 0)",
+            "northArrowTurnedClockwise": "25°"
+          },
+          "setbackLine": {
+            "x0": 1.5,
+            "y0": 1.5,
+            "x1": 18.5,
+            "y1": 23
+          },
+          "onScreen": "Ground",
+          "landingRule": "wait",
+          "importanceOrder": [
+            "Stair",
+            "Master Bedroom",
+            "Family Living"
+          ],
+          "storeys": [
+            {
+              "storey": "Ground",
+              "lineTheGroundFloorMayReach": {
+                "x0": 0,
+                "y0": 0,
+                "x1": 20,
+                "y1": 25
+              },
+              "placed": [
+                {
+                  "name": "Stair",
+                  "kind": "stair",
+                  "storey": "Ground",
+                  "x": 9,
+                  "y": 10,
+                  "w": 2.5,
+                  "h": 6,
+                  "angle": 0,
+                  "area": 15,
+                  "target": 15,
+                  "height": 7,
+                  "doors": 0
+                },
+                {
+                  "name": "Master Bedroom",
+                  "kind": "master-bedroom",
+                  "storey": "Ground",
+                  "x": 11.5,
+                  "y": 10,
+                  "w": 5,
+                  "h": 5,
+                  "angle": 0,
+                  "area": 25,
+                  "target": 25,
+                  "height": 3.5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [
+                {
+                  "rooms": [
+                    "Stair",
+                    "Master Bedroom"
+                  ],
+                  "metres": 5
+                }
+              ],
+              "allButTouching": [],
+              "report": {
+                "storey": 0,
+                "storeyName": "Ground",
+                "placedArea": 40,
+                "askedArea": 70,
+                "buildableArea": 365.5,
+                "floors": [
+                  40,
+                  0
+                ],
+                "total": 40,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            },
+            {
+              "storey": "First",
+              "lineTheGroundFloorMayReach": {
+                "x0": 1.5,
+                "y0": 1.5,
+                "x1": 18.5,
+                "y1": 23
+              },
+              "placed": [],
+              "sharing": [],
+              "allButTouching": [],
+              "report": {
+                "storey": 1,
+                "storeyName": "First",
+                "placedArea": 15,
+                "askedArea": 70,
+                "buildableArea": 365.5,
+                "floors": [
+                  40,
+                  0
+                ],
+                "total": 40,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": {
+                  "reached": 1,
+                  "all": 1,
+                  "unreached": [],
+                  "from": "the stair",
+                  "hallways": [],
+                  "entryWithoutOutsideDoor": null,
+                  "diwaniyaWithoutStreetDoor": null,
+                  "cannotOpen": []
+                }
+              }
+            }
+          ],
+          "waiting": [
+            {
+              "name": "Family Living",
+              "kind": "family-living",
+              "target": 30,
+              "w": 6,
+              "h": 5
+            }
+          ],
+          "totals": {
+            "floorAreas": [
+              40,
+              0
+            ],
+            "total": 40,
+            "allowed": 1050,
+            "overRatio": false
+          }
+        }
+      }
+    },
+    {
+      "tool": "take_back",
+      "input": {},
+      "result": {
+        "tookBack": true,
+        "was": "placed against · Ground",
+        "changed": {
+          "moves": [
+            {
+              "room": "Master Bedroom",
+              "how": "sent back"
+            }
+          ],
+          "newOverlaps": [],
+          "newSpills": []
+        },
+        "house": {
+          "plot": {
+            "w": 20,
+            "h": 25,
+            "serviceStreet": "south, y = 25",
+            "sideStreet": "east, x = 20",
+            "neighbours": "west (x = 0) and north (y = 0)",
+            "northArrowTurnedClockwise": "25°"
+          },
+          "setbackLine": {
+            "x0": 1.5,
+            "y0": 1.5,
+            "x1": 18.5,
+            "y1": 23
+          },
+          "onScreen": "Ground",
+          "landingRule": "wait",
+          "importanceOrder": [
+            "Stair",
+            "Master Bedroom",
+            "Family Living"
+          ],
+          "storeys": [
+            {
+              "storey": "Ground",
+              "lineTheGroundFloorMayReach": {
+                "x0": 0,
+                "y0": 0,
+                "x1": 20,
+                "y1": 25
+              },
+              "placed": [
+                {
+                  "name": "Stair",
+                  "kind": "stair",
+                  "storey": "Ground",
+                  "x": 9,
+                  "y": 10,
+                  "w": 2.5,
+                  "h": 6,
+                  "angle": 0,
+                  "area": 15,
+                  "target": 15,
+                  "height": 7,
+                  "doors": 0
+                }
+              ],
+              "sharing": [],
+              "allButTouching": [],
+              "report": {
+                "storey": 0,
+                "storeyName": "Ground",
+                "placedArea": 15,
+                "askedArea": 70,
+                "buildableArea": 365.5,
+                "floors": [
+                  15,
+                  0
+                ],
+                "total": 15,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            },
+            {
+              "storey": "First",
+              "lineTheGroundFloorMayReach": {
+                "x0": 1.5,
+                "y0": 1.5,
+                "x1": 18.5,
+                "y1": 23
+              },
+              "placed": [],
+              "sharing": [],
+              "allButTouching": [],
+              "report": {
+                "storey": 1,
+                "storeyName": "First",
+                "placedArea": 15,
+                "askedArea": 70,
+                "buildableArea": 365.5,
+                "floors": [
+                  15,
+                  0
+                ],
+                "total": 15,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": {
+                  "reached": 1,
+                  "all": 1,
+                  "unreached": [],
+                  "from": "the stair",
+                  "hallways": [],
+                  "entryWithoutOutsideDoor": null,
+                  "diwaniyaWithoutStreetDoor": null,
+                  "cannotOpen": []
+                }
+              }
+            }
+          ],
+          "waiting": [
+            {
+              "name": "Master Bedroom",
+              "kind": "master-bedroom",
+              "target": 25,
+              "w": 5,
+              "h": 5
+            },
+            {
+              "name": "Family Living",
+              "kind": "family-living",
+              "target": 30,
+              "w": 6,
+              "h": 5
+            }
+          ],
+          "totals": {
+            "floorAreas": [
+              15,
+              0
+            ],
+            "total": 15,
+            "allowed": 1050,
+            "overRatio": false
+          }
+        }
+      }
+    },
+    {
+      "tool": "do",
+      "input": {
+        "deeds": [
+          {
+            "verb": "copy",
+            "room": "Stair",
+            "to": "First"
+          }
+        ]
+      },
+      "result": {
+        "landed": [
+          "copy refused · nothing to copy"
+        ],
+        "changed": {
+          "moves": [],
+          "newOverlaps": [],
+          "newSpills": []
+        },
+        "house": {
+          "plot": {
+            "w": 20,
+            "h": 25,
+            "serviceStreet": "south, y = 25",
+            "sideStreet": "east, x = 20",
+            "neighbours": "west (x = 0) and north (y = 0)",
+            "northArrowTurnedClockwise": "25°"
+          },
+          "setbackLine": {
+            "x0": 1.5,
+            "y0": 1.5,
+            "x1": 18.5,
+            "y1": 23
+          },
+          "onScreen": "Ground",
+          "landingRule": "wait",
+          "importanceOrder": [
+            "Stair",
+            "Master Bedroom",
+            "Family Living"
+          ],
+          "storeys": [
+            {
+              "storey": "Ground",
+              "lineTheGroundFloorMayReach": {
+                "x0": 0,
+                "y0": 0,
+                "x1": 20,
+                "y1": 25
+              },
+              "placed": [
+                {
+                  "name": "Stair",
+                  "kind": "stair",
+                  "storey": "Ground",
+                  "x": 9,
+                  "y": 10,
+                  "w": 2.5,
+                  "h": 6,
+                  "angle": 0,
+                  "area": 15,
+                  "target": 15,
+                  "height": 7,
+                  "doors": 0
+                }
+              ],
+              "sharing": [],
+              "allButTouching": [],
+              "report": {
+                "storey": 0,
+                "storeyName": "Ground",
+                "placedArea": 15,
+                "askedArea": 70,
+                "buildableArea": 365.5,
+                "floors": [
+                  15,
+                  0
+                ],
+                "total": 15,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            },
+            {
+              "storey": "First",
+              "lineTheGroundFloorMayReach": {
+                "x0": 1.5,
+                "y0": 1.5,
+                "x1": 18.5,
+                "y1": 23
+              },
+              "placed": [],
+              "sharing": [],
+              "allButTouching": [],
+              "report": {
+                "storey": 1,
+                "storeyName": "First",
+                "placedArea": 15,
+                "askedArea": 70,
+                "buildableArea": 365.5,
+                "floors": [
+                  15,
+                  0
+                ],
+                "total": 15,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": {
+                  "reached": 1,
+                  "all": 1,
+                  "unreached": [],
+                  "from": "the stair",
+                  "hallways": [],
+                  "entryWithoutOutsideDoor": null,
+                  "diwaniyaWithoutStreetDoor": null,
+                  "cannotOpen": []
+                }
+              }
+            }
+          ],
+          "waiting": [
+            {
+              "name": "Master Bedroom",
+              "kind": "master-bedroom",
+              "target": 25,
+              "w": 5,
+              "h": 5
+            },
+            {
+              "name": "Family Living",
+              "kind": "family-living",
+              "target": 30,
+              "w": 6,
+              "h": 5
+            }
+          ],
+          "totals": {
+            "floorAreas": [
+              15,
+              0
+            ],
+            "total": 15,
+            "allowed": 1050,
+            "overRatio": false
+          }
+        }
+      }
+    },
+    {
+      "tool": "place_against",
+      "input": {
+        "placements": [
+          {
+            "room": "Master Bedroom",
+            "against": "Stair",
+            "wall": "east",
+            "along": "start"
+          }
+        ]
+      },
+      "result": {
+        "landed": [
+          "Master Bedroom at 11.5,10 5×5 · against Stair's east wall"
+        ],
+        "changed": {
+          "moves": [
+            {
+              "room": "Master Bedroom",
+              "how": "placed"
+            }
+          ],
+          "newOverlaps": [],
+          "newSpills": []
+        },
+        "house": {
+          "plot": {
+            "w": 20,
+            "h": 25,
+            "serviceStreet": "south, y = 25",
+            "sideStreet": "east, x = 20",
+            "neighbours": "west (x = 0) and north (y = 0)",
+            "northArrowTurnedClockwise": "25°"
+          },
+          "setbackLine": {
+            "x0": 1.5,
+            "y0": 1.5,
+            "x1": 18.5,
+            "y1": 23
+          },
+          "onScreen": "Ground",
+          "landingRule": "wait",
+          "importanceOrder": [
+            "Stair",
+            "Master Bedroom",
+            "Family Living"
+          ],
+          "storeys": [
+            {
+              "storey": "Ground",
+              "lineTheGroundFloorMayReach": {
+                "x0": 0,
+                "y0": 0,
+                "x1": 20,
+                "y1": 25
+              },
+              "placed": [
+                {
+                  "name": "Stair",
+                  "kind": "stair",
+                  "storey": "Ground",
+                  "x": 9,
+                  "y": 10,
+                  "w": 2.5,
+                  "h": 6,
+                  "angle": 0,
+                  "area": 15,
+                  "target": 15,
+                  "height": 7,
+                  "doors": 0
+                },
+                {
+                  "name": "Master Bedroom",
+                  "kind": "master-bedroom",
+                  "storey": "Ground",
+                  "x": 11.5,
+                  "y": 10,
+                  "w": 5,
+                  "h": 5,
+                  "angle": 0,
+                  "area": 25,
+                  "target": 25,
+                  "height": 3.5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [
+                {
+                  "rooms": [
+                    "Stair",
+                    "Master Bedroom"
+                  ],
+                  "metres": 5
+                }
+              ],
+              "allButTouching": [],
+              "report": {
+                "storey": 0,
+                "storeyName": "Ground",
+                "placedArea": 40,
+                "askedArea": 70,
+                "buildableArea": 365.5,
+                "floors": [
+                  40,
+                  0
+                ],
+                "total": 40,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            },
+            {
+              "storey": "First",
+              "lineTheGroundFloorMayReach": {
+                "x0": 1.5,
+                "y0": 1.5,
+                "x1": 18.5,
+                "y1": 23
+              },
+              "placed": [],
+              "sharing": [],
+              "allButTouching": [],
+              "report": {
+                "storey": 1,
+                "storeyName": "First",
+                "placedArea": 15,
+                "askedArea": 70,
+                "buildableArea": 365.5,
+                "floors": [
+                  40,
+                  0
+                ],
+                "total": 40,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": {
+                  "reached": 1,
+                  "all": 1,
+                  "unreached": [],
+                  "from": "the stair",
+                  "hallways": [],
+                  "entryWithoutOutsideDoor": null,
+                  "diwaniyaWithoutStreetDoor": null,
+                  "cannotOpen": []
+                }
+              }
+            }
+          ],
+          "waiting": [
+            {
+              "name": "Family Living",
+              "kind": "family-living",
+              "target": 30,
+              "w": 6,
+              "h": 5
+            }
+          ],
+          "totals": {
+            "floorAreas": [
+              40,
+              0
+            ],
+            "total": 40,
+            "allowed": 1050,
+            "overRatio": false
+          }
+        }
+      }
+    },
+    {
+      "tool": "do",
+      "input": {
+        "deeds": [
+          {
+            "verb": "storey",
+            "rooms": [
+              "Master Bedroom"
+            ],
+            "to": "First"
+          }
+        ]
+      },
+      "result": {
+        "landed": [
+          "storey · Master Bedroom on the first storey"
+        ],
+        "changed": {
+          "moves": [],
+          "newOverlaps": [],
+          "newSpills": []
+        },
+        "house": {
+          "plot": {
+            "w": 20,
+            "h": 25,
+            "serviceStreet": "south, y = 25",
+            "sideStreet": "east, x = 20",
+            "neighbours": "west (x = 0) and north (y = 0)",
+            "northArrowTurnedClockwise": "25°"
+          },
+          "setbackLine": {
+            "x0": 1.5,
+            "y0": 1.5,
+            "x1": 18.5,
+            "y1": 23
+          },
+          "onScreen": "Ground",
+          "landingRule": "wait",
+          "importanceOrder": [
+            "Stair",
+            "Master Bedroom",
+            "Family Living"
+          ],
+          "storeys": [
+            {
+              "storey": "Ground",
+              "lineTheGroundFloorMayReach": {
+                "x0": 0,
+                "y0": 0,
+                "x1": 20,
+                "y1": 25
+              },
+              "placed": [
+                {
+                  "name": "Stair",
+                  "kind": "stair",
+                  "storey": "Ground",
+                  "x": 9,
+                  "y": 10,
+                  "w": 2.5,
+                  "h": 6,
+                  "angle": 0,
+                  "area": 15,
+                  "target": 15,
+                  "height": 7,
+                  "doors": 0
+                }
+              ],
+              "sharing": [],
+              "allButTouching": [],
+              "report": {
+                "storey": 0,
+                "storeyName": "Ground",
+                "placedArea": 15,
+                "askedArea": 70,
+                "buildableArea": 365.5,
+                "floors": [
+                  15,
+                  40
+                ],
+                "total": 55,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            },
+            {
+              "storey": "First",
+              "lineTheGroundFloorMayReach": {
+                "x0": 1.5,
+                "y0": 1.5,
+                "x1": 18.5,
+                "y1": 23
+              },
+              "placed": [
+                {
+                  "name": "Master Bedroom",
+                  "kind": "master-bedroom",
+                  "storey": "First",
+                  "x": 11.5,
+                  "y": 10,
+                  "w": 5,
+                  "h": 5,
+                  "angle": 0,
+                  "area": 25,
+                  "target": 25,
+                  "height": 3.5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [
+                {
+                  "rooms": [
+                    "Stair",
+                    "Master Bedroom"
+                  ],
+                  "metres": 5
+                }
+              ],
+              "allButTouching": [],
+              "report": {
+                "storey": 1,
+                "storeyName": "First",
+                "placedArea": 40,
+                "askedArea": 70,
+                "buildableArea": 365.5,
+                "floors": [
+                  15,
+                  40
+                ],
+                "total": 55,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": {
+                  "reached": 1,
+                  "all": 2,
+                  "unreached": [
+                    "Master Bedroom"
+                  ],
+                  "from": "the stair",
+                  "hallways": [],
+                  "entryWithoutOutsideDoor": null,
+                  "diwaniyaWithoutStreetDoor": null,
+                  "cannotOpen": []
+                }
+              }
+            }
+          ],
+          "waiting": [
+            {
+              "name": "Family Living",
+              "kind": "family-living",
+              "target": 30,
+              "w": 6,
+              "h": 5
+            }
+          ],
+          "totals": {
+            "floorAreas": [
+              15,
+              40
+            ],
+            "total": 55,
+            "allowed": 1050,
+            "overRatio": false
+          }
+        }
+      }
+    },
+    {
+      "tool": "place_against",
+      "input": {
+        "placements": [
+          {
+            "room": "Family Living",
+            "against": "Stair",
+            "wall": "west",
+            "along": "start"
+          }
+        ],
+        "storey": "Ground"
+      },
+      "result": {
+        "landed": [
+          "Family Living at 4,10 5×6 · against Stair's west wall"
+        ],
+        "changed": {
+          "moves": [
+            {
+              "room": "Family Living",
+              "how": "placed"
+            }
+          ],
+          "newOverlaps": [],
+          "newSpills": []
+        },
+        "house": {
+          "plot": {
+            "w": 20,
+            "h": 25,
+            "serviceStreet": "south, y = 25",
+            "sideStreet": "east, x = 20",
+            "neighbours": "west (x = 0) and north (y = 0)",
+            "northArrowTurnedClockwise": "25°"
+          },
+          "setbackLine": {
+            "x0": 1.5,
+            "y0": 1.5,
+            "x1": 18.5,
+            "y1": 23
+          },
+          "onScreen": "Ground",
+          "landingRule": "wait",
+          "importanceOrder": [
+            "Stair",
+            "Master Bedroom",
+            "Family Living"
+          ],
+          "storeys": [
+            {
+              "storey": "Ground",
+              "lineTheGroundFloorMayReach": {
+                "x0": 0,
+                "y0": 0,
+                "x1": 20,
+                "y1": 25
+              },
+              "placed": [
+                {
+                  "name": "Stair",
+                  "kind": "stair",
+                  "storey": "Ground",
+                  "x": 9,
+                  "y": 10,
+                  "w": 2.5,
+                  "h": 6,
+                  "angle": 0,
+                  "area": 15,
+                  "target": 15,
+                  "height": 7,
+                  "doors": 0
+                },
+                {
+                  "name": "Family Living",
+                  "kind": "family-living",
+                  "storey": "Ground",
+                  "x": 4,
+                  "y": 10,
+                  "w": 5,
+                  "h": 6,
+                  "angle": 0,
+                  "area": 30,
+                  "target": 30,
+                  "height": 3.5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [
+                {
+                  "rooms": [
+                    "Stair",
+                    "Family Living"
+                  ],
+                  "metres": 6
+                }
+              ],
+              "allButTouching": [],
+              "report": {
+                "storey": 0,
+                "storeyName": "Ground",
+                "placedArea": 45,
+                "askedArea": 70,
+                "buildableArea": 365.5,
+                "floors": [
+                  45,
+                  40
+                ],
+                "total": 85,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            },
+            {
+              "storey": "First",
+              "lineTheGroundFloorMayReach": {
+                "x0": 1.5,
+                "y0": 1.5,
+                "x1": 18.5,
+                "y1": 23
+              },
+              "placed": [
+                {
+                  "name": "Master Bedroom",
+                  "kind": "master-bedroom",
+                  "storey": "First",
+                  "x": 11.5,
+                  "y": 10,
+                  "w": 5,
+                  "h": 5,
+                  "angle": 0,
+                  "area": 25,
+                  "target": 25,
+                  "height": 3.5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [
+                {
+                  "rooms": [
+                    "Stair",
+                    "Master Bedroom"
+                  ],
+                  "metres": 5
+                }
+              ],
+              "allButTouching": [],
+              "report": {
+                "storey": 1,
+                "storeyName": "First",
+                "placedArea": 40,
+                "askedArea": 70,
+                "buildableArea": 365.5,
+                "floors": [
+                  45,
+                  40
+                ],
+                "total": 85,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": {
+                  "reached": 1,
+                  "all": 2,
+                  "unreached": [
+                    "Master Bedroom"
+                  ],
+                  "from": "the stair",
+                  "hallways": [],
+                  "entryWithoutOutsideDoor": null,
+                  "diwaniyaWithoutStreetDoor": null,
+                  "cannotOpen": []
+                }
+              }
+            }
+          ],
+          "waiting": [],
+          "totals": {
+            "floorAreas": [
+              45,
+              40
+            ],
+            "total": 85,
+            "allowed": 1050,
+            "overRatio": false
+          }
+        }
+      }
+    }
+  ],
+  "said": [
+    "read the house · 3 rooms asked for",
+    "placed against · First · Stair stands on the Ground storey, not the First",
+    "placed against · Ground · Master Bedroom at 11.5,10 5×5 · against Stair's east …",
+    "took back · placed against · Ground",
+    "did · Ground · copy refused · nothing to copy",
+    "placed against · Ground · Master Bedroom at 11.5,10 5×5 · against Stair's east …",
+    "did · Ground · storey · Master Bedroom on the first storey",
+    "placed against · Ground · Family Living at 4,10 5×6 · against Stair's west wall"
+  ],
+  "notes": [],
+  "requests": [],
+  "lastWords": "Both rooms are placed, both at target area, no overlaps or spills. The waiting list is empty.\n\nI placed the Master Bedroom against the Stair's east wall then moved it to the First storey, and put the Family Living against the Stair's west wall on the Ground. Both share a full wall run with the Stair and hit their target areas exactly, with no overlaps. Note: the Master Bedroom still has no door, so the upstairs walk report shows it as unreached from the stair — say if you'd like me to open a door for it."
+}

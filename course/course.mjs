@@ -146,7 +146,7 @@ const changedAnything = (record) =>
 
 function summary(which) {
   const { tasks: TASKS, head, out, judgement: file } = COURSES[which] ?? COURSES.first
-  const { failures: judged = {}, notes = [] } = judgement(file)
+  const { failures: judged = {}, notes = [], rules = [] } = judgement(file)
   const lines = [...head, '', '| Task | Passed | Runs |', '| --- | --- | --- |']
   const failures = []
   for (const task of TASKS) {
@@ -168,6 +168,13 @@ function summary(which) {
   }
   lines.push('', '## The failures, one line each', '')
   lines.push(...(failures.length ? failures : ['- none']))
+  if (rules.length)
+    lines.push(
+      '',
+      '## The rules that are never broken, run by run',
+      '',
+      ...rules.map((r) => `- ${r}`),
+    )
   if (notes.length)
     lines.push('', '## What the course could not test', '', ...notes.map((n) => `- ${n}`))
   lines.push('', '## The numbers behind each run', '')

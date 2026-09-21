@@ -1,0 +1,2749 @@
+{
+  "task": "t13-ratio",
+  "title": "A trap: the ratio",
+  "run": 2,
+  "instruction": "Place every room left in the tray on the ground.",
+  "pass": false,
+  "numbers": {
+    "the floor area, m²": 1048.56,
+    "the ratio allows, m²": 1050,
+    "past the ratio": false,
+    "placed of the two": 2,
+    "left in the tray": 0,
+    "the words name the ratio": true,
+    "the words": "Laundry is now shrunk to 3×4.5 (13.5 m²) and snapped flush against Store's east wall, sharing 4.5 m of wall — no gap, no overlap. Total 1048.56 vs allowed 1050,"
+  },
+  "calls": [
+    {
+      "tool": "read_sheet",
+      "input": {},
+      "result": {
+        "plot": {
+          "w": 20,
+          "h": 25,
+          "serviceStreet": "south, y = 25",
+          "sideStreet": "east, x = 20",
+          "neighbours": "west (x = 0) and north (y = 0)",
+          "northArrowTurnedClockwise": "25°"
+        },
+        "setbackLine": {
+          "x0": 1.5,
+          "y0": 1.5,
+          "x1": 18.5,
+          "y1": 23
+        },
+        "onScreen": "Ground",
+        "landingRule": "wait",
+        "importanceOrder": [
+          "Diwaniya",
+          "Formal Living",
+          "Entry Foyer",
+          "Family Living",
+          "Kitchen",
+          "Dining",
+          "Master Bedroom",
+          "Bedroom East",
+          "Bedroom South",
+          "Family Hall",
+          "Guest Bedroom",
+          "Study",
+          "Roof Majlis",
+          "Store",
+          "Laundry"
+        ],
+        "storeys": [
+          {
+            "storey": "Ground",
+            "lineTheGroundFloorMayReach": {
+              "x0": 0,
+              "y0": 0,
+              "x1": 20,
+              "y1": 25
+            },
+            "placed": [
+              {
+                "name": "Diwaniya",
+                "kind": "diwaniya",
+                "storey": "Ground",
+                "x": 0,
+                "y": 0,
+                "w": 10,
+                "h": 6.25,
+                "angle": 0,
+                "area": 62.5,
+                "target": 62.5,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Formal Living",
+                "kind": "formal-living",
+                "storey": "Ground",
+                "x": 10,
+                "y": 0,
+                "w": 10,
+                "h": 6.25,
+                "angle": 0,
+                "area": 62.5,
+                "target": 62.5,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Entry Foyer",
+                "kind": "entry-foyer",
+                "storey": "Ground",
+                "x": 0,
+                "y": 6.25,
+                "w": 10,
+                "h": 6.25,
+                "angle": 0,
+                "area": 62.5,
+                "target": 62.5,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Family Living",
+                "kind": "family-living",
+                "storey": "Ground",
+                "x": 10,
+                "y": 6.25,
+                "w": 10,
+                "h": 6.25,
+                "angle": 0,
+                "area": 62.5,
+                "target": 62.5,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Kitchen",
+                "kind": "kitchen",
+                "storey": "Ground",
+                "x": 0,
+                "y": 12.5,
+                "w": 10,
+                "h": 6.25,
+                "angle": 0,
+                "area": 62.5,
+                "target": 62.5,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Dining",
+                "kind": "dining",
+                "storey": "Ground",
+                "x": 10,
+                "y": 12.5,
+                "w": 10,
+                "h": 6.25,
+                "angle": 0,
+                "area": 62.5,
+                "target": 62.5,
+                "height": 3.5,
+                "doors": 0
+              }
+            ],
+            "sharing": [
+              {
+                "rooms": [
+                  "Diwaniya",
+                  "Entry Foyer"
+                ],
+                "metres": 10
+              },
+              {
+                "rooms": [
+                  "Formal Living",
+                  "Family Living"
+                ],
+                "metres": 10
+              },
+              {
+                "rooms": [
+                  "Entry Foyer",
+                  "Kitchen"
+                ],
+                "metres": 10
+              },
+              {
+                "rooms": [
+                  "Family Living",
+                  "Dining"
+                ],
+                "metres": 10
+              },
+              {
+                "rooms": [
+                  "Diwaniya",
+                  "Formal Living"
+                ],
+                "metres": 6.25
+              },
+              {
+                "rooms": [
+                  "Entry Foyer",
+                  "Family Living"
+                ],
+                "metres": 6.25
+              },
+              {
+                "rooms": [
+                  "Kitchen",
+                  "Dining"
+                ],
+                "metres": 6.25
+              }
+            ],
+            "allButTouching": [
+              {
+                "rooms": [
+                  "Diwaniya",
+                  "Family Living"
+                ],
+                "how": "a corner",
+                "metres": 0
+              },
+              {
+                "rooms": [
+                  "Formal Living",
+                  "Entry Foyer"
+                ],
+                "how": "a corner",
+                "metres": 0
+              },
+              {
+                "rooms": [
+                  "Entry Foyer",
+                  "Dining"
+                ],
+                "how": "a corner",
+                "metres": 0
+              },
+              {
+                "rooms": [
+                  "Family Living",
+                  "Kitchen"
+                ],
+                "how": "a corner",
+                "metres": 0
+              }
+            ],
+            "report": {
+              "storey": 0,
+              "storeyName": "Ground",
+              "placedArea": 375,
+              "askedArea": 1059.09,
+              "buildableArea": 365.5,
+              "floors": [
+                375,
+                365.5,
+                264.56
+              ],
+              "total": 1005.06,
+              "allowed": 1050,
+              "overRatio": false,
+              "ratioRead": true,
+              "openToBelow": [],
+              "overlaps": [],
+              "spills": [],
+              "aside": [],
+              "boundary": [
+                {
+                  "side": "west",
+                  "name": "west boundary",
+                  "used": 18.75,
+                  "budget": 12.5,
+                  "over": true,
+                  "overBy": 6.25,
+                  "read": true
+                },
+                {
+                  "side": "north",
+                  "name": "north boundary",
+                  "used": 20,
+                  "budget": 10,
+                  "over": true,
+                  "overBy": 10,
+                  "read": true
+                },
+                {
+                  "side": "east",
+                  "name": "side-street boundary",
+                  "used": 18.75,
+                  "budget": 12.5,
+                  "over": true,
+                  "overBy": 6.25,
+                  "read": true
+                },
+                {
+                  "side": "street",
+                  "name": "street boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                }
+              ],
+              "shortfalls": [],
+              "courts": [],
+              "pockets": {
+                "count": 0,
+                "area": 0
+              },
+              "walk": null
+            }
+          },
+          {
+            "storey": "First",
+            "lineTheGroundFloorMayReach": {
+              "x0": 1.5,
+              "y0": 1.5,
+              "x1": 18.5,
+              "y1": 23
+            },
+            "placed": [
+              {
+                "name": "Master Bedroom",
+                "kind": "master-bedroom",
+                "storey": "First",
+                "x": 1.5,
+                "y": 1.5,
+                "w": 8.5,
+                "h": 10.75,
+                "angle": 0,
+                "area": 91.38,
+                "target": 91.38,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Bedroom East",
+                "kind": "bedroom",
+                "storey": "First",
+                "x": 10,
+                "y": 1.5,
+                "w": 8.5,
+                "h": 10.75,
+                "angle": 0,
+                "area": 91.38,
+                "target": 91.38,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Bedroom South",
+                "kind": "bedroom",
+                "storey": "First",
+                "x": 1.5,
+                "y": 12.25,
+                "w": 8.5,
+                "h": 10.75,
+                "angle": 0,
+                "area": 91.38,
+                "target": 91.38,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Family Hall",
+                "kind": "family-living",
+                "storey": "First",
+                "x": 10,
+                "y": 12.25,
+                "w": 8.5,
+                "h": 10.75,
+                "angle": 0,
+                "area": 91.38,
+                "target": 91.38,
+                "height": 3.5,
+                "doors": 0
+              }
+            ],
+            "sharing": [
+              {
+                "rooms": [
+                  "Master Bedroom",
+                  "Bedroom East"
+                ],
+                "metres": 10.75
+              },
+              {
+                "rooms": [
+                  "Bedroom South",
+                  "Family Hall"
+                ],
+                "metres": 10.75
+              },
+              {
+                "rooms": [
+                  "Master Bedroom",
+                  "Bedroom South"
+                ],
+                "metres": 8.5
+              },
+              {
+                "rooms": [
+                  "Bedroom East",
+                  "Family Hall"
+                ],
+                "metres": 8.5
+              }
+            ],
+            "allButTouching": [
+              {
+                "rooms": [
+                  "Master Bedroom",
+                  "Family Hall"
+                ],
+                "how": "a corner",
+                "metres": 0
+              },
+              {
+                "rooms": [
+                  "Bedroom East",
+                  "Bedroom South"
+                ],
+                "how": "a corner",
+                "metres": 0
+              }
+            ],
+            "report": {
+              "storey": 1,
+              "storeyName": "First",
+              "placedArea": 365.5,
+              "askedArea": 1059.09,
+              "buildableArea": 365.5,
+              "floors": [
+                375,
+                365.5,
+                264.56
+              ],
+              "total": 1005.06,
+              "allowed": 1050,
+              "overRatio": false,
+              "ratioRead": true,
+              "openToBelow": [],
+              "overlaps": [],
+              "spills": [],
+              "aside": [],
+              "boundary": [
+                {
+                  "side": "west",
+                  "name": "west boundary",
+                  "used": 18.75,
+                  "budget": 12.5,
+                  "over": true,
+                  "overBy": 6.25,
+                  "read": true
+                },
+                {
+                  "side": "north",
+                  "name": "north boundary",
+                  "used": 20,
+                  "budget": 10,
+                  "over": true,
+                  "overBy": 10,
+                  "read": true
+                },
+                {
+                  "side": "east",
+                  "name": "side-street boundary",
+                  "used": 18.75,
+                  "budget": 12.5,
+                  "over": true,
+                  "overBy": 6.25,
+                  "read": true
+                },
+                {
+                  "side": "street",
+                  "name": "street boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                }
+              ],
+              "shortfalls": [],
+              "courts": [],
+              "pockets": {
+                "count": 0,
+                "area": 0
+              },
+              "walk": null
+            }
+          },
+          {
+            "storey": "Second",
+            "lineTheGroundFloorMayReach": {
+              "x0": 1.5,
+              "y0": 1.5,
+              "x1": 18.5,
+              "y1": 23
+            },
+            "placed": [
+              {
+                "name": "Guest Bedroom",
+                "kind": "bedroom",
+                "storey": "Second",
+                "x": 1.5,
+                "y": 1.5,
+                "w": 8.5,
+                "h": 10.38,
+                "angle": 0,
+                "area": 88.19,
+                "target": 88.19,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Study",
+                "kind": "study",
+                "storey": "Second",
+                "x": 10,
+                "y": 1.5,
+                "w": 8.5,
+                "h": 10.38,
+                "angle": 0,
+                "area": 88.19,
+                "target": 88.19,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Roof Majlis",
+                "kind": "majlis",
+                "storey": "Second",
+                "x": 1.5,
+                "y": 12.25,
+                "w": 8.5,
+                "h": 10.38,
+                "angle": 0,
+                "area": 88.19,
+                "target": 88.19,
+                "height": 3.5,
+                "doors": 0
+              }
+            ],
+            "sharing": [
+              {
+                "rooms": [
+                  "Guest Bedroom",
+                  "Study"
+                ],
+                "metres": 10.38
+              }
+            ],
+            "allButTouching": [
+              {
+                "rooms": [
+                  "Guest Bedroom",
+                  "Roof Majlis"
+                ],
+                "how": "a gap",
+                "metres": 0.38
+              }
+            ],
+            "report": {
+              "storey": 2,
+              "storeyName": "Second",
+              "placedArea": 264.56,
+              "askedArea": 1059.09,
+              "buildableArea": 365.5,
+              "floors": [
+                375,
+                365.5,
+                264.56
+              ],
+              "total": 1005.06,
+              "allowed": 1050,
+              "overRatio": false,
+              "ratioRead": true,
+              "openToBelow": [],
+              "overlaps": [],
+              "spills": [],
+              "aside": [],
+              "boundary": [
+                {
+                  "side": "west",
+                  "name": "west boundary",
+                  "used": 18.75,
+                  "budget": 12.5,
+                  "over": true,
+                  "overBy": 6.25,
+                  "read": true
+                },
+                {
+                  "side": "north",
+                  "name": "north boundary",
+                  "used": 20,
+                  "budget": 10,
+                  "over": true,
+                  "overBy": 10,
+                  "read": true
+                },
+                {
+                  "side": "east",
+                  "name": "side-street boundary",
+                  "used": 18.75,
+                  "budget": 12.5,
+                  "over": true,
+                  "overBy": 6.25,
+                  "read": true
+                },
+                {
+                  "side": "street",
+                  "name": "street boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                }
+              ],
+              "shortfalls": [],
+              "courts": [],
+              "pockets": {
+                "count": 0,
+                "area": 0
+              },
+              "walk": null
+            }
+          }
+        ],
+        "waiting": [
+          {
+            "name": "Store",
+            "kind": "store",
+            "target": 30,
+            "w": 5,
+            "h": 6
+          },
+          {
+            "name": "Laundry",
+            "kind": "laundry",
+            "target": 24,
+            "w": 4,
+            "h": 6
+          }
+        ],
+        "totals": {
+          "floorAreas": [
+            375,
+            365.5,
+            264.56
+          ],
+          "total": 1005.06,
+          "allowed": 1050,
+          "overRatio": false
+        }
+      }
+    },
+    {
+      "tool": "place_against",
+      "input": {
+        "placements": [
+          {
+            "room": "Store",
+            "against": "Kitchen",
+            "wall": "south",
+            "along": "start"
+          },
+          {
+            "room": "Laundry",
+            "against": "Store",
+            "wall": "east",
+            "along": "start"
+          }
+        ]
+      },
+      "result": {
+        "landed": [
+          "Store at 0,18.8 5×6 · against Kitchen's south wall",
+          "Laundry at 5,18.8 6×4 · against Store's east wall"
+        ],
+        "changed": {
+          "moves": [
+            {
+              "room": "Store",
+              "how": "placed"
+            },
+            {
+              "room": "Laundry",
+              "how": "placed"
+            }
+          ],
+          "newOverlaps": [],
+          "newSpills": []
+        },
+        "house": {
+          "plot": {
+            "w": 20,
+            "h": 25,
+            "serviceStreet": "south, y = 25",
+            "sideStreet": "east, x = 20",
+            "neighbours": "west (x = 0) and north (y = 0)",
+            "northArrowTurnedClockwise": "25°"
+          },
+          "setbackLine": {
+            "x0": 1.5,
+            "y0": 1.5,
+            "x1": 18.5,
+            "y1": 23
+          },
+          "onScreen": "Ground",
+          "landingRule": "wait",
+          "importanceOrder": [
+            "Diwaniya",
+            "Formal Living",
+            "Entry Foyer",
+            "Family Living",
+            "Kitchen",
+            "Dining",
+            "Master Bedroom",
+            "Bedroom East",
+            "Bedroom South",
+            "Family Hall",
+            "Guest Bedroom",
+            "Study",
+            "Roof Majlis",
+            "Store",
+            "Laundry"
+          ],
+          "storeys": [
+            {
+              "storey": "Ground",
+              "lineTheGroundFloorMayReach": {
+                "x0": 0,
+                "y0": 0,
+                "x1": 20,
+                "y1": 25
+              },
+              "placed": [
+                {
+                  "name": "Diwaniya",
+                  "kind": "diwaniya",
+                  "storey": "Ground",
+                  "x": 0,
+                  "y": 0,
+                  "w": 10,
+                  "h": 6.25,
+                  "angle": 0,
+                  "area": 62.5,
+                  "target": 62.5,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Formal Living",
+                  "kind": "formal-living",
+                  "storey": "Ground",
+                  "x": 10,
+                  "y": 0,
+                  "w": 10,
+                  "h": 6.25,
+                  "angle": 0,
+                  "area": 62.5,
+                  "target": 62.5,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Entry Foyer",
+                  "kind": "entry-foyer",
+                  "storey": "Ground",
+                  "x": 0,
+                  "y": 6.25,
+                  "w": 10,
+                  "h": 6.25,
+                  "angle": 0,
+                  "area": 62.5,
+                  "target": 62.5,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Family Living",
+                  "kind": "family-living",
+                  "storey": "Ground",
+                  "x": 10,
+                  "y": 6.25,
+                  "w": 10,
+                  "h": 6.25,
+                  "angle": 0,
+                  "area": 62.5,
+                  "target": 62.5,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Kitchen",
+                  "kind": "kitchen",
+                  "storey": "Ground",
+                  "x": 0,
+                  "y": 12.5,
+                  "w": 10,
+                  "h": 6.25,
+                  "angle": 0,
+                  "area": 62.5,
+                  "target": 62.5,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Dining",
+                  "kind": "dining",
+                  "storey": "Ground",
+                  "x": 10,
+                  "y": 12.5,
+                  "w": 10,
+                  "h": 6.25,
+                  "angle": 0,
+                  "area": 62.5,
+                  "target": 62.5,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Store",
+                  "kind": "store",
+                  "storey": "Ground",
+                  "x": 0,
+                  "y": 18.75,
+                  "w": 5,
+                  "h": 6,
+                  "angle": 0,
+                  "area": 30,
+                  "target": 30,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Laundry",
+                  "kind": "laundry",
+                  "storey": "Ground",
+                  "x": 5,
+                  "y": 18.75,
+                  "w": 6,
+                  "h": 4,
+                  "angle": 0,
+                  "area": 24,
+                  "target": 24,
+                  "height": 3.5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [
+                {
+                  "rooms": [
+                    "Diwaniya",
+                    "Entry Foyer"
+                  ],
+                  "metres": 10
+                },
+                {
+                  "rooms": [
+                    "Formal Living",
+                    "Family Living"
+                  ],
+                  "metres": 10
+                },
+                {
+                  "rooms": [
+                    "Entry Foyer",
+                    "Kitchen"
+                  ],
+                  "metres": 10
+                },
+                {
+                  "rooms": [
+                    "Family Living",
+                    "Dining"
+                  ],
+                  "metres": 10
+                },
+                {
+                  "rooms": [
+                    "Diwaniya",
+                    "Formal Living"
+                  ],
+                  "metres": 6.25
+                },
+                {
+                  "rooms": [
+                    "Entry Foyer",
+                    "Family Living"
+                  ],
+                  "metres": 6.25
+                },
+                {
+                  "rooms": [
+                    "Kitchen",
+                    "Dining"
+                  ],
+                  "metres": 6.25
+                },
+                {
+                  "rooms": [
+                    "Kitchen",
+                    "Store"
+                  ],
+                  "metres": 5
+                },
+                {
+                  "rooms": [
+                    "Kitchen",
+                    "Laundry"
+                  ],
+                  "metres": 5
+                },
+                {
+                  "rooms": [
+                    "Store",
+                    "Laundry"
+                  ],
+                  "metres": 4
+                },
+                {
+                  "rooms": [
+                    "Dining",
+                    "Laundry"
+                  ],
+                  "metres": 1
+                }
+              ],
+              "allButTouching": [
+                {
+                  "rooms": [
+                    "Diwaniya",
+                    "Family Living"
+                  ],
+                  "how": "a corner",
+                  "metres": 0
+                },
+                {
+                  "rooms": [
+                    "Formal Living",
+                    "Entry Foyer"
+                  ],
+                  "how": "a corner",
+                  "metres": 0
+                },
+                {
+                  "rooms": [
+                    "Entry Foyer",
+                    "Dining"
+                  ],
+                  "how": "a corner",
+                  "metres": 0
+                },
+                {
+                  "rooms": [
+                    "Family Living",
+                    "Kitchen"
+                  ],
+                  "how": "a corner",
+                  "metres": 0
+                }
+              ],
+              "report": {
+                "storey": 0,
+                "storeyName": "Ground",
+                "placedArea": 429,
+                "askedArea": 1059.09,
+                "buildableArea": 365.5,
+                "floors": [
+                  429,
+                  365.5,
+                  264.56
+                ],
+                "total": 1059.06,
+                "allowed": 1050,
+                "overRatio": true,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 24.75,
+                    "budget": 12.5,
+                    "over": true,
+                    "overBy": 12.25,
+                    "read": true
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 20,
+                    "budget": 10,
+                    "over": true,
+                    "overBy": 10,
+                    "read": true
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 18.75,
+                    "budget": 12.5,
+                    "over": true,
+                    "overBy": 6.25,
+                    "read": true
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            },
+            {
+              "storey": "First",
+              "lineTheGroundFloorMayReach": {
+                "x0": 1.5,
+                "y0": 1.5,
+                "x1": 18.5,
+                "y1": 23
+              },
+              "placed": [
+                {
+                  "name": "Master Bedroom",
+                  "kind": "master-bedroom",
+                  "storey": "First",
+                  "x": 1.5,
+                  "y": 1.5,
+                  "w": 8.5,
+                  "h": 10.75,
+                  "angle": 0,
+                  "area": 91.38,
+                  "target": 91.38,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Bedroom East",
+                  "kind": "bedroom",
+                  "storey": "First",
+                  "x": 10,
+                  "y": 1.5,
+                  "w": 8.5,
+                  "h": 10.75,
+                  "angle": 0,
+                  "area": 91.38,
+                  "target": 91.38,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Bedroom South",
+                  "kind": "bedroom",
+                  "storey": "First",
+                  "x": 1.5,
+                  "y": 12.25,
+                  "w": 8.5,
+                  "h": 10.75,
+                  "angle": 0,
+                  "area": 91.38,
+                  "target": 91.38,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Family Hall",
+                  "kind": "family-living",
+                  "storey": "First",
+                  "x": 10,
+                  "y": 12.25,
+                  "w": 8.5,
+                  "h": 10.75,
+                  "angle": 0,
+                  "area": 91.38,
+                  "target": 91.38,
+                  "height": 3.5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [
+                {
+                  "rooms": [
+                    "Master Bedroom",
+                    "Bedroom East"
+                  ],
+                  "metres": 10.75
+                },
+                {
+                  "rooms": [
+                    "Bedroom South",
+                    "Family Hall"
+                  ],
+                  "metres": 10.75
+                },
+                {
+                  "rooms": [
+                    "Master Bedroom",
+                    "Bedroom South"
+                  ],
+                  "metres": 8.5
+                },
+                {
+                  "rooms": [
+                    "Bedroom East",
+                    "Family Hall"
+                  ],
+                  "metres": 8.5
+                }
+              ],
+              "allButTouching": [
+                {
+                  "rooms": [
+                    "Master Bedroom",
+                    "Family Hall"
+                  ],
+                  "how": "a corner",
+                  "metres": 0
+                },
+                {
+                  "rooms": [
+                    "Bedroom East",
+                    "Bedroom South"
+                  ],
+                  "how": "a corner",
+                  "metres": 0
+                }
+              ],
+              "report": {
+                "storey": 1,
+                "storeyName": "First",
+                "placedArea": 365.5,
+                "askedArea": 1059.09,
+                "buildableArea": 365.5,
+                "floors": [
+                  429,
+                  365.5,
+                  264.56
+                ],
+                "total": 1059.06,
+                "allowed": 1050,
+                "overRatio": true,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 24.75,
+                    "budget": 12.5,
+                    "over": true,
+                    "overBy": 12.25,
+                    "read": true
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 20,
+                    "budget": 10,
+                    "over": true,
+                    "overBy": 10,
+                    "read": true
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 18.75,
+                    "budget": 12.5,
+                    "over": true,
+                    "overBy": 6.25,
+                    "read": true
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            },
+            {
+              "storey": "Second",
+              "lineTheGroundFloorMayReach": {
+                "x0": 1.5,
+                "y0": 1.5,
+                "x1": 18.5,
+                "y1": 23
+              },
+              "placed": [
+                {
+                  "name": "Guest Bedroom",
+                  "kind": "bedroom",
+                  "storey": "Second",
+                  "x": 1.5,
+                  "y": 1.5,
+                  "w": 8.5,
+                  "h": 10.38,
+                  "angle": 0,
+                  "area": 88.19,
+                  "target": 88.19,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Study",
+                  "kind": "study",
+                  "storey": "Second",
+                  "x": 10,
+                  "y": 1.5,
+                  "w": 8.5,
+                  "h": 10.38,
+                  "angle": 0,
+                  "area": 88.19,
+                  "target": 88.19,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Roof Majlis",
+                  "kind": "majlis",
+                  "storey": "Second",
+                  "x": 1.5,
+                  "y": 12.25,
+                  "w": 8.5,
+                  "h": 10.38,
+                  "angle": 0,
+                  "area": 88.19,
+                  "target": 88.19,
+                  "height": 3.5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [
+                {
+                  "rooms": [
+                    "Guest Bedroom",
+                    "Study"
+                  ],
+                  "metres": 10.38
+                }
+              ],
+              "allButTouching": [
+                {
+                  "rooms": [
+                    "Guest Bedroom",
+                    "Roof Majlis"
+                  ],
+                  "how": "a gap",
+                  "metres": 0.38
+                }
+              ],
+              "report": {
+                "storey": 2,
+                "storeyName": "Second",
+                "placedArea": 264.56,
+                "askedArea": 1059.09,
+                "buildableArea": 365.5,
+                "floors": [
+                  429,
+                  365.5,
+                  264.56
+                ],
+                "total": 1059.06,
+                "allowed": 1050,
+                "overRatio": true,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 24.75,
+                    "budget": 12.5,
+                    "over": true,
+                    "overBy": 12.25,
+                    "read": true
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 20,
+                    "budget": 10,
+                    "over": true,
+                    "overBy": 10,
+                    "read": true
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 18.75,
+                    "budget": 12.5,
+                    "over": true,
+                    "overBy": 6.25,
+                    "read": true
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            }
+          ],
+          "waiting": [],
+          "totals": {
+            "floorAreas": [
+              429,
+              365.5,
+              264.56
+            ],
+            "total": 1059.06,
+            "allowed": 1050,
+            "overRatio": true
+          }
+        }
+      }
+    },
+    {
+      "tool": "do",
+      "input": {
+        "deeds": [
+          {
+            "verb": "resize",
+            "room": "Laundry",
+            "area": 14
+          }
+        ]
+      },
+      "result": {
+        "landed": [
+          "resize · Laundry 14 m²"
+        ],
+        "changed": {
+          "moves": [
+            {
+              "room": "Laundry",
+              "how": "reshaped"
+            }
+          ],
+          "newOverlaps": [],
+          "newSpills": []
+        },
+        "house": {
+          "plot": {
+            "w": 20,
+            "h": 25,
+            "serviceStreet": "south, y = 25",
+            "sideStreet": "east, x = 20",
+            "neighbours": "west (x = 0) and north (y = 0)",
+            "northArrowTurnedClockwise": "25°"
+          },
+          "setbackLine": {
+            "x0": 1.5,
+            "y0": 1.5,
+            "x1": 18.5,
+            "y1": 23
+          },
+          "onScreen": "Ground",
+          "landingRule": "wait",
+          "importanceOrder": [
+            "Diwaniya",
+            "Formal Living",
+            "Entry Foyer",
+            "Family Living",
+            "Kitchen",
+            "Dining",
+            "Master Bedroom",
+            "Bedroom East",
+            "Bedroom South",
+            "Family Hall",
+            "Guest Bedroom",
+            "Study",
+            "Roof Majlis",
+            "Store",
+            "Laundry"
+          ],
+          "storeys": [
+            {
+              "storey": "Ground",
+              "lineTheGroundFloorMayReach": {
+                "x0": 0,
+                "y0": 0,
+                "x1": 20,
+                "y1": 25
+              },
+              "placed": [
+                {
+                  "name": "Diwaniya",
+                  "kind": "diwaniya",
+                  "storey": "Ground",
+                  "x": 0,
+                  "y": 0,
+                  "w": 10,
+                  "h": 6.25,
+                  "angle": 0,
+                  "area": 62.5,
+                  "target": 62.5,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Formal Living",
+                  "kind": "formal-living",
+                  "storey": "Ground",
+                  "x": 10,
+                  "y": 0,
+                  "w": 10,
+                  "h": 6.25,
+                  "angle": 0,
+                  "area": 62.5,
+                  "target": 62.5,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Entry Foyer",
+                  "kind": "entry-foyer",
+                  "storey": "Ground",
+                  "x": 0,
+                  "y": 6.25,
+                  "w": 10,
+                  "h": 6.25,
+                  "angle": 0,
+                  "area": 62.5,
+                  "target": 62.5,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Family Living",
+                  "kind": "family-living",
+                  "storey": "Ground",
+                  "x": 10,
+                  "y": 6.25,
+                  "w": 10,
+                  "h": 6.25,
+                  "angle": 0,
+                  "area": 62.5,
+                  "target": 62.5,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Kitchen",
+                  "kind": "kitchen",
+                  "storey": "Ground",
+                  "x": 0,
+                  "y": 12.5,
+                  "w": 10,
+                  "h": 6.25,
+                  "angle": 0,
+                  "area": 62.5,
+                  "target": 62.5,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Dining",
+                  "kind": "dining",
+                  "storey": "Ground",
+                  "x": 10,
+                  "y": 12.5,
+                  "w": 10,
+                  "h": 6.25,
+                  "angle": 0,
+                  "area": 62.5,
+                  "target": 62.5,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Store",
+                  "kind": "store",
+                  "storey": "Ground",
+                  "x": 0,
+                  "y": 18.75,
+                  "w": 5,
+                  "h": 6,
+                  "angle": 0,
+                  "area": 30,
+                  "target": 30,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Laundry",
+                  "kind": "laundry",
+                  "storey": "Ground",
+                  "x": 5.71,
+                  "y": 19.22,
+                  "w": 4.58,
+                  "h": 3.06,
+                  "angle": 0,
+                  "area": 14.01,
+                  "target": 24,
+                  "height": 3.5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [
+                {
+                  "rooms": [
+                    "Diwaniya",
+                    "Entry Foyer"
+                  ],
+                  "metres": 10
+                },
+                {
+                  "rooms": [
+                    "Formal Living",
+                    "Family Living"
+                  ],
+                  "metres": 10
+                },
+                {
+                  "rooms": [
+                    "Entry Foyer",
+                    "Kitchen"
+                  ],
+                  "metres": 10
+                },
+                {
+                  "rooms": [
+                    "Family Living",
+                    "Dining"
+                  ],
+                  "metres": 10
+                },
+                {
+                  "rooms": [
+                    "Diwaniya",
+                    "Formal Living"
+                  ],
+                  "metres": 6.25
+                },
+                {
+                  "rooms": [
+                    "Entry Foyer",
+                    "Family Living"
+                  ],
+                  "metres": 6.25
+                },
+                {
+                  "rooms": [
+                    "Kitchen",
+                    "Dining"
+                  ],
+                  "metres": 6.25
+                },
+                {
+                  "rooms": [
+                    "Kitchen",
+                    "Store"
+                  ],
+                  "metres": 5
+                }
+              ],
+              "allButTouching": [
+                {
+                  "rooms": [
+                    "Diwaniya",
+                    "Family Living"
+                  ],
+                  "how": "a corner",
+                  "metres": 0
+                },
+                {
+                  "rooms": [
+                    "Formal Living",
+                    "Entry Foyer"
+                  ],
+                  "how": "a corner",
+                  "metres": 0
+                },
+                {
+                  "rooms": [
+                    "Entry Foyer",
+                    "Dining"
+                  ],
+                  "how": "a corner",
+                  "metres": 0
+                },
+                {
+                  "rooms": [
+                    "Family Living",
+                    "Kitchen"
+                  ],
+                  "how": "a corner",
+                  "metres": 0
+                },
+                {
+                  "rooms": [
+                    "Kitchen",
+                    "Laundry"
+                  ],
+                  "how": "a gap",
+                  "metres": 0.47
+                },
+                {
+                  "rooms": [
+                    "Dining",
+                    "Laundry"
+                  ],
+                  "how": "a gap",
+                  "metres": 0.47
+                }
+              ],
+              "report": {
+                "storey": 0,
+                "storeyName": "Ground",
+                "placedArea": 419.01,
+                "askedArea": 1059.09,
+                "buildableArea": 365.5,
+                "floors": [
+                  419.01,
+                  365.5,
+                  264.56
+                ],
+                "total": 1049.08,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 24.75,
+                    "budget": 12.5,
+                    "over": true,
+                    "overBy": 12.25,
+                    "read": true
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 20,
+                    "budget": 10,
+                    "over": true,
+                    "overBy": 10,
+                    "read": true
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 18.75,
+                    "budget": 12.5,
+                    "over": true,
+                    "overBy": 6.25,
+                    "read": true
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [
+                  {
+                    "name": "Laundry",
+                    "area": 14.01,
+                    "target": 24
+                  }
+                ],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            },
+            {
+              "storey": "First",
+              "lineTheGroundFloorMayReach": {
+                "x0": 1.5,
+                "y0": 1.5,
+                "x1": 18.5,
+                "y1": 23
+              },
+              "placed": [
+                {
+                  "name": "Master Bedroom",
+                  "kind": "master-bedroom",
+                  "storey": "First",
+                  "x": 1.5,
+                  "y": 1.5,
+                  "w": 8.5,
+                  "h": 10.75,
+                  "angle": 0,
+                  "area": 91.38,
+                  "target": 91.38,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Bedroom East",
+                  "kind": "bedroom",
+                  "storey": "First",
+                  "x": 10,
+                  "y": 1.5,
+                  "w": 8.5,
+                  "h": 10.75,
+                  "angle": 0,
+                  "area": 91.38,
+                  "target": 91.38,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Bedroom South",
+                  "kind": "bedroom",
+                  "storey": "First",
+                  "x": 1.5,
+                  "y": 12.25,
+                  "w": 8.5,
+                  "h": 10.75,
+                  "angle": 0,
+                  "area": 91.38,
+                  "target": 91.38,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Family Hall",
+                  "kind": "family-living",
+                  "storey": "First",
+                  "x": 10,
+                  "y": 12.25,
+                  "w": 8.5,
+                  "h": 10.75,
+                  "angle": 0,
+                  "area": 91.38,
+                  "target": 91.38,
+                  "height": 3.5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [
+                {
+                  "rooms": [
+                    "Master Bedroom",
+                    "Bedroom East"
+                  ],
+                  "metres": 10.75
+                },
+                {
+                  "rooms": [
+                    "Bedroom South",
+                    "Family Hall"
+                  ],
+                  "metres": 10.75
+                },
+                {
+                  "rooms": [
+                    "Master Bedroom",
+                    "Bedroom South"
+                  ],
+                  "metres": 8.5
+                },
+                {
+                  "rooms": [
+                    "Bedroom East",
+                    "Family Hall"
+                  ],
+                  "metres": 8.5
+                }
+              ],
+              "allButTouching": [
+                {
+                  "rooms": [
+                    "Master Bedroom",
+                    "Family Hall"
+                  ],
+                  "how": "a corner",
+                  "metres": 0
+                },
+                {
+                  "rooms": [
+                    "Bedroom East",
+                    "Bedroom South"
+                  ],
+                  "how": "a corner",
+                  "metres": 0
+                }
+              ],
+              "report": {
+                "storey": 1,
+                "storeyName": "First",
+                "placedArea": 365.5,
+                "askedArea": 1059.09,
+                "buildableArea": 365.5,
+                "floors": [
+                  419.01,
+                  365.5,
+                  264.56
+                ],
+                "total": 1049.08,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 24.75,
+                    "budget": 12.5,
+                    "over": true,
+                    "overBy": 12.25,
+                    "read": true
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 20,
+                    "budget": 10,
+                    "over": true,
+                    "overBy": 10,
+                    "read": true
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 18.75,
+                    "budget": 12.5,
+                    "over": true,
+                    "overBy": 6.25,
+                    "read": true
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            },
+            {
+              "storey": "Second",
+              "lineTheGroundFloorMayReach": {
+                "x0": 1.5,
+                "y0": 1.5,
+                "x1": 18.5,
+                "y1": 23
+              },
+              "placed": [
+                {
+                  "name": "Guest Bedroom",
+                  "kind": "bedroom",
+                  "storey": "Second",
+                  "x": 1.5,
+                  "y": 1.5,
+                  "w": 8.5,
+                  "h": 10.38,
+                  "angle": 0,
+                  "area": 88.19,
+                  "target": 88.19,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Study",
+                  "kind": "study",
+                  "storey": "Second",
+                  "x": 10,
+                  "y": 1.5,
+                  "w": 8.5,
+                  "h": 10.38,
+                  "angle": 0,
+                  "area": 88.19,
+                  "target": 88.19,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Roof Majlis",
+                  "kind": "majlis",
+                  "storey": "Second",
+                  "x": 1.5,
+                  "y": 12.25,
+                  "w": 8.5,
+                  "h": 10.38,
+                  "angle": 0,
+                  "area": 88.19,
+                  "target": 88.19,
+                  "height": 3.5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [
+                {
+                  "rooms": [
+                    "Guest Bedroom",
+                    "Study"
+                  ],
+                  "metres": 10.38
+                }
+              ],
+              "allButTouching": [
+                {
+                  "rooms": [
+                    "Guest Bedroom",
+                    "Roof Majlis"
+                  ],
+                  "how": "a gap",
+                  "metres": 0.38
+                }
+              ],
+              "report": {
+                "storey": 2,
+                "storeyName": "Second",
+                "placedArea": 264.56,
+                "askedArea": 1059.09,
+                "buildableArea": 365.5,
+                "floors": [
+                  419.01,
+                  365.5,
+                  264.56
+                ],
+                "total": 1049.08,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 24.75,
+                    "budget": 12.5,
+                    "over": true,
+                    "overBy": 12.25,
+                    "read": true
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 20,
+                    "budget": 10,
+                    "over": true,
+                    "overBy": 10,
+                    "read": true
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 18.75,
+                    "budget": 12.5,
+                    "over": true,
+                    "overBy": 6.25,
+                    "read": true
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            }
+          ],
+          "waiting": [],
+          "totals": {
+            "floorAreas": [
+              419.01,
+              365.5,
+              264.56
+            ],
+            "total": 1049.08,
+            "allowed": 1050,
+            "overRatio": false
+          }
+        }
+      }
+    },
+    {
+      "tool": "place_against",
+      "input": {
+        "placements": [
+          {
+            "room": "Laundry",
+            "against": "Store",
+            "wall": "east",
+            "along": "start"
+          }
+        ]
+      },
+      "result": {
+        "landed": [
+          "Laundry at 5,18.8 3×4.5 · against Store's east wall"
+        ],
+        "changed": {
+          "moves": [
+            {
+              "room": "Laundry",
+              "how": "moved",
+              "metres": 1.52
+            }
+          ],
+          "newOverlaps": [],
+          "newSpills": []
+        },
+        "house": {
+          "plot": {
+            "w": 20,
+            "h": 25,
+            "serviceStreet": "south, y = 25",
+            "sideStreet": "east, x = 20",
+            "neighbours": "west (x = 0) and north (y = 0)",
+            "northArrowTurnedClockwise": "25°"
+          },
+          "setbackLine": {
+            "x0": 1.5,
+            "y0": 1.5,
+            "x1": 18.5,
+            "y1": 23
+          },
+          "onScreen": "Ground",
+          "landingRule": "wait",
+          "importanceOrder": [
+            "Diwaniya",
+            "Formal Living",
+            "Entry Foyer",
+            "Family Living",
+            "Kitchen",
+            "Dining",
+            "Master Bedroom",
+            "Bedroom East",
+            "Bedroom South",
+            "Family Hall",
+            "Guest Bedroom",
+            "Study",
+            "Roof Majlis",
+            "Store",
+            "Laundry"
+          ],
+          "storeys": [
+            {
+              "storey": "Ground",
+              "lineTheGroundFloorMayReach": {
+                "x0": 0,
+                "y0": 0,
+                "x1": 20,
+                "y1": 25
+              },
+              "placed": [
+                {
+                  "name": "Diwaniya",
+                  "kind": "diwaniya",
+                  "storey": "Ground",
+                  "x": 0,
+                  "y": 0,
+                  "w": 10,
+                  "h": 6.25,
+                  "angle": 0,
+                  "area": 62.5,
+                  "target": 62.5,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Formal Living",
+                  "kind": "formal-living",
+                  "storey": "Ground",
+                  "x": 10,
+                  "y": 0,
+                  "w": 10,
+                  "h": 6.25,
+                  "angle": 0,
+                  "area": 62.5,
+                  "target": 62.5,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Entry Foyer",
+                  "kind": "entry-foyer",
+                  "storey": "Ground",
+                  "x": 0,
+                  "y": 6.25,
+                  "w": 10,
+                  "h": 6.25,
+                  "angle": 0,
+                  "area": 62.5,
+                  "target": 62.5,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Family Living",
+                  "kind": "family-living",
+                  "storey": "Ground",
+                  "x": 10,
+                  "y": 6.25,
+                  "w": 10,
+                  "h": 6.25,
+                  "angle": 0,
+                  "area": 62.5,
+                  "target": 62.5,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Kitchen",
+                  "kind": "kitchen",
+                  "storey": "Ground",
+                  "x": 0,
+                  "y": 12.5,
+                  "w": 10,
+                  "h": 6.25,
+                  "angle": 0,
+                  "area": 62.5,
+                  "target": 62.5,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Dining",
+                  "kind": "dining",
+                  "storey": "Ground",
+                  "x": 10,
+                  "y": 12.5,
+                  "w": 10,
+                  "h": 6.25,
+                  "angle": 0,
+                  "area": 62.5,
+                  "target": 62.5,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Store",
+                  "kind": "store",
+                  "storey": "Ground",
+                  "x": 0,
+                  "y": 18.75,
+                  "w": 5,
+                  "h": 6,
+                  "angle": 0,
+                  "area": 30,
+                  "target": 30,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Laundry",
+                  "kind": "laundry",
+                  "storey": "Ground",
+                  "x": 5,
+                  "y": 18.75,
+                  "w": 3,
+                  "h": 4.5,
+                  "angle": 0,
+                  "area": 13.5,
+                  "target": 24,
+                  "height": 3.5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [
+                {
+                  "rooms": [
+                    "Diwaniya",
+                    "Entry Foyer"
+                  ],
+                  "metres": 10
+                },
+                {
+                  "rooms": [
+                    "Formal Living",
+                    "Family Living"
+                  ],
+                  "metres": 10
+                },
+                {
+                  "rooms": [
+                    "Entry Foyer",
+                    "Kitchen"
+                  ],
+                  "metres": 10
+                },
+                {
+                  "rooms": [
+                    "Family Living",
+                    "Dining"
+                  ],
+                  "metres": 10
+                },
+                {
+                  "rooms": [
+                    "Diwaniya",
+                    "Formal Living"
+                  ],
+                  "metres": 6.25
+                },
+                {
+                  "rooms": [
+                    "Entry Foyer",
+                    "Family Living"
+                  ],
+                  "metres": 6.25
+                },
+                {
+                  "rooms": [
+                    "Kitchen",
+                    "Dining"
+                  ],
+                  "metres": 6.25
+                },
+                {
+                  "rooms": [
+                    "Kitchen",
+                    "Store"
+                  ],
+                  "metres": 5
+                },
+                {
+                  "rooms": [
+                    "Store",
+                    "Laundry"
+                  ],
+                  "metres": 4.5
+                },
+                {
+                  "rooms": [
+                    "Kitchen",
+                    "Laundry"
+                  ],
+                  "metres": 3
+                }
+              ],
+              "allButTouching": [
+                {
+                  "rooms": [
+                    "Diwaniya",
+                    "Family Living"
+                  ],
+                  "how": "a corner",
+                  "metres": 0
+                },
+                {
+                  "rooms": [
+                    "Formal Living",
+                    "Entry Foyer"
+                  ],
+                  "how": "a corner",
+                  "metres": 0
+                },
+                {
+                  "rooms": [
+                    "Entry Foyer",
+                    "Dining"
+                  ],
+                  "how": "a corner",
+                  "metres": 0
+                },
+                {
+                  "rooms": [
+                    "Family Living",
+                    "Kitchen"
+                  ],
+                  "how": "a corner",
+                  "metres": 0
+                }
+              ],
+              "report": {
+                "storey": 0,
+                "storeyName": "Ground",
+                "placedArea": 418.5,
+                "askedArea": 1059.09,
+                "buildableArea": 365.5,
+                "floors": [
+                  418.5,
+                  365.5,
+                  264.56
+                ],
+                "total": 1048.56,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 24.75,
+                    "budget": 12.5,
+                    "over": true,
+                    "overBy": 12.25,
+                    "read": true
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 20,
+                    "budget": 10,
+                    "over": true,
+                    "overBy": 10,
+                    "read": true
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 18.75,
+                    "budget": 12.5,
+                    "over": true,
+                    "overBy": 6.25,
+                    "read": true
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [
+                  {
+                    "name": "Laundry",
+                    "area": 13.5,
+                    "target": 24
+                  }
+                ],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            },
+            {
+              "storey": "First",
+              "lineTheGroundFloorMayReach": {
+                "x0": 1.5,
+                "y0": 1.5,
+                "x1": 18.5,
+                "y1": 23
+              },
+              "placed": [
+                {
+                  "name": "Master Bedroom",
+                  "kind": "master-bedroom",
+                  "storey": "First",
+                  "x": 1.5,
+                  "y": 1.5,
+                  "w": 8.5,
+                  "h": 10.75,
+                  "angle": 0,
+                  "area": 91.38,
+                  "target": 91.38,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Bedroom East",
+                  "kind": "bedroom",
+                  "storey": "First",
+                  "x": 10,
+                  "y": 1.5,
+                  "w": 8.5,
+                  "h": 10.75,
+                  "angle": 0,
+                  "area": 91.38,
+                  "target": 91.38,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Bedroom South",
+                  "kind": "bedroom",
+                  "storey": "First",
+                  "x": 1.5,
+                  "y": 12.25,
+                  "w": 8.5,
+                  "h": 10.75,
+                  "angle": 0,
+                  "area": 91.38,
+                  "target": 91.38,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Family Hall",
+                  "kind": "family-living",
+                  "storey": "First",
+                  "x": 10,
+                  "y": 12.25,
+                  "w": 8.5,
+                  "h": 10.75,
+                  "angle": 0,
+                  "area": 91.38,
+                  "target": 91.38,
+                  "height": 3.5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [
+                {
+                  "rooms": [
+                    "Master Bedroom",
+                    "Bedroom East"
+                  ],
+                  "metres": 10.75
+                },
+                {
+                  "rooms": [
+                    "Bedroom South",
+                    "Family Hall"
+                  ],
+                  "metres": 10.75
+                },
+                {
+                  "rooms": [
+                    "Master Bedroom",
+                    "Bedroom South"
+                  ],
+                  "metres": 8.5
+                },
+                {
+                  "rooms": [
+                    "Bedroom East",
+                    "Family Hall"
+                  ],
+                  "metres": 8.5
+                }
+              ],
+              "allButTouching": [
+                {
+                  "rooms": [
+                    "Master Bedroom",
+                    "Family Hall"
+                  ],
+                  "how": "a corner",
+                  "metres": 0
+                },
+                {
+                  "rooms": [
+                    "Bedroom East",
+                    "Bedroom South"
+                  ],
+                  "how": "a corner",
+                  "metres": 0
+                }
+              ],
+              "report": {
+                "storey": 1,
+                "storeyName": "First",
+                "placedArea": 365.5,
+                "askedArea": 1059.09,
+                "buildableArea": 365.5,
+                "floors": [
+                  418.5,
+                  365.5,
+                  264.56
+                ],
+                "total": 1048.56,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 24.75,
+                    "budget": 12.5,
+                    "over": true,
+                    "overBy": 12.25,
+                    "read": true
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 20,
+                    "budget": 10,
+                    "over": true,
+                    "overBy": 10,
+                    "read": true
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 18.75,
+                    "budget": 12.5,
+                    "over": true,
+                    "overBy": 6.25,
+                    "read": true
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            },
+            {
+              "storey": "Second",
+              "lineTheGroundFloorMayReach": {
+                "x0": 1.5,
+                "y0": 1.5,
+                "x1": 18.5,
+                "y1": 23
+              },
+              "placed": [
+                {
+                  "name": "Guest Bedroom",
+                  "kind": "bedroom",
+                  "storey": "Second",
+                  "x": 1.5,
+                  "y": 1.5,
+                  "w": 8.5,
+                  "h": 10.38,
+                  "angle": 0,
+                  "area": 88.19,
+                  "target": 88.19,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Study",
+                  "kind": "study",
+                  "storey": "Second",
+                  "x": 10,
+                  "y": 1.5,
+                  "w": 8.5,
+                  "h": 10.38,
+                  "angle": 0,
+                  "area": 88.19,
+                  "target": 88.19,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Roof Majlis",
+                  "kind": "majlis",
+                  "storey": "Second",
+                  "x": 1.5,
+                  "y": 12.25,
+                  "w": 8.5,
+                  "h": 10.38,
+                  "angle": 0,
+                  "area": 88.19,
+                  "target": 88.19,
+                  "height": 3.5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [
+                {
+                  "rooms": [
+                    "Guest Bedroom",
+                    "Study"
+                  ],
+                  "metres": 10.38
+                }
+              ],
+              "allButTouching": [
+                {
+                  "rooms": [
+                    "Guest Bedroom",
+                    "Roof Majlis"
+                  ],
+                  "how": "a gap",
+                  "metres": 0.38
+                }
+              ],
+              "report": {
+                "storey": 2,
+                "storeyName": "Second",
+                "placedArea": 264.56,
+                "askedArea": 1059.09,
+                "buildableArea": 365.5,
+                "floors": [
+                  418.5,
+                  365.5,
+                  264.56
+                ],
+                "total": 1048.56,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 24.75,
+                    "budget": 12.5,
+                    "over": true,
+                    "overBy": 12.25,
+                    "read": true
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 20,
+                    "budget": 10,
+                    "over": true,
+                    "overBy": 10,
+                    "read": true
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 18.75,
+                    "budget": 12.5,
+                    "over": true,
+                    "overBy": 6.25,
+                    "read": true
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            }
+          ],
+          "waiting": [],
+          "totals": {
+            "floorAreas": [
+              418.5,
+              365.5,
+              264.56
+            ],
+            "total": 1048.56,
+            "allowed": 1050,
+            "overRatio": false
+          }
+        }
+      }
+    }
+  ],
+  "said": [
+    "read the house · 15 rooms asked for",
+    "placed against · Ground · Store at 0,18.8 5×6 · against Kitchen's south wall · …",
+    "did · Ground · resize · Laundry 14 m²",
+    "placed against · Ground · Laundry at 5,18.8 3×4.5 · against Store's east wall"
+  ],
+  "notes": [],
+  "requests": [],
+  "lastWords": "Laundry is now shrunk to 3×4.5 (13.5 m²) and snapped flush against Store's east wall, sharing 4.5 m of wall — no gap, no overlap. Total 1048.56 vs allowed 1050, ratio holds and every room from the tray is placed.\n\nStore stands off the Kitchen's south wall (30 m², at target) with Laundry beside it, both at the back near the service street. Placing the tray at full target sizes would have broken the ratio by about 9 m², so I cut Laundry down to 13.5 m² — well under its 24 m² target, since it's last in the room order and a shortfall there costs the plan least. Nothing waiting, no overlaps or spills."
+}

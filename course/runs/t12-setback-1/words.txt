@@ -1,0 +1,3 @@
+The store landed at 14.5,1.5 — held inside the setback line, no overlaps or spills, at full target area of 12. On the First storey the line the floor may reach is the setback line, not the plot edge, so "up to the boundary" lands it against the setback corner rather than the true north-east plot corner.
+
+**What I did:** placed the Store touching the setback line in the north-east of the First storey, since that line — not the plot boundary — is what the floor may reach there. **What's left:** the setback line stops it about 1.5–2m short of the true plot edge on both the north and east sides; if you want it closer than that, the setback would need to change, and I won't touch that setting.

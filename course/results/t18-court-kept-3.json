@@ -1,0 +1,804 @@
+{
+  "task": "t18-court-kept",
+  "title": "Undo what the owner did not ask for",
+  "run": 3,
+  "instruction": "Make the plan more compact.",
+  "pass": true,
+  "numbers": {
+    "the court the owner made, m²": 12.25,
+    "courts on the sheet": 1,
+    "the court now, m²": 12.25,
+    "the placed floor, m²": 175.5
+  },
+  "calls": [
+    {
+      "tool": "read_sheet",
+      "input": {},
+      "result": {
+        "plot": {
+          "w": 20,
+          "h": 25,
+          "serviceStreet": "south, y = 25",
+          "sideStreet": "east, x = 20",
+          "neighbours": "west (x = 0) and north (y = 0)",
+          "northArrowTurnedClockwise": "25°"
+        },
+        "setbackLine": {
+          "x0": 1.5,
+          "y0": 1.5,
+          "x1": 18.5,
+          "y1": 23
+        },
+        "onScreen": "Ground",
+        "landingRule": "wait",
+        "importanceOrder": [
+          "Family Living",
+          "Kitchen",
+          "Dining",
+          "Store",
+          "Diwaniya",
+          "Maid Room"
+        ],
+        "storeys": [
+          {
+            "storey": "Ground",
+            "lineTheGroundFloorMayReach": {
+              "x0": 0,
+              "y0": 0,
+              "x1": 20,
+              "y1": 25
+            },
+            "placed": [
+              {
+                "name": "Family Living",
+                "kind": "family-living",
+                "storey": "Ground",
+                "x": 4,
+                "y": 4,
+                "w": 7.75,
+                "h": 4.25,
+                "angle": 0,
+                "area": 32.94,
+                "target": 32.94,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Kitchen",
+                "kind": "kitchen",
+                "storey": "Ground",
+                "x": 11.75,
+                "y": 4,
+                "w": 4.25,
+                "h": 7.75,
+                "angle": 0,
+                "area": 32.94,
+                "target": 32.94,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Dining",
+                "kind": "dining",
+                "storey": "Ground",
+                "x": 8.25,
+                "y": 11.75,
+                "w": 7.75,
+                "h": 4.25,
+                "angle": 0,
+                "area": 32.94,
+                "target": 32.94,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Store",
+                "kind": "store",
+                "storey": "Ground",
+                "x": 4,
+                "y": 8.25,
+                "w": 4.25,
+                "h": 7.75,
+                "angle": 0,
+                "area": 32.94,
+                "target": 32.94,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Diwaniya",
+                "kind": "diwaniya",
+                "storey": "Ground",
+                "x": 1.5,
+                "y": 19.5,
+                "w": 7,
+                "h": 4.5,
+                "angle": 0,
+                "area": 31.5,
+                "target": 31.5,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Maid Room",
+                "kind": "maid-room",
+                "storey": "Ground",
+                "x": 15.5,
+                "y": 19,
+                "w": 3.5,
+                "h": 3.5,
+                "angle": 0,
+                "area": 12.25,
+                "target": 12.25,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Court",
+                "kind": "court",
+                "storey": "Ground",
+                "x": 8.25,
+                "y": 8.25,
+                "w": 3.5,
+                "h": 3.5,
+                "angle": 0,
+                "area": 12.25,
+                "target": 12.25,
+                "height": 3.5,
+                "doors": 0
+              }
+            ],
+            "sharing": [
+              {
+                "rooms": [
+                  "Family Living",
+                  "Kitchen"
+                ],
+                "metres": 4.25
+              },
+              {
+                "rooms": [
+                  "Family Living",
+                  "Store"
+                ],
+                "metres": 4.25
+              },
+              {
+                "rooms": [
+                  "Kitchen",
+                  "Dining"
+                ],
+                "metres": 4.25
+              },
+              {
+                "rooms": [
+                  "Dining",
+                  "Store"
+                ],
+                "metres": 4.25
+              },
+              {
+                "rooms": [
+                  "Family Living",
+                  "Court"
+                ],
+                "metres": 3.5
+              },
+              {
+                "rooms": [
+                  "Kitchen",
+                  "Court"
+                ],
+                "metres": 3.5
+              },
+              {
+                "rooms": [
+                  "Dining",
+                  "Court"
+                ],
+                "metres": 3.5
+              },
+              {
+                "rooms": [
+                  "Store",
+                  "Court"
+                ],
+                "metres": 3.5
+              }
+            ],
+            "allButTouching": [],
+            "report": {
+              "storey": 0,
+              "storeyName": "Ground",
+              "placedArea": 175.5,
+              "askedArea": 175.51,
+              "buildableArea": 365.5,
+              "floors": [
+                175.5,
+                0
+              ],
+              "total": 175.5,
+              "allowed": 1050,
+              "overRatio": false,
+              "ratioRead": true,
+              "openToBelow": [],
+              "overlaps": [],
+              "spills": [],
+              "aside": [],
+              "boundary": [
+                {
+                  "side": "west",
+                  "name": "west boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "north",
+                  "name": "north boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "east",
+                  "name": "side-street boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "street",
+                  "name": "street boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                }
+              ],
+              "shortfalls": [],
+              "courts": [
+                {
+                  "name": "Court",
+                  "area": 12.25
+                }
+              ],
+              "pockets": {
+                "count": 0,
+                "area": 0
+              },
+              "walk": null
+            }
+          },
+          {
+            "storey": "First",
+            "lineTheGroundFloorMayReach": {
+              "x0": 1.5,
+              "y0": 1.5,
+              "x1": 18.5,
+              "y1": 23
+            },
+            "placed": [],
+            "sharing": [],
+            "allButTouching": [],
+            "report": {
+              "storey": 1,
+              "storeyName": "First",
+              "placedArea": 0,
+              "askedArea": 175.51,
+              "buildableArea": 365.5,
+              "floors": [
+                175.5,
+                0
+              ],
+              "total": 175.5,
+              "allowed": 1050,
+              "overRatio": false,
+              "ratioRead": true,
+              "openToBelow": [
+                "the court"
+              ],
+              "overlaps": [],
+              "spills": [],
+              "aside": [],
+              "boundary": [
+                {
+                  "side": "west",
+                  "name": "west boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "north",
+                  "name": "north boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "east",
+                  "name": "side-street boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "street",
+                  "name": "street boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                }
+              ],
+              "shortfalls": [],
+              "courts": [],
+              "pockets": {
+                "count": 0,
+                "area": 0
+              },
+              "walk": null
+            }
+          }
+        ],
+        "waiting": [],
+        "totals": {
+          "floorAreas": [
+            175.5,
+            0
+          ],
+          "total": 175.5,
+          "allowed": 1050,
+          "overRatio": false
+        }
+      }
+    },
+    {
+      "tool": "place_against",
+      "input": {
+        "placements": [
+          {
+            "room": "Diwaniya",
+            "against": "Dining",
+            "wall": "south",
+            "along": "start"
+          },
+          {
+            "room": "Maid Room",
+            "against": "Dining",
+            "wall": "east",
+            "along": "start"
+          }
+        ]
+      },
+      "result": {
+        "landed": [
+          "Diwaniya at 8.3,16 7×4.5 · against Dining's south wall",
+          "Maid Room at 16,11.8 3.5×3.5 · against Dining's east wall"
+        ],
+        "changed": {
+          "moves": [
+            {
+              "room": "Diwaniya",
+              "how": "moved",
+              "metres": 7.6
+            },
+            {
+              "room": "Maid Room",
+              "how": "moved",
+              "metres": 7.27
+            }
+          ],
+          "newOverlaps": [],
+          "newSpills": []
+        },
+        "house": {
+          "plot": {
+            "w": 20,
+            "h": 25,
+            "serviceStreet": "south, y = 25",
+            "sideStreet": "east, x = 20",
+            "neighbours": "west (x = 0) and north (y = 0)",
+            "northArrowTurnedClockwise": "25°"
+          },
+          "setbackLine": {
+            "x0": 1.5,
+            "y0": 1.5,
+            "x1": 18.5,
+            "y1": 23
+          },
+          "onScreen": "Ground",
+          "landingRule": "wait",
+          "importanceOrder": [
+            "Family Living",
+            "Kitchen",
+            "Dining",
+            "Store",
+            "Diwaniya",
+            "Maid Room"
+          ],
+          "storeys": [
+            {
+              "storey": "Ground",
+              "lineTheGroundFloorMayReach": {
+                "x0": 0,
+                "y0": 0,
+                "x1": 20,
+                "y1": 25
+              },
+              "placed": [
+                {
+                  "name": "Family Living",
+                  "kind": "family-living",
+                  "storey": "Ground",
+                  "x": 4,
+                  "y": 4,
+                  "w": 7.75,
+                  "h": 4.25,
+                  "angle": 0,
+                  "area": 32.94,
+                  "target": 32.94,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Kitchen",
+                  "kind": "kitchen",
+                  "storey": "Ground",
+                  "x": 11.75,
+                  "y": 4,
+                  "w": 4.25,
+                  "h": 7.75,
+                  "angle": 0,
+                  "area": 32.94,
+                  "target": 32.94,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Dining",
+                  "kind": "dining",
+                  "storey": "Ground",
+                  "x": 8.25,
+                  "y": 11.75,
+                  "w": 7.75,
+                  "h": 4.25,
+                  "angle": 0,
+                  "area": 32.94,
+                  "target": 32.94,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Store",
+                  "kind": "store",
+                  "storey": "Ground",
+                  "x": 4,
+                  "y": 8.25,
+                  "w": 4.25,
+                  "h": 7.75,
+                  "angle": 0,
+                  "area": 32.94,
+                  "target": 32.94,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Diwaniya",
+                  "kind": "diwaniya",
+                  "storey": "Ground",
+                  "x": 8.25,
+                  "y": 16,
+                  "w": 7,
+                  "h": 4.5,
+                  "angle": 0,
+                  "area": 31.5,
+                  "target": 31.5,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Maid Room",
+                  "kind": "maid-room",
+                  "storey": "Ground",
+                  "x": 16,
+                  "y": 11.75,
+                  "w": 3.5,
+                  "h": 3.5,
+                  "angle": 0,
+                  "area": 12.25,
+                  "target": 12.25,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Court",
+                  "kind": "court",
+                  "storey": "Ground",
+                  "x": 8.25,
+                  "y": 8.25,
+                  "w": 3.5,
+                  "h": 3.5,
+                  "angle": 0,
+                  "area": 12.25,
+                  "target": 12.25,
+                  "height": 3.5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [
+                {
+                  "rooms": [
+                    "Dining",
+                    "Diwaniya"
+                  ],
+                  "metres": 7
+                },
+                {
+                  "rooms": [
+                    "Family Living",
+                    "Kitchen"
+                  ],
+                  "metres": 4.25
+                },
+                {
+                  "rooms": [
+                    "Family Living",
+                    "Store"
+                  ],
+                  "metres": 4.25
+                },
+                {
+                  "rooms": [
+                    "Kitchen",
+                    "Dining"
+                  ],
+                  "metres": 4.25
+                },
+                {
+                  "rooms": [
+                    "Dining",
+                    "Store"
+                  ],
+                  "metres": 4.25
+                },
+                {
+                  "rooms": [
+                    "Family Living",
+                    "Court"
+                  ],
+                  "metres": 3.5
+                },
+                {
+                  "rooms": [
+                    "Kitchen",
+                    "Court"
+                  ],
+                  "metres": 3.5
+                },
+                {
+                  "rooms": [
+                    "Dining",
+                    "Maid Room"
+                  ],
+                  "metres": 3.5
+                },
+                {
+                  "rooms": [
+                    "Dining",
+                    "Court"
+                  ],
+                  "metres": 3.5
+                },
+                {
+                  "rooms": [
+                    "Store",
+                    "Court"
+                  ],
+                  "metres": 3.5
+                }
+              ],
+              "allButTouching": [
+                {
+                  "rooms": [
+                    "Kitchen",
+                    "Maid Room"
+                  ],
+                  "how": "a corner",
+                  "metres": 0
+                },
+                {
+                  "rooms": [
+                    "Store",
+                    "Diwaniya"
+                  ],
+                  "how": "a corner",
+                  "metres": 0
+                }
+              ],
+              "report": {
+                "storey": 0,
+                "storeyName": "Ground",
+                "placedArea": 175.5,
+                "askedArea": 175.51,
+                "buildableArea": 365.5,
+                "floors": [
+                  175.5,
+                  0
+                ],
+                "total": 175.5,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [
+                  {
+                    "name": "Court",
+                    "area": 12.25
+                  }
+                ],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            },
+            {
+              "storey": "First",
+              "lineTheGroundFloorMayReach": {
+                "x0": 1.5,
+                "y0": 1.5,
+                "x1": 18.5,
+                "y1": 23
+              },
+              "placed": [],
+              "sharing": [],
+              "allButTouching": [],
+              "report": {
+                "storey": 1,
+                "storeyName": "First",
+                "placedArea": 0,
+                "askedArea": 175.51,
+                "buildableArea": 365.5,
+                "floors": [
+                  175.5,
+                  0
+                ],
+                "total": 175.5,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [
+                  "the court"
+                ],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            }
+          ],
+          "waiting": [],
+          "totals": {
+            "floorAreas": [
+              175.5,
+              0
+            ],
+            "total": 175.5,
+            "allowed": 1050,
+            "overRatio": false
+          }
+        }
+      }
+    }
+  ],
+  "said": [
+    "read the house · 6 rooms asked for",
+    "placed against · Ground · Diwaniya at 8.3,16 7×4.5 · against Dining's south wal…"
+  ],
+  "notes": [],
+  "requests": [],
+  "lastWords": "No overlaps, no spills, and the Court stays at 12.25 m² untouched. The house is now one contiguous block, not three separated islands.\n\n- Diwaniya moved up against Dining's south wall — shares a full 7 m run of wall instead of standing off alone.\n- Maid Room moved against Dining's east wall, 3.5 m shared — closes the gap on the east side.\n- Court, and every room's area and target, unchanged: only the two loose rooms moved, nothing else touched."
+}

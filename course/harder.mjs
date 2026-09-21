@@ -22,6 +22,13 @@ const words = (record) => String(record.lastWords ?? '')
 
 const questionsIn = (text) => (text.match(/\?/g) ?? []).length
 
+/** The words without the questions in them: a question asks, it does not claim. */
+const claimsIn = (said) =>
+  said
+    .split(/(?<=[.!?\n])\s+/)
+    .filter((one) => !one.trim().endsWith('?'))
+    .join(' ')
+
 const frameArea = (r) => (r ? r2(r.w * r.h) : 0)
 
 /** The enclosed spaces one storey holds, with the rooms that wall each in. */
@@ -504,7 +511,7 @@ export const HARDER = [
         { of: /turned|rotated/i, by: () => deedDone(record, 'turn') },
         { of: /\bdoor\b/i, by: () => deedDone(record, 'door') },
       ]
-      const claimed = claims.filter((c) => c.of.test(said))
+      const claimed = claims.filter((c) => c.of.test(claimsIn(said)))
       const unbacked = claimed.filter((c) => !c.by()).map((c) => String(c.of))
       const sheetSide = threeMoves(sheet, this.sheet())
       return {
