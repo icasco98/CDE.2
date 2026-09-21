@@ -1,0 +1,3 @@
+Both landed clean, no overlaps or spills. Note the tool turned Laundry 90° (4.9×4 instead of my 4×4.9) but kept the footprint — it still sits against Store's east wall, tray now empty.
+
+Store stands off the Kitchen's south wall, and Laundry beside it — both undersized from target (24.5 and 19.6 m² vs 30 and 24) because their full targets would have pushed the house over its allowed ratio (1050 m²); total now sits at 1049.16, just under. Everything else is untouched and every room in the tray is placed.

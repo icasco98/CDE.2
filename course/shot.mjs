@@ -2,7 +2,7 @@
  * The drawings: each task's sheet before the architect touched it and after its first run, loaded
  * into the built app through browser storage and photographed on the Sheet tab.
  *
- *   node course/shot.mjs
+ *   node course/shot.mjs [--only t11-three-moves,t12-setback]
  */
 
 import { register } from 'node:module'
@@ -62,7 +62,10 @@ if (!existsSync(join(dist, 'index.html'))) throw new Error('build the app first:
 mkdirSync(results, { recursive: true })
 const { server, port } = await serve()
 const browser = await chromium.launch()
-for (const task of TASKS) {
+const asked = process.argv.includes('--only')
+  ? process.argv[process.argv.indexOf('--only') + 1].split(',')
+  : null
+for (const task of TASKS.filter((t) => !asked || asked.includes(t.key))) {
   const state = readState(task.key, 1)
   const after = replay(task, state.calls).sheet()
   for (const [when, sheet] of [

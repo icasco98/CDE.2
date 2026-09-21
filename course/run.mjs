@@ -110,9 +110,11 @@ function doCall(state, task, text) {
 function doCheck(state, task) {
   const hand = replay(task, state.calls)
   const sheet = hand.sheet()
-  const record = { ...state, calls: state.calls }
-  const outcome = task.check(sheet, record)
   const words = join(runDir(state.task, state.run), 'words.txt')
+  // a task about what the architect said reads its words from the run's own record, never the sheet
+  const said = existsSync(words) ? readFileSync(words, 'utf8').trim() : ''
+  const record = { ...state, calls: state.calls, lastWords: said }
+  const outcome = task.check(sheet, record)
   const lines = Object.entries(outcome.numbers).map(([name, value]) => `  ${name}: ${value}`)
   process.stdout.write(`${outcome.pass ? 'PASS' : 'FAIL'} · ${task.key} run ${state.run}\n`)
   process.stdout.write(`${lines.join('\n')}\n`)
@@ -131,7 +133,7 @@ function doCheck(state, task) {
         said: hand.log,
         notes: hand.notes,
         requests: hand.requests,
-        lastWords: existsSync(words) ? readFileSync(words, 'utf8').trim() : '',
+        lastWords: said,
       },
       null,
       2,
@@ -146,7 +148,7 @@ const task = asked === fileURLToPath(import.meta.url) ? taskNamed(key ?? '') : n
 if (asked !== fileURLToPath(import.meta.url)) {
   // imported by the runner or the drawings: nothing to do
 } else if (!task) {
-  process.stdout.write('The task is one of: t1-give … t10-door-refused\n')
+  process.stdout.write('The task is one of: t1-give … t20-say-what\n')
   process.exitCode = 1
 } else {
   const state = readState(task.key, n ?? '1')

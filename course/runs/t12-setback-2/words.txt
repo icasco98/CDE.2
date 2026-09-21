@@ -1,0 +1,3 @@
+The Store landed at 14.5, 1.5 — snapped inside the setback line, not at the plot boundary the owner asked for. The First storey may only reach the setback line (1.5 m in from each side there), so "right up to the boundary" on that storey isn't something the tool will do; it held the room inside the line instead, touching the setback rather than the property line.
+
+The owner's words describe two different lines at once — the boundary and the setback — and only one can hold on the First storey. Do you want the Store held at the setback line (where it landed) instead, or should it go on the Ground storey where the boundary is reachable?

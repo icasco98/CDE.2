@@ -1,0 +1,6 @@
+No overlaps or spills, everything placed. I'll flag the boundary note rather than silently claim a clean plan.
+
+- Kitchen stands against the Hallway's east wall, and Dining beyond it against the Hallway's east wall too, both touching.
+- The corner Kitchen and Dining left (north of Dining, east of Kitchen) is now given to Dining — it wraps that corner, area 84 against its 60 target.
+- No overlaps or spills remain, and nothing is still waiting.
+- One thing left: the north boundary is now over by 2 m (used 12 of a 10 m budget) because Dining's new corner reaches the north line — I didn't touch that setting, just flagging it for you.

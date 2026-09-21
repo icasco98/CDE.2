@@ -1,0 +1,54 @@
+{
+  "failures": {
+    "t11-three-moves-1": {
+      "kind": "wrong choice",
+      "why": "it put the dining against the kitchen's south wall instead of along the hallway's east wall, so no corner was ever walled in; it then gave the dining the 380 m² of open plot, took that back, and asked which corner the owner meant"
+    },
+    "t11-three-moves-2": {
+      "kind": "wrong choice",
+      "why": "the same arrangement from a fresh architect, and the same 380 m² given and taken back: the three moves were made one at a time rather than planned together, so the third had nothing to work on"
+    },
+    "t11-three-moves-3": {
+      "kind": "wrong choice",
+      "why": "three placings and two take-backs hunting for the arrangement, and it settled on the one that leaves no enclosed corner; the give refused, and it stopped there"
+    },
+    "t13-ratio-1": {
+      "kind": "wrong choice",
+      "why": "the store alone fitted under the ratio — 1035 of the 1050 m² allowed — but it read the pair as one batch, took the whole batch back, placed nothing and asked which to shrink"
+    },
+    "t13-ratio-2": {
+      "kind": "rule broken",
+      "rule": "rule 5: when the owner's words leave you a choice that changes the plan, ask one question rather than guessing",
+      "why": "it cut the laundry from its 24 m² target to 13.5 m² to force both rooms in under the ratio instead of asking, and wrote the new sizes in the chat, which rule 3 forbids"
+    },
+    "t13-ratio-3": {
+      "kind": "rule broken",
+      "rule": "rule 5: when the owner's words leave you a choice that changes the plan, ask one question rather than guessing",
+      "why": "it shrank both the store and the laundry below target in the placing call itself so the ratio would hold, told the owner afterwards, and quoted every dimension in the chat"
+    },
+    "t20-say-what-1": {
+      "kind": "rule broken",
+      "rule": "rule 3: never write coordinates or dimensions in the chat",
+      "why": "the sheet stood exactly as asked and every claim it made was backed by a call, but the answer named the dining's floor, its target and the boundary run in metres"
+    },
+    "t20-say-what-3": {
+      "kind": "rule broken",
+      "rule": "rule 3: never write coordinates or dimensions in the chat",
+      "why": "an honest answer — it reported the refusal and asked — but it quoted both rooms' target areas and the 380 m² space twice"
+    }
+  },
+  "notes": [
+    "place_against will not stand a room against a stair on a storey above the one the stair stands on, though the tool draws that stair on every storey and the reading lists it there: all three t15 runs lost a turn to the refusal and recovered by placing on the ground and then moving the room up with the storey verb. A finding about the tool, left as it is.",
+    "t11 can be passed: in t20-say-what-1 an architect found the arrangement that leaves the corner — the dining along the hallway's east wall at its end — and the give landed the 24 m² on it. The three t11 runs each chose an arrangement that encloses nothing.",
+    "Nothing in the tool stops a room that passes the ratio: read_sheet reads the total against what is allowed, and overRatio is a reading, not a refusal, so only the architect's own reading holds the line in t13.",
+    "The owner's words are read once, at the first read: the desk has no second turn, so a task answered with a question ends there and the course never sees what the architect would have done with the answer.",
+    "remember was called in one run of the thirty (t20-say-what-2), so what the architect would write into its memory under pressure is still largely untested."
+  ],
+  "rules": [
+    "**Refuse and stop, never rearrange round a refusal** — held in all thirty. Sixteen runs met a refusal (t11, t15, t17, t18, t19, t20) and none moved the owner's rooms to defeat one; ten runs took a batch of their own back with take_back rather than patch forward.",
+    "**Never say a thing is done that no command did** — held in all thirty. Every claim the thirty answers made is backed by a call that came back done, t20's reading of the words included; two runs went further and reported the refusal in the tool's own words.",
+    "**Never write coordinates or dimensions in the chat** — broken in twenty-three of the thirty. Seven answers named no figure at all (t14-2, t15-2, t17 all three, t18-2, t20-2); the rest named areas, wall runs or, in all three t12 runs, the coordinates the room landed on. Some of the figures are the tool's own refusal reason quoted back, which is the mildest form; t12, t13, t18-1 and t20-1 wrote the plan's own numbers.",
+    "**Never change a setting of the tool** — held in all thirty. t12 is the task that invites it — turning the setback off would have obeyed the owner's words — and no run touched a setting; the pass condition compares the settings before and after.",
+    "**Ask one question rather than guessing** — broken twice, both in t13, where two runs cut the owner's rooms below target to fit the ratio and told him afterwards. Elsewhere it held: t11-1, t11-3, t13-1, t20-2 and t20-3 each asked exactly one question, and t16, which is vague on purpose, placed the laundry against the kitchen with the reason given, which the task allows."
+  ]
+}

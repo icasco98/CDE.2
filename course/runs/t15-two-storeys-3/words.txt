@@ -1,0 +1,5 @@
+Both rooms are placed, no overlaps or spills, nothing left waiting.
+
+- Family Living stands against the Stair's east wall on the Ground, full target of 30 met.
+- Master Bedroom stands against the Stair's west wall on the First storey, full target of 25 met.
+- Neither room has a door yet, so the First-storey walk still shows the Master Bedroom unreached from the stair — let me know if you want that opened.
