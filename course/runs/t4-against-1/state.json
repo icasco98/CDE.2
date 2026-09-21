@@ -1,0 +1,479 @@
+{
+  "task": "t4-against",
+  "run": 1,
+  "onScreen": 0,
+  "told": true,
+  "calls": [
+    {
+      "tool": "read_sheet",
+      "input": {},
+      "result": {
+        "plot": {
+          "w": 20,
+          "h": 25,
+          "serviceStreet": "south, y = 25",
+          "sideStreet": "east, x = 20",
+          "neighbours": "west (x = 0) and north (y = 0)",
+          "northArrowTurnedClockwise": "25°"
+        },
+        "setbackLine": {
+          "x0": 1.5,
+          "y0": 1.5,
+          "x1": 18.5,
+          "y1": 23
+        },
+        "onScreen": "Ground",
+        "landingRule": "wait",
+        "importanceOrder": [
+          "Kitchen",
+          "Dining"
+        ],
+        "storeys": [
+          {
+            "storey": "Ground",
+            "lineTheGroundFloorMayReach": {
+              "x0": 0,
+              "y0": 0,
+              "x1": 20,
+              "y1": 25
+            },
+            "placed": [
+              {
+                "name": "Kitchen",
+                "kind": "kitchen",
+                "storey": "Ground",
+                "x": 4,
+                "y": 4,
+                "w": 4,
+                "h": 5,
+                "angle": 0,
+                "area": 20,
+                "target": 20,
+                "height": 3.5,
+                "doors": 0
+              },
+              {
+                "name": "Dining",
+                "kind": "dining",
+                "storey": "Ground",
+                "x": 13,
+                "y": 14,
+                "w": 4.5,
+                "h": 4.5,
+                "angle": 0,
+                "area": 20.25,
+                "target": 20.25,
+                "height": 3.5,
+                "doors": 0
+              }
+            ],
+            "sharing": [],
+            "allButTouching": [],
+            "report": {
+              "storey": 0,
+              "storeyName": "Ground",
+              "placedArea": 40.25,
+              "askedArea": 40.25,
+              "buildableArea": 365.5,
+              "floors": [
+                40.25,
+                0
+              ],
+              "total": 40.25,
+              "allowed": 1050,
+              "overRatio": false,
+              "ratioRead": true,
+              "openToBelow": [],
+              "overlaps": [],
+              "spills": [],
+              "aside": [],
+              "boundary": [
+                {
+                  "side": "west",
+                  "name": "west boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "north",
+                  "name": "north boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "east",
+                  "name": "side-street boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "street",
+                  "name": "street boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                }
+              ],
+              "shortfalls": [],
+              "courts": [],
+              "pockets": {
+                "count": 0,
+                "area": 0
+              },
+              "walk": null
+            }
+          },
+          {
+            "storey": "First",
+            "lineTheGroundFloorMayReach": {
+              "x0": 1.5,
+              "y0": 1.5,
+              "x1": 18.5,
+              "y1": 23
+            },
+            "placed": [],
+            "sharing": [],
+            "allButTouching": [],
+            "report": {
+              "storey": 1,
+              "storeyName": "First",
+              "placedArea": 0,
+              "askedArea": 40.25,
+              "buildableArea": 365.5,
+              "floors": [
+                40.25,
+                0
+              ],
+              "total": 40.25,
+              "allowed": 1050,
+              "overRatio": false,
+              "ratioRead": true,
+              "openToBelow": [],
+              "overlaps": [],
+              "spills": [],
+              "aside": [],
+              "boundary": [
+                {
+                  "side": "west",
+                  "name": "west boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "north",
+                  "name": "north boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "east",
+                  "name": "side-street boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "street",
+                  "name": "street boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                }
+              ],
+              "shortfalls": [],
+              "courts": [],
+              "pockets": {
+                "count": 0,
+                "area": 0
+              },
+              "walk": null
+            }
+          }
+        ],
+        "waiting": [],
+        "totals": {
+          "floorAreas": [
+            40.25,
+            0
+          ],
+          "total": 40.25,
+          "allowed": 1050,
+          "overRatio": false
+        }
+      }
+    },
+    {
+      "tool": "place_against",
+      "input": {
+        "placements": [
+          {
+            "room": "Dining",
+            "against": "Kitchen",
+            "wall": "east",
+            "along": "start"
+          }
+        ]
+      },
+      "result": {
+        "landed": [
+          "Dining at 8,4 4.5×4.5 · against Kitchen's east wall"
+        ],
+        "changed": {
+          "moves": [
+            {
+              "room": "Dining",
+              "how": "moved",
+              "metres": 11.18
+            }
+          ],
+          "newOverlaps": [],
+          "newSpills": []
+        },
+        "house": {
+          "plot": {
+            "w": 20,
+            "h": 25,
+            "serviceStreet": "south, y = 25",
+            "sideStreet": "east, x = 20",
+            "neighbours": "west (x = 0) and north (y = 0)",
+            "northArrowTurnedClockwise": "25°"
+          },
+          "setbackLine": {
+            "x0": 1.5,
+            "y0": 1.5,
+            "x1": 18.5,
+            "y1": 23
+          },
+          "onScreen": "Ground",
+          "landingRule": "wait",
+          "importanceOrder": [
+            "Kitchen",
+            "Dining"
+          ],
+          "storeys": [
+            {
+              "storey": "Ground",
+              "lineTheGroundFloorMayReach": {
+                "x0": 0,
+                "y0": 0,
+                "x1": 20,
+                "y1": 25
+              },
+              "placed": [
+                {
+                  "name": "Kitchen",
+                  "kind": "kitchen",
+                  "storey": "Ground",
+                  "x": 4,
+                  "y": 4,
+                  "w": 4,
+                  "h": 5,
+                  "angle": 0,
+                  "area": 20,
+                  "target": 20,
+                  "height": 3.5,
+                  "doors": 0
+                },
+                {
+                  "name": "Dining",
+                  "kind": "dining",
+                  "storey": "Ground",
+                  "x": 8,
+                  "y": 4,
+                  "w": 4.5,
+                  "h": 4.5,
+                  "angle": 0,
+                  "area": 20.25,
+                  "target": 20.25,
+                  "height": 3.5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [
+                {
+                  "rooms": [
+                    "Kitchen",
+                    "Dining"
+                  ],
+                  "metres": 4.5
+                }
+              ],
+              "allButTouching": [],
+              "report": {
+                "storey": 0,
+                "storeyName": "Ground",
+                "placedArea": 40.25,
+                "askedArea": 40.25,
+                "buildableArea": 365.5,
+                "floors": [
+                  40.25,
+                  0
+                ],
+                "total": 40.25,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            },
+            {
+              "storey": "First",
+              "lineTheGroundFloorMayReach": {
+                "x0": 1.5,
+                "y0": 1.5,
+                "x1": 18.5,
+                "y1": 23
+              },
+              "placed": [],
+              "sharing": [],
+              "allButTouching": [],
+              "report": {
+                "storey": 1,
+                "storeyName": "First",
+                "placedArea": 0,
+                "askedArea": 40.25,
+                "buildableArea": 365.5,
+                "floors": [
+                  40.25,
+                  0
+                ],
+                "total": 40.25,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            }
+          ],
+          "waiting": [],
+          "totals": {
+            "floorAreas": [
+              40.25,
+              0
+            ],
+            "total": 40.25,
+            "allowed": 1050,
+            "overRatio": false
+          }
+        }
+      }
+    }
+  ]
+}

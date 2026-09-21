@@ -1,0 +1,3 @@
+The Store's west wall sits on the property boundary, and the tool refused the door there: "A wall on the boundary takes no door." Nothing on the plan changed — doors are still 0.
+
+I tried the west wall since it's the only boundary wall the Store touches. The refusal stands as the answer: a boundary wall can't take a door here.

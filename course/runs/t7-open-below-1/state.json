@@ -1,0 +1,436 @@
+{
+  "task": "t7-open-below",
+  "run": 1,
+  "onScreen": 0,
+  "told": true,
+  "calls": [
+    {
+      "tool": "read_sheet",
+      "input": {},
+      "result": {
+        "plot": {
+          "w": 20,
+          "h": 25,
+          "serviceStreet": "south, y = 25",
+          "sideStreet": "east, x = 20",
+          "neighbours": "west (x = 0) and north (y = 0)",
+          "northArrowTurnedClockwise": "25°"
+        },
+        "setbackLine": {
+          "x0": 1.5,
+          "y0": 1.5,
+          "x1": 18.5,
+          "y1": 23
+        },
+        "onScreen": "Ground",
+        "landingRule": "wait",
+        "importanceOrder": [
+          "Stair Hall"
+        ],
+        "storeys": [
+          {
+            "storey": "Ground",
+            "lineTheGroundFloorMayReach": {
+              "x0": 0,
+              "y0": 0,
+              "x1": 20,
+              "y1": 25
+            },
+            "placed": [
+              {
+                "name": "Stair Hall",
+                "kind": "hallway",
+                "storey": "Ground",
+                "x": 6,
+                "y": 6,
+                "w": 3,
+                "h": 6,
+                "angle": 0,
+                "area": 18,
+                "target": 18,
+                "height": 3.5,
+                "doors": 0
+              }
+            ],
+            "sharing": [],
+            "allButTouching": [],
+            "report": {
+              "storey": 0,
+              "storeyName": "Ground",
+              "placedArea": 18,
+              "askedArea": 18,
+              "buildableArea": 365.5,
+              "floors": [
+                18,
+                0
+              ],
+              "total": 18,
+              "allowed": 1050,
+              "overRatio": false,
+              "ratioRead": true,
+              "openToBelow": [],
+              "overlaps": [],
+              "spills": [],
+              "aside": [],
+              "boundary": [
+                {
+                  "side": "west",
+                  "name": "west boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "north",
+                  "name": "north boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "east",
+                  "name": "side-street boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "street",
+                  "name": "street boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                }
+              ],
+              "shortfalls": [],
+              "courts": [],
+              "pockets": {
+                "count": 0,
+                "area": 0
+              },
+              "walk": null
+            }
+          },
+          {
+            "storey": "First",
+            "lineTheGroundFloorMayReach": {
+              "x0": 1.5,
+              "y0": 1.5,
+              "x1": 18.5,
+              "y1": 23
+            },
+            "placed": [],
+            "sharing": [],
+            "allButTouching": [],
+            "report": {
+              "storey": 1,
+              "storeyName": "First",
+              "placedArea": 0,
+              "askedArea": 18,
+              "buildableArea": 365.5,
+              "floors": [
+                18,
+                0
+              ],
+              "total": 18,
+              "allowed": 1050,
+              "overRatio": false,
+              "ratioRead": true,
+              "openToBelow": [],
+              "overlaps": [],
+              "spills": [],
+              "aside": [],
+              "boundary": [
+                {
+                  "side": "west",
+                  "name": "west boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "north",
+                  "name": "north boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "east",
+                  "name": "side-street boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "street",
+                  "name": "street boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                }
+              ],
+              "shortfalls": [],
+              "courts": [],
+              "pockets": {
+                "count": 0,
+                "area": 0
+              },
+              "walk": null
+            }
+          }
+        ],
+        "waiting": [],
+        "totals": {
+          "floorAreas": [
+            18,
+            0
+          ],
+          "total": 18,
+          "allowed": 1050,
+          "overRatio": false
+        }
+      }
+    },
+    {
+      "tool": "do",
+      "input": {
+        "deeds": [
+          {
+            "verb": "height",
+            "room": "Stair Hall",
+            "metres": 5
+          }
+        ]
+      },
+      "result": {
+        "landed": [
+          "height · Stair Hall 5 m"
+        ],
+        "changed": {
+          "moves": [],
+          "newOverlaps": [],
+          "newSpills": []
+        },
+        "house": {
+          "plot": {
+            "w": 20,
+            "h": 25,
+            "serviceStreet": "south, y = 25",
+            "sideStreet": "east, x = 20",
+            "neighbours": "west (x = 0) and north (y = 0)",
+            "northArrowTurnedClockwise": "25°"
+          },
+          "setbackLine": {
+            "x0": 1.5,
+            "y0": 1.5,
+            "x1": 18.5,
+            "y1": 23
+          },
+          "onScreen": "Ground",
+          "landingRule": "wait",
+          "importanceOrder": [
+            "Stair Hall"
+          ],
+          "storeys": [
+            {
+              "storey": "Ground",
+              "lineTheGroundFloorMayReach": {
+                "x0": 0,
+                "y0": 0,
+                "x1": 20,
+                "y1": 25
+              },
+              "placed": [
+                {
+                  "name": "Stair Hall",
+                  "kind": "hallway",
+                  "storey": "Ground",
+                  "x": 6,
+                  "y": 6,
+                  "w": 3,
+                  "h": 6,
+                  "angle": 0,
+                  "area": 18,
+                  "target": 18,
+                  "height": 5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [],
+              "allButTouching": [],
+              "report": {
+                "storey": 0,
+                "storeyName": "Ground",
+                "placedArea": 18,
+                "askedArea": 18,
+                "buildableArea": 365.5,
+                "floors": [
+                  18,
+                  0
+                ],
+                "total": 18,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            },
+            {
+              "storey": "First",
+              "lineTheGroundFloorMayReach": {
+                "x0": 1.5,
+                "y0": 1.5,
+                "x1": 18.5,
+                "y1": 23
+              },
+              "placed": [],
+              "sharing": [],
+              "allButTouching": [],
+              "report": {
+                "storey": 1,
+                "storeyName": "First",
+                "placedArea": 0,
+                "askedArea": 18,
+                "buildableArea": 365.5,
+                "floors": [
+                  18,
+                  0
+                ],
+                "total": 18,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [
+                  "Stair Hall"
+                ],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            }
+          ],
+          "waiting": [],
+          "totals": {
+            "floorAreas": [
+              18,
+              0
+            ],
+            "total": 18,
+            "allowed": 1050,
+            "overRatio": false
+          }
+        }
+      }
+    }
+  ]
+}

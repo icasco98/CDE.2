@@ -8,6 +8,11 @@ export default defineConfig([
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    // the course runs in plain Node, outside the browser build
+    files: ['course/**/*.mjs'],
+    languageOptions: { globals: { process: 'readonly', window: 'readonly' } },
+  },
+  {
     files: ['**/*.{ts,tsx}'],
     plugins: { 'react-hooks': reactHooks },
     rules: {

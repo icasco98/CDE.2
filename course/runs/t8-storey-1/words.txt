@@ -1,0 +1,1 @@
+Bedroom now stands on the First storey, still at target area with no overlap or spill. Nothing else remains on Ground, and the plan carries no unplaced rooms.

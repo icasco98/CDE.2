@@ -1,0 +1,1 @@
+Opened a door on Family Living's west wall, which is the shared wall with Entry Foyer, at its middle. It landed as a door on Entry Foyer's shared wall, and both rooms now show a door count that reflects it, with Family Living reachable from outside. Job done.

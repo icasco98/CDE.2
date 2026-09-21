@@ -1,0 +1,448 @@
+{
+  "task": "t10-door-refused",
+  "title": "A door refused",
+  "run": 1,
+  "instruction": "Put a door on its boundary wall.",
+  "pass": true,
+  "numbers": {
+    "doors on the sheet": 0,
+    "the tool's reason in the last result": true
+  },
+  "calls": [
+    {
+      "tool": "read_sheet",
+      "input": {},
+      "result": {
+        "plot": {
+          "w": 20,
+          "h": 25,
+          "serviceStreet": "south, y = 25",
+          "sideStreet": "east, x = 20",
+          "neighbours": "west (x = 0) and north (y = 0)",
+          "northArrowTurnedClockwise": "25°"
+        },
+        "setbackLine": {
+          "x0": 1.5,
+          "y0": 1.5,
+          "x1": 18.5,
+          "y1": 23
+        },
+        "onScreen": "Ground",
+        "landingRule": "wait",
+        "importanceOrder": [
+          "Store"
+        ],
+        "storeys": [
+          {
+            "storey": "Ground",
+            "lineTheGroundFloorMayReach": {
+              "x0": 0,
+              "y0": 0,
+              "x1": 20,
+              "y1": 25
+            },
+            "placed": [
+              {
+                "name": "Store",
+                "kind": "store",
+                "storey": "Ground",
+                "x": 0,
+                "y": 10,
+                "w": 5,
+                "h": 5,
+                "angle": 0,
+                "area": 25,
+                "target": 25,
+                "height": 3.5,
+                "doors": 0
+              }
+            ],
+            "sharing": [],
+            "allButTouching": [],
+            "report": {
+              "storey": 0,
+              "storeyName": "Ground",
+              "placedArea": 25,
+              "askedArea": 25,
+              "buildableArea": 365.5,
+              "floors": [
+                25,
+                0
+              ],
+              "total": 25,
+              "allowed": 1050,
+              "overRatio": false,
+              "ratioRead": true,
+              "openToBelow": [],
+              "overlaps": [],
+              "spills": [],
+              "aside": [],
+              "boundary": [
+                {
+                  "side": "west",
+                  "name": "west boundary",
+                  "used": 5,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                },
+                {
+                  "side": "north",
+                  "name": "north boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "east",
+                  "name": "side-street boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "street",
+                  "name": "street boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                }
+              ],
+              "shortfalls": [],
+              "courts": [],
+              "pockets": {
+                "count": 0,
+                "area": 0
+              },
+              "walk": null
+            }
+          },
+          {
+            "storey": "First",
+            "lineTheGroundFloorMayReach": {
+              "x0": 1.5,
+              "y0": 1.5,
+              "x1": 18.5,
+              "y1": 23
+            },
+            "placed": [],
+            "sharing": [],
+            "allButTouching": [],
+            "report": {
+              "storey": 1,
+              "storeyName": "First",
+              "placedArea": 0,
+              "askedArea": 25,
+              "buildableArea": 365.5,
+              "floors": [
+                25,
+                0
+              ],
+              "total": 25,
+              "allowed": 1050,
+              "overRatio": false,
+              "ratioRead": true,
+              "openToBelow": [],
+              "overlaps": [],
+              "spills": [],
+              "aside": [],
+              "boundary": [
+                {
+                  "side": "west",
+                  "name": "west boundary",
+                  "used": 5,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                },
+                {
+                  "side": "north",
+                  "name": "north boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "east",
+                  "name": "side-street boundary",
+                  "used": 0,
+                  "budget": 12.5,
+                  "over": false,
+                  "overBy": 0,
+                  "read": false
+                },
+                {
+                  "side": "street",
+                  "name": "street boundary",
+                  "used": 0,
+                  "budget": 10,
+                  "over": false,
+                  "overBy": 0,
+                  "read": true
+                }
+              ],
+              "shortfalls": [],
+              "courts": [],
+              "pockets": {
+                "count": 0,
+                "area": 0
+              },
+              "walk": null
+            }
+          }
+        ],
+        "waiting": [],
+        "totals": {
+          "floorAreas": [
+            25,
+            0
+          ],
+          "total": 25,
+          "allowed": 1050,
+          "overRatio": false
+        }
+      }
+    },
+    {
+      "tool": "do",
+      "input": {
+        "deeds": [
+          {
+            "verb": "door",
+            "room": "Store",
+            "wall": "west",
+            "type": "door",
+            "along": 0.5
+          }
+        ]
+      },
+      "result": {
+        "landed": [
+          "door refused · A wall on the boundary takes no door."
+        ],
+        "changed": {
+          "moves": [],
+          "newOverlaps": [],
+          "newSpills": []
+        },
+        "house": {
+          "plot": {
+            "w": 20,
+            "h": 25,
+            "serviceStreet": "south, y = 25",
+            "sideStreet": "east, x = 20",
+            "neighbours": "west (x = 0) and north (y = 0)",
+            "northArrowTurnedClockwise": "25°"
+          },
+          "setbackLine": {
+            "x0": 1.5,
+            "y0": 1.5,
+            "x1": 18.5,
+            "y1": 23
+          },
+          "onScreen": "Ground",
+          "landingRule": "wait",
+          "importanceOrder": [
+            "Store"
+          ],
+          "storeys": [
+            {
+              "storey": "Ground",
+              "lineTheGroundFloorMayReach": {
+                "x0": 0,
+                "y0": 0,
+                "x1": 20,
+                "y1": 25
+              },
+              "placed": [
+                {
+                  "name": "Store",
+                  "kind": "store",
+                  "storey": "Ground",
+                  "x": 0,
+                  "y": 10,
+                  "w": 5,
+                  "h": 5,
+                  "angle": 0,
+                  "area": 25,
+                  "target": 25,
+                  "height": 3.5,
+                  "doors": 0
+                }
+              ],
+              "sharing": [],
+              "allButTouching": [],
+              "report": {
+                "storey": 0,
+                "storeyName": "Ground",
+                "placedArea": 25,
+                "askedArea": 25,
+                "buildableArea": 365.5,
+                "floors": [
+                  25,
+                  0
+                ],
+                "total": 25,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 5,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            },
+            {
+              "storey": "First",
+              "lineTheGroundFloorMayReach": {
+                "x0": 1.5,
+                "y0": 1.5,
+                "x1": 18.5,
+                "y1": 23
+              },
+              "placed": [],
+              "sharing": [],
+              "allButTouching": [],
+              "report": {
+                "storey": 1,
+                "storeyName": "First",
+                "placedArea": 0,
+                "askedArea": 25,
+                "buildableArea": 365.5,
+                "floors": [
+                  25,
+                  0
+                ],
+                "total": 25,
+                "allowed": 1050,
+                "overRatio": false,
+                "ratioRead": true,
+                "openToBelow": [],
+                "overlaps": [],
+                "spills": [],
+                "aside": [],
+                "boundary": [
+                  {
+                    "side": "west",
+                    "name": "west boundary",
+                    "used": 5,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  },
+                  {
+                    "side": "north",
+                    "name": "north boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "east",
+                    "name": "side-street boundary",
+                    "used": 0,
+                    "budget": 12.5,
+                    "over": false,
+                    "overBy": 0,
+                    "read": false
+                  },
+                  {
+                    "side": "street",
+                    "name": "street boundary",
+                    "used": 0,
+                    "budget": 10,
+                    "over": false,
+                    "overBy": 0,
+                    "read": true
+                  }
+                ],
+                "shortfalls": [],
+                "courts": [],
+                "pockets": {
+                  "count": 0,
+                  "area": 0
+                },
+                "walk": null
+              }
+            }
+          ],
+          "waiting": [],
+          "totals": {
+            "floorAreas": [
+              25,
+              0
+            ],
+            "total": 25,
+            "allowed": 1050,
+            "overRatio": false
+          }
+        }
+      }
+    }
+  ],
+  "said": [
+    "read the house · 1 rooms asked for",
+    "did · Ground · door refused · A wall on the boundary takes no door."
+  ],
+  "notes": [],
+  "requests": [],
+  "lastWords": "The Store's west wall sits on the property boundary, and the tool refused the door there: \"A wall on the boundary takes no door.\" Nothing on the plan changed — doors are still 0.\n\nI tried the west wall since it's the only boundary wall the Store touches. The refusal stands as the answer: a boundary wall can't take a door here."
+}

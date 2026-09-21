@@ -1,0 +1,27 @@
+read_sheet
+The whole house as it stands: the plot, the setback line, and every storey with each room on it (frame x,y the top-left corner in metres, w, h, angle, area, target, height, doors), how the rooms stand to each other — every pair that shares a run of wall and how long it is, and every pair that only meets at a corner or stands a sliver apart — the rooms still waiting, the report per storey and the floor areas in total. Call it after a batch.
+{"type":"object","properties":{}}
+
+place_against
+Put rooms against a named wall of another room, touching it and lying along it: each {room, against, wall: north|south|east|west of that room, along: start|end|centre, offset: metres from the near end instead, w, h to resize}. The tool works out the coordinates, the sheet snaps and holds it inside the line, and a wall too short to take the room is refused with the reason. Several placements in one call, in importance order. storey: the storey by name, the one on screen by default.
+{"type":"object","properties":{"placements":{"type":"array","items":{"type":"object","properties":{"room":{"type":"string"},"against":{"type":"string"},"wall":{"type":"string"},"along":{"type":"string"},"offset":{"type":"number"},"w":{"type":"number"},"h":{"type":"number"}},"required":["room","against","wall"]}},"storey":{"type":"string"}},"required":["placements"]}
+
+place_rooms
+Place or move rooms by coordinate, several at once, in importance order. Each: name; x,y the top-left corner of its frame in plot metres (x east, y south); optional angle in degrees clockwise; optional w,h to resize. Each room snaps to the neighbours and the lines, is held inside the line the ground floor may reach, and the landing rule settles what it overlaps. At most 40 a call. storey: the storey by name, the one on screen by default. Prefer place_against wherever a room belongs beside another.
+{"type":"object","properties":{"moves":{"type":"array","items":{"type":"object","properties":{"name":{"type":"string"},"x":{"type":"number"},"y":{"type":"number"},"angle":{"type":"number"},"w":{"type":"number"},"h":{"type":"number"}},"required":["name","x","y"]}},"storey":{"type":"string"}},"required":["moves"]}
+
+settle
+Settle an overlap, as the right-click menu does: {room, with: the other room, how: carve|push}. The room higher in the order of importance keeps its shape and the lower one gives way — carved to the shape of the higher one, or slid aside. Every overlap the higher room is in is settled, not only this pair. storey: the storey by name, the one on screen by default.
+{"type":"object","properties":{"room":{"type":"string"},"with":{"type":"string"},"how":{"type":"string"},"storey":{"type":"string"}},"required":["room","how"]}
+
+take_back
+Take back your own last batch, before you answer: the sheet goes back to how it stood before your last placing or settling in this message. Use it when a batch made the plan worse, rather than patching forward. Nothing of the owner’s is taken back.
+{"type":"object","properties":{}}
+
+remember
+Write into your own memory, kept by the tool and sent to you with every later message. note: one line you have learned, in your own words — a rule the owner stated, or what you now know to do differently; replaces: the older line this one is written over, so the page never holds two versions of a rule. request: a command you lacked, which the cofounder reads and either builds or refuses. One short sentence each, not a summary of what you did.
+{"type":"object","properties":{"note":{"type":"string"},"replaces":{"type":"string"},"request":{"type":"string"}}}
+
+do
+Every other verb of the tool, in a list applied in order: deeds:[{verb, …}]. turn{room, degrees|quarter:true|face:'north'}; mirror{room, axis:x|y}; resize{room, w, h | area}; reshape{room, polygon:[[x,y]…] in plot metres}; carve{room, out_of: the room it is taken out of}; push{room: what lies under it slides aside}; court{between:[the rooms round the enclosed space]}; corridor{between}; give{between, to}; combine{rooms:[names], into: the one that survives}; lock{rooms}; unlock{rooms}; group{rooms}; ungroup{rooms}; height{room, metres}; storey{rooms, to: a storey by name}; copy{room, to}; cut{room: past the setback}; restore{room}; door{room, wall:north|south|east|west, type:door|double|sliding|opening|street|street2, along: 0–1 of the way along that wall}; open_wall{room, wall, along}; send_back{rooms}. Each deed says what it did, or refuses with the reason and changes nothing while the rest of the list still runs. storey: by name, the one on screen by default.
+{"type":"object","properties":{"deeds":{"type":"array","items":{"type":"object","properties":{"verb":{"type":"string"},"room":{"type":"string"},"rooms":{"type":"array","items":{"type":"string"}}},"required":["verb"]}},"storey":{"type":"string"}},"required":["deeds"]}

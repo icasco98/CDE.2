@@ -1,0 +1,1 @@
+Done: the Stair Hall's height is now 5 m, which carries it through the First floor, so it now shows as open to below there. No overlaps, spills, or unplaced rooms remain.
