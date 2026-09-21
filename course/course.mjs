@@ -6,7 +6,7 @@
  *   node course/course.mjs tools
  *   node course/course.mjs run <task> <n>
  *   node course/course.mjs all [--only t1-give,t2-court] [--runs 3]
- *   node course/course.mjs summary
+ *   node course/course.mjs summary [harder]
  */
 
 import { register } from 'node:module'
@@ -19,7 +19,7 @@ register('./ts-resolve.mjs', import.meta.url)
 
 const here = dirname(fileURLToPath(import.meta.url))
 const { layoutTools } = await import('../src/sheet/index.ts')
-const { TASKS, taskNamed } = await import('./tasks.mjs')
+const { COURSE, HARDER, TASKS, taskNamed } = await import('./tasks.mjs')
 const { packFor, writeTools } = await import('./pack.mjs')
 
 const resultsDir = join(here, 'results')
@@ -96,12 +96,40 @@ const KINDS = {
   narration: 'narration',
   'wrong choice': 'wrong choice',
   'tool fault': 'tool fault',
+  'rule broken': 'rule broken',
 }
 
 /** The judgement on each failure, and what the course could not test, read back from beside it. */
-const judgement = () => {
-  const file = join(here, 'judgement.json')
-  return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : { failures: {}, notes: [] }
+const judgement = (file) =>
+  existsSync(join(here, file))
+    ? JSON.parse(readFileSync(join(here, file), 'utf8'))
+    : { failures: {}, notes: [] }
+
+/** The two courses, each with its own tasks, its judgement and the page it is written to. */
+const COURSES = {
+  first: {
+    tasks: COURSE,
+    judgement: 'judgement.json',
+    out: 'summary.md',
+    head: [
+      '# The course: how the architect used the tool',
+      '',
+      'Thirty runs, three for each task, each a fresh architect with its own two pages, the tool',
+      'descriptions and the desk. Every pass condition is read from the sheet the tool left behind.',
+    ],
+  },
+  harder: {
+    tasks: HARDER,
+    judgement: 'judgement-harder.json',
+    out: 'harder.md',
+    head: [
+      '# The harder course: the architect under pressure',
+      '',
+      'Thirty more runs, three for each of ten tasks that take several moves, hold a trap, or say',
+      'too little. Each pass condition is read from the model, or — where the task is about what the',
+      "architect said — from the run's own record of its words.",
+    ],
+  },
 }
 
 const changedAnything = (record) =>
@@ -116,17 +144,10 @@ const changedAnything = (record) =>
         c.result.tookBack),
   )
 
-function summary() {
-  const { failures: judged = {}, notes = [] } = judgement()
-  const lines = [
-    '# The course: how the architect used the tool',
-    '',
-    'Thirty runs, three for each task, each a fresh architect with its own two pages, the tool',
-    'descriptions and the desk. Every pass condition is read from the sheet the tool left behind.',
-    '',
-    '| Task | Passed | Runs |',
-    '| --- | --- | --- |',
-  ]
+function summary(which) {
+  const { tasks: TASKS, head, out, judgement: file } = COURSES[which] ?? COURSES.first
+  const { failures: judged = {}, notes = [] } = judgement(file)
+  const lines = [...head, '', '| Task | Passed | Runs |', '| --- | --- | --- |']
   const failures = []
   for (const task of TASKS) {
     const runs = [1, 2, 3].map((n) => recordOf(task.key, n))
@@ -141,7 +162,8 @@ function summary() {
         const key = `${task.key}-${i + 1}`
         const held = judged[key] ?? {}
         const kind = KINDS[held.kind] ?? (changedAnything(record) ? 'wrong choice' : 'narration')
-        failures.push(`- **${key}** · ${kind} · ${held.why ?? 'see the record'}`)
+        const rule = held.rule ? ` (${held.rule})` : ''
+        failures.push(`- **${key}** · ${kind}${rule} · ${held.why ?? 'see the record'}`)
       }
   }
   lines.push('', '## The failures, one line each', '')
@@ -163,7 +185,7 @@ function summary() {
       )
     }
   mkdirSync(resultsDir, { recursive: true })
-  writeFileSync(join(resultsDir, 'summary.md'), `${lines.join('\n')}\n`)
+  writeFileSync(join(resultsDir, out), `${lines.join('\n')}\n`)
   process.stdout.write(`${lines.slice(4, 18).join('\n')}\n`)
 }
 
@@ -179,7 +201,7 @@ if (command === 'tools') {
   for (const task of TASKS)
     if (!only || only.includes(task.key)) for (let n = 1; n <= runs; n++) oneRun(task.key, n)
 } else if (command === 'summary') {
-  summary()
+  summary(rest[0] === 'harder' ? 'harder' : 'first')
 } else {
   process.stdout.write('The commands are tools, run, all and summary.\n')
   process.exitCode = 1

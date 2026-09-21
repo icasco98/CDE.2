@@ -1,6 +1,7 @@
 /**
- * The ten tasks. Each is a starting sheet built in code, one instruction in the owner's plain words,
- * and a pass condition read from the sheet the tool left behind — never from what the architect said.
+ * The first course's ten tasks. Each is a starting sheet built in code, one instruction in the
+ * owner's plain words, and a pass condition read from the sheet the tool left behind — never from
+ * what the architect said. The harder course's ten stand beside them in `harder.mjs`.
  */
 
 import {
@@ -15,41 +16,11 @@ import {
   polyArea,
   report,
   sheetOf,
-  sheetRead,
   storeyOf,
   walkTest,
 } from '../src/sheet/index.ts'
-
-const r2 = (n) => Math.round(n * 100) / 100
-
-/** A room as the sheet stores one: a rectangle standing where the owner's hand left it. */
-const maker = () => {
-  let n = 0
-  return (name, kind, cat, box, more = {}) => ({
-    id: `r${++n}`,
-    name,
-    kind,
-    cat,
-    target: r2(box.w * box.h),
-    x: box.x,
-    y: box.y,
-    w: box.w,
-    h: box.h,
-    angle: 0,
-    pieces: null,
-    placed: true,
-    storey: 0,
-    placedAt: n,
-    ...more,
-  })
-}
-
-const named = (sheet, name) => sheet.rooms.find((o) => o.name === name) ?? null
-
-const area = (sheet, name) => {
-  const r = named(sheet, name)
-  return r ? r2(areaOf(r)) : 0
-}
+import { HARDER } from './harder.mjs'
+import { area, lastResult, maker, named, r2, sharedWall, untouched } from './reads.mjs'
 
 /**
  * Four rooms round an empty middle: a pinwheel that seals the ring, so the middle is an enclosed
@@ -90,23 +61,7 @@ function doorsAcross(sheet, storey) {
   return out
 }
 
-const sharedWall = (sheet, one, other) => {
-  const read = sheetRead(sheet, 0).storeys[0]
-  const found = read.sharing.find((s) => s.rooms.includes(one) && s.rooms.includes(other))
-  return found ? found.metres : 0
-}
-
-/** The last thing a tool said in this run, as it said it. */
-const lastResult = (record) => {
-  const calls = record.calls.filter((c) => c.tool !== 'read_sheet')
-  const last = calls[calls.length - 1]
-  return last ? JSON.stringify(last.result) : ''
-}
-
-const untouched = (task, sheet) =>
-  JSON.stringify(task.sheet().rooms) === JSON.stringify(sheet.rooms)
-
-export const TASKS = [
+const COURSE = [
   {
     key: 't1-give',
     title: 'Give a space away',
@@ -370,6 +325,11 @@ export const TASKS = [
     },
   },
 ]
+
+export { COURSE, HARDER }
+
+/** Both courses, the first ten and the harder ten, in the order they were set. */
+export const TASKS = [...COURSE, ...HARDER]
 
 export const taskNamed = (key) =>
   TASKS.find((t) => t.key === key || t.key.startsWith(`${key}-`)) ?? null
