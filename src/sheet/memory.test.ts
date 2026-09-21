@@ -51,7 +51,7 @@ describe('the assistant memory', () => {
     expect(sent.feedback).toHaveLength(FEEDBACK_SENT)
     expect(sent.feedback[FEEDBACK_SENT - 1]).toBe('owner line 49')
     expect(sent.lessons.length).toBeGreaterThan(NOTES_SENT)
-    expect(sent.lessons[0]).toContain('Place rooms against each other')
+    expect(sent.lessons[0]).toContain('When the tool refuses, say so and stop')
     expect(sent.lessons[sent.lessons.length - 1]).toBe('note 49')
   })
 

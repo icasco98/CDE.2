@@ -34,7 +34,7 @@ describe('the prompt the assistant reads', () => {
 
   it('carries the lessons and the requests it ships with, and where each request stands', () => {
     const prompt = promptFor({ read, memory: newMemory(), text: 'lay out the ground floor' })
-    expect(prompt).toContain('- Place rooms against each other')
+    expect(prompt).toContain('- When the tool refuses, say so and stop')
     expect(prompt).toContain('- Read the whole house at once, every storey, not only the one on')
     expect(prompt).toContain('screen. (built)')
   })
