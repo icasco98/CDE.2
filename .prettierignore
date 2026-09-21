@@ -4,3 +4,6 @@ playwright-report/
 test-results/
 package-lock.json
 *.md
+course/results/
+course/runs/
+course/tools.txt

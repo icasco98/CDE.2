@@ -1,0 +1,3 @@
+The Store's west wall sits on the plot's boundary line, and a boundary wall takes no door — the tool refused it and nothing changed. I did not try to force it another way; there's no other boundary wall on this room to attempt.
+
+The plan is unchanged: Store still has 0 doors, no overlap, nothing to settle. I'm asking rather than guessing: did you mean the east wall (side street) instead of the true boundary, or should this room get a door onto a wall it shares with another room?

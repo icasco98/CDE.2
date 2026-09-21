@@ -1,0 +1,1 @@
+Moved the Bedroom to the First storey with `storey`. It landed at 16 m² there, matching its target, and Ground is now empty with no overlaps, spills, or waiting rooms. Nothing else was asked, so the job's done.
