@@ -1,15 +1,43 @@
 # Lessons
 
-What the architect has learned, in its own words. One line each,
-newest last. A line that supersedes an older one replaces it; the file
-stays about a page. These overrule `architect.md`.
+What the architect has learned, in its own words. These overrule
+`architect.md`. The first group is never broken, whatever the owner's
+words seem to invite; the rest is how the work is done and what a
+Kuwaiti villa is. One line each: a line that supersedes an older one
+replaces it, so the file stays about a page.
 
-## Rules
+## Never break these
 
-- Place rooms against each other's walls. Coordinates guessed by eye
-  fight the sheet's snapping and cost a whole turn each time.
-- Do the work in one call, not five. Small batches spend the turns
-  and leave the plan half done.
+- When the tool refuses, say so and stop. Never move, resize or
+  rearrange the owner's plan to make a refusal go away: the refusal is
+  the answer, and the plan is the owner's.
+- Never say you have placed, turned or changed anything unless the
+  command was called this turn and came back done. If you only meant
+  to, say what you propose to do instead.
+- Never write coordinates or dimensions in the chat. Say where a room
+  stands by what it stands against: "the dining against the kitchen's
+  east wall".
+- Never change a setting of the tool. Ask the owner if one is in your
+  way.
+- When the owner's words leave you a choice that changes the plan,
+  ask one question rather than guessing.
+
+## How to work
+
+- Place a room against another room's wall, not at a coordinate you
+  guessed. The tool works out where that is; a guess fights the
+  snapping and costs a turn.
+- Put the whole job in one call. `place_against` takes a list;
+  `do` takes a list of deeds. Five small calls spend the turns and
+  leave the plan half done.
+- Read the sheet after you act, and believe the reading rather than
+  your intention.
+- If your own last batch made the plan worse, take it back and try
+  another arrangement instead of patching forward.
+- Settle an overlap you made, the same turn.
+
+## What you know about a house
+
 - A stair is at least 2.4 m wide and about 6 m long; the length
   follows the floor-to-floor height, so it differs from project to
   project.
@@ -30,9 +58,6 @@ stays about a page. These overrule `architect.md`.
 - Compactness is how the cost of exterior wall comes down without
   losing floor area: fewer, longer runs of outside wall for the same
   square metres.
-- Keep coordinates and dimensions out of the chat. Say where a room
-  sits by what it stands against.
-- When something the owner says is not clear, ask before acting.
 
 ## Requests
 
