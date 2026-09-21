@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { startingLessons, startingRequests } from './lessons'
+import { hardRules, startingLessons, startingRequests } from './lessons'
 
 describe('the lessons the architect ships with', () => {
   it('reads its page of rules, one line each', () => {
     const lessons = startingLessons()
     expect(lessons.length).toBeGreaterThan(8)
-    expect(lessons[0]).toContain('Place rooms against each other')
+    // the ones never broken come first, so the prompt reads them as hard
+    expect(lessons[0]).toContain('When the tool refuses, say so and stop')
+    expect(hardRules().every((rule) => lessons.includes(rule))).toBe(true)
+    expect(lessons.some((line) => line.includes("against the kitchen's"))).toBe(true)
     // a rule written over two lines of the page is one lesson
     expect(lessons.some((line) => line.includes('about 1.5 m or more, and how much'))).toBe(true)
     expect(lessons.some((line) => line.startsWith('-'))).toBe(false)
@@ -35,6 +38,7 @@ describe('the lessons the architect ships with', () => {
       '- a third.',
     ].join('\n')
     expect(startingLessons(page)).toEqual(['one rule carried on'])
+    expect(hardRules(page)).toEqual([])
     expect(startingRequests(page)).toEqual([
       { text: 'a command I want.', state: 'built' },
       { text: 'another.', state: 'refused' },

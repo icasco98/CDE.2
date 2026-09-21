@@ -29,9 +29,18 @@ function bulletsUnder(markdown: string, heading: string): string[] {
   return out
 }
 
-/** The lessons as written, one line each. */
-export const startingLessons = (markdown: string = page): string[] =>
-  bulletsUnder(markdown, 'rules')
+/** The three groups the page is written in, hardest first. */
+const GROUPS = ['never break these', 'how to work', 'what you know about a house'] as const
+
+/** The lessons as written, one line each, the ones never broken first. */
+export const startingLessons = (markdown: string = page): string[] => {
+  const groups = GROUPS.flatMap((heading) => bulletsUnder(markdown, heading))
+  // a page written under one heading, as the owner's own page once was, still reads
+  return groups.length ? groups : bulletsUnder(markdown, 'rules')
+}
+
+/** The lessons that are never broken, whatever else is asked. */
+export const hardRules = (markdown: string = page): string[] => bulletsUnder(markdown, GROUPS[0])
 
 /** The requests as written, each with the state the cofounder left on it. */
 export const startingRequests = (markdown: string = page): Request[] =>
