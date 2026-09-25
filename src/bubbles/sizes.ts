@@ -4,10 +4,10 @@
  */
 
 /** The largest circle's radius, in the diagram's units: its cell is 120 wide, less a gap and the ring. */
-export const LARGEST_RADIUS = 52
+const LARGEST_RADIUS = 52
 
 /** The smallest radius drawn, so a WC or a store can still be pressed and its ring reached. */
-export const SMALLEST_RADIUS = 13
+const SMALLEST_RADIUS = 13
 
 /** The areas the legend's key may stand for, in m²; the key takes a round one the program uses. */
 const KEY_AREAS = [5, 10, 20, 50, 100, 200] as const

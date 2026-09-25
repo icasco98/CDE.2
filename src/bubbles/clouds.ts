@@ -8,7 +8,7 @@ import type { Spot as Circle } from './arrange'
 
 type Point = { readonly x: number; readonly y: number }
 
-export type Cloud = {
+type Cloud = {
   readonly key: string
   readonly category: string
   readonly storey: number

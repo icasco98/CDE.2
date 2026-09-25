@@ -7,11 +7,11 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import type { Arrangement, Spot } from '../../bubbles/arrange'
-import { cloudsOf } from '../../bubbles/clouds'
 import { EXTERIOR, type Bubble as Nudge, type Commit } from '../../model'
-import { categoryLabels, storeyLabel } from '../../rulebook'
+import { storeyLabel } from '../../rulebook'
 import { pointerAt, viewBoxOf, type Camera } from '../camera'
 import { DRAG_PX, usePanZoom } from './panZoom'
+import { Clouds } from './Clouds'
 import { Apart, Bubble, Link, Outside } from './parts'
 import type { BubbleApart, BubbleLink, BubbleRoom, DragMakes } from './types'
 
@@ -198,11 +198,6 @@ export function Diagram(props: DiagramProps) {
     return pairs
   }, [arrangement.spots])
 
-  const clouds = useMemo(
-    () => cloudsOf(arrangement.spots, (id) => rooms.get(id)?.category),
-    [arrangement.spots, rooms],
-  )
-
   /** Where a keep-apart line runs: between the pair's circles on a storey they share, else their first. */
   const ends = (pair: BubbleApart): [Spot, Spot] | null => {
     const of = (id: string) => arrangement.spots.filter((spot) => spot.id === id)
@@ -295,21 +290,7 @@ export function Diagram(props: DiagramProps) {
           </text>
         </g>
       ))}
-      <g className="clouds" aria-hidden="true">
-        {clouds.map((cloud) => (
-          <g
-            key={cloud.key}
-            data-cloud={cloud.category}
-            data-storey={cloud.storey}
-            className={dimmed(cloud.storey) ? 'cloud cloud-dimmed' : 'cloud'}
-          >
-            <path d={cloud.path} className={`category-${cloud.category}`} />
-            <text x={cloud.label.x} y={cloud.label.y - 4}>
-              {categoryLabels[cloud.category as keyof typeof categoryLabels] ?? cloud.category}
-            </text>
-          </g>
-        ))}
-      </g>
+      <Clouds spots={arrangement.spots} rooms={rooms} dimmed={dimmed} />
       {edges.map((edge) => {
         const from = where({ id: edge.a, storey: edge.storey })
         const to = where({ id: edge.b, storey: edge.storey })
