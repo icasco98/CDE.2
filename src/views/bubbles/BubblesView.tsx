@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { arrange } from '../../bubbles/arrange'
 import { storeyLabel } from '../../rulebook'
 import { ApartPanel } from './ApartPanel'
+import { ChecksPanel } from './ChecksPanel'
 import { Diagram } from './Diagram'
 import { EdgePanel } from './EdgePanel'
 import { Legend } from './parts'
@@ -139,6 +140,7 @@ export function BubblesView(props: BubblesViewProps) {
               onAllow={() => props.onAllowTogether(selectedPair.id)}
             />
           )}
+          <ChecksPanel checks={props.checks} onPick={props.onSelect} />
           <Legend />
         </div>
       </div>

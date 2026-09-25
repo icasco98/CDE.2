@@ -103,6 +103,11 @@ function bandsOf(
     row.splice(at, 0, room)
     placed.set(room.id, { room, tier })
   }
+  // A room that goes on up stands at the right of its row and one that comes from below at the
+  // left, so the tie between a stair's circles in two columns side by side stays short.
+  const side = (room: ArrangeRoom): number =>
+    room.storey < storey ? -1 : standsOn(room, storey + 1) ? 1 : 0
+  for (const row of rows.values()) row.sort((one, other) => side(one) - side(other))
   return rows
 }
 

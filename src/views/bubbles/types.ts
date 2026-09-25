@@ -1,3 +1,4 @@
+import type { Check } from '../../graph/types'
 import type { Bubble, Commit, EdgeKind } from '../../model'
 
 /** What a drag on a stair is answered with: its span is the program's to set, not the hand's. */
@@ -36,6 +37,8 @@ export type BubblesViewProps = {
   readonly edges: readonly BubbleLink[]
   readonly apart: readonly BubbleApart[]
   readonly storeys: number
+  /** The graph's warnings, read again on every edit. */
+  readonly checks: readonly Check[]
   /** A room id, an edge id, or nothing. */
   readonly selected: string | null
   /** The storeys that still want a hallway, each with the rule's sentence saying why. */

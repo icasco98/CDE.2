@@ -60,6 +60,20 @@ describe('the bubble diagram arranged by storey and by tier', () => {
     expect(arranged.spots.filter((spot) => spot.id === 'bedroom')).toHaveLength(1)
   })
 
+  it('stands a stair at the right of the ground row and the left of the row above', () => {
+    const first = [
+      room('stair', 'semi-public', 0, 12, 2),
+      room('dining', 'semi-public'),
+      room('landing', 'semi-public', 1),
+    ]
+    const arranged = arrange(first, [], 2)
+    // Ground: two cells of 120 from x 60, the stair in the second. First: from x 360, stair first.
+    expect(at(arranged, 'dining')).toEqual([120, 225])
+    expect(at(arranged, 'stair')).toEqual([240, 225])
+    expect(at(arranged, 'stair', 1)).toEqual([420, 225])
+    expect(at(arranged, 'landing', 1)).toEqual([540, 225])
+  })
+
   it('moves a nudged room by its nudge and nothing else', () => {
     const nudged = rooms.map((each) =>
       each.id === 'diwaniya' ? { ...each, bubble: { x: 10, y: -5 } } : each,

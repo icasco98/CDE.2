@@ -4,6 +4,7 @@ import { selection, useSelection } from '../../app/selection'
 import { sendToStorey } from '../../app/sendToStorey'
 import { session } from '../../app/session'
 import { useProject } from '../../app/useProject'
+import { graphChecks } from '../../graph/checks'
 import { EXTERIOR, type Bubble, type Commit, type EdgeKind, type Result } from '../../model'
 import { circulationPerStorey, connectionSource, roomTypeById } from '../../rulebook'
 import { addHallway } from './addHallway'
@@ -32,6 +33,12 @@ export function BubblesStage() {
       return row ? { ...edge, source: `Rulebook ${row.id}: ${row.source}` } : edge
     })
   }, [project.edges, project.rooms])
+
+  const checks = useMemo(
+    () =>
+      graphChecks({ rooms, edges: project.edges, apart: project.apart, storeys: project.storeys }),
+    [rooms, project.edges, project.apart, project.storeys],
+  )
 
   const hallwayWanted = useMemo(
     () =>
@@ -98,6 +105,7 @@ export function BubblesStage() {
       edges={edges}
       apart={project.apart}
       storeys={project.storeys}
+      checks={checks}
       selected={selected}
       hallwayWanted={hallwayWanted}
       onNudge={(id: string, nudge: Bubble, commit: Commit) =>
