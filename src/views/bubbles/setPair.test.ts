@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { removedLinks } from '../../app/defaultLinks'
 import { createIdGenerator, createStore, type Store } from '../../model'
 import { setPair } from './setPair'
 
@@ -33,7 +32,8 @@ describe('a pair set from the matrix', () => {
     expect(state()).toEqual({ edges: ['open'], apart: 1 })
     setPair(store, kitchen, dining, 'nothing')
     expect(state()).toEqual({ edges: [], apart: 0 })
-    expect(removedLinks.holds(store.getState().id, kitchen, dining)).toBe(true)
+    // The rulebook suggests a kitchen beside the dining room, so taking it out is kept as declined.
+    expect(store.getState().declined).toEqual([{ a: kitchen, b: dining }])
   })
 
   it('toggles keep apart, and is one undo step each time', () => {

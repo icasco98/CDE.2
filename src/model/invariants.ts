@@ -201,11 +201,33 @@ export function checkApart(project: Project): readonly Violation[] {
   return violations
 }
 
+/** A declined suggestion names two different ends, each a room or the outside, once per pair. */
+export function checkDeclined(project: Project): readonly Violation[] {
+  const rooms = roomIndex(project)
+  const seen = new Set<string>()
+  const violations: Violation[] = []
+  for (const pair of project.declined) {
+    for (const end of [pair.a, pair.b])
+      if (end !== EXTERIOR && !rooms.has(end))
+        violations.push(
+          say('declined-endpoint', `a declined connection names ${end}, which is not a room`),
+        )
+    if (pair.a === pair.b)
+      violations.push(say('declined-self', 'a room is not connected to itself'))
+    const key = pair.a <= pair.b ? `${pair.a}|${pair.b}` : `${pair.b}|${pair.a}`
+    if (seen.has(key))
+      violations.push(say('declined-duplicate', 'that connection is already declined'))
+    seen.add(key)
+  }
+  return violations
+}
+
 const checks = [
   checkEdgeEndpoints,
   checkEdgeStoreys,
   checkEdgeUniqueness,
   checkApart,
+  checkDeclined,
   checkExteriorIsNotARoom,
   checkMainDoor,
   checkFootprints,

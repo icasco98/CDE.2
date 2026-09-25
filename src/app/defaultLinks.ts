@@ -8,42 +8,19 @@ import { impliedConnections } from '../rulebook'
  */
 type Linking = Pick<Store, 'actions' | 'getState'>
 
-function pairKey(a: string, b: string): string {
-  return a <= b ? `${a}|${b}` : `${b}|${a}`
-}
-
-/**
- * What the designer has disconnected, per project. It is view memory: the graph stores what it
- * holds, never what it has stopped holding, so a pair taken out is kept here and not offered
- * again. A new project is a new id, which is what clears it.
- */
-let inProject = ''
-let removed = new Set<string>()
-
-function within(projectId: string): Set<string> {
-  if (projectId !== inProject) {
-    inProject = projectId
-    removed = new Set<string>()
-  }
-  return removed
-}
-
-export const removedLinks = {
-  remember(projectId: string, a: string, b: string): void {
-    within(projectId).add(pairKey(a, b))
-  },
-  holds: (projectId: string, a: string, b: string): boolean => within(projectId).has(pairKey(a, b)),
-}
+const between = (a: string, b: string) => (pair: { a: string; b: string }) =>
+  (pair.a === a && pair.b === b) || (pair.a === b && pair.b === a)
 
 /**
  * Every default connection this program implies and does not hold, made as an edge, but for the
- * pairs the designer has already taken out. Run inside the transaction that added the rooms, so
- * one undo takes the rooms and their links together.
+ * pairs the project has declined; only the ones touching `room` when one is named. Run inside the
+ * transaction that added the rooms, so one undo takes the rooms and their links together.
  */
-export function connectDefaults(store: Linking): Result | void {
+export function connectDefaults(store: Linking, room?: string): Result | void {
   const project: Project = store.getState()
   for (const link of impliedConnections(project.rooms, project.edges)) {
-    if (removedLinks.holds(project.id, link.a, link.b)) continue
+    if (room !== undefined && link.a !== room && link.b !== room) continue
+    if (project.declined.some(between(link.a, link.b))) continue
     const made = store.actions.connect({
       a: link.a,
       b: link.b,
@@ -52,4 +29,26 @@ export function connectDefaults(store: Linking): Result | void {
     })
     if (!made.ok) return made
   }
+}
+
+/**
+ * A connection taken out by the person. When the rulebook suggests that pair, the project keeps
+ * it as declined, so a reload or the next room added does not bring the suggestion back.
+ */
+export function takeOut(store: Linking, edgeId: string): Result | void {
+  const edge = store.getState().edges.find((each) => each.id === edgeId)
+  const cut = store.actions.disconnect(edgeId)
+  if (!cut.ok || !edge) return cut
+  const after = store.getState()
+  const suggested = impliedConnections(after.rooms, after.edges).some(between(edge.a, edge.b))
+  if (!suggested) return
+  const kept = store.actions.decline(edge.a, edge.b)
+  return kept.ok ? undefined : kept
+}
+
+/** The suggestions the person declined made again: all of them, or those of one room. */
+export function restoreSuggested(store: Linking, room?: string): Result | void {
+  const forgot = store.actions.forgetDeclined(room)
+  if (!forgot.ok) return forgot
+  return connectDefaults(store, room)
 }

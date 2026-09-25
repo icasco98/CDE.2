@@ -98,6 +98,27 @@ describe('keep apart', () => {
   })
 })
 
+describe('declined suggestions', () => {
+  it('keeps a pair once, forgets one room’s or all, and goes with its room', () => {
+    const kitchen = addRoom('kitchen')
+    const dining = addRoom('dining-room')
+    store.actions.decline(kitchen, dining)
+    store.actions.decline(dining, kitchen)
+    store.actions.decline(dining, EXTERIOR)
+    expect(store.getState().declined).toEqual([
+      { a: kitchen, b: dining },
+      { a: dining, b: EXTERIOR },
+    ])
+    store.actions.forgetDeclined(kitchen)
+    expect(store.getState().declined).toEqual([{ a: dining, b: EXTERIOR }])
+    store.actions.decline(kitchen, dining)
+    store.actions.removeRoom(kitchen)
+    expect(store.getState().declined).toEqual([{ a: dining, b: EXTERIOR }])
+    store.actions.forgetDeclined()
+    expect(store.getState().declined).toEqual([])
+  })
+})
+
 describe('connect', () => {
   it('refuses a second edge between the same pair on one storey', () => {
     const a = addRoom('bedroom')
@@ -200,11 +221,11 @@ describe('storey heights', () => {
 })
 
 describe('undo', () => {
-  it('covers rooms, edges, plot, storeys, weights and household', () => {
+  it('covers rooms, edges, declined suggestions, plot, storeys and household', () => {
     const room = addRoom('bedroom')
     store.actions.addStorey()
     store.actions.setPlot({ on: true, polygon: [], north: 30, street: [0] })
-    store.actions.setWeights({ privacy: 0.8 })
+    store.actions.decline(room, EXTERIOR)
     store.actions.setHousehold({ ...store.getState().household, bedrooms: 6 })
     store.actions.connect({ a: EXTERIOR, b: room, kind: 'main-door' })
 
@@ -213,7 +234,7 @@ describe('undo', () => {
     store.undo()
     expect(store.getState().household.bedrooms).toBe(startingHousehold.bedrooms)
     store.undo()
-    expect(store.getState().weights).toEqual({})
+    expect(store.getState().declined).toEqual([])
     store.undo()
     expect(store.getState().plot.north).toBe(0)
     store.undo()

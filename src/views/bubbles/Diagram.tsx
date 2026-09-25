@@ -4,6 +4,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import type { Arrangement, Spot } from '../../bubbles/arrange'
@@ -48,6 +49,8 @@ type DiagramProps = {
   readonly onKeepApart: (a: string, b: string) => void
   readonly onSelect: (id: string | null) => void
   readonly onRefuse: (message: string) => void
+  /** A right-click on a room, at the pointer's place on the page. */
+  readonly onRoomMenu: (id: string, at: { readonly x: number; readonly y: number }) => void
   /** Screen pixels per unit of the diagram, told whenever the drawing's size on screen changes. */
   readonly onPixels: (pixels: number) => void
   readonly camera: Camera
@@ -108,6 +111,13 @@ export function Diagram(props: DiagramProps) {
     if (event.button !== 0) return
     event.stopPropagation()
     begin({ kind: 'link', from: spot, at: unitsAt(event.clientX, event.clientY) })
+  }
+
+  function menu(event: ReactMouseEvent, spot: Spot): void {
+    event.preventDefault()
+    event.stopPropagation()
+    props.onSelect(spot.id)
+    props.onRoomMenu(spot.id, { x: event.clientX, y: event.clientY })
   }
 
   function move(event: PointerEvent): void {
@@ -369,6 +379,7 @@ export function Diagram(props: DiagramProps) {
             onHover={setHovered}
             onGrab={grab}
             onReach={reach}
+            onMenu={menu}
           />
         )
       })}

@@ -21,9 +21,7 @@ import {
   type Plot,
   type Project,
   type Result,
-  type Site,
   type WallHint,
-  type Weights,
 } from './types'
 import type { Footprint } from '../geometry/types'
 
@@ -54,6 +52,9 @@ function storeysOf(project: Project, endpoint: Endpoint): readonly number[] {
   const room = findRoom(project, endpoint)
   return room ? occupiedStoreys(room) : []
 }
+
+const between = (a: Endpoint, b: Endpoint) => (pair: { a: Endpoint; b: Endpoint }) =>
+  (pair.a === a && pair.b === b) || (pair.a === b && pair.b === a)
 
 function sharedStorey(project: Project, a: Endpoint, b: Endpoint): number | undefined {
   const onB = storeysOf(project, b)
@@ -251,17 +252,29 @@ export function createActions(context: Context) {
       return settle({ ...project, apart: project.apart.filter((pair) => pair.id !== id) })
     },
 
+    /** A suggested connection the person took out, kept so it is not suggested again. */
+    decline(a: Endpoint, b: Endpoint): Result {
+      const project = state()
+      if (project.declined.some(between(a, b))) return ok(undefined)
+      return settle({ ...project, declined: [...project.declined, { a, b }] })
+    },
+
+    /** The declined suggestions forgotten: every one, or those of one room when it is named. */
+    forgetDeclined(room?: string): Result {
+      const project = state()
+      const kept = project.declined.filter(
+        (pair) => room !== undefined && pair.a !== room && pair.b !== room,
+      )
+      if (kept.length === project.declined.length) return ok(undefined)
+      return settle({ ...project, declined: kept })
+    },
+
     setPlot: (plot: Plot): Result => settle({ ...state(), plot }),
 
     setNorth: (north: number): Result => settle({ ...state(), plot: { ...state().plot, north } }),
 
     setStreet: (street: readonly number[]): Result =>
       settle({ ...state(), plot: { ...state().plot, street } }),
-
-    setWeights: (weights: Weights): Result => settle({ ...state(), weights }),
-
-    /** The client's two site answers, S4 and S5; they are the project's, so undo covers them. */
-    setSite: (site: Site): Result => settle({ ...state(), site }),
 
     setHousehold: (household: Household): Result => settle({ ...state(), household }),
 

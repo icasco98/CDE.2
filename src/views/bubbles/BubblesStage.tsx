@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { connectDefaults, removedLinks } from '../../app/defaultLinks'
+import { connectDefaults, restoreSuggested, takeOut } from '../../app/defaultLinks'
 import { selection, useSelection } from '../../app/selection'
 import { sendToStorey } from '../../app/sendToStorey'
 import { session } from '../../app/session'
@@ -103,11 +103,9 @@ export function BubblesStage() {
     if (both) session.say(`${nameOf(a)} and ${nameOf(b)} are kept apart and connected.`)
   }
 
-  /** A link taken out is a link this house does not want, so the rulebook is not to offer it again. */
+  /** A suggestion taken out is one this house does not want, so the project keeps it declined. */
   const disconnect = (edgeId: string): void => {
-    const edge = project.edges.find((each) => each.id === edgeId)
-    if (!report(session.actions.disconnect(edgeId))) return
-    if (edge) removedLinks.remember(project.id, edge.a, edge.b)
+    if (!report(session.transaction(() => takeOut(session, edgeId)))) return
     if (selection.get() === edgeId) selection.select(null)
   }
 
@@ -116,6 +114,7 @@ export function BubblesStage() {
       rooms={rooms}
       edges={edges}
       apart={project.apart}
+      declined={project.declined}
       storeys={project.storeys}
       checks={checks}
       selected={selected}
@@ -147,6 +146,9 @@ export function BubblesStage() {
             return connectDefaults(session)
           }),
         )
+      }
+      onRestore={(room?: string) =>
+        report(session.transaction(() => restoreSuggested(session, room)))
       }
       onSelect={selection.select}
       onRefuse={session.say}

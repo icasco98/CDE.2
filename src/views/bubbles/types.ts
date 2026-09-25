@@ -37,6 +37,8 @@ export type BubblesViewProps = {
   readonly rooms: readonly BubbleRoom[]
   readonly edges: readonly BubbleLink[]
   readonly apart: readonly BubbleApart[]
+  /** The suggested connections the person took out, which Restore brings back. */
+  readonly declined: readonly { readonly a: string; readonly b: string }[]
   readonly storeys: number
   /** The graph's warnings, read again on every edit. */
   readonly checks: readonly Check[]
@@ -55,6 +57,8 @@ export type BubblesViewProps = {
   readonly onSetEdgeKind: (edgeId: string, kind: EdgeKind) => void
   readonly onRemoveRoom: (id: string) => void
   readonly onAddHallway: (storey: number) => void
+  /** The declined suggestions made again: every one, or one room's. */
+  readonly onRestore: (room?: string) => void
   readonly onSelect: (id: string | null) => void
   /** A gesture the model will not have, said in the view's own words. */
   readonly onRefuse: (message: string) => void

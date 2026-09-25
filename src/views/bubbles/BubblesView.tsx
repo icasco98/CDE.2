@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { arrange } from '../../bubbles/arrange'
 import { storeyLabel } from '../../rulebook'
 import { fitCamera, type Camera } from '../camera'
@@ -20,6 +20,7 @@ export function BubblesView(props: BubblesViewProps) {
   const levels = Math.max(1, Math.trunc(storeys))
   const arrangement = useMemo(() => arrange(rooms, edges, levels), [rooms, edges, levels])
   const [pixels, setPixels] = useState(1)
+  const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null)
   const named = useMemo(() => new Map(rooms.map((room) => [room.id, room])), [rooms])
   const selectedRoom = named.get(selected ?? '')
   const selectedEdge = edges.find((edge) => edge.id === selected)
@@ -42,6 +43,21 @@ export function BubblesView(props: BubblesViewProps) {
     else if (selectedPair) props.onAllowTogether(selectedPair.id)
     else if (selectedRoom) props.onRemoveRoom(selectedRoom.id)
   }
+
+  // The menu goes on any click or key elsewhere, as a right-click menu does.
+  useEffect(() => {
+    if (!menu) return
+    const close = () => setMenu(null)
+    window.addEventListener('pointerdown', close)
+    window.addEventListener('keydown', close)
+    return () => {
+      window.removeEventListener('pointerdown', close)
+      window.removeEventListener('keydown', close)
+    }
+  }, [menu])
+
+  const declinedOf = (id: string): number =>
+    props.declined.filter((pair) => pair.a === id || pair.b === id).length
 
   const nameOf = (id: string): string => named.get(id)?.name ?? 'Outside'
   const titleOf = (edge: BubbleLink): string =>
@@ -78,6 +94,14 @@ export function BubblesView(props: BubblesViewProps) {
         </span>
         <button type="button" onClick={() => setMatrix(true)}>
           Matrix
+        </button>
+        <button
+          type="button"
+          disabled={props.declined.length === 0}
+          title="Make again every connection the rulebook suggested and you deleted"
+          onClick={() => props.onRestore()}
+        >
+          Restore suggested connections
         </button>
         <button type="button" title="Show the whole diagram" onClick={() => setCamera(fitCamera)}>
           Fit
@@ -134,6 +158,7 @@ export function BubblesView(props: BubblesViewProps) {
           onKeepApart={props.onKeepApart}
           onSelect={props.onSelect}
           onRefuse={props.onRefuse}
+          onRoomMenu={(id, at) => setMenu({ id, ...at })}
           onPixels={setPixels}
           camera={camera}
           onCamera={setCamera}
@@ -158,6 +183,29 @@ export function BubblesView(props: BubblesViewProps) {
           <Legend scale={arrangement.scale} pixels={pixels} />
         </div>
       </div>
+      {menu && (
+        <div
+          className="bubbles-menu"
+          role="menu"
+          style={{ left: menu.x, top: menu.y }}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            disabled={declinedOf(menu.id) === 0}
+            onClick={() => {
+              props.onRestore(menu.id)
+              setMenu(null)
+            }}
+          >
+            Restore suggested connections for this room
+          </button>
+          {declinedOf(menu.id) === 0 && (
+            <p>No suggested connection of {nameOf(menu.id)} was deleted.</p>
+          )}
+        </div>
+      )}
       {matrix && (
         <Matrix
           rooms={rooms}

@@ -3,28 +3,26 @@ import {
   PROJECT_VERSION,
   type Actor,
   type Apart,
+  type Declined,
   type Edge,
   type Household,
   type Plot,
   type Project,
   type Room,
-  type Site,
-  type Weights,
 } from './types'
 
 /** The floor-to-floor height a storey opens at, in metres. */
 export const STARTING_HEIGHT_M = 3.5
 
-/** What undo restores: rooms, edges, keep-apart pairs, plot, storeys, heights, weights and household. */
+/** What undo restores: rooms, edges, keep-apart pairs, declined suggestions, plot, storeys, heights and household. */
 export type Snapshot = {
   readonly rooms: readonly Room[]
   readonly edges: readonly Edge[]
   readonly apart: readonly Apart[]
+  readonly declined: readonly Declined[]
   readonly plot: Plot
-  readonly site: Site
   readonly storeys: number
   readonly heights: readonly number[]
-  readonly weights: Weights
   readonly household: Household
 }
 
@@ -41,9 +39,6 @@ export const startingPlot: Plot = {
   north: 0,
   street: [2],
 }
-
-/** What a project assumes until the client says otherwise: no corner diwaniya, the garden behind. */
-export const startingSite: Site = { diwaniyaAtCorner: false, garden: 'rear' }
 
 export const startingHousehold: Household = {
   familySize: 4,
@@ -62,20 +57,19 @@ export function emptyProject(newId: IdGenerator, name = 'Untitled'): Project {
     storeys: 1,
     heights: [STARTING_HEIGHT_M],
     plot: startingPlot,
-    site: startingSite,
     household: startingHousehold,
     rooms: [],
     edges: [],
     apart: [],
-    weights: {},
+    declined: [],
     actors: [],
     version: PROJECT_VERSION,
   }
 }
 
 export function snapshotOf(project: Project): Snapshot {
-  const { rooms, edges, apart, plot, site, storeys, heights, weights, household } = project
-  return { rooms, edges, apart, plot, site, storeys, heights, weights, household }
+  const { rooms, edges, apart, declined, plot, storeys, heights, household } = project
+  return { rooms, edges, apart, declined, plot, storeys, heights, household }
 }
 
 export function restore(project: Project, snapshot: Snapshot): Project {
@@ -104,13 +98,17 @@ export function patchActor(project: Project, id: string, patch: Partial<Actor>):
   }
 }
 
-/** Deleting a room deletes its edges and its keep-apart pairs, and drops it from every actor's route. */
+/**
+ * Deleting a room deletes its edges, its keep-apart pairs and the suggestions declined for it, and
+ * drops it from every actor's route.
+ */
 export function dropRoom(project: Project, id: string): Project {
   return {
     ...project,
     rooms: project.rooms.filter((room) => room.id !== id),
     edges: project.edges.filter((edge) => edge.a !== id && edge.b !== id),
     apart: project.apart.filter((pair) => pair.a !== id && pair.b !== id),
+    declined: project.declined.filter((pair) => pair.a !== id && pair.b !== id),
     actors: project.actors.map((actor) =>
       actor.waypoints.includes(id)
         ? { ...actor, waypoints: actor.waypoints.filter((waypoint) => waypoint !== id) }

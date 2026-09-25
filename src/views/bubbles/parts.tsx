@@ -1,4 +1,8 @@
-import { memo, type PointerEvent as ReactPointerEvent } from 'react'
+import {
+  memo,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import type { Spot } from '../../bubbles/arrange'
 import { keyFor } from '../../bubbles/sizes'
 import { categoryLabels } from '../../rulebook'
@@ -35,6 +39,7 @@ type BubbleProps = {
   readonly onHover: (id: string | null) => void
   readonly onGrab: (event: ReactPointerEvent, spot: Spot) => void
   readonly onReach: (event: ReactPointerEvent, spot: Spot) => void
+  readonly onMenu: (event: ReactMouseEvent, spot: Spot) => void
 }
 
 export const Bubble = memo(function Bubble(props: BubbleProps) {
@@ -58,6 +63,7 @@ export const Bubble = memo(function Bubble(props: BubbleProps) {
       className={classes.join(' ')}
       onPointerEnter={() => props.onHover(spot.id)}
       onPointerLeave={() => props.onHover(null)}
+      onContextMenu={(event) => props.onMenu(event, spot)}
     >
       <circle
         cx={spot.x}

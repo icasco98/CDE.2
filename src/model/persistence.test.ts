@@ -69,7 +69,7 @@ function furnished(): Project {
     north: 42.5,
     street: [0, 3],
   })
-  actions.setWeights({ privacy: 0.7, compactness: 0.35 })
+  actions.decline(hall, bedroom)
   const actor = must(actions.addActor({ name: 'Guest', role: 'visitor' }))
   actions.addWaypoint(actor, hall)
   return store.getState()
@@ -161,22 +161,22 @@ describe('the project file', () => {
     expect(back.ok && back.value.household.bedrooms).toBe(7)
   })
 
-  it('maps the placeholder weights to the three families and drops the budget key', () => {
-    const project = furnished()
-    const document = {
-      ...project,
-      version: 2,
-      weights: { client: 0.8, climate: 0.2, budget: 0.4 },
+  it('drops the weights and the site answers of a version 9 document and declines nothing', () => {
+    const document: Record<string, unknown> = {
+      ...furnished(),
+      version: 9,
+      weights: { userRequirements: 0.8 },
+      site: { diwaniyaAtCorner: true, garden: 'side' },
     }
+    delete document.declined
     const back = deserialize(JSON.stringify(document))
-    expect(back.ok && back.value.weights).toEqual({
-      userRequirements: 0.8,
-      environmentalFactors: 0.2,
-    })
+    expect(back.ok && back.value.declined).toEqual([])
+    expect(back.ok && 'weights' in back.value).toBe(false)
+    expect(back.ok && 'site' in back.value).toBe(false)
     expect(back.ok && back.value.version).toBe(PROJECT_VERSION)
   })
 
-  it('migrates a version 1 document with placeholder weights through both steps', () => {
+  it('migrates a version 1 document through every step', () => {
     const project = furnished()
     const document: Record<string, unknown> = {
       ...project,
@@ -184,13 +184,17 @@ describe('the project file', () => {
       weights: { client: 0.6, climate: 0.1, budget: 0.9 },
     }
     delete document.household
+    delete document.declined
     const back = deserialize(JSON.stringify(document))
     expect(back.ok && back.value.household).toEqual(startingHousehold)
-    expect(back.ok && back.value.weights).toEqual({
-      userRequirements: 0.6,
-      environmentalFactors: 0.1,
-    })
     expect(back.ok && back.value.version).toBe(PROJECT_VERSION)
+  })
+
+  it('keeps the declined suggestions a document carries', () => {
+    const project = furnished()
+    const back = deserialize(serialize(project))
+    expect(back.ok && back.value.declined).toEqual(project.declined)
+    expect(project.declined).toHaveLength(1)
   })
 
   it('gives a document written before heights 3.5 m for every storey', () => {
@@ -244,20 +248,6 @@ describe('the project file', () => {
     const rooms = project.rooms.map((room) => ({ ...room, bubble: { x: 12, y: -4 } }))
     const back = deserialize(JSON.stringify({ ...project, rooms }))
     expect(back.ok && back.value.rooms[0]?.bubble).toEqual({ x: 12, y: -4 })
-  })
-
-  it('gives a project written before the two site questions the answers a villa gives', () => {
-    const project: Record<string, unknown> = { ...furnished(), version: 6 }
-    delete project.site
-    const back = deserialize(JSON.stringify(project))
-    expect(back.ok && back.value.site).toEqual({ diwaniyaAtCorner: false, garden: 'rear' })
-    expect(back.ok && back.value.version).toBe(PROJECT_VERSION)
-  })
-
-  it('leaves the answers of a project that already carries them', () => {
-    const project = { ...furnished(), site: { diwaniyaAtCorner: true, garden: 'side' as const } }
-    const back = deserialize(JSON.stringify({ ...project, version: 6 }))
-    expect(back.ok && back.value.site).toEqual({ diwaniyaAtCorner: true, garden: 'side' })
   })
 
   it('leaves a version 5 project with no bubbles exactly as it was', () => {

@@ -1,5 +1,5 @@
 import { isDocument, parseProject, type Document } from './parse'
-import { STARTING_HEIGHT_M, startingHousehold, startingSite } from './project'
+import { STARTING_HEIGHT_M, startingHousehold } from './project'
 import type { Store } from './store'
 import { PROJECT_VERSION, ok, refused, type Project, type Result, type Violation } from './types'
 
@@ -14,15 +14,6 @@ export type Storage = {
 
 type Migration = (document: Document) => Document
 
-/** The placeholder sliders become the three families named in rulebook/forces.md. */
-function weightsToFamilies(document: Document): Document {
-  const old = isDocument(document.weights) ? document.weights : {}
-  const weights: Document = {}
-  if (typeof old.client === 'number') weights.userRequirements = old.client
-  if (typeof old.climate === 'number') weights.environmentalFactors = old.climate
-  return { ...document, weights }
-}
-
 /** Before heights were stored every storey stood at the height a project opens on. */
 function storeysToHeights(document: Document): Document {
   const storeys = typeof document.storeys === 'number' ? document.storeys : 1
@@ -33,12 +24,6 @@ function storeysToHeights(document: Document): Document {
 function householdMasterOnGround(document: Document): Document {
   const household = isDocument(document.household) ? document.household : {}
   return { ...document, household: { masterOnGround: false, ...household } }
-}
-
-/** A project written before the client could answer S4 and S5 answers them the way a villa does. */
-function siteChoices(document: Document): Document {
-  const site = isDocument(document.site) ? document.site : {}
-  return { ...document, site: { ...startingSite, ...site } }
 }
 
 /** A bubble stood on the plot until the diagram became the graph alone; its place there is no nudge. */
@@ -55,17 +40,30 @@ function bubblesOffThePlot(document: Document): Document {
   }
 }
 
+/**
+ * The weights and the site answers were read by nothing, so they go; a project written before
+ * declined suggestions were kept has declined none.
+ */
+function declinedNotWeighed(document: Document): Document {
+  const kept: Document = { ...document, declined: [] }
+  delete kept.weights
+  delete kept.site
+  return kept
+}
+
 /** From the version keyed to the next one. */
 const migrations: ReadonlyMap<number, Migration> = new Map<number, Migration>([
   [1, (document) => ({ household: startingHousehold, ...document })],
-  [2, weightsToFamilies],
+  // The weights and the site answers these two steps shaped are dropped on the way to version 10.
+  [2, (document) => document],
   [3, storeysToHeights],
   [4, householdMasterOnGround],
   // Bubbles are dropped on the way to version 8, so where this step once put them is moot.
   [5, (document) => document],
-  [6, siteChoices],
+  [6, (document) => document],
   [7, bubblesOffThePlot],
   [8, (document) => ({ apart: [], ...document })],
+  [9, declinedNotWeighed],
 ])
 
 export function serialize(project: Project): string {

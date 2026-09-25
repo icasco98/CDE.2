@@ -38,9 +38,6 @@ test('a person enters a plot, a household and a program, and it is still there a
   const rooms = rowsOf(page)
   expect(await rooms.count()).toBeGreaterThanOrEqual(12)
 
-  // Nothing reads the weights while no solver runs, so no slider stands anywhere.
-  await expect(page.getByRole('slider', { name: 'Site constraints' })).toHaveCount(0)
-
   const diwaniya = rowNamed(page, 'Diwaniya')
   await expect(diwaniya.getByLabel('Target area')).toHaveValue('52.5')
 

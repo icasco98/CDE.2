@@ -1,4 +1,4 @@
-import { removedLinks } from '../../app/defaultLinks'
+import { takeOut } from '../../app/defaultLinks'
 import type { Result, Store } from '../../model'
 
 /** What one cell of the matrix may be set to. */
@@ -12,7 +12,7 @@ const between = (a: string, b: string) => (pair: { a: string; b: string }) =>
 /**
  * One pair of rooms set from the matrix, as one undo step. A door or an opening makes or turns the
  * edge and leaves a keep-apart pair standing, to be warned of; Keep apart toggles the pair and
- * leaves the edge; Nothing takes both out, and a default taken out is not offered again.
+ * leaves the edge; Nothing takes both out, and a suggestion taken out is kept as declined.
  */
 export function setPair(store: Setting, a: string, b: string, choice: PairChoice): Result {
   return store.transaction(() => {
@@ -26,10 +26,9 @@ export function setPair(store: Setting, a: string, b: string, choice: PairChoice
     }
     if (choice === 'nothing') {
       for (const edge of edges) {
-        const cut = store.actions.disconnect(edge.id)
-        if (!cut.ok) return cut
+        const cut = takeOut(store, edge.id)
+        if (cut && !cut.ok) return cut
       }
-      if (edges.length > 0) removedLinks.remember(project.id, a, b)
       return pair ? store.actions.allowTogether(pair.id) : undefined
     }
     if (edges.length === 0) {

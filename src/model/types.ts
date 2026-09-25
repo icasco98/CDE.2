@@ -3,11 +3,7 @@ import type { Footprint, Point, Polygon } from '../geometry/types'
 export const EXTERIOR = 'EXTERIOR'
 
 /** The document format; a bump needs a migration in persistence.ts. */
-export const PROJECT_VERSION = 9
-
-/** The three families of forces the tool balances, named in rulebook/forces.md. */
-export const families = ['userRequirements', 'siteConstraints', 'environmentalFactors'] as const
-export type Family = (typeof families)[number]
+export const PROJECT_VERSION = 10
 
 export type EdgeKind = 'door' | 'open' | 'main-door'
 
@@ -28,18 +24,6 @@ export type Plot = {
   readonly north: number
   /** Indices of the polygon sides that face a street, side `i` running from vertex `i` to `i + 1`. */
   readonly street: readonly number[]
-}
-
-/** Where the garden goes: the boundary away from the service street, one of the sides, or nowhere. */
-export type Garden = 'rear' | 'side' | 'none'
-
-/**
- * The two site questions the rulebook leaves to the client rather than to the table: S4, whether
- * the diwaniya addresses the corner where two streets meet, and S5, where the garden goes.
- */
-export type Site = {
-  readonly diwaniyaAtCorner: boolean
-  readonly garden: Garden
 }
 
 /** Who the house is for; the program screen reads the rooms it implies from it. */
@@ -85,8 +69,14 @@ export type Apart = {
   readonly b: string
 }
 
-/** One number per force; the forces themselves are not defined yet. */
-export type Weights = Readonly<Record<string, number>>
+/**
+ * A connection the rulebook suggested and the person took out: the pair it joined, a room id or
+ * `EXTERIOR` at either end. It is kept so the suggestion is not made again in this project.
+ */
+export type Declined = {
+  readonly a: Endpoint
+  readonly b: Endpoint
+}
 
 export type Actor = {
   readonly id: string
@@ -103,13 +93,11 @@ export type Project = {
   /** The floor-to-floor height of each storey in metres, one entry per storey. */
   readonly heights: readonly number[]
   readonly plot: Plot
-  /** The client's two answers on this project, which S4 and S5 read. */
-  readonly site: Site
   readonly household: Household
   readonly rooms: readonly Room[]
   readonly edges: readonly Edge[]
   readonly apart: readonly Apart[]
-  readonly weights: Weights
+  readonly declined: readonly Declined[]
   readonly actors: readonly Actor[]
   readonly version: number
 }

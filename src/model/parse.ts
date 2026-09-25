@@ -4,18 +4,16 @@ import {
   ok,
   type Actor,
   type Apart,
+  type Declined,
   type Edge,
   type EdgeKind,
   type Household,
   type Plot,
   type Project,
   type Result,
-  type Garden,
   type Room,
-  type Site,
   type Violation,
   type WallHint,
-  type Weights,
 } from './types'
 
 export type Document = Record<string, unknown>
@@ -135,6 +133,11 @@ export function parseProject(document: Document): Result<Project> {
     return { id: text(raw.id, `${at}.id`), a: text(raw.a, `${at}.a`), b: text(raw.b, `${at}.b`) }
   }
 
+  const declined = (value: unknown, at: string): Declined => {
+    const raw = nested(value, at)
+    return { a: text(raw.a, `${at}.a`), b: text(raw.b, `${at}.b`) }
+  }
+
   const actor = (value: unknown, at: string): Actor => {
     const raw = nested(value, at)
     return {
@@ -157,18 +160,6 @@ export function parseProject(document: Document): Result<Project> {
     }
   }
 
-  const gardens: readonly string[] = ['rear', 'side', 'none']
-
-  const siteOf = (value: unknown, at: string): Site => {
-    const raw = nested(value, at)
-    const garden = text(raw.garden, `${at}.garden`)
-    if (!gardens.includes(garden)) fail(`${at}.garden`, 'rear, side or none')
-    return {
-      diwaniyaAtCorner: flag(raw.diwaniyaAtCorner, `${at}.diwaniyaAtCorner`),
-      garden: garden as Garden,
-    }
-  }
-
   const householdOf = (value: unknown, at: string): Household => {
     const raw = nested(value, at)
     return {
@@ -182,26 +173,17 @@ export function parseProject(document: Document): Result<Project> {
     }
   }
 
-  const weightsOf = (value: unknown, at: string): Weights =>
-    Object.fromEntries(
-      Object.entries(nested(value, at)).map(([force, weight]) => [
-        force,
-        count(weight, `${at}.${force}`),
-      ]),
-    )
-
   const project: Project = {
     id: text(document.id, 'id'),
     name: text(document.name, 'name'),
     storeys: count(document.storeys, 'storeys'),
     heights: list(document.heights, 'heights').map((height, i) => count(height, `heights[${i}]`)),
     plot: plotOf(document.plot, 'plot'),
-    site: siteOf(document.site, 'site'),
     household: householdOf(document.household, 'household'),
     rooms: list(document.rooms, 'rooms').map((raw, i) => room(raw, `rooms[${i}]`)),
     edges: list(document.edges, 'edges').map((raw, i) => edge(raw, `edges[${i}]`)),
     apart: list(document.apart, 'apart').map((raw, i) => apart(raw, `apart[${i}]`)),
-    weights: weightsOf(document.weights, 'weights'),
+    declined: list(document.declined, 'declined').map((raw, i) => declined(raw, `declined[${i}]`)),
     actors: list(document.actors, 'actors').map((raw, i) => actor(raw, `actors[${i}]`)),
     version: count(document.version, 'version'),
   }
