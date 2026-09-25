@@ -31,6 +31,7 @@ import {
   combine,
   copyTo,
   cutToSetback,
+  doorAcross,
   doorAt,
   doorNear,
   doorRead,
@@ -99,7 +100,8 @@ import {
   type Sheet,
   type Side4,
 } from '../../sheet'
-import type { Result as ModelResult } from '../../model'
+import { EXTERIOR, type EdgeKind, type Result as ModelResult } from '../../model'
+import { onlyThrough } from '../../graph/apart'
 import { session } from '../../app/session'
 import { useProject } from '../../app/useProject'
 import {
@@ -126,6 +128,11 @@ import {
   type RoomChoice,
 } from './menus'
 import { OpeningsTools } from './OpeningsTools'
+import { checkRead, linesFrom, pairKey } from './check'
+import type { SheetCheck } from './CheckMarks'
+import { DoorOffer } from './DoorOffer'
+import { createLinks } from './linkedUndo'
+import { TrayLines } from './TrayLines'
 import { beginDoorDrag, doorDragTo, doorDrop, type DoorDrag } from './doorDrag'
 import {
   beginCorner,
@@ -197,6 +204,16 @@ type Menu =
   | { kind: 'pocket'; pocket: Pocket; at: { x: number; y: number } }
   | { kind: 'note'; note: string; at: { x: number; y: number } }
 
+/** A door waiting on its question: where it was aimed, what it is, and the pair it would draw. */
+type Offer = {
+  x: number
+  y: number
+  type: DoorType
+  width: number
+  pair: [string, string]
+  at: { x: number; y: number }
+}
+
 type TypeIn = {
   at: { x: number; y: number }
   value: string
@@ -256,6 +273,11 @@ export function SheetStage() {
   const [lit, setLit] = useState<string | null>(null)
   const [drawMenuFor, setDrawMenuFor] = useState<string | null>(null)
   const [specState, setSpecState] = useState('')
+  // Check: the project's edges drawn on the sheet, off until asked for.
+  const [checking, setChecking] = useState(false)
+  const [offer, setOffer] = useState<Offer | null>(null)
+  const links = useRef(createLinks(session))
+  const row = useRef<HTMLDivElement | null>(null)
   const settingsWindow = useSettingsWindow()
   // The owner's spec and sample as last saved by This is it: this browser's, then the link's store's.
   const spec = useRef<Partial<Settings> | null>(localSpec())
@@ -390,6 +412,56 @@ export function SheetStage() {
 
   const selected = view.rooms.filter((r) => selection.includes(r.id))
 
+  // Check reads the project's graph against the sheet: once per change, and the lines once per hover.
+  const roomEdges = useMemo(
+    () => project.edges.filter((edge) => edge.a !== EXTERIOR && edge.b !== EXTERIOR),
+    [project.edges],
+  )
+  const through = useMemo(
+    () =>
+      new Set(
+        project.apart.flatMap((pair) =>
+          onlyThrough(pair, project.edges) ? [pairKey(pair.a, pair.b)] : [],
+        ),
+      ),
+    [project.apart, project.edges],
+  )
+  const checked = useMemo(
+    () =>
+      checking
+        ? checkRead(
+            sheet,
+            STOREY,
+            { edges: roomEdges, apart: project.apart, through },
+            openingsOn ? 'openings' : 'zoning',
+          )
+        : null,
+    [checking, sheet, STOREY, roomEdges, project.apart, through, openingsOn],
+  )
+  const focusLines = useMemo(() => {
+    if (!checked) return null
+    const lines: { from: string; to: string; bold: boolean }[] = []
+    const tray: { from: string; to: string }[] = []
+    const from = (id: string, bold: boolean) => {
+      const reach = linesFrom(id, checked.waiting, sheet, STOREY)
+      for (const to of reach.placed) lines.push({ from: id, to, bold })
+      for (const to of reach.tray) tray.push({ from: id, to })
+    }
+    if (hover && view.rooms.some((r) => r.id === hover)) from(hover, false)
+    for (const id of selection) if (view.rooms.some((r) => r.id === id)) from(id, true)
+    return { lines, tray }
+  }, [checked, hover, selection, sheet, STOREY, view.rooms])
+  const sheetCheck: SheetCheck | null =
+    checked && focusLines
+      ? { lines: focusLines.lines, apartDoors: checked.apartDoors, apartRooms: checked.apartRooms }
+      : null
+  const nameOf = (id: string): string =>
+    id === EXTERIOR
+      ? 'Outside'
+      : (project.rooms.find((room) => room.id === id)?.name ??
+        sheet.rooms.find((room) => room.id === id)?.name ??
+        id)
+
   /** A refusal from the project's own actions is read where the sheet's refusals are read. */
   const refuse = (result: ModelResult): void => {
     if (!result.ok) setFlash(result.problems.map((trouble) => trouble.message).join(' · '))
@@ -404,6 +476,7 @@ export function SheetStage() {
     }
     const now = docRef.current
     const next = { sheet: change.sheet, history: remember(now.history, now.sheet) }
+    links.current.prune(next.history.past.length)
     touched.current = true
     docRef.current = next
     setDoc(next)
@@ -437,10 +510,12 @@ export function SheetStage() {
 
   /** Whether there was a step of the sheet's own to take back; the brief's are the project's. */
   const stepBack = (): boolean => {
+    const depth = docRef.current.history.past.length
     const back = undo(docRef.current.sheet, { history: docRef.current.history })
     if (!back.result.ok) return false
     docRef.current = { sheet: back.sheet, history: back.history }
     setDoc(docRef.current)
+    links.current.undone(depth)
     return true
   }
 
@@ -449,6 +524,7 @@ export function SheetStage() {
     if (!forward.result.ok) return false
     docRef.current = { sheet: forward.sheet, history: forward.history }
     setDoc(docRef.current)
+    links.current.redone(forward.history.past.length)
     return true
   }
 
@@ -465,6 +541,7 @@ export function SheetStage() {
   const agentBegin = () => {
     const now = docRef.current
     docRef.current = { ...now, history: remember(now.history, now.sheet) }
+    links.current.prune(docRef.current.history.past.length)
     setDoc(docRef.current)
   }
 
@@ -485,6 +562,7 @@ export function SheetStage() {
         : sampleSheet(now.sheet.settings),
       history: remember(now.history, now.sheet),
     }
+    links.current.prune(docRef.current.history.past.length)
     setDoc(docRef.current)
     setSelection([])
     setMenu(null)
@@ -573,14 +651,88 @@ export function SheetStage() {
       return
     }
     const before = docRef.current.sheet
+    const pair = armed === 'open' ? null : pairAt(before, x, y)
+    // A door is the drawing of an edge: between two rooms with none it asks before it is placed.
+    if (pair && !joined(pair[0], pair[1])) {
+      setOffer({
+        x,
+        y,
+        type: armed,
+        width: doorWidth,
+        pair,
+        at: inBox(event.clientX, event.clientY),
+      })
+      return
+    }
     const change =
       armed === 'open'
-        ? openWall(before, { x, y, storey: STOREY })
-        : addDoor(before, { x, y, type: armed, width: doorWidth, storey: STOREY })
+        ? openWall(before, { x, y, storey: STOREY, joined })
+        : addDoor(before, {
+            x,
+            y,
+            type: armed,
+            width: doorWidth,
+            storey: STOREY,
+            ...(pair ? { pair } : {}),
+          })
     if (!apply(change)) {
       if (!change.result.ok && change.result.said === 'No wall there.') setDoorSel(null)
       return
     }
+    setDoorSel(newDoors(before, change.sheet).at(-1) ?? null)
+  }
+
+  /** Whether the project holds an edge between two rooms, on any storey. */
+  const joined = (a: string, b: string): boolean =>
+    session
+      .getState()
+      .edges.some((edge) => (edge.a === a && edge.b === b) || (edge.a === b && edge.b === a))
+
+  /**
+   * The pair a door put here would draw, read once as it is placed and kept on the door: the room
+   * whose wall it is on and the room across, or the outside. Nothing for a sheet not drawing the
+   * project's program, or a wall no door may take, which addDoor then says why of.
+   */
+  const pairAt = (sheet: Sheet, x: number, y: number): [string, string] | null => {
+    const hit = doorAt(x, y, doorWidth, sheet, STOREY)
+    if (!hit || hit.why) return null
+    const rooms = session.getState().rooms
+    const known = (id: string) => id === EXTERIOR || rooms.some((room) => room.id === id)
+    const across = doorAcross(hit.room, hit.pl, sheet, STOREY)?.id ?? EXTERIOR
+    return known(hit.room.id) && known(across) ? [hit.room.id, across] : null
+  }
+
+  /** Yes to the door's question: the edge through the project's connect, and the door that draws it. */
+  const acceptOffer = () => {
+    const held = offer
+    setOffer(null)
+    if (!held) return
+    const kind: EdgeKind = held.type === 'opening' ? 'open' : 'door'
+    const made = session.actions.connect({ a: held.pair[0], b: held.pair[1], kind })
+    if (!made.ok) {
+      refuse(made)
+      return
+    }
+    const before = docRef.current.sheet
+    const change = addDoor(before, {
+      x: held.x,
+      y: held.y,
+      type: held.type,
+      width: held.width,
+      storey: STOREY,
+      pair: held.pair,
+    })
+    if (!apply(change)) {
+      session.actions.disconnect(made.value)
+      return
+    }
+    links.current.add({
+      depth: docRef.current.history.past.length,
+      edge: made.value,
+      a: held.pair[0],
+      b: held.pair[1],
+      kind,
+    })
     setDoorSel(newDoors(before, change.sheet).at(-1) ?? null)
   }
 
@@ -1027,6 +1179,10 @@ export function SheetStage() {
       if (openingsOn && !doorDrag) {
         const [x, y] = pointAt(event.clientX, event.clientY)
         setDoorHover(armed && armed !== 'open' ? doorAt(x, y, doorWidth, sheet, STOREY) : null)
+        // Check's lines follow the hand in this step too.
+        const over = event.target instanceof Element ? event.target.closest('[data-room]') : null
+        const id = over?.getAttribute('data-room') ?? null
+        if (checking && hover !== id) setHover(id)
         return
       }
       if (drawing && (drawing.shape === 'poly' ? drawing.pts.length : drawing.from)) {
@@ -1344,7 +1500,8 @@ export function SheetStage() {
         case 'escape':
           // Esc never leaves the step: it drops the door in hand, then the type armed
           if (openingsOn) {
-            if (doorSel) setDoorSel(null)
+            if (offer) setOffer(null)
+            else if (doorSel) setDoorSel(null)
             else if (armed) armType(null)
             else if (menu) setMenu(null)
             return
@@ -1438,6 +1595,16 @@ export function SheetStage() {
           })
         : sentenceOf(view.read, settings)
 
+  if (checked) {
+    const waiting = checked.waiting.length
+    const said = `${waiting} connection${waiting === 1 ? '' : 's'} not ${openingsOn ? 'met' : 'ready'}`
+    parts.push({
+      lead: 'Check',
+      text: checked.broken ? `${said}, ${checked.broken} keep-apart broken` : said,
+      bad: waiting > 0 || checked.broken > 0,
+    })
+  }
+
   const tagRoom = tag ? view.rooms.find((r) => r.id === tag.id) : null
 
   const under = (() => {
@@ -1506,6 +1673,15 @@ export function SheetStage() {
             title="M"
           >
             Measure
+          </button>
+          <button
+            type="button"
+            className={checking ? 'on' : ''}
+            aria-pressed={checking}
+            title="Show the connections: lines from the room under the hand and the room selected"
+            onClick={() => setChecking((was) => !was)}
+          >
+            Check
           </button>
           <button
             type="button"
@@ -1681,7 +1857,7 @@ export function SheetStage() {
           specState={specState}
         />
       )}
-      <div className="body-row">
+      <div className="body-row" ref={row}>
         <Program
           sheet={sheet}
           selection={selection}
@@ -1763,6 +1939,7 @@ export function SheetStage() {
                 pocketPicked={pocketPicked}
                 hover={hover}
                 lit={lit}
+                check={sheetCheck}
                 openings={
                   openingsOn
                     ? {
@@ -1844,6 +2021,14 @@ export function SheetStage() {
                 <DoorMenu at={menu.at} door={doorInHand} onChoose={doorChoice} />
               )}
               {menu?.kind === 'note' && <EmptyNote at={menu.at} note={menu.note} />}
+              {offer && (
+                <DoorOffer
+                  at={offer.at}
+                  names={[nameOf(offer.pair[0]), nameOf(offer.pair[1])]}
+                  onAccept={acceptOffer}
+                  onDecline={() => setOffer(null)}
+                />
+              )}
               {tagRoom && tag && (
                 <div className="room-tag" style={{ left: `${tag.x}px`, top: `${tag.y}px` }}>
                   <b>{tagRoom.name}</b> ·{' '}
@@ -1971,6 +2156,15 @@ export function SheetStage() {
           onBegin={agentBegin}
           onEnd={agentEnd}
         />
+        {focusLines && (
+          <TrayLines
+            lines={focusLines.tray}
+            rooms={view.rooms}
+            svg={svg.current}
+            box={row.current}
+            camera={camera}
+          />
+        )}
       </div>
     </div>
   )

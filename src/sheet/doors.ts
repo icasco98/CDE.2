@@ -161,13 +161,15 @@ export function doorAt(
 /**
  * A wall picked for opening: every stretch of it that meets a neighbouring room's wall is taken out,
  * one opening per neighbour, each held inside both walls' runs so nothing spills past a corner. The
- * doors already on that stretch go with the wall.
+ * doors already on that stretch go with the wall. An opening onto one neighbour records the pair
+ * as the edge it draws when `joined` says the two already share one.
  */
 export function openWall(
   hit: Hit,
   sheet: Sheet,
   storey: number,
   id: () => string,
+  joined: (a: string, b: string) => boolean = () => false,
 ): { why: string | null; added: Door[] } {
   const r = hit.room
   const seg = hit.pl.seg
@@ -177,7 +179,7 @@ export function openWall(
   const B = toWorld(r, seg.b[0], seg.b[1])
   const wu = [(B[0] - A[0]) / L, (B[1] - A[1]) / L]
   const wn = worldN(r, seg.n)
-  const runs: [number, number][] = []
+  const runs: [number, number, string][] = []
   for (const o of placedRooms(sheet, storey)) {
     if (o === r || isOpen(o) || o.fixed) continue
     for (const w of worldWalls(o)) {
@@ -188,7 +190,7 @@ export function openWall(
       const t1 = (w.b[0] - A[0]) * wu[0]! + (w.b[1] - A[1]) * wu[1]!
       const lo = Math.max(0, Math.min(t0, t1))
       const hi = Math.min(L, Math.max(t0, t1))
-      if (hi - lo >= 0.6) runs.push([lo, hi])
+      if (hi - lo >= 0.6) runs.push([lo, hi, o.id])
     }
   }
   if (!runs.length)
@@ -197,11 +199,13 @@ export function openWall(
       added: [],
     }
   runs.sort((p, q) => p[0] - q[0])
-  const merged: [number, number][] = []
-  for (const run of runs) {
+  const merged: { lo: number; hi: number; with: Set<string> }[] = []
+  for (const [lo, hi, other] of runs) {
     const last = merged[merged.length - 1]
-    if (last && run[0] <= last[1] + 0.05) last[1] = Math.max(last[1], run[1])
-    else merged.push([run[0], run[1]])
+    if (last && lo <= last.hi + 0.05) {
+      last.hi = Math.max(last.hi, hi)
+      last.with.add(other)
+    } else merged.push({ lo, hi, with: new Set([other]) })
   }
   const gone = doorsOf(r).filter((d) => {
     const pl = doorPlace(r, d)
@@ -209,15 +213,16 @@ export function openWall(
       !!pl &&
       same(pl.seg.a, seg.a) &&
       same(pl.seg.b, seg.b) &&
-      merged.some(([lo, hi]) => pl.t > lo && pl.t < hi)
+      merged.some(({ lo, hi }) => pl.t > lo && pl.t < hi)
     )
   })
   r.doors = doorsOf(r).filter((d) => !gone.includes(d))
   const added: Door[] = []
-  for (const [lo, hi] of merged) {
+  for (const { lo, hi, with: others } of merged) {
     // five centimetres kept at each end, so the opening sits inside both walls
     const w = r2(hi - lo - 0.1)
     const t = (lo + hi) / 2
+    const [other] = [...others]
     const d: Door = {
       id: id(),
       type: 'open',
@@ -225,6 +230,7 @@ export function openWall(
       flip: false,
       hinge: false,
       at: [r6(seg.a[0] + u[0] * t), r6(seg.a[1] + u[1] * t)],
+      ...(others.size === 1 && other && joined(r.id, other) ? { pair: [r.id, other] } : {}),
     }
     r.doors = [...doorsOf(r), d]
     added.push(d)

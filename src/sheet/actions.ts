@@ -1149,7 +1149,17 @@ export function makeCorridor(sheet: Sheet, input: { pocket: number; storey: numb
 
 export function addDoor(
   sheet: Sheet,
-  input: { x: number; y: number; type: DoorType; width?: number; storey: number },
+  input: {
+    x: number
+    y: number
+    type: DoorType
+    width?: number
+    storey: number
+    /** The edge the door draws, as the person confirmed it when placing it. */
+    pair?: [string, string]
+    /** Whether two rooms share an edge, so an opened wall can record the one it draws. */
+    joined?: (a: string, b: string) => boolean
+  },
 ): Change {
   return edit(sheet, (next) => {
     const w = input.width ?? DOOR[input.type].w
@@ -1158,7 +1168,13 @@ export function addDoor(
     if (input.type === 'open') {
       if (hit.why && !hit.why.startsWith('That wall is too short'))
         return { ok: false, said: hit.why }
-      const out = openWallOf(hit, next, input.storey, () => freshId('d', doorIds(next)))
+      const out = openWallOf(
+        hit,
+        next,
+        input.storey,
+        () => freshId('d', doorIds(next)),
+        input.joined,
+      )
       if (out.why) return { ok: false, said: out.why }
       return { ok: true, said: `${hit.room.name}: wall opened`, at: where(hit.room) }
     }
@@ -1170,6 +1186,7 @@ export function addDoor(
       flip: input.type === 'street2', // a double street door swings out
       hinge: false,
       at: [r6(hit.pl.p[0]), r6(hit.pl.p[1])],
+      ...(input.pair ? { pair: input.pair } : {}),
     }
     hit.room.doors = [...doorsOf(hit.room), d]
     return {
@@ -1306,7 +1323,15 @@ export function reattachDoor(
 }
 
 /** The stretch two rooms share taken out, with no leaf and no jambs, never past a corner. */
-export function openWall(sheet: Sheet, input: { x: number; y: number; storey: number }): Change {
+export function openWall(
+  sheet: Sheet,
+  input: {
+    x: number
+    y: number
+    storey: number
+    joined?: (a: string, b: string) => boolean
+  },
+): Change {
   return addDoor(sheet, { ...input, type: 'open' })
 }
 

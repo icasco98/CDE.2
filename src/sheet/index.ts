@@ -184,6 +184,8 @@ export { initialsOf, labelPlan, obstaclesOf, spanThrough } from './labels'
 export type { BoundaryRead, Report } from './report'
 export { boundaryWalls, report, sideOver, sideUsed } from './report'
 
+export { meetingOf } from './meetings'
+
 export {
   DOOR,
   KINDS,

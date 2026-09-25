@@ -121,4 +121,22 @@ describe('where the sheet and the memory are kept', () => {
     keepSheet(sheet, null)
     expect(placed(localSheet()!)).toBe(0)
   })
+
+  it('opens a sheet saved before doors knew their edge, and keeps the pair of one that does', () => {
+    const sheet = sampleSheet()
+    const withDoors = sheet.rooms.filter((room) => room.doors?.length)
+    expect(withDoors.length).toBeGreaterThan(1)
+    const [old, paired] = withDoors
+    old!.doors = old!.doors!.map((door) => ({
+      ...door,
+      pair: 'garbled' as unknown as [string, string],
+    }))
+    paired!.doors = paired!.doors!.map((door) => ({ ...door, pair: ['r1', 'EXTERIOR'] }))
+    const back = sheetFrom(sheetKept(sheet))!
+    const doorsOf = (id: string) => back.rooms.find((room) => room.id === id)!.doors!
+    expect(doorsOf(old!.id).every((door) => door.pair === undefined)).toBe(true)
+    expect(doorsOf(paired!.id).every((door) => door.pair?.join() === 'r1,EXTERIOR')).toBe(true)
+    const untouched = sampleSheet().rooms.find((room) => room.doors?.length)!
+    expect(back.rooms.find((room) => room.id === untouched.id)).toBeDefined()
+  })
 })

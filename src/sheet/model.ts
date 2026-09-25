@@ -9,7 +9,11 @@ export type Category = 'reception' | 'shared' | 'private' | 'service' | 'circula
 
 export type DoorType = 'door' | 'double' | 'sliding' | 'opening' | 'open' | 'street' | 'street2'
 
-/** A door is the drawing of an edge on a wall of its room: `at` is a point in the room's frame. */
+/**
+ * A door is the drawing of an edge on a wall of its room: `at` is a point in the room's frame, and
+ * `pair` the two rooms of the edge it draws (a room id or `EXTERIOR`), recorded when it is placed
+ * and never read back off the wall; a door saved before doors knew their edge has none.
+ */
 export type Door = {
   id: string
   type: DoorType
@@ -17,6 +21,7 @@ export type Door = {
   at: Point
   flip: boolean
   hinge: boolean
+  pair?: [string, string]
 }
 
 /**

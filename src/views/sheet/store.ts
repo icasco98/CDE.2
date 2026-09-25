@@ -89,11 +89,26 @@ export function sheetFrom(value: unknown): Sheet | null {
   return sheet
 }
 
-/** A stored room read back: its own copy, with the fields an older store may not have carried. */
+const isPair = (value: unknown): value is [string, string] =>
+  Array.isArray(value) &&
+  value.length === 2 &&
+  value.every((end) => typeof end === 'string' && end.length > 0)
+
+/**
+ * A stored room read back: its own copy, with the fields an older store may not have carried. A
+ * door saved before doors knew their edge opens with none, and draws none until placed again.
+ */
 function asRoom(saved: Room): Room {
   const room = JSON.parse(JSON.stringify(saved)) as Room
   room.angle = Number(room.angle) || 0
   room.pieces = room.pieces ?? null
+  if (room.doors)
+    room.doors = room.doors.map((door) => {
+      if (door.pair === undefined || isPair(door.pair)) return door
+      const kept = { ...door }
+      delete kept.pair
+      return kept
+    })
   return room
 }
 

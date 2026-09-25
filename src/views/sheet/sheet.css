@@ -160,6 +160,7 @@ body:has(main.stage-sheet) {
 }
 
 .sheet-stage .body-row {
+  position: relative;
   display: grid;
   grid-template-columns: 210px minmax(320px, 1fr) 300px;
   gap: 14px;
@@ -1538,4 +1539,69 @@ body:has(main.stage-sheet) {
 .sheet-stage .door-lost.selected {
   stroke: var(--select);
   stroke-width: 0.1;
+}
+
+/* Check: an edge not yet ready or met, dashed from the room under the hand, bold from the one selected. */
+.sheet-stage .check-line {
+  stroke: var(--accent);
+  stroke-width: 0.06;
+  stroke-dasharray: 0.3 0.22;
+  stroke-opacity: 0.55;
+  pointer-events: none;
+}
+
+.sheet-stage .check-line.bold {
+  stroke-width: 0.13;
+  stroke-opacity: 0.95;
+}
+
+.sheet-stage .apart-door {
+  stroke: #c62828;
+  stroke-width: 0.12;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.sheet-stage .room.apart-through path.wall {
+  stroke: #c62828;
+  stroke-width: 0.16;
+}
+
+/* The lines to rooms still in the program run over the program and the sheet alike. */
+.sheet-stage .tray-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.sheet-stage .tray-lines line {
+  stroke: var(--accent);
+  stroke-width: 1.5px;
+  stroke-dasharray: 6 5;
+  stroke-opacity: 0.55;
+}
+
+.sheet-stage .door-offer {
+  position: absolute;
+  z-index: 6;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--ink);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+}
+
+.sheet-stage .door-offer p {
+  margin: 0 0 6px;
+}
+
+.sheet-stage .door-offer div {
+  display: flex;
+  gap: 6px;
 }

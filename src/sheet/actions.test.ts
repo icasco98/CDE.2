@@ -739,6 +739,37 @@ describe('doors', () => {
       'That wall meets no room. Only a wall shared with a neighbour can be opened.',
     )
   })
+
+  it('records the pair a door draws as it was given, and keeps it when the door slides', () => {
+    const placed = addDoor(walled(), {
+      x: 8,
+      y: 6,
+      type: 'door',
+      storey: 0,
+      pair: ['a', 'EXTERIOR'],
+    }).sheet
+    const door = doorsOf(roomOf(placed, 'a'))[0]!
+    expect(door.pair).toEqual(['a', 'EXTERIOR'])
+    const slid = slideDoor(placed, { room: 'a', door: door.id, step: 0.25 })
+    expect(doorsOf(roomOf(slid.sheet, 'a'))[0]!.pair).toEqual(['a', 'EXTERIOR'])
+    expect(
+      doorsOf(roomOf(addDoor(walled(), { x: 8, y: 6, type: 'door', storey: 0 }).sheet, 'a'))[0]!
+        .pair,
+    ).toBeUndefined()
+  })
+
+  it('records the pair of an opened wall only where the two rooms already share an edge', () => {
+    const sheet = quiet(
+      [room({ x: 6, y: 6, w: 4, h: 3 }), room({ id: 'b', name: 'B', x: 10, y: 6, w: 4, h: 3 })],
+      { grid: 0.25, snapDist: 0.4 },
+    )
+    const opened = (joined: boolean) => {
+      const out = openWall(sheet, { x: 10, y: 7.5, storey: 0, joined: () => joined }).sheet
+      return doorsOf(roomOf(out, 'a')).concat(doorsOf(roomOf(out, 'b')))[0]!
+    }
+    expect([...opened(true).pair!].sort()).toEqual(['a', 'b'])
+    expect(opened(false).pair).toBeUndefined()
+  })
 })
 
 describe('settings', () => {
