@@ -5,6 +5,7 @@ import { ApartPanel } from './ApartPanel'
 import { ChecksPanel } from './ChecksPanel'
 import { Diagram } from './Diagram'
 import { EdgePanel } from './EdgePanel'
+import { Matrix } from './Matrix'
 import { Legend } from './parts'
 import { STAIR_STAYS, type BubbleLink, type BubblesViewProps, type DragMakes } from './types'
 import './bubbles.css'
@@ -13,6 +14,7 @@ export function BubblesView(props: BubblesViewProps) {
   const { rooms, edges, apart, storeys, selected, hallwayWanted } = props
   const [focus, setFocus] = useState<number | null>(null)
   const [makes, setMakes] = useState<DragMakes>('connect')
+  const [matrix, setMatrix] = useState(false)
   const levels = Math.max(1, Math.trunc(storeys))
   const arrangement = useMemo(() => arrange(rooms, edges, levels), [rooms, edges, levels])
   const named = useMemo(() => new Map(rooms.map((room) => [room.id, room])), [rooms])
@@ -47,7 +49,7 @@ export function BubblesView(props: BubblesViewProps) {
       className="bubbles"
       tabIndex={-1}
       onKeyDown={(event) => {
-        if (event.key !== 'Delete' && event.key !== 'Backspace') return
+        if (matrix || (event.key !== 'Delete' && event.key !== 'Backspace')) return
         if (event.target instanceof HTMLInputElement) return
         if (!selectedRoom && !selectedEdge && !selectedPair) return
         event.preventDefault()
@@ -71,6 +73,9 @@ export function BubblesView(props: BubblesViewProps) {
             Keep apart
           </button>
         </span>
+        <button type="button" onClick={() => setMatrix(true)}>
+          Matrix
+        </button>
         <button
           type="button"
           className="bubbles-wide"
@@ -144,6 +149,15 @@ export function BubblesView(props: BubblesViewProps) {
           <Legend />
         </div>
       </div>
+      {matrix && (
+        <Matrix
+          rooms={rooms}
+          edges={edges}
+          apart={apart}
+          onSet={props.onSetPair}
+          onClose={() => setMatrix(false)}
+        />
+      )}
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import type { Check } from '../../graph/types'
 import type { Bubble, Commit, EdgeKind } from '../../model'
+import type { PairChoice } from './setPair'
 
 /** What a drag on a stair is answered with: its span is the program's to set, not the hand's. */
 export const STAIR_STAYS = 'A stair does not change floors on its own; set its span in the program.'
@@ -49,6 +50,8 @@ export type BubblesViewProps = {
   readonly onDisconnect: (edgeId: string) => void
   readonly onKeepApart: (a: string, b: string) => void
   readonly onAllowTogether: (id: string) => void
+  /** One cell of the matrix set, as one undo step. */
+  readonly onSetPair: (a: string, b: string, choice: PairChoice) => void
   readonly onSetEdgeKind: (edgeId: string, kind: EdgeKind) => void
   readonly onRemoveRoom: (id: string) => void
   readonly onAddHallway: (storey: number) => void

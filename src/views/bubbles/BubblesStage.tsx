@@ -8,6 +8,7 @@ import { graphChecks } from '../../graph/checks'
 import { EXTERIOR, type Bubble, type Commit, type EdgeKind, type Result } from '../../model'
 import { circulationPerStorey, connectionSource, roomTypeById } from '../../rulebook'
 import { addHallway } from './addHallway'
+import { setPair, type PairChoice } from './setPair'
 import { BubblesView } from './BubblesView'
 
 /** The bubbles view over the app's one store: every callback is a store action, refusals are said out loud. */
@@ -91,6 +92,17 @@ export function BubblesStage() {
     if (selection.get() === id) selection.select(null)
   }
 
+  const setOnePair = (a: string, b: string, choice: PairChoice): void => {
+    if (!report(setPair(session, a, b, choice))) return
+    const after = session.getState()
+    const both =
+      after.apart.some(
+        (pair) => (pair.a === a && pair.b === b) || (pair.a === b && pair.b === a),
+      ) &&
+      after.edges.some((edge) => (edge.a === a && edge.b === b) || (edge.a === b && edge.b === a))
+    if (both) session.say(`${nameOf(a)} and ${nameOf(b)} are kept apart and connected.`)
+  }
+
   /** A link taken out is a link this house does not want, so the rulebook is not to offer it again. */
   const disconnect = (edgeId: string): void => {
     const edge = project.edges.find((each) => each.id === edgeId)
@@ -121,6 +133,7 @@ export function BubblesStage() {
       onDisconnect={disconnect}
       onKeepApart={keepApart}
       onAllowTogether={allowTogether}
+      onSetPair={setOnePair}
       onSetEdgeKind={(edgeId: string, kind: EdgeKind) =>
         report(session.actions.setEdgeKind(edgeId, kind))
       }
