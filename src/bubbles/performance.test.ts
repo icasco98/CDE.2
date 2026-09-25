@@ -1,10 +1,12 @@
 import { expect, it } from 'vitest'
 import { EXTERIOR } from '../model'
 import { arrange, type ArrangeEdge, type ArrangeRoom } from './arrange'
+import { cloudsOf } from './clouds'
 
 /*
  * The budget: the diagram is arranged again on every edit and every frame of a nudge, rows ordered
- * to uncross included, so forty rooms over three storeys must arrange inside one 16 ms frame.
+ * to uncross included, so forty rooms over three storeys must arrange inside one 16 ms frame, and
+ * the zone clouds drawn round them, remade as often, inside 4 ms.
  */
 
 function milliseconds(work: () => void): number {
@@ -38,4 +40,13 @@ it('arranges forty rooms on three storeys in under 16 ms', () => {
   const took = milliseconds(() => arrange(rooms, edges, 3))
   console.info(`arrange, 40 rooms: ${took.toFixed(3)} ms`)
   expect(took).toBeLessThan(16)
+})
+
+it('draws the zone clouds round forty rooms in under 4 ms', () => {
+  const { spots } = arrange(rooms, edges, 3)
+  const categories = ['reception', 'shared', 'private', 'service', 'open']
+  const categoryOf = (id: string) => categories[Number(id.slice(4)) % categories.length]
+  const took = milliseconds(() => cloudsOf(spots, categoryOf))
+  console.info(`clouds, 40 rooms: ${took.toFixed(3)} ms`)
+  expect(took).toBeLessThan(4)
 })

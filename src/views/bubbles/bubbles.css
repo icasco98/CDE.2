@@ -333,6 +333,28 @@
   align-self: flex-start;
 }
 
+/* A category's zone: a wash of its colour behind its rooms, never in the hand's way. */
+.bubbles-sheet .clouds {
+  pointer-events: none;
+}
+
+.bubbles-sheet .cloud path {
+  fill-opacity: 0.28;
+  stroke: none;
+}
+
+.bubbles-sheet .cloud text {
+  text-anchor: middle;
+  font-size: 10px;
+  font-style: italic;
+  fill: #9a958c;
+}
+
+.bubbles-sheet .cloud-dimmed,
+.bubbles-sheet.bubbles-focusing .cloud {
+  opacity: 0.4;
+}
+
 /* A room in focus, under the hand or selected: its connections bold, everything else faint. */
 .bubbles-sheet .bubble,
 .bubbles-sheet .outside,
