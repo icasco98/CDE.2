@@ -2,7 +2,8 @@ import type { Point } from '../geometry'
 
 /* Every sheet is drawn in metres over an extent, so one camera serves the zoning plan and the
    massing alike: nothing here knows what is drawn, only how much of it is in view. The massing's
-   metres are the projected ones, which is all that differs between the two. */
+   metres are the projected ones, and the bubble diagram's are its own units, which is all that
+   differs between them. */
 
 /** A box on the sheet in metres: what a sheet draws, or the part of it a camera shows. */
 export type Extent = {

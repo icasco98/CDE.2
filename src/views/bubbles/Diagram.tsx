@@ -10,11 +10,10 @@ import type { Arrangement, Spot } from '../../bubbles/arrange'
 import { cloudsOf } from '../../bubbles/clouds'
 import { EXTERIOR, type Bubble as Nudge, type Commit } from '../../model'
 import { categoryLabels, storeyLabel } from '../../rulebook'
+import { pointerAt, viewBoxOf, type Camera } from '../camera'
+import { DRAG_PX, usePanZoom } from './panZoom'
 import { Apart, Bubble, Link, Outside } from './parts'
 import type { BubbleApart, BubbleLink, BubbleRoom, DragMakes } from './types'
-
-/** How far the hand may wander before a press on a bubble is a nudge rather than a click, in pixels. */
-const DRAG_PX = 3
 
 /** Said when a drag ends on a room of another storey; only a stair joins two storeys. */
 const ONE_STOREY =
@@ -51,13 +50,8 @@ type DiagramProps = {
   readonly onRefuse: (message: string) => void
   /** Screen pixels per unit of the diagram, told whenever the drawing's size on screen changes. */
   readonly onPixels: (pixels: number) => void
-}
-
-function pointerAt(svg: SVGSVGElement | null, clientX: number, clientY: number): Point {
-  const screen = svg?.getScreenCTM()
-  if (!screen) return { x: 0, y: 0 }
-  const at = new DOMPoint(clientX, clientY).matrixTransform(screen.inverse())
-  return { x: at.x, y: at.y }
+  readonly camera: Camera
+  readonly onCamera: (next: (was: Camera) => Camera) => void
 }
 
 /** The spot under the pointer, the outside included, on any column. */
@@ -72,6 +66,20 @@ export function Diagram(props: DiagramProps) {
   const gestureRef = useRef<Gesture | null>(null)
   const [gesture, setGesture] = useState<Gesture | null>(null)
   const [hovered, setHovered] = useState<string | null>(null)
+
+  const extent = useMemo(
+    () => ({ minX: 0, minY: 0, width: arrangement.width, height: arrangement.height }),
+    [arrangement.width, arrangement.height],
+  )
+  const panDown = usePanZoom(svgRef, extent, props.camera, props.onCamera, () =>
+    props.onSelect(null),
+  )
+
+  /** Where a pointer lands in the diagram's units, whatever the camera is doing. */
+  const unitsAt = (clientX: number, clientY: number): Point => {
+    const [x, y] = svgRef.current ? pointerAt(svgRef.current, clientX, clientY) : [0, 0]
+    return { x, y }
+  }
 
   const begin = (next: Gesture | null): void => {
     gestureRef.current = next
@@ -90,7 +98,7 @@ export function Diagram(props: DiagramProps) {
     begin({
       kind: 'nudge',
       id: spot.id,
-      from: pointerAt(svgRef.current, event.clientX, event.clientY),
+      from: unitsAt(event.clientX, event.clientY),
       start: room?.bubble ?? { x: 0, y: 0 },
       moved: false,
     })
@@ -99,13 +107,13 @@ export function Diagram(props: DiagramProps) {
   function reach(event: ReactPointerEvent, spot: Spot): void {
     if (event.button !== 0) return
     event.stopPropagation()
-    begin({ kind: 'link', from: spot, at: pointerAt(svgRef.current, event.clientX, event.clientY) })
+    begin({ kind: 'link', from: spot, at: unitsAt(event.clientX, event.clientY) })
   }
 
   function move(event: PointerEvent): void {
     const held = gestureRef.current
     if (!held) return
-    const at = pointerAt(svgRef.current, event.clientX, event.clientY)
+    const at = unitsAt(event.clientX, event.clientY)
     if (held.kind === 'link') {
       begin({ ...held, at })
       return
@@ -123,7 +131,7 @@ export function Diagram(props: DiagramProps) {
     const held = gestureRef.current
     if (!held) return
     begin(null)
-    const at = pointerAt(svgRef.current, event.clientX, event.clientY)
+    const at = unitsAt(event.clientX, event.clientY)
     if (held.kind === 'nudge') {
       if (held.moved)
         props.onNudge(
@@ -176,7 +184,7 @@ export function Diagram(props: DiagramProps) {
     const observer = new ResizeObserver(tell)
     observer.observe(svg)
     return () => observer.disconnect()
-  }, [onPixels, arrangement.width, arrangement.height])
+  }, [onPixels, arrangement.width, arrangement.height, props.camera])
 
   /** A room drawn in two columns is one room, so its two circles are tied by a line of their own. */
   const through = useMemo(() => {
@@ -239,12 +247,12 @@ export function Diagram(props: DiagramProps) {
           : []),
         ...(near ? ['bubbles-focusing'] : []),
       ].join(' ')}
-      viewBox={`0 0 ${arrangement.width} ${arrangement.height}`}
+      viewBox={viewBoxOf(extent, props.camera)}
       preserveAspectRatio="xMidYMin meet"
       tabIndex={0}
       role="application"
       aria-label="Bubble diagram"
-      onPointerDown={() => props.onSelect(null)}
+      onPointerDown={panDown}
     >
       {arrangement.columns.map((column) => (
         <g

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { arrange } from '../../bubbles/arrange'
 import { storeyLabel } from '../../rulebook'
+import { fitCamera, type Camera } from '../camera'
 import { ApartPanel } from './ApartPanel'
 import { ChecksPanel } from './ChecksPanel'
 import { Diagram } from './Diagram'
@@ -15,6 +16,7 @@ export function BubblesView(props: BubblesViewProps) {
   const [focus, setFocus] = useState<number | null>(null)
   const [makes, setMakes] = useState<DragMakes>('connect')
   const [matrix, setMatrix] = useState(false)
+  const [camera, setCamera] = useState<Camera>(fitCamera)
   const levels = Math.max(1, Math.trunc(storeys))
   const arrangement = useMemo(() => arrange(rooms, edges, levels), [rooms, edges, levels])
   const [pixels, setPixels] = useState(1)
@@ -77,6 +79,9 @@ export function BubblesView(props: BubblesViewProps) {
         <button type="button" onClick={() => setMatrix(true)}>
           Matrix
         </button>
+        <button type="button" title="Show the whole diagram" onClick={() => setCamera(fitCamera)}>
+          Fit
+        </button>
         <button
           type="button"
           className="bubbles-wide"
@@ -99,7 +104,7 @@ export function BubblesView(props: BubblesViewProps) {
           ? 'Drag the small ring on a room to another room, on any storey, to keep the two apart; click the red line to let them together.'
           : 'Drag the small ring on a room to another room, or to Outside, to connect them; click a connection to change its kind or delete it.'}{' '}
         Drag a room to nudge it; the nudge is for reading and means nothing for the plan. Click a
-        storey&rsquo;s name to bring it forward.
+        storey&rsquo;s name to bring it forward. Wheel to zoom, drag the background to pan.
       </p>
       {hallwayWanted.map((entry) => (
         <p className="bubbles-nudge" key={entry.storey}>
@@ -130,6 +135,8 @@ export function BubblesView(props: BubblesViewProps) {
           onSelect={props.onSelect}
           onRefuse={props.onRefuse}
           onPixels={setPixels}
+          camera={camera}
+          onCamera={setCamera}
         />
         <div className="bubbles-side">
           {selectedEdge && (

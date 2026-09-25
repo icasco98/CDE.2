@@ -129,6 +129,15 @@
   user-select: none;
 }
 
+/* The background is what a drag pans; bubbles, rings and lines keep cursors of their own. */
+.bubbles-sheet {
+  cursor: grab;
+}
+
+.bubbles-sheet:active {
+  cursor: grabbing;
+}
+
 .bubbles-sheet:focus {
   outline: none;
 }
