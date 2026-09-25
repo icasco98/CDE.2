@@ -375,3 +375,63 @@ A reversal is a new entry, never an edit.
     the diagram zooms and pans with the sheet's camera. Amends 23 and
     24: the size is no longer only a hint, and the order in a row is no
     longer the program's.
+
+32. **One list of rooms.** The architect's ruling: the program is the
+    only source of rooms, and the program, the bubbles and the zoning
+    sheet always show the same ones. A room deleted anywhere leaves the
+    sheet, set aside for the page's lifetime so the project's undo puts
+    it back where it stood; a room the sheet makes (a court or corridor
+    from a pocket, a copy, a piece a cut splits off) joins the program as
+    the step that made it. The built-in sample house, its fallback on an
+    empty project and "Back to the sample" go, since a hand-built house
+    is what CLAUDE.md forbids and its own stair appeared on the sheet
+    with no bubble; an empty program is an empty sheet. "This is it"
+    keeps the settings as the spec only. The plan stays as test data.
+    Reverses the keeping aside of 29's reconciliation and the "opens on
+    the sample plan" of stage 3.
+
+33. **Every door to the outside is an entrance.** Reachability starts
+    from every edge to `EXTERIOR`, so a diwaniya or a garage with its own
+    street door is reached through it; a house with no main door is still
+    told so. A project of two storeys or more with no stair in the
+    program is told "No stair connects the storeys", beside the bubbles
+    and under the sheet. Amends 27.
+
+34. **A deleted suggestion is kept in the project.** A connection the
+    rulebook suggested and the person took out is stored as declined,
+    under undo, in the file (document version 10), and the defaults skip
+    it after a reload as before it. "Restore suggested connections" in
+    the bubbles forgets all of them, a right-click on a room forgets that
+    room's, and each makes its suggestions again. Replaces the page
+    memory of 23's "not offered again".
+
+35. **The weights and the site answers go.** Nothing read them while no
+    solver runs, and an inert field is dead code. Version 10 drops them
+    from saved projects; the plot stays. Reverses 30's keeping of the
+    weights; a solver that needs them brings them back with a reader.
+
+36. **A door is the drawing of its edge.** A door names its edge and the
+    edge's far end, and is held by the room at the other end. Between
+    two rooms it stands on the longest run of wall they share, a
+    fraction of the way along it counted from the run's western, then
+    northern, end; to the outside, on the outside wall of its room it
+    was placed on. Where the rooms share no wall it fits, or the wall no
+    longer faces outside, it is simply not drawn and Check says its edge
+    is not met; moved back, it is drawn where it was. There is no lost
+    state and nothing to reattach. One door per edge; deleting the edge
+    takes the door, deleting the door keeps the edge. Placing is as
+    before: the wall clicked and the room across name the pair, and a
+    pair with no edge asks for one. Sheets saved before are migrated by
+    matching each door's recorded pair to an edge, the rest dropped.
+    Replaces 29's door on a point of its room's wall.
+
+37. **Rebuilding the program proposes storeys.** The one-storey program,
+    hallway included, is read against the buildable ground: when it fits
+    it stays on one storey; when it does not, a First is proposed, the
+    upper kinds go up with their suites, a stair spans the storeys, and
+    while the ground is still over a private room the table lets stand
+    on either floor (family living first) follows. Each step is a
+    sentence under the button; every room's storey stays the person's.
+    No margin for walls is added to the fit, so the starting household
+    on the starting plot stays on one storey (313.8 of 365.5 m²); the
+    rule is provisional and written into rulebook/room-types.md.
