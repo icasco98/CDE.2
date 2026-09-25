@@ -277,3 +277,84 @@ A reversal is a new entry, never an edit.
     holds them; the feasible suite carries that one open link and no
     other. Z7 built it, by the cofounder; the springs of 18 and the
     walk of 21 are gone.
+
+23. **The bubble diagram is the connection graph, and nothing else.**
+    The owner's ruling: circles settled on the plot gave nothing that
+    carried into zoning, and what lasts from the stage is the edges,
+    which is where every layout method starts. So the bubbles have no
+    plot, no setbacks, no physics and no scale; a circle's size may
+    hint at its area. The default connections arrive as edges from
+    the program as before, each saying its source (the rulebook row,
+    or by hand). A drag from one room to another connects them, a
+    click on an edge changes its kind or disconnects it, and a pair
+    disconnected is not offered again in the project. Reverses 17,
+    18 and 22, the kerb walls and the canonical start of 20, and the
+    settle's part in 21; the settle, its forces and the weights panel
+    go from the bubble tab. Amends 7: storeys are assigned in the
+    program and shown as columns.
+
+24. **The arrangement is computed, not settled.** One column per
+    storey, every storey side by side; inside a column one row per
+    tier of the room-type table, public at the bottom, semi-public in
+    the middle, private at the top, an exempt room in the row of the
+    first room it is joined to. The same program always draws the
+    same diagram. A nudge by the hand is kept on the room so the
+    diagram stays readable; it is an offset from the computed place
+    and means nothing for the plan. Clicking a storey's name brings it
+    forward; the others fade and stay visible.
+
+25. **A stair is one room in every column it spans.** A stair or lift
+    is drawn in each storey it reaches, and it is the only way an edge
+    crosses from one storey to another. On the zoning sheet a stair
+    placed stands on every storey (the sheet's `stairAcross`, on by
+    default), so moving it on one storey moves it on all.
+
+26. **Keep apart is the opposite of a connection.** A pair of rooms
+    the program wants apart: no edge between them, and neither reached
+    only through the other (on the edge graph, `b` is not on every
+    route from the front door to `a`, nor `a` to `b`). They may share
+    a wall or stand far apart; geometry is not read. It is stored as
+    its own list on the project, not as an edge, under undo, in the
+    file, and a room deleted takes its pairs with it. It is set in the
+    diagram like a connection and drawn as a line unlike any edge. It
+    only warns: a keep-apart pair may still be connected, and nothing
+    is refused or moved for it. The diwaniya and the family living,
+    the diwaniya and the women's reception, the maid's room and the
+    master bedroom, the garage and the bedrooms are the cases.
+
+27. **The graph is checked beside the diagram, on every edit.** Rooms
+    not reached from the front door; a private room joined straight
+    to the outside or to a public room (a tier skip); a storey whose
+    edges cannot be drawn without crossing (the planarity test the
+    brief already used); keep-apart pairs broken, either way. Each
+    check names its rule and its source and ships with a reference
+    case. They warn; they never change the graph.
+
+28. **The matrix is a second window on the same graph.** An optional
+    window lists every pair of rooms once, a half grid, each cell
+    connected (door or open), keep apart, or nothing, and a click on a
+    cell changes it through the same actions and the same undo as the
+    diagram, which stays the main view.
+
+29. **The zoning sheet shows the edges when asked, and a door knows
+    its edge.** Check, off by default, draws each edge as a dashed
+    line from a room hovered or selected, including to a room still
+    in the program. An edge is ready in the zoning step when its two
+    rooms share a run of wall a door wide, corners not counting, and
+    met in the Openings step only when a door drawing it is placed.
+    A door records its two rooms when it is placed: reading the pair
+    off whichever room lies across the wall would be an edge inferred
+    from geometry, which decision 2 forbids. A door placed between
+    two rooms with no edge asks to add the connection; yes is one
+    undo step for the edge and the door, no places nothing. Doors
+    saved before this carry no pair and count for nothing until
+    placed again. Keep-apart pairs broken are marked on the sheet
+    while Check is on. Replaces the proposal of an edge on touch in 2
+    and in MODEL.md: the door's question is the only way zoning adds
+    an edge.
+
+30. **A solver is an option that proposes.** When one comes it is a
+    feature a person turns to, and what it gives is a proposal for
+    the zoning; it never overrides a zoning made by hand. Until then
+    the weights stay on the project, in undo and in the file, and are
+    not on screen, since nothing reads them.
