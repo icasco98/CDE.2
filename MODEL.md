@@ -71,15 +71,22 @@ overrides one made by hand.
 1. **Requirements.** Rooms with target areas, the household, the plot
    with north and street sides, budget, weights.
 2. **Bubbles.** The connection graph, built and checked. No plot, no
-   setbacks, no physics, no scale; a circle's size may hint at its
-   area and nothing more. The diagram is filled from the program: the
+   setbacks, no physics and no distance: a circle's area is in
+   proportion to the room's target area, the largest room setting the
+   scale and a key in the legend saying it, and where a circle stands
+   means nothing. The diagram is filled from the program: the
    rulebook's default connections are edges already, each saying its
    source (the rulebook row, or added by hand). The arrangement is
    automatic and the same twice: one column per storey, every storey
    side by side, and inside a column the rooms in rows by the tier of
    the room-type table, public at the bottom, semi-public in the
    middle, private at the top; an exempt room stands in the row of the
-   first room it is connected to. A nudge by the hand is kept for
+   first room it is connected to. Inside a row the rooms stand in the
+   order that keeps connected rooms near each other, read off a fixed
+   number of sweeps of the barycentre rule, ties by program order, so
+   fewer lines cross and the diagram is still the same twice. Each
+   category's rooms on a storey sit in a soft cloud of its colour. A
+   nudge by the hand is kept for
    readability and means nothing for the plan. Clicking a storey's
    name brings it forward and fades the others, which stay visible. A
    room spanning storeys (a stair, a lift) stands in every column it

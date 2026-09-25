@@ -358,3 +358,20 @@ A reversal is a new entry, never an edit.
     the zoning; it never overrides a zoning made by hand. Until then
     the weights stay on the project, in undo and in the file, and are
     not on screen, since nothing reads them.
+
+31. **A bubble's area is its room's, and the rows are ordered to
+    uncross.** The owner's ruling on the connection diagram: a 60 m²
+    diwaniya drawn as large as a 3 m² WC hid the program's weight. A
+    circle's area is now in proportion to the target area, the largest
+    room setting the scale so it fits its cell, a room too small to
+    click held to a minimum radius, each row as deep as its largest
+    circle, and a key in the legend at the same scale. Inside a row the
+    rooms are ordered by a fixed number of sweeps of the barycentre
+    rule (each room at the mean place of its neighbours), ties broken
+    by program order and the order with the fewest crossings kept, so
+    connected rooms stand near each other and the same program still
+    draws the same diagram. Each category's rooms on a storey sit in a
+    soft cloud of its colour, like a hand-drawn bubble diagram, and
+    the diagram zooms and pans with the sheet's camera. Amends 23 and
+    24: the size is no longer only a hint, and the order in a row is no
+    longer the program's.
