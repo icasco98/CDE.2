@@ -26,6 +26,13 @@ describe('a bubble drawn at an area in proportion to its room', () => {
     expect(key.r).toBeCloseTo(30.022, 3)
   })
 
+  it('takes a smaller round area when the key would be drawn larger than the legend holds', () => {
+    // 20 m² has a radius of 30.02; held to 22 the key falls to 10 m², 52 × √(10/60) = 21.2, and
+    // held to 20 to 5 m², 15.01.
+    expect(keyFor(scale, 20).area).toBe(5)
+    expect(keyFor(scale, 22).area).toBe(10)
+  })
+
   it('scales to the largest room whatever it is, so the largest circle always fits its cell', () => {
     expect(radiusFor(300, scaleFor([300, 12]))).toBeCloseTo(52, 12)
     expect(keyFor(scaleFor([300, 12])).area).toBe(100)

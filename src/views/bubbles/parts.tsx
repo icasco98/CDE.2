@@ -1,5 +1,6 @@
 import { memo, type PointerEvent as ReactPointerEvent } from 'react'
 import type { Spot } from '../../bubbles/arrange'
+import { keyFor } from '../../bubbles/sizes'
 import { categoryLabels } from '../../rulebook'
 
 /** The fill is bubbles.css's to choose, so a bubble and the legend that names it take one class. */
@@ -29,6 +30,9 @@ type BubbleProps = {
   readonly span?: string
   readonly selected: boolean
   readonly dimmed: boolean
+  /** The room in focus or one it is connected to or kept apart from; the rest fade while one is. */
+  readonly near: boolean
+  readonly onHover: (id: string | null) => void
   readonly onGrab: (event: ReactPointerEvent, spot: Spot) => void
   readonly onReach: (event: ReactPointerEvent, spot: Spot) => void
 }
@@ -38,6 +42,7 @@ export const Bubble = memo(function Bubble(props: BubbleProps) {
   const classes = ['bubble']
   if (props.selected) classes.push('bubble-selected')
   if (props.dimmed) classes.push('bubble-dimmed')
+  if (props.near) classes.push('bubble-near')
   const lines = linesOf(name)
   // A circle too small for its area's label wears it under its name instead.
   const areaInside = spot.r >= AREA_FITS
@@ -51,6 +56,8 @@ export const Bubble = memo(function Bubble(props: BubbleProps) {
       data-x={spot.x}
       data-y={spot.y}
       className={classes.join(' ')}
+      onPointerEnter={() => props.onHover(spot.id)}
+      onPointerLeave={() => props.onHover(null)}
     >
       <circle
         cx={spot.x}
@@ -111,6 +118,8 @@ type LinkProps = {
   readonly storey: number
   readonly selected: boolean
   readonly dimmed: boolean
+  /** Joined to the room in focus: drawn bold while the rest fade. */
+  readonly near: boolean
   readonly title: string
   readonly onSelect: (event: ReactPointerEvent, id: string) => void
 }
@@ -127,6 +136,7 @@ export const Link = memo(function Link(props: LinkProps) {
   const stroke = props.selected ? 'link link-selected' : 'link'
   const classes = ['link-group', `link-${props.kind}`]
   if (props.dimmed) classes.push('link-dimmed')
+  if (props.near) classes.push('link-near')
   return (
     <g
       data-edge={props.id}
@@ -155,6 +165,7 @@ type ApartProps = {
   readonly to: Spot
   readonly selected: boolean
   readonly dimmed: boolean
+  readonly near: boolean
   readonly title: string
   readonly onSelect: (event: ReactPointerEvent, id: string) => void
 }
@@ -171,6 +182,7 @@ export const Apart = memo(function Apart(props: ApartProps) {
   const classes = ['apart-group']
   if (props.selected) classes.push('apart-selected')
   if (props.dimmed) classes.push('link-dimmed')
+  if (props.near) classes.push('link-near')
   return (
     <g data-apart={props.id} className={classes.join(' ')}>
       <title>{props.title}</title>
@@ -186,14 +198,17 @@ export const Apart = memo(function Apart(props: ApartProps) {
 })
 
 /** The street under a column: where a door to the outside is drawn to and dragged to. */
-export function Outside(props: { readonly spot: Spot; readonly dimmed: boolean }) {
+export function Outside(props: {
+  readonly spot: Spot
+  readonly dimmed: boolean
+  readonly near: boolean
+}) {
   const { spot } = props
+  const classes = ['outside']
+  if (props.dimmed) classes.push('bubble-dimmed')
+  if (props.near) classes.push('bubble-near')
   return (
-    <g
-      data-room="EXTERIOR"
-      data-storey={spot.storey}
-      className={props.dimmed ? 'outside bubble-dimmed' : 'outside'}
-    >
+    <g data-room="EXTERIOR" data-storey={spot.storey} className={classes.join(' ')}>
       <rect x={spot.x - 44} y={spot.y - spot.r} width={88} height={spot.r * 2} rx={6} />
       <text x={spot.x} y={spot.y}>
         Outside
@@ -236,23 +251,25 @@ const legendRows = [
   },
 ]
 
+/** The legend key's box, in pixels on screen. */
+const KEY_BOX = 64
+
 /**
  * Beside the diagram, never over it: a legend that covers a bubble is a legend in the way. The key
  * is a circle at the diagram's own scale on screen, so it reads against the bubbles as drawn.
  */
-export function Legend(props: {
-  readonly scaleKey: { readonly area: number; readonly r: number }
-  readonly pixels: number
-}) {
-  const r = Math.max(1, props.scaleKey.r * props.pixels)
+export function Legend(props: { readonly scale: number; readonly pixels: number }) {
+  const key = keyFor(props.scale, KEY_BOX / 2 / props.pixels)
+  const r = Math.max(1, key.r * props.pixels)
   return (
     <section className="bubbles-panel legend">
       <h2>Legend</h2>
-      <p className="legend-key" data-key-area={props.scaleKey.area}>
-        <svg width={2 * r + 2} height={2 * r + 2} aria-hidden="true">
-          <circle cx={r + 1} cy={r + 1} r={r} className="legend-scale" />
+      <p className="legend-key" data-key-area={key.area}>
+        {/* A box of its own size whatever the key's, so the key never moves the diagram. */}
+        <svg width={KEY_BOX + 2} height={KEY_BOX + 2} aria-hidden="true">
+          <circle cx={KEY_BOX / 2 + 1} cy={KEY_BOX / 2 + 1} r={r} className="legend-scale" />
         </svg>
-        <span>= {props.scaleKey.area} m²</span>
+        <span>= {key.area} m²</span>
       </p>
       <ul>
         {legendRows.map((row) => (

@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import {
   centreOf,
   drag,
+  edgeBetween,
   linkedPairs,
   openVilla,
   roomNamed,
@@ -62,13 +63,17 @@ test('a nudge moves one bubble, is kept after a reload, and moves nothing else',
   await openVilla(page)
   const kitchen = await centreOf(page, 'Kitchen')
   const dining = await centreOf(page, 'Dining Room')
+  const across = async () => Number(await roomNamed(page, 'Kitchen').getAttribute('data-x'))
+  const from = await across()
   await drag(page, kitchen, { x: kitchen.x + 40, y: kitchen.y - 20 })
   const moved = await centreOf(page, 'Kitchen')
   expect(moved.x - kitchen.x).toBeCloseTo(40, -1)
   expect(await centreOf(page, 'Dining Room')).toEqual(dining)
+  // The rebuild's own autosave may land mid-drag, so wait for the save of the nudge as dropped.
+  const nudge = (await across()) - from
   await expect
-    .poll(async () => (await saved(page)).rooms.find((room) => room.name === 'Kitchen')?.bubble)
-    .toBeDefined()
+    .poll(async () => (await saved(page)).rooms.find((room) => room.name === 'Kitchen')?.bubble?.x)
+    .toBeCloseTo(nudge, 6)
   await page.reload()
   await page.locator('nav.tabs').getByRole('button', { name: 'Bubbles', exact: true }).click()
   const after = await centreOf(page, 'Kitchen')
@@ -93,6 +98,45 @@ test("a circle's area follows its room's, and the legend's key is drawn at the s
   await expect(key).toContainText(`= ${area} m²`)
   const drawn = (await key.locator('circle').boundingBox())!.width / 2
   expect(drawn / diwaniya).toBeCloseTo(Math.sqrt(area / areaOf('Diwaniya')), 1)
+})
+
+test('hovering a room makes its connections bold and fades the rest; selecting it keeps that', async ({
+  page,
+}) => {
+  await openVilla(page)
+  const sheet = page.locator('svg.bubbles-sheet')
+  const opacity = (selector: string) =>
+    page
+      .locator(selector)
+      .first()
+      .evaluate((node) => Number(getComputedStyle(node).opacity))
+  await expect.poll(async () => (await saved(page)).edges.length).toBeGreaterThan(5)
+  const pair = await edgeBetween(page, 'Kitchen', 'Dining Room')
+  const project = await saved(page)
+  const kitchen = project.rooms.find((room) => room.name === 'Kitchen')!.id
+  const elsewhere = project.edges.find((edge) => edge.a !== kitchen && edge.b !== kitchen)!
+
+  const at = await centreOf(page, 'Kitchen')
+  await page.mouse.move(at.x, at.y)
+  await expect(sheet).toHaveClass(/bubbles-focusing/)
+  await expect(page.locator(`[data-edge="${pair!.id}"]`)).toHaveClass(/link-near/)
+  await expect(roomNamed(page, 'Dining Room')).toHaveClass(/bubble-near/)
+  await expect.poll(() => opacity(`[data-edge="${elsewhere.id}"]`)).toBeLessThan(0.3)
+  await expect.poll(() => opacity(`[data-edge="${pair!.id}"]`)).toBe(1)
+  const bold = await page
+    .locator(`[data-edge="${pair!.id}"] .link`)
+    .first()
+    .evaluate((line) => parseFloat(getComputedStyle(line).strokeWidth))
+  expect(bold).toBeGreaterThan(3)
+
+  await page.mouse.move(5, 5)
+  await expect(sheet).not.toHaveClass(/bubbles-focusing/)
+  await expect.poll(() => opacity(`[data-edge="${elsewhere.id}"]`)).toBe(1)
+
+  await selectRoom(page, 'Kitchen')
+  await page.mouse.move(5, 5)
+  await expect(sheet).toHaveClass(/bubbles-focusing/)
+  await expect(page.locator(`[data-edge="${pair!.id}"]`)).toHaveClass(/link-near/)
 })
 
 test("clicking a storey's name brings it forward and fades the others", async ({ page }) => {

@@ -22,10 +22,19 @@ export function radiusFor(targetArea: number, scale: number): number {
   return Math.max(SMALLEST_RADIUS, scale * Math.sqrt(Math.max(0, targetArea)))
 }
 
-/** The legend's reference circle: the largest round area no bigger than half the largest room. */
-export function keyFor(scale: number): { readonly area: number; readonly r: number } {
+/**
+ * The legend's reference circle: the largest round area no bigger than half the largest room whose
+ * radius stays within `limit`, so a key drawn zoomed in still fits the legend.
+ */
+export function keyFor(
+  scale: number,
+  limit = Infinity,
+): { readonly area: number; readonly r: number } {
   if (scale <= 0) return { area: KEY_AREAS[0], r: SMALLEST_RADIUS }
   const largest = (LARGEST_RADIUS / scale) ** 2
-  const area = [...KEY_AREAS].reverse().find((each) => each <= largest / 2) ?? KEY_AREAS[0]
+  const area =
+    [...KEY_AREAS]
+      .reverse()
+      .find((each) => each <= largest / 2 && scale * Math.sqrt(each) <= limit) ?? KEY_AREAS[0]
   return { area, r: scale * Math.sqrt(area) }
 }

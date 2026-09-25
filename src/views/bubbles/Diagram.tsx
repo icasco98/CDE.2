@@ -70,6 +70,7 @@ export function Diagram(props: DiagramProps) {
   const svgRef = useRef<SVGSVGElement>(null)
   const gestureRef = useRef<Gesture | null>(null)
   const [gesture, setGesture] = useState<Gesture | null>(null)
+  const [hovered, setHovered] = useState<string | null>(null)
 
   const begin = (next: Gesture | null): void => {
     gestureRef.current = next
@@ -200,6 +201,22 @@ export function Diagram(props: DiagramProps) {
     return ones[0] && others[0] ? [ones[0], others[0]] : null
   }
 
+  /** The room whose connections stand out and the rest fade: the one drawn from, under the hand, or selected. */
+  const focused =
+    gesture?.kind === 'link'
+      ? gesture.from.id
+      : (hovered ?? (selected !== null && rooms.has(selected) ? selected : null))
+  const near = useMemo(() => {
+    if (focused === null) return null
+    const ids = new Set([focused])
+    for (const edge of edges)
+      if (edge.a === focused || edge.b === focused) ids.add(edge.a === focused ? edge.b : edge.a)
+    for (const pair of props.apart)
+      if (pair.a === focused || pair.b === focused) ids.add(pair.a === focused ? pair.b : pair.a)
+    return ids
+  }, [focused, edges, props.apart])
+  const touches = (a: string, b: string): boolean => a === focused || b === focused
+
   const dimmed = (storey: number): boolean => focus !== null && storey !== focus
   const choose = (event: ReactPointerEvent, id: string): void => {
     event.stopPropagation()
@@ -209,11 +226,13 @@ export function Diagram(props: DiagramProps) {
   return (
     <svg
       ref={svgRef}
-      className={
-        gesture?.kind === 'link'
-          ? `bubbles-sheet bubbles-linking${props.makes === 'apart' ? ' bubbles-parting' : ''}`
-          : 'bubbles-sheet'
-      }
+      className={[
+        'bubbles-sheet',
+        ...(gesture?.kind === 'link'
+          ? ['bubbles-linking', ...(props.makes === 'apart' ? ['bubbles-parting'] : [])]
+          : []),
+        ...(near ? ['bubbles-focusing'] : []),
+      ].join(' ')}
       viewBox={`0 0 ${arrangement.width} ${arrangement.height}`}
       preserveAspectRatio="xMidYMin meet"
       tabIndex={0}
@@ -276,6 +295,7 @@ export function Diagram(props: DiagramProps) {
             storey={edge.storey}
             selected={edge.id === selected}
             dimmed={dimmed(edge.storey)}
+            near={touches(edge.a, edge.b)}
             title={props.titleOf(edge)}
             onSelect={choose}
           />
@@ -292,6 +312,7 @@ export function Diagram(props: DiagramProps) {
             to={both[1]}
             selected={pair.id === selected}
             dimmed={dimmed(both[0].storey) && dimmed(both[1].storey)}
+            near={touches(pair.a, pair.b)}
             title={`Keep apart: ${rooms.get(pair.a)?.name ?? ''} and ${rooms.get(pair.b)?.name ?? ''}`}
             onSelect={choose}
           />
@@ -305,13 +326,18 @@ export function Diagram(props: DiagramProps) {
           y1={from.y}
           x2={to.x - to.r}
           y2={to.y}
-          className="through"
+          className={from.id === focused ? 'through through-near' : 'through'}
         >
           <title>{`${rooms.get(from.id)?.name ?? ''}: one room on both storeys`}</title>
         </line>
       ))}
       {arrangement.outside.map((spot) => (
-        <Outside key={spot.storey} spot={spot} dimmed={dimmed(spot.storey)} />
+        <Outside
+          key={spot.storey}
+          spot={spot}
+          dimmed={dimmed(spot.storey)}
+          near={near?.has(EXTERIOR) ?? false}
+        />
       ))}
       {arrangement.spots.map((spot) => {
         const room = rooms.get(spot.id)
@@ -329,6 +355,8 @@ export function Diagram(props: DiagramProps) {
               : {})}
             selected={spot.id === selected}
             dimmed={dimmed(spot.storey)}
+            near={near?.has(spot.id) ?? false}
+            onHover={setHovered}
             onGrab={grab}
             onReach={reach}
           />

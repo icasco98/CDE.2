@@ -333,6 +333,32 @@
   align-self: flex-start;
 }
 
+/* A room in focus, under the hand or selected: its connections bold, everything else faint. */
+.bubbles-sheet .bubble,
+.bubbles-sheet .outside,
+.bubbles-sheet .link-group,
+.bubbles-sheet .apart-group,
+.bubbles-sheet .through {
+  transition: opacity 120ms;
+}
+
+.bubbles-sheet.bubbles-focusing .bubble:not(.bubble-near),
+.bubbles-sheet.bubbles-focusing .outside:not(.bubble-near),
+.bubbles-sheet.bubbles-focusing .link-group:not(.link-near),
+.bubbles-sheet.bubbles-focusing .apart-group:not(.link-near),
+.bubbles-sheet.bubbles-focusing .through:not(.through-near) {
+  opacity: 0.18;
+}
+
+.bubbles-sheet.bubbles-focusing .link-near .link:not(.link-selected) {
+  stroke: #2b2822;
+  stroke-width: 3.5px;
+}
+
+.bubbles-sheet.bubbles-focusing .link-near .apart {
+  stroke-width: 3.5px;
+}
+
 /* A stair's circles on two storeys are one room; the tie between them is not an edge. */
 .bubbles-sheet .through {
   stroke: #9a958c;
