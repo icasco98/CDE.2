@@ -72,6 +72,32 @@ describe('rooms', () => {
   })
 })
 
+describe('keep apart', () => {
+  it('keeps two rooms apart and lets them together again, each one step to undo', () => {
+    const diwaniya = addRoom('diwaniya')
+    const family = addRoom('family-living')
+    const pair = id(store.actions.keepApart({ a: diwaniya, b: family }))
+    expect(store.getState().apart).toEqual([{ id: pair, a: diwaniya, b: family }])
+    expect(codes(store.actions.keepApart({ a: family, b: diwaniya }))).toEqual(['apart-duplicate'])
+    // Connecting a pair kept apart is a warning for the checks, never a refusal.
+    expect(store.actions.connect({ a: diwaniya, b: family, kind: 'door' }).ok).toBe(true)
+    store.undo()
+    expect(store.actions.allowTogether(pair).ok).toBe(true)
+    expect(store.getState().apart).toEqual([])
+    store.undo()
+    expect(store.getState().apart).toHaveLength(1)
+    expect(codes(store.actions.allowTogether('apart_none'))).toEqual(['no-such-pair'])
+  })
+
+  it('goes with either of its rooms', () => {
+    const maid = addRoom('maid-room')
+    const master = addRoom('master-bedroom')
+    store.actions.keepApart({ a: maid, b: master })
+    store.actions.removeRoom(master)
+    expect(store.getState().apart).toEqual([])
+  })
+})
+
 describe('connect', () => {
   it('refuses a second edge between the same pair on one storey', () => {
     const a = addRoom('bedroom')

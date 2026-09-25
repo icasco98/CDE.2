@@ -1,20 +1,23 @@
 import { useMemo, useState } from 'react'
 import { arrange } from '../../bubbles/arrange'
 import { storeyLabel } from '../../rulebook'
+import { ApartPanel } from './ApartPanel'
 import { Diagram } from './Diagram'
 import { EdgePanel } from './EdgePanel'
 import { Legend } from './parts'
-import { STAIR_STAYS, type BubbleLink, type BubblesViewProps } from './types'
+import { STAIR_STAYS, type BubbleLink, type BubblesViewProps, type DragMakes } from './types'
 import './bubbles.css'
 
 export function BubblesView(props: BubblesViewProps) {
-  const { rooms, edges, storeys, selected, hallwayWanted } = props
+  const { rooms, edges, apart, storeys, selected, hallwayWanted } = props
   const [focus, setFocus] = useState<number | null>(null)
+  const [makes, setMakes] = useState<DragMakes>('connect')
   const levels = Math.max(1, Math.trunc(storeys))
   const arrangement = useMemo(() => arrange(rooms, edges, levels), [rooms, edges, levels])
   const named = useMemo(() => new Map(rooms.map((room) => [room.id, room])), [rooms])
   const selectedRoom = named.get(selected ?? '')
   const selectedEdge = edges.find((edge) => edge.id === selected)
+  const selectedPair = apart.find((pair) => pair.id === selected)
 
   /** The next floor up, and the ground again from the top: one button walks a room through the storeys. */
   const nextStorey = selectedRoom ? (selectedRoom.storey + 1) % levels : 0
@@ -30,6 +33,7 @@ export function BubblesView(props: BubblesViewProps) {
 
   function removeSelected(): void {
     if (selectedEdge) props.onDisconnect(selectedEdge.id)
+    else if (selectedPair) props.onAllowTogether(selectedPair.id)
     else if (selectedRoom) props.onRemoveRoom(selectedRoom.id)
   }
 
@@ -44,7 +48,7 @@ export function BubblesView(props: BubblesViewProps) {
       onKeyDown={(event) => {
         if (event.key !== 'Delete' && event.key !== 'Backspace') return
         if (event.target instanceof HTMLInputElement) return
-        if (!selectedRoom && !selectedEdge) return
+        if (!selectedRoom && !selectedEdge && !selectedPair) return
         event.preventDefault()
         removeSelected()
       }}
@@ -53,6 +57,19 @@ export function BubblesView(props: BubblesViewProps) {
         <button type="button" aria-pressed={focus === null} onClick={() => setFocus(null)}>
           All storeys
         </button>
+        <span className="bubbles-makes" role="group" aria-label="A drag makes">
+          <span>A drag makes</span>
+          <button
+            type="button"
+            aria-pressed={makes === 'connect'}
+            onClick={() => setMakes('connect')}
+          >
+            Connection
+          </button>
+          <button type="button" aria-pressed={makes === 'apart'} onClick={() => setMakes('apart')}>
+            Keep apart
+          </button>
+        </span>
         <button
           type="button"
           className="bubbles-wide"
@@ -71,9 +88,11 @@ export function BubblesView(props: BubblesViewProps) {
         </button>
       </div>
       <p className="bubbles-hint">
-        Drag the small ring on a room to another room, or to Outside, to connect them; click a
-        connection to change its kind or delete it. Drag a room to nudge it; the nudge is for
-        reading and means nothing for the plan. Click a storey&rsquo;s name to bring it forward.
+        {makes === 'apart'
+          ? 'Drag the small ring on a room to another room, on any storey, to keep the two apart; click the red line to let them together.'
+          : 'Drag the small ring on a room to another room, or to Outside, to connect them; click a connection to change its kind or delete it.'}{' '}
+        Drag a room to nudge it; the nudge is for reading and means nothing for the plan. Click a
+        storey&rsquo;s name to bring it forward.
       </p>
       {hallwayWanted.map((entry) => (
         <p className="bubbles-nudge" key={entry.storey}>
@@ -92,12 +111,15 @@ export function BubblesView(props: BubblesViewProps) {
           arrangement={arrangement}
           rooms={named}
           edges={edges}
+          apart={apart}
+          makes={makes}
           selected={selected}
           focus={focus}
           titleOf={titleOf}
           onFocus={(storey) => setFocus((was) => (was === storey ? null : storey))}
           onNudge={props.onNudge}
           onConnect={props.onConnect}
+          onKeepApart={props.onKeepApart}
           onSelect={props.onSelect}
           onRefuse={props.onRefuse}
         />
@@ -108,6 +130,13 @@ export function BubblesView(props: BubblesViewProps) {
               nameOf={nameOf}
               onSetKind={(kind) => props.onSetEdgeKind(selectedEdge.id, kind)}
               onDelete={() => props.onDisconnect(selectedEdge.id)}
+            />
+          )}
+          {selectedPair && (
+            <ApartPanel
+              pair={selectedPair}
+              nameOf={nameOf}
+              onAllow={() => props.onAllowTogether(selectedPair.id)}
             />
           )}
           <Legend />

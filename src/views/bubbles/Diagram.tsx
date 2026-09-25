@@ -2,14 +2,14 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import type { Arrangement, Spot } from '../../bubbles/arrange'
 import { EXTERIOR, type Bubble as Nudge, type Commit } from '../../model'
 import { storeyLabel } from '../../rulebook'
-import { Bubble, Link, Outside } from './parts'
-import type { BubbleLink, BubbleRoom } from './types'
+import { Apart, Bubble, Link, Outside } from './parts'
+import type { BubbleApart, BubbleLink, BubbleRoom, DragMakes } from './types'
 
 /** How far the hand may wander before a press on a bubble is a nudge rather than a click, in pixels. */
 const DRAG_PX = 3
 
 /** Said when a drag ends on a room of another storey; only a stair joins two storeys. */
-export const ONE_STOREY =
+const ONE_STOREY =
   'An edge joins two rooms on one storey; a stair is the way from one storey to the next.'
 
 type Point = { readonly x: number; readonly y: number }
@@ -28,6 +28,9 @@ export type DiagramProps = {
   readonly arrangement: Arrangement
   readonly rooms: ReadonlyMap<string, BubbleRoom>
   readonly edges: readonly BubbleLink[]
+  readonly apart: readonly BubbleApart[]
+  /** What a drag from a room's ring makes when it lands on another room. */
+  readonly makes: DragMakes
   readonly selected: string | null
   /** The storey brought forward; the others fade and stay. */
   readonly focus: number | null
@@ -35,6 +38,7 @@ export type DiagramProps = {
   readonly onFocus: (storey: number) => void
   readonly onNudge: (id: string, nudge: Nudge, commit: Commit) => void
   readonly onConnect: (a: string, b: string) => void
+  readonly onKeepApart: (a: string, b: string) => void
   readonly onSelect: (id: string | null) => void
   readonly onRefuse: (message: string) => void
 }
@@ -121,6 +125,12 @@ export function Diagram(props: DiagramProps) {
     }
     const target = spotAt(arrangement, at)
     if (!target || target.id === held.from.id) return
+    // Keep apart is about two rooms, not a wall between them, so storeys do not matter to it.
+    if (props.makes === 'apart') {
+      if (target.id !== EXTERIOR && held.from.id !== EXTERIOR)
+        props.onKeepApart(held.from.id, target.id)
+      return
+    }
     if (target.storey !== held.from.storey) {
       props.onRefuse(ONE_STOREY)
       return
@@ -155,6 +165,18 @@ export function Diagram(props: DiagramProps) {
     return pairs
   }, [arrangement.spots])
 
+  /** Where a keep-apart line runs: between the pair's circles on a storey they share, else their first. */
+  const ends = (pair: BubbleApart): [Spot, Spot] | null => {
+    const of = (id: string) => arrangement.spots.filter((spot) => spot.id === id)
+    const ones = of(pair.a)
+    const others = of(pair.b)
+    for (const one of ones) {
+      const other = others.find((each) => each.storey === one.storey)
+      if (other) return [one, other]
+    }
+    return ones[0] && others[0] ? [ones[0], others[0]] : null
+  }
+
   const dimmed = (storey: number): boolean => focus !== null && storey !== focus
   const choose = (event: ReactPointerEvent, id: string): void => {
     event.stopPropagation()
@@ -164,7 +186,11 @@ export function Diagram(props: DiagramProps) {
   return (
     <svg
       ref={svgRef}
-      className={gesture?.kind === 'link' ? 'bubbles-sheet bubbles-linking' : 'bubbles-sheet'}
+      className={
+        gesture?.kind === 'link'
+          ? `bubbles-sheet bubbles-linking${props.makes === 'apart' ? ' bubbles-parting' : ''}`
+          : 'bubbles-sheet'
+      }
       viewBox={`0 0 ${arrangement.width} ${arrangement.height}`}
       preserveAspectRatio="xMidYMin meet"
       tabIndex={0}
@@ -228,6 +254,22 @@ export function Diagram(props: DiagramProps) {
             selected={edge.id === selected}
             dimmed={dimmed(edge.storey)}
             title={props.titleOf(edge)}
+            onSelect={choose}
+          />
+        )
+      })}
+      {props.apart.map((pair) => {
+        const both = ends(pair)
+        if (!both) return null
+        return (
+          <Apart
+            key={pair.id}
+            id={pair.id}
+            from={both[0]}
+            to={both[1]}
+            selected={pair.id === selected}
+            dimmed={dimmed(both[0].storey) && dimmed(both[1].storey)}
+            title={`Keep apart: ${rooms.get(pair.a)?.name ?? ''} and ${rooms.get(pair.b)?.name ?? ''}`}
             onSelect={choose}
           />
         )

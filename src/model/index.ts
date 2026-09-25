@@ -2,6 +2,7 @@ export { EXTERIOR, PROJECT_VERSION, families, ok, refused } from './types'
 export { startingSite } from './project'
 export type {
   Actor,
+  Apart,
   Bubble,
   Edge,
   EdgeKind,

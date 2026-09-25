@@ -237,6 +237,20 @@ export function createActions(context: Context) {
       return settle({ ...project, edges: project.edges.filter((edge) => edge.id !== edgeId) })
     },
 
+    /** Two rooms the program wants apart; a warning to be read, never a wall. */
+    keepApart(input: { a: string; b: string }): Result<string> {
+      const project = state()
+      const pair = { id: newId('apart'), a: input.a, b: input.b }
+      const result = settle({ ...project, apart: [...project.apart, pair] })
+      return result.ok ? ok(pair.id) : result
+    },
+
+    allowTogether(id: string): Result {
+      const project = state()
+      if (!project.apart.some((pair) => pair.id === id)) return missing('pair', id)
+      return settle({ ...project, apart: project.apart.filter((pair) => pair.id !== id) })
+    },
+
     setPlot: (plot: Plot): Result => settle({ ...state(), plot }),
 
     setNorth: (north: number): Result => settle({ ...state(), plot: { ...state().plot, north } }),

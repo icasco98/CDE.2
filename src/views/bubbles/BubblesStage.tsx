@@ -59,6 +59,31 @@ export function BubblesStage() {
       selection.select(null)
   }
 
+  const nameOf = (id: string): string =>
+    project.rooms.find((room) => room.id === id)?.name ?? 'the outside'
+  const keptApart = (a: string, b: string): boolean =>
+    project.apart.some((pair) => (pair.a === a && pair.b === b) || (pair.a === b && pair.b === a))
+  const joined = (a: string, b: string): boolean =>
+    project.edges.some((edge) => (edge.a === a && edge.b === b) || (edge.a === b && edge.b === a))
+
+  /** Connecting a pair kept apart is allowed and said out loud, never refused. */
+  const connect = (a: string, b: string): void => {
+    if (!report(session.actions.connect({ a, b, kind: 'door' }))) return
+    if (keptApart(a, b))
+      session.say(`${nameOf(a)} and ${nameOf(b)} are to be kept apart; connected all the same.`)
+  }
+
+  const keepApart = (a: string, b: string): void => {
+    if (!report(session.actions.keepApart({ a, b }))) return
+    if (joined(a, b))
+      session.say(`${nameOf(a)} and ${nameOf(b)} are connected; the pair kept apart warns of it.`)
+  }
+
+  const allowTogether = (id: string): void => {
+    if (!report(session.actions.allowTogether(id))) return
+    if (selection.get() === id) selection.select(null)
+  }
+
   /** A link taken out is a link this house does not want, so the rulebook is not to offer it again. */
   const disconnect = (edgeId: string): void => {
     const edge = project.edges.find((each) => each.id === edgeId)
@@ -71,6 +96,7 @@ export function BubblesStage() {
     <BubblesView
       rooms={rooms}
       edges={edges}
+      apart={project.apart}
       storeys={project.storeys}
       selected={selected}
       hallwayWanted={hallwayWanted}
@@ -83,8 +109,10 @@ export function BubblesStage() {
         if (moved.ok) moved.value.forEach((sentence) => session.say(sentence))
         return report(moved)
       }}
-      onConnect={(a: string, b: string) => report(session.actions.connect({ a, b, kind: 'door' }))}
+      onConnect={connect}
       onDisconnect={disconnect}
+      onKeepApart={keepApart}
+      onAllowTogether={allowTogether}
       onSetEdgeKind={(edgeId: string, kind: EdgeKind) =>
         report(session.actions.setEdgeKind(edgeId, kind))
       }

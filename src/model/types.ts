@@ -3,7 +3,7 @@ import type { Footprint, Point, Polygon } from '../geometry/types'
 export const EXTERIOR = 'EXTERIOR'
 
 /** The document format; a bump needs a migration in persistence.ts. */
-export const PROJECT_VERSION = 8
+export const PROJECT_VERSION = 9
 
 /** The three families of forces the tool balances, named in rulebook/forces.md. */
 export const families = ['userRequirements', 'siteConstraints', 'environmentalFactors'] as const
@@ -75,6 +75,16 @@ export type Edge = {
   readonly hint?: WallHint
 }
 
+/**
+ * Two rooms the program wants apart: no edge between them, and neither reached only through the
+ * other. It is not an edge and is never drawn as a door; it warns and refuses nothing.
+ */
+export type Apart = {
+  readonly id: string
+  readonly a: string
+  readonly b: string
+}
+
 /** One number per force; the forces themselves are not defined yet. */
 export type Weights = Readonly<Record<string, number>>
 
@@ -98,6 +108,7 @@ export type Project = {
   readonly household: Household
   readonly rooms: readonly Room[]
   readonly edges: readonly Edge[]
+  readonly apart: readonly Apart[]
   readonly weights: Weights
   readonly actors: readonly Actor[]
   readonly version: number

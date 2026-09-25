@@ -46,6 +46,13 @@
   color: #faf8f4;
 }
 
+.bubbles-makes {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #6d6862;
+}
+
 .bubbles-hint {
   margin: 0;
   color: #6d6862;
@@ -308,4 +315,32 @@
   stroke-width: 1.5px;
   stroke-dasharray: 1 5;
   stroke-linecap: round;
+}
+
+/* Keep apart is not an edge, so it is drawn in the warning red, dashed and crossed. */
+.bubbles-sheet .apart,
+.bubbles .legend .apart {
+  stroke: #b3261e;
+  stroke-width: 2px;
+  stroke-dasharray: 6 4;
+  pointer-events: none;
+}
+
+.bubbles-sheet .apart-cross,
+.bubbles .legend .apart-cross {
+  stroke: #b3261e;
+  stroke-width: 2.5px;
+  fill: none;
+}
+
+.bubbles-sheet .apart-cross {
+  cursor: pointer;
+}
+
+.bubbles-sheet .apart-selected .apart {
+  stroke-width: 4px;
+}
+
+.bubbles-sheet.bubbles-parting .link-drawn {
+  stroke: #b3261e;
 }

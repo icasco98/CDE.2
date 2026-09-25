@@ -26,9 +26,15 @@ export type BubbleLink = {
   readonly source?: string
 }
 
+export type BubbleApart = { readonly id: string; readonly a: string; readonly b: string }
+
+/** What a drag from one room's ring to another makes: a connection, or a pair kept apart. */
+export type DragMakes = 'connect' | 'apart'
+
 export type BubblesViewProps = {
   readonly rooms: readonly BubbleRoom[]
   readonly edges: readonly BubbleLink[]
+  readonly apart: readonly BubbleApart[]
   readonly storeys: number
   /** A room id, an edge id, or nothing. */
   readonly selected: string | null
@@ -38,6 +44,8 @@ export type BubblesViewProps = {
   readonly onSetStorey: (id: string, storey: number) => void
   readonly onConnect: (a: string, b: string) => void
   readonly onDisconnect: (edgeId: string) => void
+  readonly onKeepApart: (a: string, b: string) => void
+  readonly onAllowTogether: (id: string) => void
   readonly onSetEdgeKind: (edgeId: string, kind: EdgeKind) => void
   readonly onRemoveRoom: (id: string) => void
   readonly onAddHallway: (storey: number) => void

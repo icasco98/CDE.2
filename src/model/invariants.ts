@@ -180,10 +180,32 @@ export function checkHeights(project: Project): readonly Violation[] {
     .map(() => say('height-size', 'a storey height is a positive number of metres'))
 }
 
+/** A keep-apart pair names two different rooms, once per unordered pair, on any storeys. */
+export function checkApart(project: Project): readonly Violation[] {
+  const rooms = roomIndex(project)
+  const seen = new Set<string>()
+  const violations: Violation[] = []
+  for (const pair of project.apart) {
+    for (const end of [pair.a, pair.b])
+      if (!rooms.has(end))
+        violations.push(
+          say('apart-endpoint', `keep-apart ${pair.id} names ${end}, which is not a room`),
+        )
+    if (pair.a === pair.b)
+      violations.push(say('apart-self', 'a room cannot be kept apart from itself'))
+    const key = pair.a <= pair.b ? `${pair.a}|${pair.b}` : `${pair.b}|${pair.a}`
+    if (seen.has(key))
+      violations.push(say('apart-duplicate', 'those two rooms are already kept apart'))
+    seen.add(key)
+  }
+  return violations
+}
+
 const checks = [
   checkEdgeEndpoints,
   checkEdgeStoreys,
   checkEdgeUniqueness,
+  checkApart,
   checkExteriorIsNotARoom,
   checkMainDoor,
   checkFootprints,

@@ -65,6 +65,7 @@ const migrations: ReadonlyMap<number, Migration> = new Map<number, Migration>([
   [5, (document) => document],
   [6, siteChoices],
   [7, bubblesOffThePlot],
+  [8, (document) => ({ apart: [], ...document })],
 ])
 
 export function serialize(project: Project): string {

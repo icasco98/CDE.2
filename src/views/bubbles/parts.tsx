@@ -136,6 +136,42 @@ export const Link = memo(function Link(props: LinkProps) {
   )
 })
 
+type ApartProps = {
+  readonly id: string
+  readonly from: Spot
+  readonly to: Spot
+  readonly selected: boolean
+  readonly dimmed: boolean
+  readonly title: string
+  readonly onSelect: (event: ReactPointerEvent, id: string) => void
+}
+
+/** Half the reach of the cross on a keep-apart line, in the diagram's units. */
+const CROSS = 5
+
+/** Two rooms kept apart: a red dashed line with a cross at its middle, unlike any edge. */
+export const Apart = memo(function Apart(props: ApartProps) {
+  const [x1, y1, x2, y2] = rimToRim(props.from, props.to)
+  const mx = (x1 + x2) / 2
+  const my = (y1 + y2) / 2
+  const select = (event: ReactPointerEvent): void => props.onSelect(event, props.id)
+  const classes = ['apart-group']
+  if (props.selected) classes.push('apart-selected')
+  if (props.dimmed) classes.push('link-dimmed')
+  return (
+    <g data-apart={props.id} className={classes.join(' ')}>
+      <title>{props.title}</title>
+      <line x1={x1} y1={y1} x2={x2} y2={y2} className="link-grip" onPointerDown={select} />
+      <line x1={x1} y1={y1} x2={x2} y2={y2} className="apart" />
+      <path
+        d={`M${mx - CROSS} ${my - CROSS}L${mx + CROSS} ${my + CROSS}M${mx + CROSS} ${my - CROSS}L${mx - CROSS} ${my + CROSS}`}
+        className="apart-cross"
+        onPointerDown={select}
+      />
+    </g>
+  )
+})
+
 /** The street under a column: where a door to the outside is drawn to and dragged to. */
 export function Outside(props: { readonly spot: Spot; readonly dimmed: boolean }) {
   const { spot } = props
@@ -174,6 +210,16 @@ const legendRows = [
     key: 'main-door',
     label: 'Front door',
     mark: <line x1={2} y1={6} x2={22} y2={6} className="link link-main" />,
+  },
+  {
+    key: 'apart',
+    label: 'Keep apart',
+    mark: (
+      <>
+        <line x1={2} y1={6} x2={22} y2={6} className="apart" />
+        <path d="M9 2L15 10M15 2L9 10" className="apart-cross" />
+      </>
+    ),
   },
 ]
 

@@ -3,6 +3,7 @@ import { checkProject } from './invariants'
 import {
   ok,
   type Actor,
+  type Apart,
   type Edge,
   type EdgeKind,
   type Household,
@@ -129,6 +130,11 @@ export function parseProject(document: Document): Result<Project> {
     }
   }
 
+  const apart = (value: unknown, at: string): Apart => {
+    const raw = nested(value, at)
+    return { id: text(raw.id, `${at}.id`), a: text(raw.a, `${at}.a`), b: text(raw.b, `${at}.b`) }
+  }
+
   const actor = (value: unknown, at: string): Actor => {
     const raw = nested(value, at)
     return {
@@ -194,6 +200,7 @@ export function parseProject(document: Document): Result<Project> {
     household: householdOf(document.household, 'household'),
     rooms: list(document.rooms, 'rooms').map((raw, i) => room(raw, `rooms[${i}]`)),
     edges: list(document.edges, 'edges').map((raw, i) => edge(raw, `edges[${i}]`)),
+    apart: list(document.apart, 'apart').map((raw, i) => apart(raw, `apart[${i}]`)),
     weights: weightsOf(document.weights, 'weights'),
     actors: list(document.actors, 'actors').map((raw, i) => actor(raw, `actors[${i}]`)),
     version: count(document.version, 'version'),

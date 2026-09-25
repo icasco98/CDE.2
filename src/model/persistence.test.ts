@@ -57,6 +57,7 @@ function furnished(): Project {
   actions.connect({ a: EXTERIOR, b: hall, kind: 'main-door', hint: { at: [2, 0] } })
   actions.connect({ a: hall, b: stair, kind: 'open' })
   actions.connect({ a: stair, b: bedroom, kind: 'door', storey: 1 })
+  actions.keepApart({ a: hall, b: bedroom })
   actions.setPlot({
     on: true,
     polygon: [
@@ -268,6 +269,14 @@ describe('the project file', () => {
     })
     const back = deserialize(JSON.stringify({ ...project, rooms, version: 5 }))
     expect(back.ok && back.value.rooms.every((room) => room.bubble === undefined)).toBe(true)
+  })
+
+  it('gives a project written before keep apart an empty list of pairs', () => {
+    const project: Record<string, unknown> = { ...furnished(), version: 8 }
+    delete project.apart
+    const back = deserialize(JSON.stringify(project))
+    expect(back.ok && back.value.apart).toEqual([])
+    expect(back.ok && back.value.version).toBe(PROJECT_VERSION)
   })
 
   it('refuses a version it cannot migrate and one from a newer tool', () => {

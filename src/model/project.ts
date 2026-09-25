@@ -2,6 +2,7 @@ import type { IdGenerator } from './ids'
 import {
   PROJECT_VERSION,
   type Actor,
+  type Apart,
   type Edge,
   type Household,
   type Plot,
@@ -14,10 +15,11 @@ import {
 /** The floor-to-floor height a storey opens at, in metres. */
 export const STARTING_HEIGHT_M = 3.5
 
-/** What undo restores: rooms, edges, plot, storeys, heights, weights and household, and nothing else. */
+/** What undo restores: rooms, edges, keep-apart pairs, plot, storeys, heights, weights and household. */
 export type Snapshot = {
   readonly rooms: readonly Room[]
   readonly edges: readonly Edge[]
+  readonly apart: readonly Apart[]
   readonly plot: Plot
   readonly site: Site
   readonly storeys: number
@@ -64,6 +66,7 @@ export function emptyProject(newId: IdGenerator, name = 'Untitled'): Project {
     household: startingHousehold,
     rooms: [],
     edges: [],
+    apart: [],
     weights: {},
     actors: [],
     version: PROJECT_VERSION,
@@ -71,8 +74,8 @@ export function emptyProject(newId: IdGenerator, name = 'Untitled'): Project {
 }
 
 export function snapshotOf(project: Project): Snapshot {
-  const { rooms, edges, plot, site, storeys, heights, weights, household } = project
-  return { rooms, edges, plot, site, storeys, heights, weights, household }
+  const { rooms, edges, apart, plot, site, storeys, heights, weights, household } = project
+  return { rooms, edges, apart, plot, site, storeys, heights, weights, household }
 }
 
 export function restore(project: Project, snapshot: Snapshot): Project {
@@ -101,12 +104,13 @@ export function patchActor(project: Project, id: string, patch: Partial<Actor>):
   }
 }
 
-/** Deleting a room deletes its edges and drops it from every actor's route. */
+/** Deleting a room deletes its edges and its keep-apart pairs, and drops it from every actor's route. */
 export function dropRoom(project: Project, id: string): Project {
   return {
     ...project,
     rooms: project.rooms.filter((room) => room.id !== id),
     edges: project.edges.filter((edge) => edge.a !== id && edge.b !== id),
+    apart: project.apart.filter((pair) => pair.a !== id && pair.b !== id),
     actors: project.actors.map((actor) =>
       actor.waypoints.includes(id)
         ? { ...actor, waypoints: actor.waypoints.filter((waypoint) => waypoint !== id) }
