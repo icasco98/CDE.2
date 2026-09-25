@@ -35,6 +35,19 @@ brings with it — a bedroom's ensuite, the diwaniya's WC, a staff
 room's bathroom — and a companion always takes the storey of the room
 it serves. Both columns are the cofounder's judgement and provisional.
 
+**How many storeys a rebuilt program proposes.** The program stays on
+one storey when it fits there: the sum of its target areas, the
+hallway's share included, is no more than the floor the Municipality
+setbacks leave (the same fit the Requirements totals show). When it
+does not, a first storey is proposed: the `upper` kinds go up with
+their companions and a stair spans the storeys. While the ground is
+still over, a private-tier kind the table marks `any` (family living
+first, as the largest) follows them up, one kind at a time. A project
+already on more storeys keeps them. Each step is said in a sentence
+beside the button, and every room's storey stays the person's to
+change. The rule is the cofounder's judgement and provisional: it
+recommends and never refuses.
+
 ## The default program
 
 Every villa starts with the standard trio, each a different kind:

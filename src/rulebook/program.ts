@@ -37,11 +37,15 @@ export function companionName(companionId: string, roomName: string): string {
   return companionId === 'ensuite-bathroom' ? `Ensuite, ${roomName}` : label
 }
 
-/** The standard trio plus the rooms this household implies, each at its typical target area. */
+/**
+ * The standard trio plus the rooms this household implies, each at its typical target area. A kind
+ * named in `raised` whose table storey is `any` stands on the first storey rather than the ground.
+ */
 export function defaultProgram(
   plotAreaM2: number,
   household: Household,
   storeys: number,
+  raised: ReadonlySet<string> = new Set(),
 ): readonly ProgramRoom[] {
   const levels = Math.max(1, Math.trunc(storeys))
   const rooms: ProgramRoom[] = []
@@ -56,7 +60,14 @@ export function defaultProgram(
     })
   }
 
-  const add = (type: string, name: string, on = standingOf(type, levels).storey): void => {
+  const lifted = (type: string): boolean =>
+    levels > 1 && raised.has(type) && roomTypeById(type)?.defaultStorey === 'any'
+
+  const add = (
+    type: string,
+    name: string,
+    on = lifted(type) ? 1 : standingOf(type, levels).storey,
+  ): void => {
     put(type, name, on)
     // A companion stands with the room it serves, so it takes that room's storey, not its own
     // default, and brings nothing further of its own.
