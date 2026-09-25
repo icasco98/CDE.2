@@ -301,3 +301,11 @@
 .edge-panel > button {
   align-self: flex-start;
 }
+
+/* A stair's circles on two storeys are one room; the tie between them is not an edge. */
+.bubbles-sheet .through {
+  stroke: #9a958c;
+  stroke-width: 1.5px;
+  stroke-dasharray: 1 5;
+  stroke-linecap: round;
+}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import type { Arrangement, Spot } from '../../bubbles/arrange'
 import { EXTERIOR, type Bubble as Nudge, type Commit } from '../../model'
 import { storeyLabel } from '../../rulebook'
@@ -143,6 +143,18 @@ export function Diagram(props: DiagramProps) {
     }
   }, [])
 
+  /** A room drawn in two columns is one room, so its two circles are tied by a line of their own. */
+  const through = useMemo(() => {
+    const pairs: [Spot, Spot][] = []
+    const seen = new Map<string, Spot>()
+    for (const spot of arrangement.spots) {
+      const before = seen.get(spot.id)
+      if (before) pairs.push([before, spot])
+      seen.set(spot.id, spot)
+    }
+    return pairs
+  }, [arrangement.spots])
+
   const dimmed = (storey: number): boolean => focus !== null && storey !== focus
   const choose = (event: ReactPointerEvent, id: string): void => {
     event.stopPropagation()
@@ -220,6 +232,19 @@ export function Diagram(props: DiagramProps) {
           />
         )
       })}
+      {through.map(([from, to]) => (
+        <line
+          key={`${from.id}@${from.storey}`}
+          data-through={from.id}
+          x1={from.x + from.r}
+          y1={from.y}
+          x2={to.x - to.r}
+          y2={to.y}
+          className="through"
+        >
+          <title>{`${rooms.get(from.id)?.name ?? ''}: one room on both storeys`}</title>
+        </line>
+      ))}
       {arrangement.outside.map((spot) => (
         <Outside key={spot.storey} spot={spot} dimmed={dimmed(spot.storey)} />
       ))}
