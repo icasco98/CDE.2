@@ -20,7 +20,8 @@ export type CheckPair = { readonly a: string; readonly b: string }
 
 /** One warning on the graph, with the rule it reads and where that rule comes from. */
 export type Check = {
-  readonly code: 'unreached' | 'tier-skip' | 'crossing' | 'apart-joined' | 'apart-through'
+  readonly code:
+    'no-stair' | 'unreached' | 'tier-skip' | 'crossing' | 'apart-joined' | 'apart-through'
   /** The rooms it is about, so a view can point at them. */
   readonly rooms: readonly string[]
   readonly sentence: string

@@ -2,11 +2,11 @@ import { EXTERIOR } from '../model'
 import type { CheckEdge } from './types'
 
 /**
- * The rooms reached from the front door over the edges, with one room taken out when asked. Only
- * the main door leads in from the outside: a room with a street door of its own is not thereby
- * reached from the entrance.
+ * The rooms reached from outside over the edges, with one room taken out when asked. Every edge to
+ * the outside is an entrance, the front door and a room's own street door alike, so a diwaniya or a
+ * garage with a door of its own is reached through it.
  */
-export function reachedFromFrontDoor(
+export function reachedFromOutside(
   edges: readonly CheckEdge[],
   without?: string,
 ): ReadonlySet<string> {
@@ -16,8 +16,6 @@ export function reachedFromFrontDoor(
   }
   for (const edge of edges) {
     if (edge.a === without || edge.b === without) continue
-    const outside = edge.a === EXTERIOR || edge.b === EXTERIOR
-    if (outside && edge.kind !== 'main-door') continue
     join(edge.a, edge.b)
     join(edge.b, edge.a)
   }

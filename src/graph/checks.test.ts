@@ -3,7 +3,8 @@ import { EXTERIOR, type EdgeKind } from '../model'
 import { apartBroken, onlyThrough } from './apart'
 import { graphChecks } from './checks'
 import { crossings } from './crossings'
-import { reachedFromFrontDoor } from './reach'
+import { reachedFromOutside } from './reach'
+import { noStair } from './stairs'
 import { tierSkips } from './tierSkips'
 import type { CheckEdge, CheckRoom } from './types'
 import { unreached } from './unreached'
@@ -11,7 +12,8 @@ import { unreached } from './unreached'
 /*
  * Every check against a graph small enough to read by eye, each with the answer worked out by
  * hand. The house: a front door into the entry, a hallway behind it, the family living off the
- * hallway, a bedroom off the family living, and a diwaniya with only its own street door.
+ * hallway, a bedroom off the family living, a diwaniya with only its own street door, and a store
+ * with no door at all.
  */
 
 const room = (id: string, tier?: string, storey = 0, storeysSpanned = 1): CheckRoom => ({
@@ -35,6 +37,7 @@ const rooms = [
   room('Family', 'private'),
   room('Bedroom', 'private'),
   room('Diwaniya', 'public'),
+  room('Store'),
 ]
 
 const edges = [
@@ -45,26 +48,35 @@ const edges = [
   edge(EXTERIOR, 'Diwaniya'),
 ]
 
-describe('reached from the front door', () => {
-  it('follows the edges in from the main door and no other street door', () => {
-    expect([...reachedFromFrontDoor(edges)].sort()).toEqual([
+describe('reached from outside', () => {
+  it('follows the edges in from every entrance, the diwaniya’s own street door as much as the main door', () => {
+    expect([...reachedFromOutside(edges)].sort()).toEqual([
       'Bedroom',
+      'Diwaniya',
       'Entry',
       'Family',
       'Hallway',
     ])
   })
 
-  it('names the diwaniya, whose only way in is its own street door', () => {
+  it('names the store, which no door leads to', () => {
     expect(unreached(rooms, edges).map((check) => check.sentence)).toEqual([
-      'Diwaniya is not reached from the front door.',
+      'Store is not reached from any entrance.',
     ])
   })
 
-  it('says once that there is no front door, rather than naming every room', () => {
+  it('says there is no front door, and still reaches the rooms behind another entrance', () => {
     const found = unreached(rooms, edges.slice(1))
     expect(found.map((check) => check.sentence)).toEqual([
-      'There is no front door, so no room is reached from one.',
+      'There is no front door.',
+      'Entry, Hallway, Family, Bedroom and Store are not reached from any entrance.',
+    ])
+  })
+
+  it('says once that no room has a door to the outside, rather than naming every room', () => {
+    const inside = edges.filter((each) => each.a !== EXTERIOR && each.b !== EXTERIOR)
+    expect(unreached(rooms, inside).map((check) => check.sentence)).toEqual([
+      'No room has a door to the outside, so no room is reached.',
     ])
   })
 
@@ -168,6 +180,19 @@ describe('keep apart', () => {
 
   it('says nothing of a pair whose rooms share a wall with no edge and no route through', () => {
     expect(apartBroken(rooms, edges, [{ a: 'Diwaniya', b: 'Family' }])).toEqual([])
+  })
+})
+
+describe('a stair between the storeys', () => {
+  it('is wanted by a house of two storeys whose program has none', () => {
+    expect(noStair(rooms, 2).map((check) => check.sentence)).toEqual([
+      'No stair connects the storeys.',
+    ])
+  })
+
+  it('is not wanted on one storey, nor when a room spans two', () => {
+    expect(noStair(rooms, 1)).toEqual([])
+    expect(noStair([...rooms, room('Stair', 'semi-public', 0, 2)], 2)).toEqual([])
   })
 })
 

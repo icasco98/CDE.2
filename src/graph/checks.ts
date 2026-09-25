@@ -1,5 +1,6 @@
 import { apartBroken } from './apart'
 import { crossings } from './crossings'
+import { noStair } from './stairs'
 import { tierSkips } from './tierSkips'
 import type { Check, CheckEdge, CheckPair, CheckRoom } from './types'
 import { unreached } from './unreached'
@@ -12,6 +13,7 @@ export function graphChecks(input: {
   readonly storeys: number
 }): readonly Check[] {
   return [
+    ...noStair(input.rooms, input.storeys),
     ...unreached(input.rooms, input.edges),
     ...tierSkips(input.rooms, input.edges),
     ...crossings(input.rooms, input.edges, input.storeys),
