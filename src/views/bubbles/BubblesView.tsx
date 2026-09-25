@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { arrange } from '../../bubbles/arrange'
-import type { EdgeKind } from '../../model'
 import { storeyLabel } from '../../rulebook'
 import { Diagram } from './Diagram'
+import { EdgePanel } from './EdgePanel'
 import { Legend } from './parts'
 import { STAIR_STAYS, type BubbleLink, type BubblesViewProps } from './types'
 import './bubbles.css'
@@ -33,12 +33,9 @@ export function BubblesView(props: BubblesViewProps) {
     else if (selectedRoom) props.onRemoveRoom(selectedRoom.id)
   }
 
-  const titleOf = (edge: BubbleLink): string => {
-    const name = (id: string) => named.get(id)?.name ?? 'Outside'
-    return `${name(edge.a)} and ${name(edge.b)}: ${edge.kind}`
-  }
-
-  const otherKind: EdgeKind = selectedEdge?.kind === 'open' ? 'door' : 'open'
+  const nameOf = (id: string): string => named.get(id)?.name ?? 'Outside'
+  const titleOf = (edge: BubbleLink): string =>
+    `${nameOf(edge.a)} ↔ ${nameOf(edge.b)}, ${edge.kind}. ${edge.source ?? 'Added by hand.'}`
 
   return (
     <div
@@ -67,28 +64,16 @@ export function BubblesView(props: BubblesViewProps) {
         <button
           type="button"
           className="bubbles-wide"
-          disabled={!selectedRoom && !selectedEdge}
-          onClick={removeSelected}
+          disabled={!selectedRoom}
+          onClick={() => selectedRoom && props.onRemoveRoom(selectedRoom.id)}
         >
-          {selectedEdge ? 'Delete link' : selectedRoom ? 'Delete room' : 'Delete'}
+          Delete room
         </button>
-        {selectedEdge && (
-          <span className="bubbles-kind">
-            <span>Link: {selectedEdge.kind}</span>
-            <button
-              type="button"
-              disabled={selectedEdge.kind === 'main-door'}
-              onClick={() => props.onSetEdgeKind(selectedEdge.id, otherKind)}
-            >
-              {otherKind === 'open' ? 'Make it open' : 'Make it a door'}
-            </button>
-          </span>
-        )}
       </div>
       <p className="bubbles-hint">
-        Drag the small ring on a room to another room to connect them. Drag a room to nudge it; the
-        nudge is for reading and means nothing for the plan. Click a storey&rsquo;s name to bring it
-        forward.
+        Drag the small ring on a room to another room, or to Outside, to connect them; click a
+        connection to change its kind or delete it. Drag a room to nudge it; the nudge is for
+        reading and means nothing for the plan. Click a storey&rsquo;s name to bring it forward.
       </p>
       {hallwayWanted.map((entry) => (
         <p className="bubbles-nudge" key={entry.storey}>
@@ -117,6 +102,14 @@ export function BubblesView(props: BubblesViewProps) {
           onRefuse={props.onRefuse}
         />
         <div className="bubbles-side">
+          {selectedEdge && (
+            <EdgePanel
+              edge={selectedEdge}
+              nameOf={nameOf}
+              onSetKind={(kind) => props.onSetEdgeKind(selectedEdge.id, kind)}
+              onDelete={() => props.onDisconnect(selectedEdge.id)}
+            />
+          )}
           <Legend />
         </div>
       </div>

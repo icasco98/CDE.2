@@ -4,8 +4,8 @@ import { selection, useSelection } from '../../app/selection'
 import { sendToStorey } from '../../app/sendToStorey'
 import { session } from '../../app/session'
 import { useProject } from '../../app/useProject'
-import type { Bubble, Commit, EdgeKind, Result } from '../../model'
-import { circulationPerStorey, roomTypeById } from '../../rulebook'
+import { EXTERIOR, type Bubble, type Commit, type EdgeKind, type Result } from '../../model'
+import { circulationPerStorey, connectionSource, roomTypeById } from '../../rulebook'
 import { addHallway } from './addHallway'
 import { BubblesView } from './BubblesView'
 
@@ -22,6 +22,16 @@ export function BubblesStage() {
       }),
     [project.rooms],
   )
+
+  /** A connection the rulebook wants says which row and why; any other was added by hand. */
+  const edges = useMemo(() => {
+    const kindOf = (id: string): string =>
+      id === EXTERIOR ? EXTERIOR : (project.rooms.find((room) => room.id === id)?.type ?? '')
+    return project.edges.map((edge) => {
+      const row = connectionSource(kindOf(edge.a), kindOf(edge.b))
+      return row ? { ...edge, source: `Rulebook ${row.id}: ${row.source}` } : edge
+    })
+  }, [project.edges, project.rooms])
 
   const hallwayWanted = useMemo(
     () =>
@@ -60,7 +70,7 @@ export function BubblesStage() {
   return (
     <BubblesView
       rooms={rooms}
-      edges={project.edges}
+      edges={edges}
       storeys={project.storeys}
       selected={selected}
       hallwayWanted={hallwayWanted}

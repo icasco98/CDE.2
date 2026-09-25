@@ -22,6 +22,8 @@ export type BubbleLink = {
   readonly b: string
   readonly kind: EdgeKind
   readonly storey: number
+  /** The rulebook row that wants this pair, in its own words; absent for a pair added by hand. */
+  readonly source?: string
 }
 
 export type BubblesViewProps = {

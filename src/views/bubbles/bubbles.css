@@ -46,13 +46,6 @@
   color: #faf8f4;
 }
 
-.bubbles-kind {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #6d6862;
-}
-
 .bubbles-hint {
   margin: 0;
   color: #6d6862;
@@ -292,4 +285,19 @@
 .bubbles .legend .legend-swatch {
   stroke: #6f6a62;
   stroke-width: 1px;
+}
+
+.edge-panel p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #4a453d;
+}
+
+.edge-panel .edge-kind {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.edge-panel > button {
+  align-self: flex-start;
 }
