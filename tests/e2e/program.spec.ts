@@ -177,3 +177,33 @@ test('a saved sheet is reconciled with a brief it does not match: the brief wins
   expect(drawn.map((block) => block.name)).toEqual(entered.map((room) => room.name))
   await expect(page.locator('svg.sheet [data-room]')).toHaveCount(0)
 })
+
+test('a room deleted in the bubbles is gone from the zoning sheet, and Undo brings it back', async ({
+  page,
+}) => {
+  await seedPlan(page)
+  await page.goto('/')
+  await tab(page, 'Bubbles').click()
+  await page
+    .locator('.bubbles-sheet [data-room][data-name="Diwaniya"] circle.bubble-shape')
+    .first()
+    .click()
+  await page.locator('svg.bubbles-sheet').press('Delete')
+  await tab(page, 'Sheet').click()
+  await page.locator('svg.sheet').waitFor()
+  await expect(page.locator('svg.sheet g.room[data-room="r2"]')).toHaveCount(0)
+  await expect(page.locator('.tray .item[data-room="r2"]')).toHaveCount(0)
+  await page.locator('header.shell').getByRole('button', { name: 'Undo' }).click()
+  await expect(page.locator('svg.sheet g.room[data-room="r2"]')).toHaveCount(1)
+})
+
+test('an empty program is an empty sheet, with no stair and no sample to go back to', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await tab(page, 'Sheet').click()
+  await page.locator('svg.sheet').waitFor()
+  await expect(page.locator('svg.sheet [data-room]')).toHaveCount(0)
+  await expect(blocks(page)).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Back to the sample' })).toHaveCount(0)
+})

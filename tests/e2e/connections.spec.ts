@@ -84,3 +84,44 @@ test('a drag to a room on another storey is refused with the reason', async ({ p
   await expect(page.locator('.messages')).toContainText('a stair is the way from one storey')
   expect(await linkedPairs(page)).toEqual(pairs)
 })
+
+test('a deleted suggestion stays deleted after a reload, and Restore brings it back', async ({
+  page,
+}) => {
+  await openVilla(page)
+  await expect.poll(() => linkedPairs(page)).toContain('Dining Room to Kitchen')
+  const edge = await edgeBetween(page, 'Kitchen', 'Dining Room')
+  await selectEdge(page, edge!.id)
+  await page.getByRole('button', { name: 'Delete connection' }).click()
+  await expect.poll(() => linkedPairs(page)).not.toContain('Dining Room to Kitchen')
+  await page.waitForTimeout(700)
+  await page.reload()
+  await tab(page, 'Bubbles').click()
+  await expect.poll(() => linkedPairs(page)).not.toContain('Dining Room to Kitchen')
+  await page.getByRole('button', { name: 'Restore suggested connections' }).click()
+  await expect.poll(() => linkedPairs(page)).toContain('Dining Room to Kitchen')
+  await expect(page.getByRole('button', { name: 'Restore suggested connections' })).toBeDisabled()
+})
+
+test('a right-click on a room restores its deleted suggestions and no other room’s', async ({
+  page,
+}) => {
+  await openVilla(page)
+  await expect.poll(() => linkedPairs(page)).toContain('Dining Room to Kitchen')
+  for (const [a, b] of [
+    ['Kitchen', 'Dining Room'],
+    ['Formal Living', 'Entry'],
+  ] as const) {
+    const edge = await edgeBetween(page, a, b)
+    await selectEdge(page, edge!.id)
+    await page.getByRole('button', { name: 'Delete connection' }).click()
+  }
+  await expect.poll(() => linkedPairs(page)).not.toContain('Entry to Formal Living')
+  await page
+    .locator('.bubbles-sheet [data-room][data-name="Kitchen"] circle.bubble-shape')
+    .first()
+    .click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Restore suggested connections for this room' }).click()
+  await expect.poll(() => linkedPairs(page)).toContain('Dining Room to Kitchen')
+  expect(await linkedPairs(page)).not.toContain('Entry to Formal Living')
+})

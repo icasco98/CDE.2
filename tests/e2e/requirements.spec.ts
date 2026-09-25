@@ -302,3 +302,20 @@ test('a bedroom moved to First says which door it let go', async ({ page }) => {
     'Master Bedroom: its door to Ground Hallway was let go.',
   )
 })
+
+test('rebuilding a household too big for one storey proposes a First with a stair, and says why', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await page.getByLabel('Bedrooms').fill('5')
+  await page.getByLabel('Cars').fill('2')
+  await page.getByRole('checkbox', { name: 'Live-in maid' }).check()
+  await page.getByRole('checkbox', { name: 'Driver' }).check()
+  await page.getByRole('button', { name: 'Rebuild program from household' }).click()
+  const why = page.getByRole('list', { name: 'Why these storeys' })
+  await expect(why).toContainText('over by 49.5 m². A First storey is proposed.')
+  await expect(why).toContainText('A stair spans Ground to First')
+  await expect(
+    page.locator('table.program tbody tr', { has: page.locator('input[value="Stair"]') }),
+  ).toHaveCount(1)
+})
