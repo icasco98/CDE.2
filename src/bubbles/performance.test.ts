@@ -3,8 +3,8 @@ import { EXTERIOR } from '../model'
 import { arrange, type ArrangeEdge, type ArrangeRoom } from './arrange'
 
 /*
- * The budget: the diagram is arranged again on every edit and every frame of a nudge, so forty
- * rooms over three storeys must arrange inside one 16 ms frame.
+ * The budget: the diagram is arranged again on every edit and every frame of a nudge, rows ordered
+ * to uncross included, so forty rooms over three storeys must arrange inside one 16 ms frame.
  */
 
 function milliseconds(work: () => void): number {

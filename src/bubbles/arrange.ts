@@ -6,6 +6,7 @@
  */
 
 import { EXTERIOR, type Bubble, type Endpoint } from '../model'
+import { uncross } from './order'
 import { radiusFor, scaleFor } from './sizes'
 
 type Tier = 'public' | 'semi-public' | 'private'
@@ -113,15 +114,36 @@ function bandsOf(
     row.splice(at, 0, room)
     placed.set(room.id, { room, tier })
   }
-  // A room that goes on up stands at the right of its row and one that comes from below at the
-  // left, so the tie between a stair's circles in two columns side by side stays short.
-  const side = (room: ArrangeRoom): number =>
-    room.storey < storey ? -1 : standsOn(room, storey + 1) ? 1 : 0
-  for (const row of rows.values()) row.sort((one, other) => side(one) - side(other))
+  for (const row of rows.values())
+    row.sort((one, other) => sideOf(one, storey) - sideOf(other, storey))
   return rows
 }
 
+/**
+ * A room that goes on up stands at the right of its row and one that comes from below at the left,
+ * so the tie between a stair's circles in two columns side by side stays short.
+ */
+const sideOf = (room: ArrangeRoom, storey: number): number =>
+  room.storey < storey ? -1 : standsOn(room, storey + 1) ? 1 : 0
+
 const linesFor = (count: number): number => Math.max(1, Math.ceil(count / PER_LINE))
+
+/** How far across from its column's middle the room at `index` of a row of `count` stands. */
+function acrossOf(index: number, count: number): number {
+  const line = Math.floor(index / PER_LINE)
+  const onLine = Math.min(PER_LINE, count - line * PER_LINE)
+  return ((index % PER_LINE) + 0.5 - onLine / 2) * CELL
+}
+
+/**
+ * The height of the circles' centres on a band's line. The first line of a band is its lowest, so a
+ * band fills upward from the street; the circles of a line share their centre, and the names hang
+ * below.
+ */
+function downOf(band: Band, index: number): number {
+  const line = Math.floor(index / PER_LINE)
+  return band.y + band.height - (line + 1) * band.line + ABOVE + band.radius
+}
 
 export function arrange(
   rooms: readonly ArrangeRoom[],
@@ -129,16 +151,16 @@ export function arrange(
   storeys: number,
 ): Arrangement {
   const levels = Math.max(1, Math.trunc(storeys))
-  const perStorey = Array.from({ length: levels }, (_, storey) => bandsOf(rooms, edges, storey))
+  const inBands = Array.from({ length: levels }, (_, storey) => bandsOf(rooms, edges, storey))
   const scale = scaleFor(rooms.map((room) => room.targetArea))
   // A band is as deep on every column as on its busiest, so a tier reads across the whole diagram.
   const bands: Band[] = []
   let y = GAP
   for (const tier of tiersDown) {
-    const lines = Math.max(...perStorey.map((rows) => linesFor(rows.get(tier)!.length)))
+    const lines = Math.max(...inBands.map((rows) => linesFor(rows.get(tier)!.length)))
     const radius = Math.max(
       0,
-      ...perStorey.flatMap((rows) =>
+      ...inBands.flatMap((rows) =>
         rows.get(tier)!.map((room) => radiusFor(room.targetArea, scale)),
       ),
     )
@@ -148,6 +170,18 @@ export function arrange(
   }
   const outsideY = y + LINE / 2
   const height = y + LINE + GAP / 2
+  const byTier = new Map(bands.map((band) => [band.tier, band]))
+  // Bands depend on how many rooms a row holds and how big they are, never on their order, so the
+  // order is chosen against the places the rooms will really have.
+  const perStorey = inBands.map((rows, storey) =>
+    uncross(
+      rows,
+      edges.filter((edge) => edge.storey === storey).map((edge) => [edge.a, edge.b] as const),
+      (tier, index, count) => ({ x: acrossOf(index, count), y: downOf(byTier.get(tier)!, index) }),
+      new Map([[EXTERIOR, { x: 0, y: outsideY }]]),
+      (room) => sideOf(room, storey),
+    ),
+  )
   const spots: Spot[] = []
   const columns: Column[] = []
   const outside: Spot[] = []
@@ -162,17 +196,11 @@ export function arrange(
     for (const band of bands) {
       const row = rows.get(band.tier)!
       for (const [index, room] of row.entries()) {
-        const line = Math.floor(index / PER_LINE)
-        const onLine = Math.min(PER_LINE, row.length - line * PER_LINE)
-        const across = x + (width - onLine * CELL) / 2 + ((index % PER_LINE) + 0.5) * CELL
-        // The first line of a band is its lowest, so a band fills upward from the street; the
-        // circles of a line share their centre, and the names hang below.
-        const down = band.y + band.height - (line + 1) * band.line + ABOVE + band.radius
         spots.push({
           id: room.id,
           storey,
-          x: across + (room.bubble?.x ?? 0),
-          y: down + (room.bubble?.y ?? 0),
+          x: x + width / 2 + acrossOf(index, row.length) + (room.bubble?.x ?? 0),
+          y: downOf(band, index) + (room.bubble?.y ?? 0),
           r: radiusFor(room.targetArea, scale),
         })
       }
