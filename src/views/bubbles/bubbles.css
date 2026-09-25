@@ -297,6 +297,22 @@
   opacity: 1;
 }
 
+.bubbles .legend .legend-key {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.8rem;
+  color: #4a453d;
+}
+
+.bubbles .legend .legend-scale {
+  fill: none;
+  stroke: #6f6a62;
+  stroke-width: 1px;
+  stroke-dasharray: 3 2;
+}
+
 .bubbles .legend .legend-swatch {
   stroke: #6f6a62;
   stroke-width: 1px;

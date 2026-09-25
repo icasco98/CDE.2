@@ -6,6 +6,7 @@
  */
 
 import { EXTERIOR, type Bubble, type Endpoint } from '../model'
+import { radiusFor, scaleFor } from './sizes'
 
 type Tier = 'public' | 'semi-public' | 'private'
 
@@ -32,7 +33,14 @@ export type Spot = {
 
 type Column = { readonly storey: number; readonly x: number; readonly width: number }
 
-type Band = { readonly tier: Tier; readonly y: number; readonly height: number }
+/** A tier's rows across every column; `line` is one row's depth, set by the band's largest circle. */
+type Band = {
+  readonly tier: Tier
+  readonly y: number
+  readonly height: number
+  readonly line: number
+  readonly radius: number
+}
 
 export type Arrangement = {
   readonly spots: readonly Spot[]
@@ -42,11 +50,18 @@ export type Arrangement = {
   readonly outside: readonly Spot[]
   readonly width: number
   readonly height: number
+  /** Radius per square root of a square metre, the same for every circle. */
+  readonly scale: number
 }
 
 /** A room's cell in a band: wide enough for the largest circle and its name under it. */
 const CELL = 120
+/** The least depth of a row, and the room above a row's circles and below them for the names. */
 const LINE = 110
+const ABOVE = 12
+const BELOW = 60
+/** Half the height of the outside's box under the columns. */
+const OUTSIDE = 18
 /** The gap between two columns, and the margin round the whole diagram. */
 const GAP = 60
 /** At most this many rooms to a line; a busier band wraps onto another line. */
@@ -57,11 +72,6 @@ const tiersDown: readonly Tier[] = ['private', 'semi-public', 'public']
 
 const isTier = (tier: string | undefined): tier is Tier =>
   tier === 'public' || tier === 'semi-public' || tier === 'private'
-
-/** The circle hints at the area and no more: it grows with the square root and is held to a band. */
-export function radiusFor(targetArea: number): number {
-  return Math.min(40, Math.max(18, 12 + Math.sqrt(Math.max(0, targetArea)) * 2.6))
-}
 
 function standsOn(room: ArrangeRoom, storey: number): boolean {
   const span = Math.max(1, Math.trunc(room.storeysSpanned))
@@ -120,13 +130,21 @@ export function arrange(
 ): Arrangement {
   const levels = Math.max(1, Math.trunc(storeys))
   const perStorey = Array.from({ length: levels }, (_, storey) => bandsOf(rooms, edges, storey))
+  const scale = scaleFor(rooms.map((room) => room.targetArea))
   // A band is as deep on every column as on its busiest, so a tier reads across the whole diagram.
   const bands: Band[] = []
   let y = GAP
   for (const tier of tiersDown) {
     const lines = Math.max(...perStorey.map((rows) => linesFor(rows.get(tier)!.length)))
-    bands.push({ tier, y, height: lines * LINE })
-    y += lines * LINE
+    const radius = Math.max(
+      0,
+      ...perStorey.flatMap((rows) =>
+        rows.get(tier)!.map((room) => radiusFor(room.targetArea, scale)),
+      ),
+    )
+    const line = Math.max(LINE, ABOVE + 2 * radius + BELOW)
+    bands.push({ tier, y, height: lines * line, line, radius })
+    y += lines * line
   }
   const outsideY = y + LINE / 2
   const height = y + LINE + GAP / 2
@@ -147,14 +165,15 @@ export function arrange(
         const line = Math.floor(index / PER_LINE)
         const onLine = Math.min(PER_LINE, row.length - line * PER_LINE)
         const across = x + (width - onLine * CELL) / 2 + ((index % PER_LINE) + 0.5) * CELL
-        // The first line of a band is its lowest, so a band fills upward from the street.
-        const down = band.y + band.height - (line + 0.5) * LINE
+        // The first line of a band is its lowest, so a band fills upward from the street; the
+        // circles of a line share their centre, and the names hang below.
+        const down = band.y + band.height - (line + 1) * band.line + ABOVE + band.radius
         spots.push({
           id: room.id,
           storey,
           x: across + (room.bubble?.x ?? 0),
           y: down + (room.bubble?.y ?? 0),
-          r: radiusFor(room.targetArea),
+          r: radiusFor(room.targetArea, scale),
         })
       }
     }
@@ -162,8 +181,8 @@ export function arrange(
       (edge) => edge.storey === storey && (edge.a === EXTERIOR || edge.b === EXTERIOR),
     )
     if (storey === 0 || outdoors)
-      outside.push({ id: EXTERIOR, storey, x: x + width / 2, y: outsideY, r: 18 })
+      outside.push({ id: EXTERIOR, storey, x: x + width / 2, y: outsideY, r: OUTSIDE })
     x += width + GAP
   }
-  return { spots, columns, bands, outside, width: x, height }
+  return { spots, columns, bands, outside, width: x, height, scale }
 }

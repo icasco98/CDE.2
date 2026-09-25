@@ -17,6 +17,9 @@ function linesOf(name: string): readonly string[] {
   return best < 0 ? [name] : [name.slice(0, best), name.slice(best + 1)]
 }
 
+/** The least radius whose circle holds its area's label, in the diagram's units. */
+const AREA_FITS = 18
+
 type BubbleProps = {
   readonly spot: Spot
   readonly name: string
@@ -36,6 +39,9 @@ export const Bubble = memo(function Bubble(props: BubbleProps) {
   if (props.selected) classes.push('bubble-selected')
   if (props.dimmed) classes.push('bubble-dimmed')
   const lines = linesOf(name)
+  // A circle too small for its area's label wears it under its name instead.
+  const areaInside = spot.r >= AREA_FITS
+  const under = [...lines, ...(areaInside ? [] : [props.area])]
   const reach = { x: spot.x + spot.r * Math.SQRT1_2, y: spot.y - spot.r * Math.SQRT1_2 }
   return (
     <g
@@ -55,16 +61,23 @@ export const Bubble = memo(function Bubble(props: BubbleProps) {
       >
         <title>{`${name}, ${props.area}`}</title>
       </circle>
-      <text x={spot.x} y={spot.y} className="bubble-area">
-        {props.area}
-      </text>
-      {lines.map((line, index) => (
-        <text key={index} x={spot.x} y={spot.y + spot.r + 14 + index * 15} className="bubble-name">
+      {areaInside && (
+        <text x={spot.x} y={spot.y} className="bubble-area">
+          {props.area}
+        </text>
+      )}
+      {under.map((line, index) => (
+        <text
+          key={index}
+          x={spot.x}
+          y={spot.y + spot.r + 14 + index * 15}
+          className={index < lines.length ? 'bubble-name' : 'bubble-area'}
+        >
           {line}
         </text>
       ))}
       {props.span && (
-        <text x={spot.x} y={spot.y + spot.r + 14 + lines.length * 15} className="bubble-span">
+        <text x={spot.x} y={spot.y + spot.r + 14 + under.length * 15} className="bubble-span">
           {props.span}
         </text>
       )}
@@ -223,11 +236,24 @@ const legendRows = [
   },
 ]
 
-/** Beside the diagram, never over it: a legend that covers a bubble is a legend in the way. */
-export function Legend() {
+/**
+ * Beside the diagram, never over it: a legend that covers a bubble is a legend in the way. The key
+ * is a circle at the diagram's own scale on screen, so it reads against the bubbles as drawn.
+ */
+export function Legend(props: {
+  readonly scaleKey: { readonly area: number; readonly r: number }
+  readonly pixels: number
+}) {
+  const r = Math.max(1, props.scaleKey.r * props.pixels)
   return (
     <section className="bubbles-panel legend">
       <h2>Legend</h2>
+      <p className="legend-key" data-key-area={props.scaleKey.area}>
+        <svg width={2 * r + 2} height={2 * r + 2} aria-hidden="true">
+          <circle cx={r + 1} cy={r + 1} r={r} className="legend-scale" />
+        </svg>
+        <span>= {props.scaleKey.area} m²</span>
+      </p>
       <ul>
         {legendRows.map((row) => (
           <li key={row.key}>

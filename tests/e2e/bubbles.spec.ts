@@ -76,6 +76,25 @@ test('a nudge moves one bubble, is kept after a reload, and moves nothing else',
   expect(after.y).toBeCloseTo(moved.y, 0)
 })
 
+test("a circle's area follows its room's, and the legend's key is drawn at the same scale", async ({
+  page,
+}) => {
+  await openVilla(page)
+  await expect.poll(async () => (await saved(page)).rooms.length).toBeGreaterThan(5)
+  const project = await saved(page)
+  const areaOf = (name: string) => project.rooms.find((room) => room.name === name)!.targetArea
+  const radiusOf = async (name: string) =>
+    (await roomNamed(page, name).locator('.bubble-shape').boundingBox())!.width / 2
+  const diwaniya = await radiusOf('Diwaniya')
+  const dining = await radiusOf('Dining Room')
+  expect(diwaniya / dining).toBeCloseTo(Math.sqrt(areaOf('Diwaniya') / areaOf('Dining Room')), 1)
+  const key = page.locator('.legend-key')
+  const area = Number(await key.getAttribute('data-key-area'))
+  await expect(key).toContainText(`= ${area} m²`)
+  const drawn = (await key.locator('circle').boundingBox())!.width / 2
+  expect(drawn / diwaniya).toBeCloseTo(Math.sqrt(area / areaOf('Diwaniya')), 1)
+})
+
 test("clicking a storey's name brings it forward and fades the others", async ({ page }) => {
   await openVilla(page)
   await page.getByRole('button', { name: 'First', exact: true }).click()

@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import type { Arrangement, Spot } from '../../bubbles/arrange'
 import { EXTERIOR, type Bubble as Nudge, type Commit } from '../../model'
 import { storeyLabel } from '../../rulebook'
@@ -41,6 +48,8 @@ type DiagramProps = {
   readonly onKeepApart: (a: string, b: string) => void
   readonly onSelect: (id: string | null) => void
   readonly onRefuse: (message: string) => void
+  /** Screen pixels per unit of the diagram, told whenever the drawing's size on screen changes. */
+  readonly onPixels: (pixels: number) => void
 }
 
 function pointerAt(svg: SVGSVGElement | null, clientX: number, clientY: number): Point {
@@ -152,6 +161,20 @@ export function Diagram(props: DiagramProps) {
       window.removeEventListener('pointerup', onUp)
     }
   }, [])
+
+  const onPixels = props.onPixels
+  useLayoutEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    const tell = (): void => {
+      const screen = svg.getScreenCTM()
+      if (screen) onPixels(Math.hypot(screen.a, screen.b))
+    }
+    tell()
+    const observer = new ResizeObserver(tell)
+    observer.observe(svg)
+    return () => observer.disconnect()
+  }, [onPixels, arrangement.width, arrangement.height])
 
   /** A room drawn in two columns is one room, so its two circles are tied by a line of their own. */
   const through = useMemo(() => {

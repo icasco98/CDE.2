@@ -62,7 +62,13 @@ export async function selectRoom(page: Page, name: string, storey = 0) {
 }
 
 type Saved = {
-  rooms: { id: string; name: string; storey: number; bubble?: { x: number; y: number } }[]
+  rooms: {
+    id: string
+    name: string
+    storey: number
+    targetArea: number
+    bubble?: { x: number; y: number }
+  }[]
   edges: { id: string; a: string; b: string; kind: string; storey: number }[]
   apart?: { id: string; a: string; b: string }[]
 }

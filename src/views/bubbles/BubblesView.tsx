@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { arrange } from '../../bubbles/arrange'
+import { keyFor } from '../../bubbles/sizes'
 import { storeyLabel } from '../../rulebook'
 import { ApartPanel } from './ApartPanel'
 import { ChecksPanel } from './ChecksPanel'
@@ -17,6 +18,8 @@ export function BubblesView(props: BubblesViewProps) {
   const [matrix, setMatrix] = useState(false)
   const levels = Math.max(1, Math.trunc(storeys))
   const arrangement = useMemo(() => arrange(rooms, edges, levels), [rooms, edges, levels])
+  const scaleKey = useMemo(() => keyFor(arrangement.scale), [arrangement.scale])
+  const [pixels, setPixels] = useState(1)
   const named = useMemo(() => new Map(rooms.map((room) => [room.id, room])), [rooms])
   const selectedRoom = named.get(selected ?? '')
   const selectedEdge = edges.find((edge) => edge.id === selected)
@@ -128,6 +131,7 @@ export function BubblesView(props: BubblesViewProps) {
           onKeepApart={props.onKeepApart}
           onSelect={props.onSelect}
           onRefuse={props.onRefuse}
+          onPixels={setPixels}
         />
         <div className="bubbles-side">
           {selectedEdge && (
@@ -146,7 +150,7 @@ export function BubblesView(props: BubblesViewProps) {
             />
           )}
           <ChecksPanel checks={props.checks} onPick={props.onSelect} />
-          <Legend />
+          <Legend scaleKey={scaleKey} pixels={pixels} />
         </div>
       </div>
       {matrix && (
