@@ -38,7 +38,7 @@ test('a person enters a plot, a household and a program, and it is still there a
   const rooms = rowsOf(page)
   expect(await rooms.count()).toBeGreaterThanOrEqual(12)
 
-  // The three weights stand beside the diagram they change, on the Bubbles tab, not here.
+  // Nothing reads the weights while no solver runs, so no slider stands anywhere.
   await expect(page.getByRole('slider', { name: 'Site constraints' })).toHaveCount(0)
 
   const diwaniya = rowNamed(page, 'Diwaniya')
@@ -221,4 +221,87 @@ test('a storey added and undone takes the stair back down with it', async ({ pag
   await expect(stair.getByLabel('To').locator('option:checked')).toHaveText('Ground')
   // The one undo answered the storey alone: the three rooms added before it are still there.
   await expect(rowsOf(page)).toHaveCount(3)
+})
+
+/** A project written straight into browser storage, as a saved file would be opened. */
+async function seed(page: Page, project: unknown) {
+  await page.addInitScript((stored) => {
+    window.localStorage.setItem('cde.project', stored as string)
+  }, JSON.stringify(project))
+}
+
+test('a brief asking a 5 m² WC to touch four rooms says so on the Requirements screen', async ({
+  page,
+}) => {
+  const room = (id: string, name: string, type: string, targetArea: number) => ({
+    id,
+    name,
+    type,
+    storey: 0,
+    storeysSpanned: 1,
+    targetArea,
+    pinned: false,
+  })
+  await seed(page, {
+    id: 'project_z2',
+    name: 'Over-linked WC',
+    storeys: 1,
+    heights: [3.5],
+    plot: {
+      on: true,
+      polygon: [
+        [0, 0],
+        [20, 0],
+        [20, 25],
+        [0, 25],
+      ],
+      north: 0,
+      street: [2],
+    },
+    site: { diwaniyaAtCorner: false, garden: 'rear' },
+    household: {
+      familySize: 4,
+      bedrooms: 0,
+      cars: 0,
+      maid: false,
+      driver: false,
+      womensReception: false,
+      masterOnGround: false,
+    },
+    rooms: [
+      room('room_wc', 'Diwaniya WC', 'diwaniya-wc', 5),
+      room('room_d', 'Diwaniya', 'diwaniya', 45),
+      room('room_f', 'Formal Living', 'formal-living', 30),
+      room('room_g', 'Dining Room', 'dining-room', 24),
+      room('room_h', 'Family Living', 'family-living', 32),
+    ],
+    edges: [
+      { id: 'edge_1', a: 'room_wc', b: 'room_d', kind: 'door', storey: 0 },
+      { id: 'edge_2', a: 'room_wc', b: 'room_f', kind: 'door', storey: 0 },
+      { id: 'edge_3', a: 'room_wc', b: 'room_g', kind: 'door', storey: 0 },
+      { id: 'edge_4', a: 'room_wc', b: 'room_h', kind: 'door', storey: 0 },
+    ],
+    weights: {},
+    actors: [],
+    version: 7,
+  })
+  await page.goto('/')
+  await expect(page.locator('.findings')).toContainText(
+    'Diwaniya WC is linked to four rooms; at 5 m² it can touch three. Remove a link.',
+  )
+})
+
+test('a bedroom moved to First says which door it let go', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Add storey' }).click()
+  await page.getByLabel('Master bedroom on the ground floor').check()
+  await page.getByRole('button', { name: /rebuild program from household/i }).click()
+
+  const row = page
+    .locator('table.program tbody tr')
+    .filter({ has: page.getByLabel('Room name').and(page.locator('[value="Master Bedroom"]')) })
+  await row.getByLabel('Storey').selectOption({ label: 'First' })
+  await expect(page.locator('.messages')).toContainText(
+    'Master Bedroom: its door to Ground Hallway was let go.',
+  )
 })

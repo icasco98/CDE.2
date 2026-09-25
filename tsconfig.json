@@ -15,5 +15,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src", "tests", "playground", "*.config.ts"]
+  "include": ["src", "tests", "*.config.ts"]
 }

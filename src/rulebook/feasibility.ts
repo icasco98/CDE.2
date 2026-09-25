@@ -9,9 +9,9 @@ import { freeProportion } from './types'
 import { inWords, listedNames, metresIn } from './words'
 
 /*
- * The brief checked before a bubble moves, under decision 21: a link can fail because the program
- * asked for what geometry cannot give, and that is knowable from the graph and the plot alone. A
- * finding says which of the three it is and what to do about it. A finding never stops a settle.
+ * The brief checked on the Requirements screen: a link can fail because the program asked for what
+ * geometry cannot give, and that is knowable from the graph and the plot alone. A finding says
+ * which it is and what to do about it, and never stops anything.
  */
 
 /** A room as the check reads one: what it is, what it is called and how much of it there is. */

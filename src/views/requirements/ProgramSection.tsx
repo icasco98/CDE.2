@@ -27,12 +27,12 @@ export function ProgramSection({ project }: { project: Project }) {
     setProblem(refusalOf(addRoomWithCompanion(session, kind, plotArea, project.storeys)))
   }
 
-  // The same reading the bubbles sheet gives, from the same function: what each storey's targets
-  // come to against the floor the setbacks leave it, a stair counted on every storey it reaches.
+  // What each storey's targets come to against the floor the setbacks leave it, a stair counted on
+  // every storey it reaches.
   const fits = storeyFits(project.rooms, buildableAreaOf(project.plot), project.storeys)
   const total = fits.reduce((sum, fit) => sum + fit.needed, 0)
-  // The brief checked before a bubble moves: what this program asks of geometry that geometry
-  // cannot give. A finding never stops a settle; it says what to change and waits.
+  // What this program asks of geometry that geometry cannot give; a finding says what to change
+  // and waits.
   const findings = feasibility(project.rooms, project.edges, project.plot, project.storeys)
 
   return (

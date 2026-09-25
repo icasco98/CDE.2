@@ -16,7 +16,7 @@ function shape(street: readonly number[]) {
   return { polygon: [...plot.polygon], street }
 }
 
-describe('the plot read into the sides the rows pull toward', () => {
+describe('the plot read into its sides', () => {
   it('sets the service street on the line the setback leaves inside the street boundary', () => {
     const sides = sidesOf(shape([2]))
     // Two metres in from a street boundary on a plot under 750 m², running the whole frontage
@@ -27,19 +27,10 @@ describe('the plot read into the sides the rows pull toward', () => {
     expect(sides.service?.inward[1]).toBe(-1)
   })
 
-  it('puts the back opposite the service street and the rest on the sides', () => {
-    const sides = sidesOf(shape([2]))
-    expect(sides.back?.inward[1]).toBe(1)
-    expect(sides.back?.from[1]).toBeCloseTo(1.5, 9)
-    expect(sides.sides.map((side) => side.index).sort()).toEqual([1, 3])
-  })
-
-  it('addresses the first street on a corner plot and gives the corner where they meet', () => {
+  it('addresses the first street on a corner plot', () => {
     const sides = sidesOf(shape([2, 3]))
     expect(sides.service?.index).toBe(2)
     expect(sides.street).toHaveLength(2)
-    expect(sides.corner?.[0]).toBeCloseTo(2, 9)
-    expect(sides.corner?.[1]).toBeCloseTo(23, 9)
   })
 
   it('has no service street on a plot with none, and holds nothing on a plot with no floor', () => {

@@ -4,9 +4,8 @@ import { selection, useSelection } from '../../app/selection'
 import { sendToStorey } from '../../app/sendToStorey'
 import { session } from '../../app/session'
 import { useProject } from '../../app/useProject'
-import type { Position } from '../../bubbles'
-import { EXTERIOR, type Commit, type EdgeKind, type Family, type Result } from '../../model'
-import { circulationPerStorey, connectionSource, roomTypeById } from '../../rulebook'
+import type { Bubble, Commit, EdgeKind, Result } from '../../model'
+import { circulationPerStorey, roomTypeById } from '../../rulebook'
 import { addHallway } from './addHallway'
 import { BubblesView } from './BubblesView'
 
@@ -19,23 +18,16 @@ export function BubblesStage() {
     () =>
       project.rooms.map((room) => {
         const kind = roomTypeById(room.type)
-        return { ...room, kind: room.type, category: kind?.category, tier: kind?.tier }
+        return { ...room, category: kind?.category, tier: kind?.tier }
       }),
     [project.rooms],
   )
 
-  /** A default connection keeps the rulebook's own words, which the link says on hover. */
-  const edges = useMemo(() => {
-    const kindOf = (id: string): string =>
-      id === EXTERIOR ? EXTERIOR : (project.rooms.find((room) => room.id === id)?.type ?? '')
-    return project.edges.map((edge) => {
-      const source = connectionSource(kindOf(edge.a), kindOf(edge.b), edge.kind)
-      return source ? { ...edge, source } : edge
-    })
-  }, [project.edges, project.rooms])
-
-  const circulation = useMemo(
-    () => circulationPerStorey(project.rooms, project.storeys),
+  const hallwayWanted = useMemo(
+    () =>
+      circulationPerStorey(project.rooms, project.storeys).flatMap((entry) =>
+        entry.wanted === undefined ? [] : [{ storey: entry.storey, sentence: entry.wanted }],
+      ),
     [project.rooms, project.storeys],
   )
 
@@ -68,25 +60,12 @@ export function BubblesStage() {
   return (
     <BubblesView
       rooms={rooms}
-      edges={edges}
+      edges={project.edges}
       storeys={project.storeys}
-      circulation={circulation}
-      plot={project.plot}
-      site={project.site}
-      weights={project.weights}
       selected={selected}
-      onMoveBubble={(id: string, at: Position, commit: Commit) =>
-        session.actions.setBubble(id, at, commit)
-      }
-      onDropBubble={(id: string, at: Position) =>
-        report(
-          // Dropped is held: the bubble is put where the hand left it and pinned there in the one
-          // step, so the forces cannot take it back and Let go is what hands it to them again.
-          session.transaction(() => {
-            const put = session.actions.setBubble(id, at)
-            return put.ok ? session.actions.pin(id) : put
-          }),
-        )
+      hallwayWanted={hallwayWanted}
+      onNudge={(id: string, nudge: Bubble, commit: Commit) =>
+        report(session.actions.setBubble(id, nudge, commit))
       }
       onSetStorey={(id: string, storey: number) => {
         // A door the move could not hold is said out loud and fades, as every refusal does.
@@ -94,9 +73,6 @@ export function BubblesStage() {
         if (moved.ok) moved.value.forEach((sentence) => session.say(sentence))
         return report(moved)
       }}
-      onPin={(id: string, pinned: boolean) =>
-        report(pinned ? session.actions.pin(id) : session.actions.unpin(id))
-      }
       onConnect={(a: string, b: string) => report(session.actions.connect({ a, b, kind: 'door' }))}
       onDisconnect={disconnect}
       onSetEdgeKind={(edgeId: string, kind: EdgeKind) =>
@@ -112,9 +88,6 @@ export function BubblesStage() {
             return connectDefaults(session)
           }),
         )
-      }
-      onSetWeight={(family: Family, weight: number) =>
-        report(session.actions.setWeights({ ...project.weights, [family]: weight }))
       }
       onSelect={selection.select}
       onRefuse={session.say}

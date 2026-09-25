@@ -1,170 +1,80 @@
-import {
-  memo,
-  type CSSProperties,
-  type PointerEvent as ReactPointerEvent,
-  type ReactNode,
-} from 'react'
+import { memo, type PointerEvent as ReactPointerEvent } from 'react'
+import type { Spot } from '../../bubbles/arrange'
 import { categoryLabels } from '../../rulebook'
-import type { Position } from '../../bubbles'
-import type { Body } from '../../bubbles'
-import { categoryClass, LINE, type BubbleLabel } from './frame'
-import type { BubbleRoom } from './types'
 
-/*
- * What must hold its size on the screen does so as the plan sheet does it: every stroke is in
- * pixels through `vector-effect: non-scaling-stroke`, and text takes a font size from the sheet's
- * `--per-px`, the metres one pixel covers, so a zoom changes one style and no bubble is drawn
- * again. A bubble's own marks, the pin and the ring, stay in metres because they belong to the
- * circle and grow with it.
- */
-
-/** How far apart the two lines of an opening run, in metres: a door is one line, an opening two. */
-const OPEN_M = 0.5
-
-/** The square that marks the front door where it meets the street, in metres. */
-const DOOR_MARK_M = 0.8
-
-/** The two marks sit opposite each other on the rim: what holds the room on the left, what links it on the right. */
-function onRim(at: Position, radius: number, toTheLeft: boolean): Position {
-  const away = radius * Math.SQRT1_2
-  return { x: at.x + (toTheLeft ? -away : away), y: at.y - away }
+/** The fill is bubbles.css's to choose, so a bubble and the legend that names it take one class. */
+export function categoryClass(category: string | undefined): string {
+  return category ? `category-${category}` : 'category-none'
 }
 
-export type BubbleHandlers = {
-  readonly onGrab: (event: ReactPointerEvent, body: Body) => void
-  readonly onReach: (event: ReactPointerEvent, body: Body) => void
+/** A name broken at the space nearest its middle when it is longer than a cell holds on one line. */
+function linesOf(name: string): readonly string[] {
+  if (name.length <= 16) return [name]
+  const middle = name.length / 2
+  let best = -1
+  for (let at = name.indexOf(' '); at >= 0; at = name.indexOf(' ', at + 1))
+    if (best < 0 || Math.abs(at - middle) < Math.abs(best - middle)) best = at
+  return best < 0 ? [name] : [name.slice(0, best), name.slice(best + 1)]
 }
 
 type BubbleProps = {
-  readonly body: Body
-  readonly room: BubbleRoom
-  /** The storey this twin is drawn on; a stair is drawn once on every storey it reaches. */
-  readonly twin: number
+  readonly spot: Spot
+  readonly name: string
+  readonly area: string
+  readonly category?: string
+  /** The storeys a stair reaches, said on every one of its bubbles so two circles read as one room. */
+  readonly span?: string
   readonly selected: boolean
-  /**
-   * On a storey that is not the one being worked on: drawn faint and out of the pointer's reach.
-   */
   readonly dimmed: boolean
-  /**
-   * What the bubble says and how large, measured against the circle by the view rather than
-   * guessed from the zoom. The same label object is handed back while the scale holds, so a pan
-   * redraws no bubble at all.
-   */
-  readonly label: BubbleLabel
-  /** What else is worth saying about where this bubble stands, for the hand that rests on it. */
-  readonly note?: string
-  readonly handlers: BubbleHandlers
-}
-
-/** Every bubble says where it stands and how wide it is, whatever shape it is drawn as. */
-function standsAt(body: Body) {
-  return {
-    'data-bubble': body.id,
-    'data-x': body.x,
-    'data-y': body.y,
-    'data-radius': body.radius,
-  }
-}
-
-/** Memoised on the body, the twin and the label, so a pan draws no bubble again. */
-/** What the hand resting on a bubble is told: its name and its size, and where it stands when
- * where it stands is not its own to choose. */
-function titleOf(
-  room: { readonly name: string; readonly targetArea: number },
-  note?: string,
-): string {
-  const said = `${room.name}, ${Math.round(room.targetArea)} m²`
-  return note ? `${said}, ${note}` : said
+  readonly onGrab: (event: ReactPointerEvent, spot: Spot) => void
+  readonly onReach: (event: ReactPointerEvent, spot: Spot) => void
 }
 
 export const Bubble = memo(function Bubble(props: BubbleProps) {
-  const { body, room, twin, label, note, handlers } = props
-  const corridor = body.half > 0
-  const at = { x: body.x, y: body.y }
-  // A corridor's two marks sit at its far end rather than on a rim it does not have.
-  const along = { x: Math.cos(body.angle) * body.half, y: Math.sin(body.angle) * body.half }
-  const rim = corridor ? { x: at.x + along.x, y: at.y + along.y } : onRim(at, body.radius, false)
-  const held = corridor ? { x: at.x - along.x, y: at.y - along.y } : onRim(at, body.radius, true)
-  const turn = (body.angle * 180) / Math.PI
-  // A label runs along the corridor and stays the right way up, so a corridor pointing back down
-  // the plot is read without turning the head.
-  const upright = Math.abs(((turn + 180) % 360) - 180) > 90 ? turn + 180 : turn
-  // A name that will not go inside its own rim on one line or two is dropped for the room's
-  // initials, and told in full on hover and while the room is selected: two labels never lie
-  // across each other.
-  const rows = label.rows
+  const { spot, name } = props
   const classes = ['bubble']
   if (props.selected) classes.push('bubble-selected')
   if (props.dimmed) classes.push('bubble-dimmed')
-  if (label.short) classes.push('bubble-short')
+  const lines = linesOf(name)
+  const reach = { x: spot.x + spot.r * Math.SQRT1_2, y: spot.y - spot.r * Math.SQRT1_2 }
   return (
     <g
-      data-room={body.id}
-      data-name={room.name}
-      data-twin={twin}
+      data-room={spot.id}
+      data-name={name}
+      data-storey={spot.storey}
+      data-x={spot.x}
+      data-y={spot.y}
       className={classes.join(' ')}
-      style={{ '--label-m': String(label.size) } as CSSProperties}
     >
-      {corridor ? (
-        <rect
-          {...standsAt(body)}
-          data-half={body.half}
-          data-angle={body.angle}
-          x={at.x - body.half - body.radius}
-          y={at.y - body.radius}
-          width={2 * (body.half + body.radius)}
-          height={2 * body.radius}
-          rx={body.radius}
-          transform={`rotate(${turn} ${at.x} ${at.y})`}
-          className={`bubble-shape ${categoryClass(room.category)}`}
-          onPointerDown={(event) => handlers.onGrab(event, body)}
-        >
-          <title>{titleOf(room, note)}</title>
-        </rect>
-      ) : (
-        <circle
-          {...standsAt(body)}
-          cx={at.x}
-          cy={at.y}
-          r={body.radius}
-          className={`bubble-shape ${categoryClass(room.category)}`}
-          onPointerDown={(event) => handlers.onGrab(event, body)}
-        >
-          <title>{titleOf(room, note)}</title>
-        </circle>
-      )}
-      {/* The stack sits about the middle of the shape, a line of its own cap height apart, so
-          the name reads at the widest part of the bubble whatever else is said under it. */}
-      <g transform={corridor ? `rotate(${upright} ${at.x} ${at.y})` : undefined}>
-        {rows.map((row, index) => (
-          <text
-            key={row.kind + index}
-            x={at.x}
-            y={at.y + (index - (rows.length - 1) / 2) * label.size * LINE}
-            className={`bubble-${row.kind}`}
-          >
-            {row.text}
-          </text>
-        ))}
-      </g>
-      {label.short && (
-        <text x={at.x} y={at.y - body.radius} dy="-0.5em" className="bubble-full">
-          {room.name}
+      <circle
+        cx={spot.x}
+        cy={spot.y}
+        r={spot.r}
+        className={`bubble-shape ${categoryClass(props.category)}`}
+        onPointerDown={(event) => props.onGrab(event, spot)}
+      >
+        <title>{`${name}, ${props.area}`}</title>
+      </circle>
+      <text x={spot.x} y={spot.y} className="bubble-area">
+        {props.area}
+      </text>
+      {lines.map((line, index) => (
+        <text key={index} x={spot.x} y={spot.y + spot.r + 14 + index * 15} className="bubble-name">
+          {line}
+        </text>
+      ))}
+      {props.span && (
+        <text x={spot.x} y={spot.y + spot.r + 14 + lines.length * 15} className="bubble-span">
+          {props.span}
         </text>
       )}
-      {room.pinned && (
-        <circle cx={held.x} cy={held.y} r={Math.max(0.45, body.radius * 0.16)} className="pin-mark">
-          <title>Held in place</title>
-        </circle>
-      )}
-      {/* Faint until the hand or the selection is on the bubble, where it is the handle to drag a link from. */}
       <circle
-        cx={rim.x}
-        cy={rim.y}
-        r={Math.max(0.55, body.radius * 0.2)}
+        cx={reach.x}
+        cy={reach.y}
+        r={6}
         className="reach"
-        data-reach={body.id}
-        onPointerDown={(event) => handlers.onReach(event, body)}
+        data-reach={spot.id}
+        onPointerDown={(event) => props.onReach(event, spot)}
       >
         <title>Drag to another room to connect them</title>
       </circle>
@@ -172,115 +82,83 @@ export const Bubble = memo(function Bubble(props: BubbleProps) {
   )
 })
 
+/** Where a line between two circles leaves the first one's rim. */
+function rimToRim(from: Spot, to: Spot): readonly [number, number, number, number] {
+  const run = Math.hypot(to.x - from.x, to.y - from.y) || 1
+  const ux = (to.x - from.x) / run
+  const uy = (to.y - from.y) / run
+  return [from.x + ux * from.r, from.y + uy * from.r, to.x - ux * to.r, to.y - uy * to.r]
+}
+
 type LinkProps = {
   readonly id: string
-  readonly from: Position
-  readonly to: Position
+  readonly from: Spot
+  readonly to: Spot
   readonly kind: string
   readonly storey: number
   readonly selected: boolean
   readonly dimmed: boolean
-  /** Why the rulebook wanted this connection, where it came from the default table. */
-  readonly title?: string
-  /** Whether the far end is the outside: the front door's square is drawn there. */
-  readonly outside: boolean
-  /** Why the link has not closed, where it has not; a closed link says nothing. */
-  readonly tension?: string | null
+  readonly title: string
   readonly onSelect: (event: ReactPointerEvent, id: string) => void
 }
 
-/** The line that stands off a link's own by half an opening, so an open link reads as two lines. */
-function beside(from: Position, to: Position, offset: number): readonly [Position, Position] {
-  const run = Math.hypot(to.x - from.x, to.y - from.y) || 1
-  const nx = (-(to.y - from.y) / run) * offset
-  const ny = ((to.x - from.x) / run) * offset
-  return [
-    { x: from.x + nx, y: from.y + ny },
-    { x: to.x + nx, y: to.y + ny },
-  ]
-}
+/** Half the gap between the two lines of an opening, in the diagram's units. */
+const OPEN_HALF = 3
 
-/** Memoised like the bubbles, so a camera that changes nothing about the graph redraws no link. */
 export const Link = memo(function Link(props: LinkProps) {
-  const { from, to } = props
+  const [x1, y1, x2, y2] = rimToRim(props.from, props.to)
+  const run = Math.hypot(x2 - x1, y2 - y1) || 1
+  const nx = (-(y2 - y1) / run) * OPEN_HALF
+  const ny = ((x2 - x1) / run) * OPEN_HALF
   const select = (event: ReactPointerEvent): void => props.onSelect(event, props.id)
-  // One space flowing into the next is an opening, drawn as the two edges of it; a door is the
-  // single line between them.
-  const open = props.kind === 'open'
-  const [leftFrom, leftTo] = beside(from, to, open ? -OPEN_M / 2 : 0)
-  const [rightFrom, rightTo] = beside(from, to, open ? OPEN_M / 2 : 0)
+  const stroke = props.selected ? 'link link-selected' : 'link'
+  const classes = ['link-group', `link-${props.kind}`]
+  if (props.dimmed) classes.push('link-dimmed')
   return (
     <g
       data-edge={props.id}
       data-kind={props.kind}
       data-storey={props.storey}
-      data-tension={props.tension ? '' : undefined}
-      className={['link-group', props.dimmed ? 'link-dimmed' : '', props.tension ? 'link-open' : '']
-        .filter(Boolean)
-        .join(' ')}
+      className={classes.join(' ')}
     >
-      {/* A link that has not closed says what is in the way; one that has says why it was wanted. */}
-      {props.tension ? (
-        <title>{props.tension}</title>
-      ) : props.title ? (
-        <title>{props.title}</title>
-      ) : null}
-      {/* The grip takes the middle third of the run, because a linked pair now stands rim to rim
-          and a grip the whole length of it would lie across both bubbles' own middles. */}
-      <line
-        x1={from.x + (to.x - from.x) / 3}
-        y1={from.y + (to.y - from.y) / 3}
-        x2={to.x - (to.x - from.x) / 3}
-        y2={to.y - (to.y - from.y) / 3}
-        className="link-grip"
-        onPointerDown={select}
-      />
-      <line
-        x1={leftFrom.x}
-        y1={leftFrom.y}
-        x2={leftTo.x}
-        y2={leftTo.y}
-        className={props.selected ? 'link link-selected' : 'link'}
-        onPointerDown={select}
-      />
-      {open && (
-        <line
-          x1={rightFrom.x}
-          y1={rightFrom.y}
-          x2={rightTo.x}
-          y2={rightTo.y}
-          className={props.selected ? 'link link-selected' : 'link'}
-          onPointerDown={select}
-        />
-      )}
-      {/* The front door is the one door onto the street, so it is marked where it meets it. */}
-      {props.kind === 'main-door' && props.outside && (
-        <rect
-          x={to.x - DOOR_MARK_M / 2}
-          y={to.y - DOOR_MARK_M / 2}
-          width={DOOR_MARK_M}
-          height={DOOR_MARK_M}
-          className="main-door-mark"
-        />
+      <title>{props.title}</title>
+      {/* A line is too thin to aim at, so a wide invisible twin takes the click. */}
+      <line x1={x1} y1={y1} x2={x2} y2={y2} className="link-grip" onPointerDown={select} />
+      {props.kind === 'open' ? (
+        <>
+          <line x1={x1 + nx} y1={y1 + ny} x2={x2 + nx} y2={y2 + ny} className={stroke} />
+          <line x1={x1 - nx} y1={y1 - ny} x2={x2 - nx} y2={y2 - ny} className={stroke} />
+        </>
+      ) : (
+        <line x1={x1} y1={y1} x2={x2} y2={y2} className={stroke} />
       )}
     </g>
   )
 })
 
-type LegendRow = { readonly key: string; readonly label: string; readonly mark: ReactNode }
+/** The street under a column: where a door to the outside is drawn to and dragged to. */
+export function Outside(props: { readonly spot: Spot; readonly dimmed: boolean }) {
+  const { spot } = props
+  return (
+    <g
+      data-room="EXTERIOR"
+      data-storey={spot.storey}
+      className={props.dimmed ? 'outside bubble-dimmed' : 'outside'}
+    >
+      <rect x={spot.x - 44} y={spot.y - spot.r} width={88} height={spot.r * 2} rx={6} />
+      <text x={spot.x} y={spot.y}>
+        Outside
+      </text>
+    </g>
+  )
+}
 
-/** Everything the sheet draws and nothing it does not: the fills, the pin, the three kinds of link. */
-const legendRows: readonly LegendRow[] = [
+const legendRows = [
   ...Object.entries(categoryLabels).map(([category, label]) => ({
     key: categoryClass(category),
     label,
     mark: <circle cx={12} cy={6} r={5} className={`legend-swatch ${categoryClass(category)}`} />,
   })),
-  {
-    key: 'pinned',
-    label: 'Held in place',
-    mark: <circle cx={12} cy={6} r={4} className="pin-mark" />,
-  },
   { key: 'door', label: 'Door', mark: <line x1={2} y1={6} x2={22} y2={6} className="link" /> },
   {
     key: 'open',
@@ -295,24 +173,14 @@ const legendRows: readonly LegendRow[] = [
   {
     key: 'main-door',
     label: 'Front door',
-    mark: (
-      <>
-        <line x1={2} y1={6} x2={18} y2={6} className="link" />
-        <rect x={17} y={2} width={7} height={7} className="main-door-mark" />
-      </>
-    ),
-  },
-  {
-    key: 'buildable',
-    label: 'Buildable line',
-    mark: <line x1={2} y1={6} x2={22} y2={6} className="legend-buildable" />,
+    mark: <line x1={2} y1={6} x2={22} y2={6} className="link link-main" />,
   },
 ]
 
-/** Beside the sheet, never over it: a legend that covers a bubble is a legend in the way. */
+/** Beside the diagram, never over it: a legend that covers a bubble is a legend in the way. */
 export function Legend() {
   return (
-    <section className="legend">
+    <section className="bubbles-panel legend">
       <h2>Legend</h2>
       <ul>
         {legendRows.map((row) => (
@@ -320,7 +188,7 @@ export function Legend() {
             <svg viewBox="0 0 24 12" width={24} height={12} aria-hidden="true">
               {row.mark}
             </svg>
-            <span className="legend-label">{row.label}</span>
+            <span>{row.label}</span>
           </li>
         ))}
       </ul>

@@ -2,8 +2,8 @@ import { area, outwardWalls, pointInPolygon, type Point, type Polygon } from '..
 import { buildableArea, setbackDepth, type PlotShape } from './setbacks'
 
 /**
- * One side of the plot as the walls and the forces read it: not the boundary itself but the line
- * the setback leaves inside it, which is where a room at that boundary really stands.
+ * One side of the plot as the brief check reads it: not the boundary itself but the line the
+ * setback leaves inside it, which is where a room at that boundary really stands.
  */
 export type PlotSide = {
   /** The plot polygon's own side number, which is what `Plot.street` names. */
@@ -16,19 +16,12 @@ export type PlotSide = {
   readonly length: number
 }
 
-/**
- * The plot's sides under the names forces.md gives them: the street sides are the ones the plot
- * marks, the back is the side opposite the service street, and a side is any of the others.
- */
+/** The plot's sides: all of them, the ones the plot marks as streets, and the frontage among those. */
 export type PlotSides = {
   readonly every: readonly PlotSide[]
   readonly street: readonly PlotSide[]
   /** The frontage a villa addresses; absent on a plot with no street at all. */
   readonly service?: PlotSide
-  readonly back?: PlotSide
-  readonly sides: readonly PlotSide[]
-  /** Where the service street meets another street, on a plot with two of them. */
-  readonly corner?: Point
 }
 
 function lengthOf(from: Point, to: Point): number {
@@ -81,27 +74,15 @@ function insideRun(from: Point, to: Point, inward: Point, polygon: Polygon): [Po
   return best
 }
 
-/** Where two lines cross, or nothing when they run together. */
-function meetingOf(one: PlotSide, other: PlotSide): Point | undefined {
-  const ax = one.to[0] - one.from[0]
-  const ay = one.to[1] - one.from[1]
-  const bx = other.to[0] - other.from[0]
-  const by = other.to[1] - other.from[1]
-  const denominator = ax * by - ay * bx
-  if (Math.abs(denominator) < 1e-9) return undefined
-  const t = ((other.from[0] - one.from[0]) * by - (other.from[1] - one.from[1]) * bx) / denominator
-  return [one.from[0] + ax * t, one.from[1] + ay * t]
-}
-
 /**
- * The plot read into the sides the forces pull toward. The service street is the first of the
- * sides the plot marks, going round the boundary: on a corner plot that is the frontage the villa
- * addresses, and the other is the side street the service entrance goes on.
+ * The plot read into its sides. The service street is the first of the sides the plot marks, going
+ * round the boundary: on a corner plot that is the frontage the villa addresses, and the other is
+ * the side street the service entrance goes on.
  */
 export function sidesOf(plot: PlotShape): PlotSides {
   const walls = outwardWalls(plot.polygon)
   const inside = buildableArea(plot)
-  if (walls.length < 3 || inside.length < 3) return { every: [], street: [], sides: [] }
+  if (walls.length < 3 || inside.length < 3) return { every: [], street: [] }
   const plotArea = area(plot.polygon)
   const every: PlotSide[] = []
   for (const [index, wall] of walls.entries()) {
@@ -126,36 +107,5 @@ export function sidesOf(plot: PlotShape): PlotSides {
   }
   const street = every.filter((side) => side.street)
   const service = [...street].sort((one, other) => one.index - other.index)[0]
-  if (!service) return { every, street, sides: every }
-  // The back is the side that faces the service street across the floor, which on any plot is the
-  // one whose way in points most nearly the other way.
-  const back = every
-    .filter((side) => side !== service)
-    .sort(
-      (one, other) =>
-        one.inward[0] * service.inward[0] +
-        one.inward[1] * service.inward[1] -
-        (other.inward[0] * service.inward[0] + other.inward[1] * service.inward[1]),
-    )[0]
-  const sides = every.filter((side) => side !== service && side !== back)
-  const other = street.find((side) => side !== service)
-  const corner = other ? meetingOf(service, other) : undefined
-  return {
-    every,
-    street,
-    service,
-    ...(back === undefined ? {} : { back }),
-    sides,
-    ...(corner === undefined ? {} : { corner }),
-  }
-}
-
-/** The nearest point of a side to somewhere on the floor. */
-export function nearestOn(side: PlotSide, x: number, y: number): Point {
-  const dx = side.to[0] - side.from[0]
-  const dy = side.to[1] - side.from[1]
-  const run = dx * dx + dy * dy
-  if (run < 1e-12) return side.from
-  const along = Math.min(1, Math.max(0, ((x - side.from[0]) * dx + (y - side.from[1]) * dy) / run))
-  return [side.from[0] + dx * along, side.from[1] + dy * along]
+  return { every, street, ...(service === undefined ? {} : { service }) }
 }

@@ -1,16 +1,15 @@
-/* The tab takes the stage's height, not its diagram's: what the lines above leave is what it gets. */
+/* The tab takes the stage's height: the lines above keep theirs and the diagram takes what is left. */
 .bubbles {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   flex: 1 1 0;
   min-height: 0;
+  outline: none;
 }
 
-/* Every line above the diagram keeps the height it reads at; the diagram takes what they leave. */
 .bubbles-bar,
 .bubbles-hint,
-.bubbles-fit,
 .bubbles-nudge {
   flex: none;
 }
@@ -22,8 +21,7 @@
   flex-wrap: wrap;
 }
 
-.bubbles-bar button,
-.bubbles-nudge button {
+.bubbles button {
   font: inherit;
   padding: 0.35rem 0.9rem;
   border: 1px solid #b7b1a5;
@@ -33,40 +31,33 @@
   cursor: pointer;
 }
 
-.bubbles-bar button.bubbles-wide {
+.bubbles button.bubbles-wide {
   min-width: 8.5rem;
 }
 
-.bubbles-bar button:disabled {
+.bubbles button:disabled {
   color: #9a958c;
   cursor: default;
 }
 
-.bubbles-bar button[aria-pressed='true'] {
+.bubbles button[aria-pressed='true'] {
   background: #1f1d1a;
   border-color: #1f1d1a;
   color: #faf8f4;
 }
 
-.bubbles-storeys,
 .bubbles-kind {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-}
-
-.bubbles-kind {
   gap: 0.5rem;
   color: #6d6862;
 }
 
-.bubbles-status,
 .bubbles-hint {
   margin: 0;
   color: #6d6862;
 }
 
-/* The rule's own line, with the button that answers it on the same line so the two read as one. */
 .bubbles-nudge {
   display: flex;
   align-items: center;
@@ -75,22 +66,18 @@
   color: #6d6862;
 }
 
-/* The sheet and the side column side by side, so a slider, the legend and the diagram are read together. */
 .bubbles-body {
   display: flex;
   align-items: stretch;
   gap: 1rem;
-  /* The height the bar and its lines leave; below the floor the page scrolls rather than show a
-     sliver of a diagram. */
   flex: 1 1 0;
   min-height: 320px;
 }
 
-/* The column beside the sheet, scrolling inside its own edge so neither the weights nor the
-   legend ever lengthens the tab. */
+/* The column beside the diagram scrolls inside its own edge, so a long list never lengthens the tab. */
 .bubbles-side {
   flex: none;
-  width: 14rem;
+  width: 17rem;
   min-height: 0;
   overflow-y: auto;
   display: flex;
@@ -98,39 +85,40 @@
   gap: 0.75rem;
 }
 
-.weights-panel,
-.bubbles .legend {
+.bubbles-panel {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.4rem;
   padding: 0.75rem 1rem;
   border: 1px solid #e2ddd3;
   border-radius: 4px;
   background: #faf8f4;
 }
 
-.weights-panel h2 {
+.bubbles-panel h2 {
   font-size: 0.95rem;
   margin: 0;
 }
 
-/* A long family name wraps onto a second line rather than being cut off at the panel's edge. */
-.weights-panel .field > span {
-  white-space: normal;
-  overflow-wrap: break-word;
+.bubbles-panel ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
 }
 
-.weights-panel .note {
-  margin: 0;
+.bubbles-panel li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #4a453d;
 }
 
 .bubbles-sheet {
-  /* The metres one CSS pixel covers, set by the view on every camera change; every mark that must
-     hold its size on the screen is sized from it. */
-  --per-px: 0.03;
-  /* The sheet takes the height of the body beside the weights, and letterboxes its drawing inside
-     it rather than growing to the drawing's own shape. */
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
@@ -141,28 +129,46 @@
   user-select: none;
 }
 
-.bubbles-sheet:focus-visible {
-  outline: 2px solid #6d6862;
-}
-
-/* In link mode the whole sheet is a target, and the cursor says so before anything is clicked. */
 .bubbles-linking {
   cursor: crosshair;
 }
 
-/*
- * Every mark on the sheet is scoped to it: the zoning sheet has marks of the same names, and one
- * stylesheet must not paint the other's.
- *
- * Every stroke and dash below is in pixels on the screen, not metres on the sheet: zooming in
- * draws a bigger bubble, not a heavier line, and zooming out never leaves a ring covering the sheet.
- */
-.bubbles-sheet * {
-  vector-effect: non-scaling-stroke;
+/* Every mark is scoped to the diagram: the zoning sheet has marks of the same names. */
+.bubbles-sheet .column-ground {
+  fill: #f3efe7;
 }
 
-/* The categories of the room-type table, and the neutral fill for a room outside it. The tab is
-   named rather than the sheet, so the legend beside it paints its swatches from the same rules. */
+.bubbles-sheet .column-head {
+  cursor: pointer;
+}
+
+.bubbles-sheet .column-head text {
+  text-anchor: middle;
+  font-size: 18px;
+  font-weight: 600;
+  fill: #2b2822;
+}
+
+.bubbles-sheet .column-head[aria-pressed='true'] text {
+  text-decoration: underline;
+}
+
+.bubbles-sheet .column-dimmed .column-ground {
+  fill: #f8f6f2;
+}
+
+.bubbles-sheet .band line {
+  stroke: #e2ddd3;
+  stroke-dasharray: 4 4;
+}
+
+.bubbles-sheet .band text {
+  text-anchor: middle;
+  font-size: 12px;
+  fill: #9a958c;
+  text-transform: capitalize;
+}
+
 .bubbles .category-reception {
   fill: #d7a6a1;
 }
@@ -187,30 +193,6 @@
   fill: #d6d9d3;
 }
 
-.bubbles-sheet .link {
-  stroke: #8f887d;
-  stroke-width: 2px;
-  pointer-events: none;
-}
-
-.bubbles-sheet .link-selected {
-  stroke: #2f6f8f;
-  stroke-width: 4px;
-}
-
-.bubbles-sheet .link-drawn {
-  stroke: #2f6f8f;
-  stroke-width: 2.5px;
-  stroke-dasharray: 7 5;
-}
-
-/* A line is too thin to aim at, so a wide invisible twin takes the click. */
-.bubbles-sheet .link-grip {
-  stroke: transparent;
-  stroke-width: 14px;
-  cursor: pointer;
-}
-
 .bubbles-sheet .bubble-shape {
   stroke: #6f6a62;
   stroke-width: 1px;
@@ -222,201 +204,92 @@
   stroke-width: 3px;
 }
 
-/*
- * The bubble's own label size, in metres of the sheet. The view sets it, holding it to a band of
- * eight to fourteen screen pixels, so a name never balloons when the sheet is drawn close and
- * never disappears when the whole diagram is in view — and so the rows it measured to fit inside
- * the circle are drawn at the size they were measured at.
- */
-.bubbles-sheet .bubble {
-  font-size: calc(var(--label-m) * 1px);
-}
-
-.bubbles-sheet .bubble text {
+.bubbles-sheet .bubble text,
+.bubbles-sheet .outside text {
   text-anchor: middle;
   dominant-baseline: middle;
-  fill: #2b2822;
-  paint-order: stroke;
-  stroke: #faf8f4;
-  stroke-width: 3px;
-  stroke-linejoin: round;
   pointer-events: none;
+}
+
+.bubbles-sheet .bubble-name {
+  font-size: 14px;
+  fill: #2b2822;
 }
 
 .bubbles-sheet .bubble-area {
-  fill: #6d6862;
-  font-size: 0.82em;
+  font-size: 11px;
+  fill: #4a453d;
 }
 
-/* The storeys a stair reaches, said on every twin of it, in the quietest voice on the bubble. */
 .bubbles-sheet .bubble-span {
-  fill: #6d6862;
-  font-size: 0.72em;
+  font-size: 10px;
   font-style: italic;
+  fill: #6d6862;
 }
 
-/* A storey the group is not working on is drawn faint and takes no pointer. */
+.bubbles-sheet .outside rect {
+  fill: #fffdf9;
+  stroke: #4a453d;
+  stroke-dasharray: 3 3;
+}
+
+.bubbles-sheet .outside text {
+  font-size: 13px;
+  fill: #4a453d;
+}
+
+/* A storey not brought forward stays in view and in reach, only fainter. */
 .bubbles-sheet .bubble-dimmed,
 .bubbles-sheet .link-dimmed {
-  opacity: 0.35;
+  opacity: 0.3;
+}
+
+.bubbles-sheet .link,
+.bubbles .legend .link {
+  stroke: #6f6a62;
+  stroke-width: 2px;
   pointer-events: none;
 }
 
-.bubbles-sheet .bubble-dimmed .bubble-shape {
-  fill: #dedbd4;
-  stroke: #b7b1a5;
+.bubbles-sheet .link-main-door .link,
+.bubbles .legend .link-main {
+  stroke: #1f1d1a;
+  stroke-width: 3.5px;
 }
 
-.bubbles-sheet .bubble-dimmed text {
-  fill: #8b857b;
+.bubbles-sheet .link-selected {
+  stroke: #2f6f8f;
+  stroke-width: 4px;
 }
 
-.bubbles-sheet .pin-mark {
-  fill: #8a3f2a;
-  stroke: #fffdf9;
-  stroke-width: 1px;
+.bubbles-sheet .link-grip {
+  stroke: transparent;
+  stroke-width: 14px;
+  cursor: pointer;
+}
+
+.bubbles-sheet .link-drawn {
+  stroke: #2f6f8f;
+  stroke-width: 2.5px;
+  stroke-dasharray: 7 5;
   pointer-events: none;
 }
 
-/* The handle a link is dragged from: faint until the hand or the selection is on its bubble. */
+/* The handle a connection is dragged from: faint until the hand is on its bubble. */
 .bubbles-sheet .reach {
   fill: #fffdf9;
   stroke: #2f6f8f;
   stroke-width: 1.5px;
-  opacity: 0.3;
+  opacity: 0.35;
   cursor: crosshair;
 }
 
 .bubbles-sheet .bubble:hover .reach,
 .bubbles-sheet .bubble-selected .reach {
   opacity: 1;
-  stroke-width: 2.5px;
-}
-
-/* The legend stands beside the sheet, never over it: one that covers a bubble is one in the way. */
-.bubbles .legend {
-  gap: 0.35rem;
-  flex: none;
-}
-
-.bubbles .legend h2 {
-  font-size: 0.95rem;
-  margin: 0;
-}
-
-.bubbles .legend ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.bubbles .legend li {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8rem;
-  color: #4a453d;
-}
-
-.bubbles .legend svg {
-  flex: none;
-}
-
-.bubbles .legend .link {
-  stroke: #8f887d;
-  stroke-width: 2px;
 }
 
 .bubbles .legend .legend-swatch {
   stroke: #6f6a62;
   stroke-width: 1px;
-}
-
-.bubbles .legend .pin-mark {
-  fill: #8a3f2a;
-}
-
-.bubbles .legend .main-door-mark {
-  fill: #fffdf9;
-  stroke: #4a453d;
-  stroke-width: 1.5px;
-}
-
-.bubbles .legend .legend-buildable {
-  stroke: #8a3f2a;
-  stroke-width: 1.5px;
-  stroke-dasharray: 4 3;
-}
-
-/* One line per storey shown: what its targets come to against the floor the setbacks leave it. */
-.bubbles-fit {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-  margin: 0;
-  font-size: 0.85rem;
-  color: #6d6862;
-}
-
-.bubbles-fit div {
-  display: flex;
-  gap: 0.4rem;
-}
-
-.bubbles-fit dt {
-  color: #4a453d;
-}
-
-.bubbles-fit dd {
-  margin: 0;
-}
-
-.bubbles-fit .fit-over,
-.bubbles-fit .fit-over dt {
-  color: #8a3f2a;
-}
-
-/* The front door where it meets the street: the one mark on a link, so it reads as the way in. */
-.bubbles-sheet .main-door-mark {
-  fill: #fffdf9;
-  stroke: #4a453d;
-  stroke-width: 2px;
-  pointer-events: none;
-}
-
-/* A name too long for its own bubble gives way to its initials; the name itself waits on the hand. */
-.bubbles-sheet .bubble-mark {
-  font-size: 1.1em;
-}
-
-.bubbles-sheet .bubble-full {
-  visibility: hidden;
-  font-size: calc(var(--per-px) * 12px);
-}
-
-.bubbles-sheet .bubble-short:hover .bubble-full,
-.bubbles-sheet .bubble-short.bubble-selected .bubble-full {
-  visibility: visible;
-}
-
-/* A link that has not closed is drawn as tension rather than as a door: the same line, dashed and
-   lighter, so the picture says which of its links it has really made. */
-.bubbles-sheet .link-open .link {
-  stroke: #a89b83;
-  stroke-dasharray: 5 4;
-}
-
-/* Every link the picture could not close, said once beside the sheet with what is in its way. */
-.bubbles-tension ul {
-  margin: 0;
-  padding-left: 1.1rem;
-  font-size: 0.8rem;
-  color: #8a6a3f;
-}
-
-.bubbles-tension li {
-  margin: 0.2rem 0;
 }

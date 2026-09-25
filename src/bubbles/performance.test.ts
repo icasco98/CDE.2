@@ -1,54 +1,12 @@
 import { expect, it } from 'vitest'
-import { startingSite } from '../model'
-import {
-  createState,
-  defaultLayout,
-  layoutFor,
-  settle,
-  step,
-  type SimulationEdge,
-} from './simulation'
-import { groundOf } from './ground'
+import { EXTERIOR } from '../model'
+import { arrange, type ArrangeEdge, type ArrangeRoom } from './arrange'
 
-/**
- * Thirty rooms over three storeys and thirty links, the size a villa's program runs to, with three
- * of them stairs standing through every storey.
+/*
+ * The budget: the diagram is arranged again on every edit and every frame of a nudge, so forty
+ * rooms over three storeys must arrange inside one 16 ms frame.
  */
-const spanning = new Set([4, 13, 22])
 
-const rooms = Array.from({ length: 30 }, (_unused, index) => ({
-  id: `room-${index}`,
-  storey: spanning.has(index) ? 0 : index % 3,
-  storeysSpanned: spanning.has(index) ? 3 : 1,
-  targetArea: 8 + (index % 7) * 6,
-  pinned: index % 11 === 0,
-  tier: ['public', 'semi-public', 'private', 'exempt'][index % 4],
-  bubble: { x: 3 + (index % 6) * 2.5, y: 3 + Math.floor(index / 6) * 3.5 },
-}))
-
-/** The starting plot with its setbacks: the floor thirty rooms are crowded onto. */
-const floor = groundOf(
-  {
-    on: true,
-    polygon: [
-      [0, 0],
-      [20, 0],
-      [20, 25],
-      [0, 25],
-    ],
-    north: 0,
-    street: [2],
-  },
-  startingSite,
-)
-
-const edges: SimulationEdge[] = Array.from({ length: 30 }, (_unused, index) => ({
-  a: `room-${index}`,
-  b: `room-${(index + 3) % 30}`,
-  storey: index % 3,
-})).filter((edge) => edge.a !== edge.b)
-
-/** The best of five runs after a warm-up, so neither compilation nor a stray collection is charged. */
 function milliseconds(work: () => void): number {
   for (let i = 0; i < 5; i++) work()
   let best = Infinity
@@ -60,38 +18,24 @@ function milliseconds(work: () => void): number {
   return best
 }
 
-/**
- * One frame of the live run: the springs, the repulsion, the pulls and the correction over every
- * pair, which is the whole of what stands between a hand on a bubble and the next picture.
- */
-it('takes one frame of thirty bubbles and thirty links in under a millisecond', () => {
-  const layout = layoutFor({ userRequirements: 1, siteConstraints: 1 })
-  let state = createState(rooms, edges, floor)
-  const took = milliseconds(() => {
-    for (let frame = 0; frame < 20; frame++) state = step(state, layout)
-  })
-  expect(state.energy).toBeLessThan(Infinity)
-  expect(took / 20).toBeLessThan(1)
-})
+const tiers = ['public', 'semi-public', 'private', 'exempt']
 
-it('takes a frame of the same program under the plain layout in under a millisecond', () => {
-  let state = createState(rooms, edges, floor)
-  const took = milliseconds(() => {
-    for (let frame = 0; frame < 20; frame++) state = step(state, defaultLayout)
-  })
-  expect(state.energy).toBeLessThan(Infinity)
-  expect(took / 20).toBeLessThan(1)
-})
+const rooms: readonly ArrangeRoom[] = Array.from({ length: 40 }, (_, i) => ({
+  id: `room${i}`,
+  tier: tiers[i % tiers.length]!,
+  storey: i % 3,
+  storeysSpanned: i === 0 ? 3 : 1,
+  targetArea: 8 + (i % 7) * 5,
+}))
 
-/**
- * The whole of what one press of Settle now runs for a villa's worth of rooms: the canonical
- * start and every round of the settle. The budget is two seconds; a villa settles in a tenth of one.
- */
-it('settles thirty rooms in well under two seconds', () => {
-  const layout = layoutFor({ userRequirements: 1, siteConstraints: 1 })
-  const whole = (): number => settle(createState(rooms, edges, floor), layout).state.bodies.length
-  whole()
-  const started = performance.now()
-  expect(whole()).toBe(30)
-  expect(performance.now() - started).toBeLessThan(2000)
+const edges: readonly ArrangeEdge[] = [
+  { a: EXTERIOR, b: 'room1', storey: 1 },
+  ...rooms.slice(1).map((each, i) => ({ a: rooms[i]!.id, b: each.id, storey: each.storey })),
+  ...rooms.slice(3).map((each, i) => ({ a: rooms[i]!.id, b: each.id, storey: each.storey })),
+]
+
+it('arranges forty rooms on three storeys in under 16 ms', () => {
+  const took = milliseconds(() => arrange(rooms, edges, 3))
+  console.info(`arrange, 40 rooms: ${took.toFixed(3)} ms`)
+  expect(took).toBeLessThan(16)
 })
