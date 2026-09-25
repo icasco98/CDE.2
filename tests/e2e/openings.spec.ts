@@ -1,8 +1,9 @@
 import { expect, test, type Page } from '@playwright/test'
+import { seedPlan } from './plan'
 
 /**
- * The Openings step, on the embedded sample. Every case is one thing an architect does to a door,
- * and each one puts the sheet back with Ctrl+Z.
+ * The Openings step, on the test plan and the edges its doors draw. Every case is one thing an
+ * architect does to a door, and each one puts the sheet back with Ctrl+Z.
  */
 
 type At = { x: number; y: number }
@@ -11,6 +12,7 @@ type At = { x: number; y: number }
 const FORMAL = 'r6'
 
 async function openStep(page: Page): Promise<void> {
+  await seedPlan(page)
   await page.goto('/')
   await page.locator('nav.tabs').getByRole('button', { name: 'Sheet', exact: true }).click()
   await page.locator('svg.sheet').waitFor()
@@ -76,7 +78,7 @@ test.describe('the Openings step', () => {
     await expect(page.locator('svg.sheet.doormode')).toBeVisible()
   })
 
-  test('puts one door on the Kitchen’s wall to the service hallway, and it serves both', async ({
+  test('puts a door on the Kitchen’s wall to the service hallway in place of the one it had', async ({
     page,
   }) => {
     const before = await doors(page).count()
@@ -85,12 +87,12 @@ test.describe('the Openings step', () => {
     await page.getByLabel('Door width in metres').fill('1.2')
     await page.getByLabel('Door width in metres').press('Enter')
     await clickAt(page, 4, 16.37)
-    expect(await doors(page).count()).toBe(before + 1)
-    await expect(who(page)).toHaveText('Door on Kitchen')
+    // one connection, one door: the new one stands where the old one did not
+    expect(await doors(page).count()).toBe(before)
+    await expect(who(page)).toHaveText(/Door on (Kitchen|service hallway)/)
     await expect(page.locator('.door-ctl .w')).toHaveText('1.2 m')
-    await expect(sentence(page)).toContainText('service hallway serves 5 doors')
-    await undo(page)
     await expect(sentence(page)).toContainText('service hallway serves 4 doors')
+    await undo(page)
     expect(await doors(page).count()).toBe(before)
   })
 
@@ -187,26 +189,22 @@ test.describe('the Openings step', () => {
     expect(await doors(page).count()).toBe(before)
   })
 
-  test('rings a door whose wall moved away, and puts it back on the nearest wall', async ({
+  test('draws no door while its two rooms stand apart, Check says not met, and it returns with them', async ({
     page,
   }) => {
-    await expect(sentence(page)).toContainText('1 door lost its wall: click the red ring')
-    // in Zoning, the Kitchen's north wall is pulled two metres off the door standing on it
+    const before = await doors(page).count()
+    // in Zoning, the Store is moved off the Kitchen it has its door into
     await page.getByRole('button', { name: 'Zoning', exact: true }).click()
-    await page.locator('svg.sheet g.room[data-room="r8"] path.body').click()
-    await drag(page, await onSheet(page, 4.6, 16.37), await onSheet(page, 4.6, 18.6))
+    await drag(page, await onSheet(page, 3, 18.8), await onSheet(page, 3, 13.5))
     await page.getByRole('button', { name: 'Openings', exact: true }).click()
-    await expect(page.locator('svg.sheet .door-lost')).toHaveCount(2)
-    await expect(sentence(page)).toContainText('2 doors lost their wall: click the red ring')
-
-    await clickRingOnSheet(page)
-    await expect(who(page)).toHaveText(/lost its wall$/)
-    await page.locator('.door-ctl').getByRole('button', { name: 'Put on the nearest wall' }).click()
-    await expect(page.locator('svg.sheet .door-lost')).toHaveCount(1)
+    expect(await doors(page).count()).toBe(before - 1)
+    await page.getByRole('button', { name: 'Check', exact: true }).click()
+    await expect(sentence(page)).toContainText(/Check [1-9]\d* connections? not met/)
+    await expect(page.locator('.door-lost')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Put on the nearest wall' })).toHaveCount(0)
     await undo(page)
-    await expect(page.locator('svg.sheet .door-lost')).toHaveCount(2)
-    await undo(page)
-    await expect(page.locator('svg.sheet .door-lost')).toHaveCount(1)
+    expect(await doors(page).count()).toBe(before)
+    await expect(sentence(page)).toContainText('Check 0 connections not met')
   })
 
   test('lights a room’s walls when it is clicked in the program list', async ({ page }) => {
@@ -217,37 +215,23 @@ test.describe('the Openings step', () => {
     await expect(page.locator('.room.lit')).toHaveCount(0)
   })
 
-  test('drags a door a metre off its wall and onto another', async ({ page }) => {
+  test('drags a door along its wall, and never off it onto another', async ({ page }) => {
     await clickAt(page, 7.15, 16.37)
     await expect(who(page)).toHaveText('Door on Kitchen')
-    await drag(page, await onSheet(page, 7.15, 16.37), await onSheet(page, 6.13, 19.8))
-    await expect(who(page)).toHaveText(/Door on (Kitchen|Driver Room)/)
-    const landed = await selectedDoorBox(page)
-    const target = await onSheet(page, 6.13, 19.8)
-    expect(Math.abs(landed.y - target.y)).toBeLessThan(20)
+    const home = await selectedDoorBox(page)
+    await drag(page, await onSheet(page, 7.15, 16.37), await onSheet(page, 5.5, 16.6))
+    const slid = await selectedDoorBox(page)
+    expect(slid.x).toBeLessThan(home.x - 20)
+    expect(Math.abs(slid.y - home.y)).toBeLessThan(5)
+    await drag(page, await onSheet(page, 5.5, 16.37), await onSheet(page, 6.13, 19.8))
+    await expect(sentence(page)).toContainText(
+      'A door stays on the wall Kitchen and service hallway share.',
+    )
     await undo(page)
     const back = await selectedDoorBox(page)
-    const home = await onSheet(page, 7.15, 16.37)
-    expect(Math.abs(back.y - home.y)).toBeLessThan(20)
+    expect(Math.abs(back.x - home.x)).toBeLessThan(5)
   })
 })
-
-/**
- * The ring of a lost door that is drawn inside the sheet's box. The sample's own lost door was left
- * far outside the plot, where the camera never reaches, so the test makes one of its own.
- */
-async function clickRingOnSheet(page: Page): Promise<void> {
-  const box = await page.locator('.sheet-box').boundingBox()
-  if (!box) throw new Error('there is no sheet box')
-  const rings = await page
-    .locator('svg.sheet .door-lost')
-    .evaluateAll((marks) => marks.map((mark) => mark.getBoundingClientRect().toJSON()))
-  const on = rings.find(
-    (r) => r.x > box.x && r.x < box.x + box.width && r.y > box.y && r.y < box.y + box.height,
-  )
-  if (!on) throw new Error('no ring stands on the sheet')
-  await page.mouse.click(on.x + on.width / 2, on.y + on.height / 2)
-}
 
 /** Where the selected door is drawn on the screen: the middle of its box. */
 async function selectedDoorBox(page: Page): Promise<At> {

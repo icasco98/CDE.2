@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { seedPlan } from './plan'
 
 /**
  * The settings window, saving, and the page fitted to the window: what the owner does when they
@@ -8,6 +9,7 @@ import { expect, test, type Page } from '@playwright/test'
 const KITCHEN = 'r8'
 
 async function openSheet(page: Page): Promise<void> {
+  await seedPlan(page)
   await page.goto('/')
   await toSheetTab(page)
 }
@@ -121,16 +123,6 @@ test('Clear the plan survives a reload', async ({ page }) => {
   await expect(page.locator('.tray .item.hollow').first()).toBeVisible()
 })
 
-test('Back to the sample restores the owner’s sheet', async ({ page }) => {
-  await openSheet(page)
-  const placed = await page.locator('svg.sheet [data-room]').count()
-  await page.getByRole('button', { name: 'Clear the plan' }).click()
-  await expect(page.locator('svg.sheet [data-room]')).toHaveCount(0)
-  await page.getByRole('button', { name: 'Back to the sample' }).click()
-  await expect(page.locator('svg.sheet [data-room]')).toHaveCount(placed)
-  await expect(page.locator('.say')).toContainText('m² placed')
-})
-
 test('a sheet edited, reloaded, comes back as it was', async ({ page }) => {
   await openSheet(page)
   await noSnapping(page)
@@ -149,7 +141,7 @@ test('a sheet edited, reloaded, comes back as it was', async ({ page }) => {
   ).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('This is it saves the sheet and the settings as the spec, and Reset to the spec puts them back', async ({
+test('This is it saves the settings as the spec, and Reset to the spec puts them back', async ({
   page,
 }) => {
   await openSheet(page)

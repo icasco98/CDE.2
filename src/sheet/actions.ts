@@ -36,7 +36,6 @@ import {
   diffPieces,
   facing,
   fmt,
-  insideConvex,
   loopsOf,
   mirrorRoom,
   norm,
@@ -84,14 +83,8 @@ import {
   roomFromPocket,
   type Pocket,
 } from './pockets'
-import {
-  doorAt,
-  doorPlace,
-  openWall as openWallOf,
-  setDoorWidth as widthOfDoor,
-  slideDoor as slideDoorAlong,
-} from './doors'
-import { DOOR, hasHinge, hasSwing, sizeFor } from './sample'
+import { doorAt, doorSlid, doorSpot, doorStanding, roomForDoor } from './doors'
+import { DOOR, hasHinge, hasSwing, sizeFor } from './kinds'
 
 export type Result = {
   ok: boolean
@@ -131,18 +124,17 @@ const found = (sheet: Sheet, id: string) => sheet.rooms.find((r) => r.id === id)
 const takeRooms = (sheet: Sheet, ids: string[], storey: number) =>
   placedRooms(sheet, storey).filter((r) => ids.includes(r.id))
 
-/** A room put back in the program: its shape, its turn and its doors go, its target size returns. */
+/**
+ * A room put back in the program: its shape and its turn go, its target size returns. Its doors
+ * stay, drawn again wherever it is placed beside the rooms they lead into.
+ */
 export function sendBackRoom(sheet: Sheet, r: Room): void {
-  if (r.extra) {
-    sheet.rooms = sheet.rooms.filter((o) => o !== r)
-    return
-  }
   r.placed = false
   r.pieces = null
   r.angle = 0
   delete r.lost
   delete r.storey
-  delete r.doors
+  delete r.fixed
   delete r.group
   delete r.labelAt
   const s = sizeFor(r.kind, r.target, sheet.settings)
@@ -150,11 +142,11 @@ export function sendBackRoom(sheet: Sheet, r: Room): void {
   r.h = s.h
 }
 
-/** Rooms a cut left with nothing go back to the program; the sheet's own rooms simply go. */
+/** Rooms a cut left with nothing go back to the program at their target size. */
 function tidyTray(sheet: Sheet): string[] {
   const gone: string[] = []
   for (const r of [...sheet.rooms])
-    if (!r.placed && (r.pieces || r.angle || r.doors || r.extra)) {
+    if (!r.placed && (r.pieces || r.angle || r.fixed)) {
       gone.push(r.name)
       sendBackRoom(sheet, r)
     }
@@ -608,7 +600,6 @@ export function reshape(
       if (after < 0.5) return { ok: false, said: 'That would take the whole room away.' }
       const parts = partsOf(weld(kept, 0.02).map(facing)).sort((a, b) => partArea(b) - partArea(a))
       r.pieces = parts[0]!.map((p) => tidy(p.slice()))
-      const inPart = (part: Poly[], pt: Point) => part.some((p) => insideConvex(p, pt[0], pt[1]))
       const born: Room[] = []
       const taken = roomIds(next)
       let clock = nextClock(next)
@@ -632,14 +623,7 @@ export function reshape(
           storey: storeyOf(r),
           pieces: part.map((p) => tidy(p.slice())),
         }
-        const ds = doorsOf(r).filter((d) => inPart(part, d.at))
-        if (ds.length) nr.doors = ds.map((d) => ({ ...d }))
         born.push(nr)
-      }
-      if (born.length) {
-        const moved = new Set(born.flatMap((nr) => doorsOf(nr).map((d) => d.id)))
-        r.doors = doorsOf(r).filter((d) => !moved.has(d.id))
-        if (!r.doors.length) delete r.doors
       }
       if (!canonicalise(r)) {
         sendBackRoom(next, r)
@@ -804,14 +788,7 @@ export function combine(
         ok: false,
         said: 'Those rooms do not share a wall, so they cannot be combined. Close the gap first.',
       }
-    for (const O of others) {
-      for (const d of doorsOf(O)) {
-        const w = toWorld(O, d.at[0], d.at[1])
-        const l = toLocal(S, w[0], w[1])
-        S.doors = [...doorsOf(S), { ...d, at: [r6(l[0]), r6(l[1])] }]
-      }
-      sendBackRoom(next, O)
-    }
+    for (const O of others) sendBackRoom(next, O)
     S.pieces = welded
     if (!canonicalise(S)) {
       sendBackRoom(next, S)
@@ -898,17 +875,6 @@ export function sendBack(sheet: Sheet, input: { ids: string[] }): Change {
     const names = sel.map((r) => r.name)
     for (const r of sel) sendBackRoom(next, r)
     return { ok: true, said: `sent back: ${names.join(', ')}`, retired: names }
-  })
-}
-
-/** A room kept aside on the sheet, which the brief does not name, taken off it for good. */
-export function removeRoom(sheet: Sheet, input: { id: string }): Change {
-  return edit(sheet, (next) => {
-    const r = found(next, input.id)
-    if (!r) return { ok: false, said: `no room called ${input.id}` }
-    if (r.placed) sendBackRoom(next, r)
-    next.rooms = next.rooms.filter((o) => o.id !== input.id)
-    return { ok: true, said: `${r.name} taken out of the program` }
   })
 }
 
@@ -1147,6 +1113,10 @@ export function makeCorridor(sheet: Sheet, input: { pocket: number; storey: numb
 
 // ---------- doors ----------
 
+/**
+ * A door put on the wall under the hand, drawing the edge named: between its room and `to`, the
+ * room across or the outside. An edge has one door, so one it already had is taken off.
+ */
 export function addDoor(
   sheet: Sheet,
   input: {
@@ -1155,43 +1125,39 @@ export function addDoor(
     type: DoorType
     width?: number
     storey: number
-    /** The edge the door draws, as the person confirmed it when placing it. */
-    pair?: [string, string]
-    /** Whether two rooms share an edge, so an opened wall can record the one it draws. */
-    joined?: (a: string, b: string) => boolean
+    edge: string
+    to: string
   },
 ): Change {
   return edit(sheet, (next) => {
     const w = input.width ?? DOOR[input.type].w
     const hit = doorAt(input.x, input.y, input.type === 'open' ? 0.6 : w, next, input.storey)
     if (!hit) return { ok: false, said: 'No wall there.' }
-    if (input.type === 'open') {
-      if (hit.why && !hit.why.startsWith('That wall is too short'))
-        return { ok: false, said: hit.why }
-      const out = openWallOf(
-        hit,
-        next,
-        input.storey,
-        () => freshId('d', doorIds(next)),
-        input.joined,
-      )
-      if (out.why) return { ok: false, said: out.why }
-      return { ok: true, said: `${hit.room.name}: wall opened`, at: where(hit.room) }
+    if (hit.room.id === input.to) return { ok: false, said: 'A door leads out of its room.' }
+    const stands = doorStanding(next, input.storey, hit, { type: input.type, w, to: input.to })
+    if ('why' in stands) return { ok: false, said: stands.why }
+    for (const r of next.rooms) {
+      if (!doorsOf(r).some((d) => d.edge === input.edge)) continue
+      r.doors = doorsOf(r).filter((d) => d.edge !== input.edge)
+      if (!r.doors.length) delete r.doors
     }
-    if (hit.why) return { ok: false, said: hit.why }
     const d: Door = {
       id: freshId('d', doorIds(next)),
+      edge: input.edge,
+      to: input.to,
       type: input.type,
-      w,
+      w: r2(stands.w),
       flip: input.type === 'street2', // a double street door swings out
       hinge: false,
-      at: [r6(hit.pl.p[0]), r6(hit.pl.p[1])],
-      ...(input.pair ? { pair: input.pair } : {}),
+      ...stands.standing,
     }
     hit.room.doors = [...doorsOf(hit.room), d]
+    const snapped = stands.pl.snapped
+    if (input.type === 'open')
+      return { ok: true, said: `${hit.room.name}: wall opened`, at: where(hit.room) }
     return {
       ok: true,
-      said: `${DOOR[input.type].label} on ${hit.room.name}${hit.pl.snapped === 'middle' ? ', middle of the wall' : hit.pl.snapped === 'jamb' ? ', a jamb from the corner' : ''}`,
+      said: `${DOOR[input.type].label} on ${hit.room.name}${snapped === 'middle' ? ', middle of the wall' : snapped === 'jamb' ? ', a jamb from the corner' : ''}`,
       at: where(hit.room),
     }
   })
@@ -1203,53 +1169,58 @@ const findDoor = (sheet: Sheet, roomId: string, doorId: string) => {
   return { r, d }
 }
 
-/**
- * Slid along its wall, or dropped on another wall when the point is off this one. `only` holds the
- * door on one room's wall, so a slide along a shared wall does not hand the door to the neighbour.
- */
+/** A door slid along the wall it stands on to the point nearest the hand; it never leaves it. */
 export function moveDoor(
   sheet: Sheet,
-  input: { room: string; door: string; x: number; y: number; storey: number; only?: string },
+  input: { room: string; door: string; x: number; y: number; storey: number },
 ): Change {
   return edit(sheet, (next) => {
     const { r, d } = findDoor(next, input.room, input.door)
     if (!r || !d) return { ok: false, said: 'no such door' }
-    const hit = doorAt(input.x, input.y, d.w, next, input.storey, found(next, input.only ?? ''))
-    if (!hit) return { ok: false, said: 'No wall there.' }
-    if (hit.why) return { ok: false, said: hit.why }
-    r.doors = doorsOf(r).filter((o) => o !== d)
-    if (!r.doors.length) delete r.doors
-    const nd: Door = { ...d, at: [r6(hit.pl.p[0]), r6(hit.pl.p[1])] }
-    hit.room.doors = [...doorsOf(hit.room), nd]
-    return { ok: true, said: `${DOOR[d.type].label} on ${hit.room.name}` }
+    const slid = doorSlid(next, input.storey, r, d, input.x, input.y)
+    if (!slid) return { ok: false, said: `${DOOR[d.type].label} on ${r.name} is not drawn here.` }
+    if (slid.hit.why) return { ok: false, said: slid.hit.why }
+    delete d.along
+    delete d.at
+    Object.assign(d, slid.standing)
+    return { ok: true, said: `${DOOR[d.type].label} on ${r.name}` }
   })
 }
 
 /** A grid step along the wall, kept a jamb from the corners. */
 export function slideDoor(
   sheet: Sheet,
-  input: { room: string; door: string; step: number },
+  input: { room: string; door: string; step: number; storey: number },
 ): Change {
   return edit(sheet, (next) => {
     const { r, d } = findDoor(next, input.room, input.door)
     if (!r || !d) return { ok: false, said: 'no such door' }
-    const nd = slideDoorAlong(r, d, input.step)
-    if (!nd) return { ok: false, said: `${DOOR[d.type].label} on ${r.name} lost its wall` }
-    Object.assign(d, nd)
+    const pl = doorSpot(next, input.storey, r, d)
+    if (!pl) return { ok: false, said: `${DOOR[d.type].label} on ${r.name} is not drawn here.` }
+    const t = pl.t + input.step
+    const [x, y] = toWorld(r, pl.seg.a[0] + pl.u[0] * t, pl.seg.a[1] + pl.u[1] * t)
+    const slid = doorSlid(next, input.storey, r, d, x, y)
+    if (!slid) return { ok: false, said: `${DOOR[d.type].label} on ${r.name} is not drawn here.` }
+    delete d.along
+    delete d.at
+    Object.assign(d, slid.standing)
     return { ok: true, said: `${DOOR[d.type].label} on ${r.name}` }
   })
 }
 
 export function setDoorWidth(
   sheet: Sheet,
-  input: { room: string; door: string; w: number },
+  input: { room: string; door: string; w: number; storey: number },
 ): Change {
   return edit(sheet, (next) => {
     const { r, d } = findDoor(next, input.room, input.door)
     if (!r || !d) return { ok: false, said: 'no such door' }
-    const out = widthOfDoor(r, d, input.w)
-    if (!out.door) return { ok: false, said: out.why ?? 'That door will not fit.' }
-    Object.assign(d, out.door)
+    if (d.type === 'open') return { ok: false, said: 'An opened wall is as wide as the wall.' }
+    const width = r2(Math.min(3, Math.max(0.6, input.w)))
+    const room = roomForDoor(next, input.storey, r, d)
+    if (room === null || width > room + 1e-6)
+      return { ok: false, said: 'That wall is too short for a door that wide.' }
+    d.w = width
     return { ok: true, said: `${DOOR[d.type].label} on ${r.name}, ${fmt(d.w)} m` }
   })
 }
@@ -1276,6 +1247,7 @@ export function hingeDoor(sheet: Sheet, input: { room: string; door: string }): 
   })
 }
 
+/** A door taken off: the edge it drew stays, not met until a door draws it again. */
 export function removeDoor(sheet: Sheet, input: { room: string; door: string }): Change {
   return edit(sheet, (next) => {
     const { r, d } = findDoor(next, input.room, input.door)
@@ -1284,55 +1256,6 @@ export function removeDoor(sheet: Sheet, input: { room: string; door: string }):
     if (!r.doors.length) delete r.doors
     return { ok: true, said: `${DOOR[d.type].label} on ${r.name} removed` }
   })
-}
-
-/** A door whose wall moved away, put back on the nearest wall long enough for it. */
-export function reattachDoor(
-  sheet: Sheet,
-  input: { room: string; door: string; storey: number },
-): Change {
-  return edit(sheet, (next) => {
-    const { r, d } = findDoor(next, input.room, input.door)
-    if (!r || !d) return { ok: false, said: 'no such door' }
-    if (doorPlace(r, d)) return { ok: false, said: 'That door is on a wall already.' }
-    const wp = toWorld(r, d.at[0], d.at[1])
-    let best: { o: Room; qp: Point; dist: number } | null = null
-    for (const o of placedRooms(next, input.storey)) {
-      if (isOpen(o) || o.fixed) continue
-      for (const seg of outlineOf(o)) {
-        const a = toWorld(o, seg.a[0], seg.a[1])
-        const b = toWorld(o, seg.b[0], seg.b[1])
-        const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1
-        const u = [(b[0] - a[0]) / L, (b[1] - a[1]) / L]
-        const t = Math.min(
-          Math.max((wp[0] - a[0]) * u[0]! + (wp[1] - a[1]) * u[1]!, d.w / 2),
-          Math.max(d.w / 2, L - d.w / 2),
-        )
-        const qp: Point = [a[0] + u[0]! * t, a[1] + u[1]! * t]
-        const dist = Math.hypot(wp[0] - qp[0], wp[1] - qp[1])
-        if (L >= d.w + 0.1 && (!best || dist < best.dist)) best = { o, qp, dist }
-      }
-    }
-    if (!best) return { ok: false, said: 'No wall long enough for it.' }
-    r.doors = doorsOf(r).filter((o) => o !== d)
-    if (!r.doors.length) delete r.doors
-    const l = toLocal(best.o, best.qp[0], best.qp[1])
-    best.o.doors = [...doorsOf(best.o), { ...d, at: [r6(l[0]), r6(l[1])] }]
-    return { ok: true, said: `${DOOR[d.type].label} on ${best.o.name}` }
-  })
-}
-
-/** The stretch two rooms share taken out, with no leaf and no jambs, never past a corner. */
-export function openWall(
-  sheet: Sheet,
-  input: {
-    x: number
-    y: number
-    storey: number
-    joined?: (a: string, b: string) => boolean
-  },
-): Change {
-  return addDoor(sheet, { ...input, type: 'open' })
 }
 
 // ---------- settings ----------

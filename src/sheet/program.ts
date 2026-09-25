@@ -1,12 +1,22 @@
 /**
  * The program the sheet draws: the rooms the brief asks for, in the order of importance, as the
- * project holds them. The sheet follows that list — a room in it keeps whatever the hand has done
- * to it, a room the list does not name is kept aside as the sheet's own — and nothing here knows
- * what a project is: the caller hands over the list.
+ * project holds them, and the edges its doors draw. The sheet follows both exactly — a room in the
+ * brief keeps whatever the hand has done to it, a room the brief no longer names leaves the sheet,
+ * and a door whose edge is gone goes with it — and nothing here knows what a project is: the caller
+ * hands over the list and the edges, and keeps what was set down so an undo can give it back.
  */
 
-import { cloneRoom, storeyOf, type Category, type Room, type Settings, type Sheet } from './model'
-import { sizeFor } from './sample'
+import {
+  cloneRoom,
+  doorsOf,
+  storeyOf,
+  type Category,
+  type Door,
+  type Room,
+  type Settings,
+  type Sheet,
+} from './model'
+import { sizeFor } from './kinds'
 
 /** One room of the brief, as the sheet reads it. */
 export type ProgramRoom = {
@@ -17,6 +27,12 @@ export type ProgramRoom = {
   readonly target: number
   readonly storey: number
 }
+
+/** A door the sheet set down with the room that held it, so it can stand there again. */
+export type HeldDoor = { readonly host: string; readonly door: Door }
+
+/** What following the brief took off the sheet, and what it may put back. */
+export type SetDown = { readonly rooms: readonly Room[]; readonly doors: readonly HeldDoor[] }
 
 /** A room of the brief the sheet has not drawn yet: sized from its target, waiting in the program. */
 export function roomFromProgram(entry: ProgramRoom, settings: Settings): Room {
@@ -38,20 +54,6 @@ export function roomFromProgram(entry: ProgramRoom, settings: Settings): Room {
   }
 }
 
-/**
- * The room on the sheet that stands for a room of the brief: the one with its id, else one of the
- * same kind and name, which is how a sheet saved before the program had ids finds its rooms again.
- */
-function claim(rooms: Room[], entry: ProgramRoom, taken: Set<string>): Room | null {
-  const byId = rooms.find((r) => r.id === entry.id && !taken.has(r.id))
-  if (byId) return byId
-  return (
-    rooms.find(
-      (r) => !taken.has(r.id) && !r.extra && r.kind === entry.kind && r.name === entry.name,
-    ) ?? null
-  )
-}
-
 /** A room of the brief the sheet already holds: the brief's words and target, the sheet's drawing. */
 function follow(held: Room, entry: ProgramRoom, settings: Settings): Room {
   const r = cloneRoom(held)
@@ -60,8 +62,6 @@ function follow(held: Room, entry: ProgramRoom, settings: Settings): Room {
   r.kind = entry.kind
   r.cat = entry.cat
   r.target = entry.target
-  delete r.extra
-  delete r.aside
   // A room already drawn keeps its footprint and the storey it stands on; the sentence reads the
   // new target against the area it has. One still waiting takes the brief's size and storey.
   if (!r.placed) {
@@ -83,44 +83,54 @@ const sameRoom = (one: Room, other: Room): boolean =>
   one.w === other.w &&
   one.h === other.h &&
   one.storey === other.storey &&
-  one.extra === other.extra &&
-  one.aside === other.aside
-
-type Followed = {
-  readonly sheet: Sheet
-  /** The rooms the brief does not name, kept aside on the sheet. */
-  readonly aside: readonly Room[]
-}
+  doorsOf(one).length === doorsOf(other).length
 
 /**
- * The sheet's program brought in line with the brief: the brief's rooms, in the brief's order, then
- * whatever else the sheet holds. A brief with no rooms in it says nothing, so the sheet keeps the
- * program it has: an owner who has not filled Requirements in still has the sample to draw on.
+ * The sheet brought in line with the brief: the brief's rooms in the brief's order and nothing else,
+ * each door drawing an edge the project still holds. What was set down aside earlier comes back when
+ * the brief names its room or holds its edge again, which is how an undo in the brief is followed.
  */
-export function followProgram(sheet: Sheet, program: readonly ProgramRoom[]): Followed {
-  if (!program.length) return { sheet, aside: [] }
+export function followProgram(
+  sheet: Sheet,
+  program: readonly ProgramRoom[],
+  edges: ReadonlySet<string>,
+  aside: SetDown = { rooms: [], doors: [] },
+): { readonly sheet: Sheet; readonly setDown: SetDown } {
   const taken = new Set<string>()
   const rooms: Room[] = []
   for (const entry of program) {
-    const held = claim(sheet.rooms, entry, taken)
+    // A room is the brief's by its id alone: a room of the same name is another room.
+    const held =
+      sheet.rooms.find((r) => r.id === entry.id && !taken.has(r.id)) ??
+      aside.rooms.find((r) => r.id === entry.id) ??
+      null
     if (held) taken.add(held.id)
     rooms.push(held ? follow(held, entry, sheet.settings) : roomFromProgram(entry, sheet.settings))
   }
-  const aside: Room[] = []
-  for (const held of sheet.rooms) {
-    if (taken.has(held.id)) continue
-    // A court or a corridor the sheet itself made is already its own; a program room the brief has
-    // dropped is set aside, so the drawing keeps it and the sentence says it is not asked for.
-    const kept = cloneRoom(held)
-    kept.extra = true
-    if (!held.extra) kept.aside = true
-    rooms.push(kept)
-    if (kept.aside) aside.push(kept)
+  const setDownRooms = sheet.rooms.filter((held) => !taken.has(held.id)).map(cloneRoom)
+  const setDownDoors: HeldDoor[] = []
+  const standing = new Set(rooms.flatMap((r) => doorsOf(r).map((d) => d.id)))
+  for (const r of rooms) {
+    const kept = doorsOf(r).filter((d) => edges.has(d.edge))
+    for (const d of doorsOf(r)) if (!edges.has(d.edge)) setDownDoors.push({ host: r.id, door: d })
+    const back = aside.doors.filter(
+      (held) =>
+        held.host === r.id &&
+        edges.has(held.door.edge) &&
+        !standing.has(held.door.id) &&
+        !rooms.some((o) => doorsOf(o).some((d) => d.edge === held.door.edge)),
+    )
+    const doors = [...kept, ...back.map((held) => ({ ...held.door }))]
+    if (doors.length) r.doors = doors
+    else delete r.doors
   }
   const storeys = Math.max(sheet.storeyCount, ...rooms.map((r) => storeyOf(r) + 1))
   const still =
     storeys === sheet.storeyCount &&
     rooms.length === sheet.rooms.length &&
     rooms.every((r, i) => sameRoom(r, sheet.rooms[i]!))
-  return { sheet: still ? sheet : { ...sheet, rooms, storeyCount: storeys }, aside }
+  return {
+    sheet: still ? sheet : { ...sheet, rooms, storeyCount: storeys },
+    setDown: { rooms: setDownRooms, doors: setDownDoors },
+  }
 }

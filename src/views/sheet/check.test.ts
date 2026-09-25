@@ -24,17 +24,19 @@ const room = (id: string, over: Partial<Room> = {}): Room => ({
   ...over,
 })
 
-const door = (id: string, pair?: [string, string]): Door => ({
+/** A door drawing edge `edge` into room `to`, halfway along the wall the two share. */
+const door = (id: string, edge: string, to: string): Door => ({
   id,
+  edge,
+  to,
   type: 'door',
   w: 0.9,
-  at: [4, 1.5],
+  along: 0.5,
   flip: false,
   hinge: false,
-  ...(pair ? { pair } : {}),
 })
 
-const edge = (a: string, b: string): SheetEdge => ({ a, b, storey: 0 })
+const edge = (a: string, b: string): SheetEdge => ({ id: `${a}-${b}`, a, b, storey: 0 })
 
 const none = { apart: [], through: new Set<string>() }
 
@@ -68,28 +70,38 @@ describe('ready in the zoning step', () => {
 })
 
 describe('met in the Openings step', () => {
-  it('is a door that recorded the pair, and not a door on the same wall that did not', () => {
-    const paired = checkRead(
-      sheet([room('a', { doors: [door('d1', ['b', 'a'])] }), room('b', { x: 6 })]),
+  it('is the door of that edge, drawn on the wall the two rooms share', () => {
+    const met = checkRead(
+      sheet([room('a', { doors: [door('d1', 'a-b', 'b')] }), room('b', { x: 6 })]),
       0,
       { edges: [edge('a', 'b')], ...none },
       'openings',
     )
-    expect(paired.waiting).toEqual([])
-    const bare = checkRead(
-      sheet([room('a', { doors: [door('d1')] }), room('b', { x: 6 })]),
+    expect(met.waiting).toEqual([])
+  })
+
+  it('is not met by the door of another edge, nor by its own door once the rooms part', () => {
+    const other = checkRead(
+      sheet([room('a', { doors: [door('d1', 'elsewhere', 'b')] }), room('b', { x: 6 })]),
       0,
       { edges: [edge('a', 'b')], ...none },
       'openings',
     )
-    expect(bare.waiting).toHaveLength(1)
+    expect(other.waiting).toHaveLength(1)
+    const parted = checkRead(
+      sheet([room('a', { doors: [door('d1', 'a-b', 'b')] }), room('b', { x: 9 })]),
+      0,
+      { edges: [edge('a', 'b')], ...none },
+      'openings',
+    )
+    expect(parted.waiting).toHaveLength(1)
   })
 })
 
 describe('keep apart on the sheet', () => {
   it('marks a door that joins a pair kept apart, and both rooms of a pair one reaches only through the other', () => {
     const rooms = [
-      room('a', { doors: [door('d1', ['a', 'b'])] }),
+      room('a', { doors: [door('d1', 'a-b', 'b')] }),
       room('b', { x: 6 }),
       room('c', { y: 5 }),
       room('e', { x: 6, y: 5 }),
@@ -107,7 +119,7 @@ describe('keep apart on the sheet', () => {
       },
       'zoning',
     )
-    expect([...read.apartDoors]).toEqual(['d1'])
+    expect([...read.apartDoors]).toEqual([['d1', [6, 3.5]]])
     expect([...read.apartRooms].sort()).toEqual(['c', 'e'])
     expect(read.broken).toBe(2)
   })
@@ -127,13 +139,13 @@ describe('the lines from a room', () => {
 })
 
 describe('the budget', () => {
-  it('reads forty rooms and the lines from one of them in under 4 ms', () => {
+  it('reads forty rooms in both steps and the lines from one of them in under 4 ms', () => {
     const rooms = Array.from({ length: 40 }, (_, i) =>
       room(`r${i}`, {
         x: 1 + (i % 8) * 4,
         y: 1 + Math.floor(i / 8) * 3,
         placed: i % 10 !== 9,
-        doors: i % 3 === 0 ? [door(`d${i}`, [`r${i}`, `r${i + 1}`])] : [],
+        doors: i % 3 === 0 ? [door(`d${i}`, `r${i}-r${i + 1}`, `r${i + 1}`)] : [],
       }),
     )
     const big = sheetOf(rooms, {}, 1, { ...sheetOf([]).plot, w: 40, h: 20 })
@@ -145,6 +157,7 @@ describe('the budget', () => {
     const once = () => {
       const read = checkRead(big, 0, input, 'zoning')
       linesFrom('r12', read.waiting, big, 0)
+      checkRead(big, 0, input, 'openings')
     }
     for (let i = 0; i < 5; i++) once()
     let best = Infinity

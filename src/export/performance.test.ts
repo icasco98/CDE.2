@@ -10,11 +10,15 @@ function house(): Sheet {
   const rooms: Room[] = []
   for (let storey = 0; storey < 3; storey += 1) {
     for (let index = 0; index < 10; index += 1) {
+      // A door into the room to the east, or out of the house from the last room of a row.
+      const last = index % 5 === 4
       const door: Door = {
         id: `d-${storey}-${index}`,
+        edge: `e-${storey}-${index}`,
+        to: last ? 'EXTERIOR' : `room-${storey}-${index + 1}`,
         type: 'door',
         w: 0.9,
-        at: [3.5, 2.5],
+        ...(last ? { at: [3.5, 2.5] as [number, number] } : { along: 0.5 }),
         flip: false,
         hinge: false,
       }

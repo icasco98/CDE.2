@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { seedPlan } from './plan'
 
 /**
  * The zoning sheet, on the embedded sample. Every case is one thing an architect does, and each one
@@ -15,6 +16,7 @@ const KITCHEN = 'r8'
 const STAIR = 'r1'
 
 async function openSheet(page: Page): Promise<void> {
+  await seedPlan(page)
   await page.goto('/')
   await page.locator('nav.tabs').getByRole('button', { name: 'Sheet', exact: true }).click()
   await page.locator('svg.sheet').waitFor()

@@ -95,7 +95,10 @@ The verbs `do` carries, and when to reach for each:
 - `door`, `open_wall` — a door of a named type on a named wall of a
   room, a fraction of the way along it, through the same check a click
   makes: a boundary wall takes none, a wall too short takes none. A
-  wall shared with a neighbour can be opened instead.
+  door is the drawing of a connection, so it is placed only where the
+  room and the room across (or the outside) are already connected; it
+  never makes a connection. A wall shared with a neighbour can be
+  opened instead, on the same condition.
 - `send_back` — a room off the sheet, back to the program.
 
 One worked example. The owner says: put the maid's room and its bath

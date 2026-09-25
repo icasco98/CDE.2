@@ -34,7 +34,12 @@ export const snapWord = (kind: string): string =>
 
 const plural = (n: number, one: string, many: string) => (n === 1 ? one : many)
 
-export function sentenceOf(read: Report, settings: Settings): Part[] {
+/** `brief` is what the project's graph warns of that the sheet cannot draw, such as a missing stair. */
+export function sentenceOf(
+  read: Report,
+  settings: Settings,
+  brief: readonly string[] = [],
+): Part[] {
   const parts: Part[] = []
   parts.push(
     read.storey === 0
@@ -47,6 +52,7 @@ export function sentenceOf(read: Report, settings: Settings): Part[] {
           text: `${fmt(read.placedArea)} m² placed with the stair, on ${fmt(read.buildableArea)} m² inside the setback`,
         },
   )
+  for (const warning of brief) parts.push({ text: warning, bad: true })
   if (read.floors.some((area, k) => k > 0 && area > 0) || read.storey > 0) {
     const sum = read.floors
       .map((area, k) => `${storeyNameOf(k).toLowerCase()} ${fmt(area)}`)
@@ -71,10 +77,6 @@ export function sentenceOf(read: Report, settings: Settings): Part[] {
     parts.push({
       text: `${read.spills.join(', ')} past the ${settings.boundary === 'off' ? 'buildable line' : 'line the ground floor may reach'}`,
       bad: true,
-    })
-  if (read.aside.length)
-    parts.push({
-      text: `${read.aside.length} ${plural(read.aside.length, 'room', 'rooms')} the brief does not name: ${read.aside.join(', ')}`,
     })
   for (const side of read.boundary) {
     if (!side.read) continue
@@ -131,7 +133,6 @@ export type OpeningsState = {
   hover: { why: string | null; snapped: 'jamb' | 'middle' | null } | null
   door: DoorRead | null
   sliding: boolean
-  lost: number
 }
 
 /**
@@ -144,26 +145,10 @@ export function openingsSentence(read: Report, state: OpeningsState): Part[] {
     return [
       {
         lead,
-        text: 'sliding along the wall; a metre off it, the door comes free for another wall',
+        text: 'sliding along its wall; a door stays on the wall its two rooms share',
       },
     ]
-  const lost: Part[] = state.lost
-    ? [
-        {
-          text: `${state.lost} ${state.lost > 1 ? 'doors lost their' : 'door lost its'} wall: click the red ring`,
-          bad: true,
-        },
-      ]
-    : []
   const door = state.door
-  if (door && !door.onWall)
-    return [
-      {
-        lead,
-        text: `${door.label} on ${door.room} lost its wall · put it on the nearest wall, or remove it`,
-      },
-      ...walkParts(read),
-    ]
   if (door)
     return [
       {
@@ -183,7 +168,6 @@ export function openingsSentence(read: Report, state: OpeningsState): Part[] {
         lead,
         text: `click near a door to select it, drag to slide it · arm a type in the bar to place doors`,
       },
-      ...lost,
       { text: leaves },
       ...walkParts(read),
     ]
@@ -191,9 +175,8 @@ export function openingsSentence(read: Report, state: OpeningsState): Part[] {
     return [
       {
         lead,
-        text: 'click a wall shared with a neighbour; the stretch they share is taken out, one opening per neighbour, never past a corner · Esc puts the tool down',
+        text: 'click a wall shared with a neighbour; the whole stretch the two share is opened, never past a corner · Esc puts the tool down',
       },
-      ...lost,
       { text: leaves },
       ...walkParts(read),
     ]
@@ -213,7 +196,6 @@ export function openingsSentence(read: Report, state: OpeningsState): Part[] {
     },
     ...(state.hover?.why ? [{ text: state.hover.why, bad: true }] : []),
     { text: 'click near a door to select it · Esc puts the type down' },
-    ...lost,
     { text: leaves },
     ...walkParts(read),
   ]

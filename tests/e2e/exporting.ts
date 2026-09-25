@@ -1,8 +1,10 @@
 import { type Download, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
+import { seedPlan } from './plan'
 
-/** The Sheet, which is where the export buttons are: it opens on the sample plan. */
+/** The Sheet, which is where the export buttons are, opened on the test plan. */
 export async function openSheet(page: Page): Promise<void> {
+  await seedPlan(page)
   await page.goto('/')
   await page.locator('nav.tabs').getByRole('button', { name: 'Sheet', exact: true }).click()
   await page.locator('svg.sheet').waitFor()

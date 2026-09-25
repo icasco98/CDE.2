@@ -1,17 +1,18 @@
 /**
- * The doors on the sheet: each one drawn on its wall in its room's frame, a red ring where one has
- * lost its wall, and the door the hand is about to place drawn faint over the wall under it.
+ * The doors on the sheet: each one drawn on its wall in its room's frame where its two rooms share
+ * one, and the door the hand is about to place drawn faint over the wall under it.
  */
 
 import {
   Fragment,
+  useMemo,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import {
+  OUTSIDE,
   doorDrawing,
-  doorPlace,
-  doorsOf,
+  drawnDoors,
   toWorld,
   type Door,
   type DoorDrawing,
@@ -48,9 +49,10 @@ const points = (p: Poly) => p.map((v) => `${p4(v[0])},${p4(v[1])}`).join(' ')
 
 const preview = (type: Door['type'], w: number): Door => ({
   id: 'preview',
+  edge: 'preview',
+  to: OUTSIDE,
   type,
   w,
-  at: [0, 0],
   flip: false,
   hinge: false,
 })
@@ -59,38 +61,28 @@ export function Doors(props: DoorsProps) {
   const { sheet, storey, rooms, openings } = props
   const armed = openings?.armedAt
   const dragged = openings?.draggedTo
+  // Where each door stands is read once per change of the sheet, not once per frame of a drag.
+  const drawn = useMemo(() => drawnDoors(sheet, storey), [sheet, storey])
   return (
     <Fragment>
-      {rooms
-        .filter((r) => doorsOf(r).length)
-        .map((r) => (
+      {rooms.map((r) => {
+        const own = drawn.filter((each) => each.room.id === r.id)
+        if (!own.length) return null
+        return (
           <g key={`doors-${r.id}`} className="doors" transform={frameOf(r)}>
-            {doorsOf(r).map((d) => {
-              const pl = doorPlace(r, d)
-              const picked = openings?.selected?.id === d.id
-              if (!pl)
-                return (
-                  <circle
-                    key={d.id}
-                    className={`door-lost${picked ? ' selected' : ''}`}
-                    cx={p4(d.at[0])}
-                    cy={p4(d.at[1])}
-                    r={0.22}
-                    onPointerDown={(event) => openings?.onDoorDown(r, d, event)}
-                    onContextMenu={(event) => openings?.onDoorMenu(r, d, event)}
-                  />
-                )
+            {own.map(({ door, pl, w }) => {
+              const d = { ...door, w }
               return (
                 <DoorMark
                   key={d.id}
                   door={d}
-                  drawing={doorDrawing(r, d, pl, sheet, storey)}
-                  picked={picked}
+                  drawing={doorDrawing(r, d, pl, sheet)}
+                  picked={openings?.selected?.id === d.id}
                   on={
                     openings
                       ? {
-                          down: (event) => openings.onDoorDown(r, d, event),
-                          menu: (event) => openings.onDoorMenu(r, d, event),
+                          down: (event) => openings.onDoorDown(r, door, event),
+                          menu: (event) => openings.onDoorMenu(r, door, event),
                         }
                       : null
                   }
@@ -98,7 +90,8 @@ export function Doors(props: DoorsProps) {
               )
             })}
           </g>
-        ))}
+        )
+      })}
       {armed && !armed.why && !dragged && openings?.armed && (
         <g className="doors" transform={frameOf(armed.room)}>
           <DoorMark
@@ -108,7 +101,6 @@ export function Doors(props: DoorsProps) {
               preview(openings.armed.type, openings.armed.w),
               armed.pl,
               sheet,
-              storey,
             )}
             picked={false}
             on={null}
@@ -126,7 +118,6 @@ export function Doors(props: DoorsProps) {
                 preview(openings.dragged.type, openings.dragged.w),
                 dragged.pl,
                 sheet,
-                storey,
               )}
               picked={false}
               on={null}

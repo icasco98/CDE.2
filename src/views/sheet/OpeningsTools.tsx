@@ -17,7 +17,6 @@ type OpeningsToolsProps = {
   onHinge: () => void
   onWider: (by: number) => void
   onRemove: () => void
-  onReattach: () => void
 }
 
 export function OpeningsTools(props: OpeningsToolsProps) {
@@ -56,20 +55,7 @@ export function OpeningsTools(props: OpeningsToolsProps) {
         />
         m
       </label>
-      {door && !door.onWall && (
-        <span className="door-ctl">
-          <span className="who">
-            {door.label} on {door.room}, lost its wall
-          </span>
-          <button type="button" onClick={props.onReattach}>
-            Put on the nearest wall
-          </button>
-          <button type="button" title="Delete" onClick={props.onRemove}>
-            Remove
-          </button>
-        </span>
-      )}
-      {door && door.onWall && (
+      {door && (
         <span className="door-ctl">
           <span className="who">
             {door.label} on {door.room}

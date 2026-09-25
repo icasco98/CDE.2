@@ -6,7 +6,7 @@
  */
 
 import { area } from '../../geometry'
-import type { Plot, Room as ProjectRoom, Result, Store } from '../../model'
+import { ok, type Plot, type Room as ProjectRoom, type Result, type Store } from '../../model'
 import { standingOf, typicalArea } from '../../rulebook'
 import {
   KINDS,
@@ -16,9 +16,11 @@ import {
   plotFrom,
   storeyOf,
   type Category,
+  type HeldDoor,
   type PlotSpec,
   type ProgramRoom,
   type Room,
+  type SetDown,
   type Sheet,
   type Side,
 } from '../../sheet'
@@ -119,60 +121,15 @@ export function plotOf(plot: Plot): PlotSpec | null {
 /** What writing the program needs of the session, so a test can hand it a plain store. */
 type Writing = Pick<Store, 'transaction' | 'actions' | 'getState'>
 
-/** The rooms of the sheet's program, in order: the blocks a person sees in the tray. */
-const programRooms = (rooms: readonly Room[]): readonly Room[] => rooms.filter((r) => !r.extra)
-
-/**
- * The project's room that stands for a room of the sheet: the one with its id, else the one at its
- * place in the program, which is how a sheet whose program was just taken up finds its rooms.
- */
-function roomIn(store: Writing, rooms: readonly Room[], id: string): string | null {
-  const project = store.getState()
-  if (project.rooms.some((room) => room.id === id)) return id
-  const at = programRooms(rooms).findIndex((r) => r.id === id)
-  return at < 0 ? null : (project.rooms[at]?.id ?? null)
-}
-
 const clampStorey = (storey: number, storeys: number) =>
   Math.max(0, Math.min(Math.max(1, storeys) - 1, Math.trunc(storey)))
-
-/**
- * A project with no program takes up the sheet's, so the two are one list from then on: a person who
- * has drawn on the sample and then adds a room finds the whole program in Requirements, not one room.
- */
-function takeUpProgram(store: Writing, rooms: readonly Room[]): Result | null {
-  if (store.getState().rooms.length > 0) return null
-  const program = programRooms(rooms)
-  // The rooms keep their ids and the storeys they stand on, so the drawing is untouched by this.
-  const wanted = Math.min(MAX_STOREYS, Math.max(...program.map((r) => storeyOf(r) + 1), 1))
-  while (store.getState().storeys < wanted) {
-    const grown = store.actions.addStorey()
-    if (!grown.ok) return grown
-  }
-  const storeys = store.getState().storeys
-  for (const r of program) {
-    const added = store.actions.addRoom({
-      id: r.id,
-      type: typeFor(r.kind),
-      name: r.name,
-      targetArea: r.target,
-      storey: clampStorey(storeyOf(r), storeys),
-      storeysSpanned: 1,
-    })
-    if (!added.ok) return added
-  }
-  return null
-}
 
 /** A room added on the sheet: it goes into the project's program, and the sheet follows it back. */
 export function addToProgram(
   store: Writing,
-  rooms: readonly Room[],
   input: { kind: string; name: string; target: number },
 ): Result {
   return store.transaction(() => {
-    const stopped = takeUpProgram(store, rooms)
-    if (stopped) return stopped
     const project = store.getState()
     const type = typeFor(input.kind)
     const standing = standingOf(type, project.storeys)
@@ -188,30 +145,42 @@ export function addToProgram(
 }
 
 /** A room taken out of the program on the sheet: out of the project, and off the sheet with it. */
-export function removeFromProgram(store: Writing, rooms: readonly Room[], id: string): Result {
-  return store.transaction(() => {
-    const stopped = takeUpProgram(store, rooms)
-    if (stopped) return stopped
-    const found = roomIn(store, rooms, id)
-    return found ? store.actions.removeRoom(found) : undefined
-  })
-}
+export const removeFromProgram = (store: Writing, id: string): Result =>
+  store.actions.removeRoom(id)
 
 /** The order of importance changed on the sheet: the project's list is what holds it. */
-export function moveInProgram(
-  store: Writing,
-  rooms: readonly Room[],
-  id: string,
-  before: string | null,
-): Result {
-  return store.transaction(() => {
-    const stopped = takeUpProgram(store, rooms)
-    if (stopped) return stopped
-    const found = roomIn(store, rooms, id)
-    if (!found) return undefined
-    const ahead = before === null ? null : roomIn(store, rooms, before)
-    return store.actions.moveRoom(found, ahead)
+export const moveInProgram = (store: Writing, id: string, before: string | null): Result =>
+  store.actions.moveRoom(id, before)
+
+/**
+ * Rooms the sheet made itself — a court or a corridor given a pocket, a copy, a piece a cut split
+ * off — join the program with the ids they have, so the bubbles and the program show them too. The
+ * project gains the storeys they stand on. One step to undo; the ids added are given back.
+ */
+export function adoptRooms(store: Writing, rooms: readonly Room[]): Result<readonly string[]> {
+  const known = new Set(store.getState().rooms.map((room) => room.id))
+  const born = rooms.filter((r) => !known.has(r.id))
+  if (!born.length) return ok([])
+  const made = store.transaction(() => {
+    const wanted = Math.min(MAX_STOREYS, Math.max(...born.map((r) => storeyOf(r) + 1)))
+    while (store.getState().storeys < wanted) {
+      const grown = store.actions.addStorey()
+      if (!grown.ok) return grown
+    }
+    const storeys = store.getState().storeys
+    for (const r of born) {
+      const added = store.actions.addRoom({
+        id: r.id,
+        type: typeFor(r.kind),
+        name: r.name,
+        targetArea: r.target > 0 ? r.target : 1,
+        storey: clampStorey(storeyOf(r), storeys),
+        storeysSpanned: 1,
+      })
+      if (!added.ok) return added
+    }
   })
+  return made.ok ? ok(born.map((r) => r.id)) : made
 }
 
 /** Whether the plot the project gives is the plot the sheet already stands on. */
@@ -222,14 +191,47 @@ const samePlot = (one: PlotSpec, other: PlotSpec): boolean =>
   one.streets.join() === other.streets.join()
 
 /**
+ * What the sheet set down while following the project: the rooms the program stopped naming and the
+ * doors whose edges went, with their drawing, so an undo in the project finds them where they stood.
+ * It lives as long as the page, which is as long as the project's undo does.
+ */
+export function createAside() {
+  const rooms = new Map<string, Room>()
+  const doors = new Map<string, HeldDoor>()
+  return {
+    held: (): SetDown => ({ rooms: [...rooms.values()], doors: [...doors.values()] }),
+    keep(down: SetDown, now: Sheet): void {
+      for (const room of down.rooms) rooms.set(room.id, room)
+      for (const held of down.doors) doors.set(held.door.id, held)
+      for (const room of now.rooms) {
+        rooms.delete(room.id)
+        for (const door of room.doors ?? []) doors.delete(door.id)
+      }
+    },
+  }
+}
+
+export type Aside = ReturnType<typeof createAside>
+
+/**
  * The sheet as the project asks for it: standing on the project's plot, drawing the project's
- * program. Where the two disagree the project wins, and a room it does not name is kept aside.
+ * program and no other room, each door drawing an edge the project holds. Where the two disagree
+ * the project wins; what it no longer names is set aside for an undo to bring back.
  */
 export function followProject(
   sheet: Sheet,
   program: readonly ProgramRoom[],
   plot: PlotSpec | null,
+  edges: readonly { readonly id: string }[],
+  aside: Aside,
 ): Sheet {
   const stood = !plot || samePlot(plot, sheet.plot) ? sheet : { ...sheet, plot }
-  return followProgram(stood, program).sheet
+  const followed = followProgram(
+    stood,
+    program,
+    new Set(edges.map((edge) => edge.id)),
+    aside.held(),
+  )
+  aside.keep(followed.setDown, followed.sheet)
+  return followed.sheet
 }

@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { AGENT_BRIEF, PROMPT_CAP, promptFor } from './prompt'
 import { sheetRead } from './agent'
-import { sampleSheet } from './sample'
+import { fixtureSheet } from './fixture'
 import { newMemory, withFeedback, withNote, withPlan, withRequest, type Memory } from './memory'
 
 const at = '2026-09-18T11:05:00.000Z'
 
 /** A memory as full as the tool will ever send: long lines, and five kept plans. */
 function fullMemory(): Memory {
-  const sheet = sampleSheet()
+  const sheet = fixtureSheet()
   let memory = newMemory()
   for (let k = 0; k < 60; k++) {
     memory = withFeedback(memory, `the owner writes a long line ${k} `.repeat(20), at)
@@ -20,7 +20,7 @@ function fullMemory(): Memory {
 }
 
 describe('the prompt the assistant reads', () => {
-  const read = sheetRead(sampleSheet(), 0)
+  const read = sheetRead(fixtureSheet(), 0)
 
   it('carries the brief, the sheet and what the owner said', () => {
     const prompt = promptFor({ read, memory: newMemory(), text: 'lay out the ground floor' })
@@ -42,7 +42,7 @@ describe('the prompt the assistant reads', () => {
   it('carries the memory: the owner’s lines, the notes and the kept plans', () => {
     const memory = withPlan(
       withNote(withFeedback(newMemory(), 'no diwaniya WC', at), 'the garden goes west', at),
-      sampleSheet(),
+      fixtureSheet(),
       0,
       at,
     )

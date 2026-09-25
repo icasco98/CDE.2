@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { NEAR_GAP, meetingOf, meetingsOf } from './meetings'
-import { sampleSheet } from './sample'
+import { fixtureSheet } from './fixture'
 import { cloneRoom, sheetOf, type Room } from './model'
 import { setAngle } from './geometry'
 
-const roomIn = (name: string): Room => sampleSheet().rooms.find((r) => r.name === name)!
+const roomIn = (name: string): Room => fixtureSheet().rooms.find((r) => r.name === name)!
 
 /** Two plain rooms side by side, the second's left wall this far from the first's right wall. */
 const pair = (gap: number, h = 4, y = 0): [Room, Room] => {
@@ -31,7 +31,7 @@ describe('how the rooms stand to each other', () => {
   })
 
   it('reads the embedded ground floor in full, the longest shared wall first', () => {
-    const meetings = meetingsOf(sampleSheet(), 0)
+    const meetings = meetingsOf(fixtureSheet(), 0)
     expect(meetings.sharing[0]).toEqual({ rooms: ['Stair', 'Family Living'], metres: 6.25 })
     expect(meetings.sharing.map((one) => one.metres)).toEqual(
       [...meetings.sharing.map((one) => one.metres)].sort((a, b) => b - a),

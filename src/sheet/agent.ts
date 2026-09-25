@@ -175,10 +175,10 @@ export function sheetRead(sheet: Sheet, onScreen: number): SheetRead {
     setbackLine: corners(plot.build),
     onScreen: storeyNameOf(onScreen),
     landingRule: sheet.settings.rule,
-    importanceOrder: sheet.rooms.filter((r) => !r.extra).map((r) => r.name),
+    importanceOrder: sheet.rooms.map((r) => r.name),
     storeys,
     waiting: sheet.rooms
-      .filter((r) => !r.extra && !r.placed)
+      .filter((r) => !r.placed)
       .map((r) => ({ name: r.name, kind: r.kind, target: r.target, w: r.w, h: r.h })),
     totals: {
       floorAreas: ground.floors,
@@ -269,9 +269,9 @@ function onePlacing(desk: Desk, storey: number, asked: Record<string, unknown>):
 }
 
 const placedCount = (sheet: Sheet, storey: number) =>
-  allPlaced(sheet).filter((o) => storeyOf(o) === storey && !o.extra).length
+  allPlaced(sheet).filter((o) => storeyOf(o) === storey).length
 
-const askedCount = (sheet: Sheet) => sheet.rooms.filter((r) => !r.extra).length
+const askedCount = (sheet: Sheet) => sheet.rooms.length
 
 /** How a batch is reported back: the house as it now stands, and what this call changed in it. */
 type Done = { landed: string[]; changed: Changed; house: SheetRead }

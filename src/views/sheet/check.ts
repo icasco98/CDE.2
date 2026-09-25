@@ -1,22 +1,30 @@
 /**
  * What Check shows on the zoning sheet, read from the project's edges and keep-apart pairs and from
- * the doors as each recorded its edge when it was placed. An edge is ready in the zoning step when
- * its two rooms share a run of wall a door wide, and met in the Openings step when a door drawing
- * it is placed. Nothing here changes the sheet or the graph.
+ * the doors drawn, each drawing the edge it names. An edge is ready in the zoning step when its two
+ * rooms share a run of wall a door wide, and met in the Openings step when its door is drawn: a
+ * door whose rooms have moved apart is not drawn, and its edge is not met. Nothing here changes the
+ * sheet or the graph.
  */
 
 import {
   DOOR,
   acrossStoreys,
-  doorsOf,
+  drawnDoors,
   meetingOf,
   placedRooms,
   storeyOf,
+  toWorld,
+  type Point,
   type Room,
   type Sheet,
 } from '../../sheet'
 
-export type SheetEdge = { readonly a: string; readonly b: string; readonly storey: number }
+export type SheetEdge = {
+  readonly id: string
+  readonly a: string
+  readonly b: string
+  readonly storey: number
+}
 
 type SheetPair = { readonly a: string; readonly b: string }
 
@@ -27,8 +35,8 @@ export const pairKey = (a: string, b: string): string => (a < b ? `${a}|${b}` : 
 type CheckRead = {
   /** This storey's edges between two rooms that are not yet ready, or not yet met. */
   readonly waiting: readonly SheetEdge[]
-  /** The doors that join a pair kept apart. */
-  readonly apartDoors: ReadonlySet<string>
+  /** The doors drawn that join a pair kept apart, and where each stands in plot metres. */
+  readonly apartDoors: ReadonlyMap<string, Point>
   /** The rooms on this storey of a pair where one is reached only through the other. */
   readonly apartRooms: ReadonlySet<string>
   /** The pairs kept apart that a door joins or that one is reached only through the other. */
@@ -46,14 +54,6 @@ function sharesADoorsWidth(one: Room, other: Room, sheet: Sheet): boolean {
   return !!met && !('how' in met) && met.metres >= DOOR.door.w - 1e-6
 }
 
-/** Every pair a door on the sheet draws, as the doors recorded them. */
-function drawnPairs(sheet: Sheet): ReadonlySet<string> {
-  const drawn = new Set<string>()
-  for (const room of sheet.rooms)
-    for (const door of doorsOf(room)) if (door.pair) drawn.add(pairKey(...door.pair))
-  return drawn
-}
-
 export function checkRead(
   sheet: Sheet,
   storey: number,
@@ -66,22 +66,22 @@ export function checkRead(
   step: Step,
 ): CheckRead {
   const byId = new Map(sheet.rooms.map((room) => [room.id, room]))
-  const drawn = drawnPairs(sheet)
+  const doors = drawnDoors(sheet, storey)
+  const met = new Set(doors.map((each) => each.door.edge))
+  const drawn = new Set(doors.map((each) => pairKey(each.room.id, each.door.to)))
   const waiting = input.edges.filter((edge) => {
     if (edge.storey !== storey) return false
     const one = byId.get(edge.a)
     const other = byId.get(edge.b)
     if (!one || !other) return false
-    return step === 'openings'
-      ? !drawn.has(pairKey(edge.a, edge.b))
-      : !sharesADoorsWidth(one, other, sheet)
+    return step === 'openings' ? !met.has(edge.id) : !sharesADoorsWidth(one, other, sheet)
   })
   const apartKeys = new Set(input.apart.map((pair) => pairKey(pair.a, pair.b)))
   const here = placedRooms(sheet, storey)
-  const apartDoors = new Set<string>()
-  for (const room of here)
-    for (const door of doorsOf(room))
-      if (door.pair && apartKeys.has(pairKey(...door.pair))) apartDoors.add(door.id)
+  const apartDoors = new Map<string, Point>()
+  for (const { room, door, pl } of doors)
+    if (apartKeys.has(pairKey(room.id, door.to)))
+      apartDoors.set(door.id, toWorld(room, pl.p[0], pl.p[1]))
   const shown = new Set(here.map((room) => room.id))
   const apartRooms = new Set<string>()
   let broken = 0

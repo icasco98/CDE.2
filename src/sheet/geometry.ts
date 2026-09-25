@@ -480,7 +480,9 @@ export function loseSize(r: Room, dw: number, dh: number): void {
 /** The frame moved or resized on its own, the shape left where it stands in the world. */
 export function setFrameOnly(r: Room, lx: number, ly: number, lw: number, lh: number): void {
   if (r.doors && (lx || ly))
-    r.doors = r.doors.map((d) => ({ ...d, at: [r6(d.at[0] - lx), r6(d.at[1] - ly)] as Point }))
+    r.doors = r.doors.map((d) =>
+      d.at ? { ...d, at: [r6(d.at[0] - lx), r6(d.at[1] - ly)] as Point } : d,
+    )
   if (r.labelAt && (lx || ly)) r.labelAt = [r6(r.labelAt[0] - lx), r6(r.labelAt[1] - ly)]
   const a = rad(r.angle || 0)
   const dx = lx + lw / 2 - r.w / 2
@@ -575,7 +577,9 @@ export function scaleTo(r: Room, lw: number, lh: number): void {
   const sy = lh / r.h
   if (r.pieces) r.pieces = r.pieces.map((p) => tidy(p.map(([x, y]) => [x * sx, y * sy] as Point)))
   if (r.doors)
-    r.doors = r.doors.map((d) => ({ ...d, at: [r6(d.at[0] * sx), r6(d.at[1] * sy)] as Point }))
+    r.doors = r.doors.map((d) =>
+      d.at ? { ...d, at: [r6(d.at[0] * sx), r6(d.at[1] * sy)] as Point } : d,
+    )
   if (r.labelAt) r.labelAt = [r6(r.labelAt[0] * sx), r6(r.labelAt[1] * sy)]
   setFrameOnly(r, 0, 0, lw, lh)
 }
@@ -737,7 +741,9 @@ export function setAngle(r: Room, deg: number): void {
       r.h = w
       if (r.pieces) r.pieces = r.pieces.map((p) => tidy(p.map(([x, y]) => [h - y, x] as Point)))
       if (r.doors)
-        r.doors = r.doors.map((d) => ({ ...d, at: [r6(h - d.at[1]), r6(d.at[0])] as Point }))
+        r.doors = r.doors.map((d) =>
+          d.at ? { ...d, at: [r6(h - d.at[1]), r6(d.at[0])] as Point } : d,
+        )
       if (r.labelAt) r.labelAt = [r6(h - r.labelAt[1]), r6(r.labelAt[0])]
     }
     r.x = r6(cx - r.w / 2)
@@ -757,7 +763,13 @@ export function mirrorRoom(r: Room, axis: 'x' | 'y'): void {
   if (r.doors)
     r.doors = r.doors.map((d) => ({
       ...d,
-      at: (axis === 'x' ? [r6(r.w - d.at[0]), d.at[1]] : [d.at[0], r6(r.h - d.at[1])]) as Point,
+      ...(d.at
+        ? {
+            at: (axis === 'x'
+              ? [r6(r.w - d.at[0]), d.at[1]]
+              : [d.at[0], r6(r.h - d.at[1])]) as Point,
+          }
+        : {}),
       hinge: !d.hinge,
     }))
   if (r.labelAt)

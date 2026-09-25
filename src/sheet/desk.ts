@@ -19,6 +19,8 @@ export type Desk = {
   note: (text: string, replaces?: string) => void
   /** A command it lacked. */
   request: (text: string) => void
+  /** The project's edge between two rooms, or a room and the outside, which a door would draw. */
+  edgeBetween: (a: string, b: string) => string | null
 }
 
 /** A room by the name the architect used: the program's name, the start of it, or its kind. */
@@ -27,12 +29,11 @@ export function roomNamed(sheet: Sheet, name: unknown): Room | null {
     .trim()
     .toLowerCase()
   if (!want) return null
-  const rooms = sheet.rooms.filter((r) => !r.extra)
+  const rooms = sheet.rooms
   return (
     rooms.find((r) => r.name.toLowerCase() === want) ??
     rooms.find((r) => r.name.toLowerCase().startsWith(want)) ??
     rooms.find((r) => r.kind === want) ??
-    sheet.rooms.find((r) => r.name.toLowerCase() === want) ??
     null
   )
 }

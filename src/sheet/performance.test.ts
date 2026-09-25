@@ -3,9 +3,10 @@ import { report } from './report'
 import { sheetRead } from './agent'
 import { meetingsOf } from './meetings'
 import { pocketsOf } from './pockets'
-import { sampleSheet } from './sample'
+import { fixtureSheet } from './fixture'
 import { MASS_START, massProjection, orderPrisms, prismsOf } from './mass'
 import { doDeed } from './verbs'
+import { drawnDoors } from './doors'
 import type { Desk } from './desk'
 
 /** The best of five runs after a warm-up, so neither compilation nor a stray collection is charged. */
@@ -20,12 +21,20 @@ function milliseconds(work: () => void): number {
   return best
 }
 
-const sheet = sampleSheet()
+const sheet = fixtureSheet()
 
 it('reads the embedded sheet’s report inside 5 ms', () => {
   const taken = milliseconds(() => report(sheet, 0))
   console.log(`report on the embedded sheet: ${taken.toFixed(2)} ms, budget 5 ms`)
   expect(taken).toBeLessThan(10)
+})
+
+it('finds where every door of the test plan stands, on its edge’s wall, inside 2 ms', () => {
+  // Read once per change of the sheet, never per frame of a drag: a drag re-renders from the memo.
+  const taken = milliseconds(() => drawnDoors(sheet, 0))
+  console.log(`drawnDoors on the test plan, 20 doors: ${taken.toFixed(2)} ms, budget 2 ms`)
+  expect(drawnDoors(sheet, 0)).toHaveLength(20)
+  expect(taken).toBeLessThan(4)
 })
 
 it('reads how the embedded sheet’s rooms stand to each other inside 5 ms', () => {
@@ -90,6 +99,7 @@ it('applies a list of ten deeds inside 60 ms', () => {
       say: () => {},
       note: () => {},
       request: () => {},
+      edgeBetween: () => null,
     }
     for (const deed of deeds) doDeed(at, 0, deed)
   })

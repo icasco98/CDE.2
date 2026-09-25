@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { tab } from './tabs'
+import { seedPlan } from './plan'
 
 /**
  * The brief is the owner's, not the tool's: a program entered on Requirements is the program the
@@ -144,19 +145,20 @@ test('a room taken out on the Sheet is out of the brief, and the plot is the pro
 test('a saved sheet is reconciled with a brief it does not match: the brief wins', async ({
   page,
 }) => {
-  // the sample sheet is drawn on first, with no brief entered at all
+  // a plan is drawn and saved, and the sheet opened on it
+  await seedPlan(page)
   await page.goto('/')
   await tab(page, 'Sheet').click()
   await page.locator('svg.sheet').waitFor()
-  const sample = await blocks(page).count()
-  expect(sample).toBeGreaterThan(12)
-  // the sheet is the owner's once it is saved, which is what a brief is later reconciled with
-  await expect
-    .poll(() => page.evaluate(() => !!window.localStorage.getItem('cde.sheet')))
-    .toBe(true)
+  expect(await blocks(page).count()).toBeGreaterThan(12)
 
-  // then a brief of twelve rooms arrives, and the sheet is opened again
+  // then the program is taken down to the twelve rooms of another brief, and the sheet opened again
   await tab(page, 'Requirements').click()
+  while ((await rowsOf(page).count()) > 0)
+    await rowsOf(page)
+      .first()
+      .getByRole('button', { name: /Remove/ })
+      .click()
   for (const kind of twelve) {
     await page.getByLabel('Kind to add').selectOption(kind)
     await page.getByRole('button', { name: 'Add room' }).click()
@@ -171,8 +173,7 @@ test('a saved sheet is reconciled with a brief it does not match: the brief wins
     await tab(page, 'Sheet').click()
     return rooms
   })()
-  expect(drawn.slice(0, 12).map((block) => block.name)).toEqual(entered.map((room) => room.name))
-  // the sample's own rooms are kept aside on the sheet, and the sentence says how many
-  await expect(page.locator('.tray .item.aside').first()).toBeVisible()
-  await expect(page.locator('.say')).toContainText('the brief does not name')
+  // one list: the sheet draws the brief's rooms and no other
+  expect(drawn.map((block) => block.name)).toEqual(entered.map((room) => room.name))
+  await expect(page.locator('svg.sheet [data-room]')).toHaveCount(0)
 })

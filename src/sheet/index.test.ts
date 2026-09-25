@@ -1,4 +1,5 @@
 import { expect, it } from 'vitest'
+import { fixtureSheet } from './fixture'
 import * as sheet from './index'
 
 /** The surface T2 to T5 and the layout agent drive: every name the sheet offers, and no other. */
@@ -14,6 +15,7 @@ const surface = [
   'boxCorners',
   // the model
   'DEFAULTS',
+  'OUTSIDE',
   'RULE_HINT',
   'SETTINGS_V',
   'acrossStoreys',
@@ -134,19 +136,17 @@ const surface = [
   'pocketsOf',
   'roomFromPocket',
   // doors
+  'alongAt',
   'doorAcross',
   'doorAt',
   'doorBlocked',
-  'doorPlace',
-  'doorWidth',
-  'openWallOn',
-  'slideDoorAlong',
+  'doorSlid',
+  'drawnDoors',
   'walkTest',
   // the Openings step
   'doorDrawing',
   'doorNear',
   'doorRead',
-  'lostDoors',
   'newDoors',
   // labels
   'initialsOf',
@@ -160,18 +160,14 @@ const surface = [
   'sideUsed',
   // how two rooms stand, which Check reads for an edge ready to draw
   'meetingOf',
-  // the program and the sample
+  // the kinds
   'DOOR',
   'KINDS',
   'KIND_LABEL',
-  'PROGRAM',
-  'PROGRAM_TAG',
-  'freshRooms',
   'hasHinge',
   'hasSwing',
   'isStreetDoor',
   'repair',
-  'sampleSheet',
   'sizeFor',
   // the actions
   'HISTORY_CAP',
@@ -199,15 +195,12 @@ const surface = [
   'moveCorner',
   'moveDoor',
   'newHistory',
-  'openWall',
   'place',
   'pullWall',
   'pushOthers',
-  'reattachDoor',
   'redo',
   'remember',
   'removeDoor',
-  'removeRoom',
   'reshape',
   'resize',
   'restOnGrid',
@@ -249,7 +242,7 @@ it('offers every name the screens and the agent drive, and no other', () => {
   for (const name of surface) expect(sheet[name as keyof typeof sheet]).toBeDefined()
 })
 
-it('opens on the sample sheet and reads it', () => {
-  const opened = sheet.sampleSheet()
+it('reads the test plan and walks it', () => {
+  const opened = fixtureSheet()
   expect(sheet.report(opened, 0).walk!.reached).toBe(17)
 })

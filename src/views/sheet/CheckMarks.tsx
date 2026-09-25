@@ -4,12 +4,12 @@
  * a red cross on every door that joins a pair kept apart.
  */
 
-import { centreOfFootprint, doorsOf, toWorld, type Room } from '../../sheet'
+import { centreOfFootprint, toWorld, type Point, type Room } from '../../sheet'
 import { p4 } from './shape'
 
 export type SheetCheck = {
   readonly lines: readonly { readonly from: string; readonly to: string; readonly bold: boolean }[]
-  readonly apartDoors: ReadonlySet<string>
+  readonly apartDoors: ReadonlyMap<string, Point>
   readonly apartRooms: ReadonlySet<string>
 }
 
@@ -43,21 +43,14 @@ export function CheckMarks(props: { readonly rooms: readonly Room[]; readonly ch
           />
         )
       })}
-      {props.rooms.flatMap((room) =>
-        doorsOf(room)
-          .filter((door) => props.check.apartDoors.has(door.id))
-          .map((door) => {
-            const [x, y] = toWorld(room, door.at[0], door.at[1])
-            return (
-              <path
-                key={door.id}
-                data-apart-door={door.id}
-                className="apart-door"
-                d={`M${p4(x - CROSS)} ${p4(y - CROSS)}L${p4(x + CROSS)} ${p4(y + CROSS)}M${p4(x + CROSS)} ${p4(y - CROSS)}L${p4(x - CROSS)} ${p4(y + CROSS)}`}
-              />
-            )
-          }),
-      )}
+      {[...props.check.apartDoors].map(([id, [x, y]]) => (
+        <path
+          key={id}
+          data-apart-door={id}
+          className="apart-door"
+          d={`M${p4(x - CROSS)} ${p4(y - CROSS)}L${p4(x + CROSS)} ${p4(y + CROSS)}M${p4(x + CROSS)} ${p4(y - CROSS)}L${p4(x - CROSS)} ${p4(y + CROSS)}`}
+        />
+      ))}
     </g>
   )
 }

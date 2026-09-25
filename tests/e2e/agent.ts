@@ -1,4 +1,5 @@
 import { type Page } from '@playwright/test'
+import { seedPlan } from './plan'
 
 /** What the chat column and the architect's commands are driven through, shared by both suites. */
 
@@ -23,6 +24,7 @@ export async function memoryReader(page: Page): Promise<void> {
 }
 
 export async function openSheet(page: Page): Promise<void> {
+  await seedPlan(page)
   await page.goto('/')
   await page.locator('nav.tabs').getByRole('button', { name: 'Sheet', exact: true }).click()
   await page.locator('svg.sheet').waitFor()

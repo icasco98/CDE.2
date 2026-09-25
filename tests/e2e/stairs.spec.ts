@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { centreOf, drag, edgeBetween, openVilla, roomNamed, selectRoom } from './bubbles'
+import { seedPlan } from './plan'
 
 /*
  * A stair is one room on every storey it spans: in the bubble diagram it stands in each column,
@@ -61,6 +62,7 @@ test.describe('the stair on the zoning sheet', () => {
 
   test('moving the stair on the first floor moves it on the ground too', async ({ page }) => {
     const STAIR = 'r1'
+    await seedPlan(page)
     await page.goto('/')
     await page.locator('nav.tabs').getByRole('button', { name: 'Sheet', exact: true }).click()
     await page.locator('svg.sheet').waitFor()

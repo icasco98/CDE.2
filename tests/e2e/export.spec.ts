@@ -9,11 +9,11 @@ test('the two buttons hand over a PDF and a DXF of the sheet as it stands', asyn
   expect(rooms).toBeGreaterThan(4)
 
   const pdf = await exported(page, 'Export PDF')
-  expect(pdf.suggestedFilename()).toBe('untitled.pdf')
+  expect(pdf.suggestedFilename()).toBe('test-plan.pdf')
   expect((await textOf(pdf)).startsWith('%PDF-')).toBe(true)
 
   const dxf = await exported(page, 'Export DXF')
-  expect(dxf.suggestedFilename()).toBe('untitled.dxf')
+  expect(dxf.suggestedFilename()).toBe('test-plan.dxf')
   const drawing = await textOf(dxf)
   expect(drawing.startsWith('0\nSECTION')).toBe(true)
   expect(drawing.endsWith('0\nEOF\n')).toBe(true)

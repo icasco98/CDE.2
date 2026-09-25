@@ -9,19 +9,25 @@ export type Category = 'reception' | 'shared' | 'private' | 'service' | 'circula
 
 export type DoorType = 'door' | 'double' | 'sliding' | 'opening' | 'open' | 'street' | 'street2'
 
+/** The project's word for the outside, the far end of a door that leads out. */
+export const OUTSIDE = 'EXTERIOR'
+
 /**
- * A door is the drawing of an edge on a wall of its room: `at` is a point in the room's frame, and
- * `pair` the two rooms of the edge it draws (a room id or `EXTERIOR`), recorded when it is placed
- * and never read back off the wall; a door saved before doors knew their edge has none.
+ * A door is the drawing of an edge: it is held by one room of the edge, `to` is the other end (a room
+ * or `OUTSIDE`), both set when it is placed. Between two rooms it stands on the wall they share,
+ * `along` of the way along it; to the outside it stands at `at`, a point of its room's frame on the
+ * outside wall it was placed on. Where that wall is not there it is not drawn, and nothing else.
  */
 export type Door = {
   id: string
+  edge: string
+  to: string
   type: DoorType
   w: number
-  at: Point
   flip: boolean
   hinge: boolean
-  pair?: [string, string]
+  along?: number
+  at?: Point
 }
 
 /**
@@ -29,7 +35,7 @@ export type Door = {
  * the frame's centre, with `pieces` — convex polygons in that frame — when carving or drawing has
  * left it something other than the whole rectangle. `lost` is how much of the frame a cut took, so
  * Restore shape can give it back. `placedAt` is a clock tick, so the newest room gives way in gap
- * closing. `extra` marks a room the sheet itself made, `fixed` one that never moves: a court.
+ * closing. `fixed` marks one that never moves: a court.
  */
 export type Room = {
   id: string
@@ -53,10 +59,7 @@ export type Room = {
   labelAt?: Point
   placedAt?: number
   placed: boolean
-  extra?: boolean
   fixed?: boolean
-  /** Kept from a saved sheet that the project's program does not name: it is the sheet's own. */
-  aside?: boolean
 }
 
 export type LandingRule = 'wait' | 'push'

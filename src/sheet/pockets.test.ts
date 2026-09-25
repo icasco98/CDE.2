@@ -9,7 +9,7 @@ import {
 } from './pockets'
 import { DEFAULTS, sheetOf, type Poly, type Room } from './model'
 import { areaOf, r2 } from './geometry'
-import { sampleSheet } from './sample'
+import { fixtureSheet } from './fixture'
 
 const room = (over: Partial<Room> = {}): Room => ({
   id: 'a',
@@ -54,7 +54,7 @@ describe('enclosed spaces', () => {
 
   /** The frozen mock's own sheet, read by the same pass the mock runs. */
   it('finds 3 spaces on the embedded sheet: 150.8, 0.2 and 5.1 m²', () => {
-    const areas = pocketsOf(sampleSheet(), 0).map((p) => Math.round(p.area * 10) / 10)
+    const areas = pocketsOf(fixtureSheet(), 0).map((p) => Math.round(p.area * 10) / 10)
     expect(areas.length).toBe(3)
     expect(areas).toEqual([150.8, 0.2, 5.1])
   })
@@ -113,6 +113,6 @@ describe('enclosed spaces', () => {
     const court = roomFromPocket(hole, 'court', 'Court', 'open', true, 'x1', 9)
     expect([court.x, court.y, court.w, court.h]).toEqual([6, 6, 2, 4])
     expect(court.pieces).toBeNull()
-    expect([court.fixed, court.extra, court.target]).toEqual([true, true, 8])
+    expect([court.fixed, court.target]).toEqual([true, 8])
   })
 })

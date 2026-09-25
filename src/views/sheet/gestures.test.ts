@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { areaOf, bboxOf, loopsOf, outlineOf, sampleSheet, setSetting } from '../../sheet'
+import { fixtureSheet } from '../../sheet/fixture'
+import { areaOf, bboxOf, loopsOf, outlineOf, setSetting } from '../../sheet'
 import {
   angleShown,
   beginCorner,
@@ -25,7 +26,7 @@ import {
 } from './gestures'
 
 const still = { shift: false }
-const sheet = sampleSheet()
+const sheet = fixtureSheet()
 /** The room the gesture tests work on: the Formal Living, a plain rectangle at 11.39, 1.5. */
 const formal = () => sheet.rooms.find((r) => r.id === 'r6')!
 const kitchen = () => sheet.rooms.find((r) => r.id === 'r8')!

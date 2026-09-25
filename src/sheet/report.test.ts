@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { report, boundaryWalls, sideOver, sideUsed } from './report'
-import { sampleSheet } from './sample'
+import { fixtureSheet } from './fixture'
 import { sheetOf, type Room } from './model'
 import { fmt } from './geometry'
 
@@ -30,7 +30,7 @@ describe('the report of the embedded sheet', () => {
    * that zone is not in the frozen mock, and every other number of the two agrees.
    */
   it('reads 343.96 m² placed of 305 asked, west 13 of 12.5, north 7.8 of 10, walk 17 of 17', () => {
-    const rep = report(sampleSheet(), 0)
+    const rep = report(fixtureSheet(), 0)
     expect(rep.placedArea).toBe(343.96)
     expect(rep.askedArea).toBe(305)
     expect(rep.buildableArea).toBe(365.5)
@@ -53,7 +53,7 @@ describe('the report of the embedded sheet', () => {
   })
 
   it('reads the ratio of both storeys against 1,050 m²', () => {
-    const rep = report(sampleSheet(), 0)
+    const rep = report(fixtureSheet(), 0)
     expect(rep.allowed).toBe(1050)
     expect(rep.floors).toEqual([343.96, 0])
     expect(rep.total).toBe(343.96)
@@ -61,13 +61,13 @@ describe('the report of the embedded sheet', () => {
   })
 
   it('names the rooms short of their target', () => {
-    const rep = report(sampleSheet(), 0)
+    const rep = report(fixtureSheet(), 0)
     expect(rep.shortfalls.map((s) => s.name)).toEqual(['Diwaniya', 'Kitchen', 'Store'])
   })
 
   it('counts enclosed spaces only where the settings show them', () => {
-    expect(report(sampleSheet(), 0).pockets.count).toBe(0)
-    expect(report(sampleSheet({ showPockets: 1 }), 0).pockets.count).toBe(3)
+    expect(report(fixtureSheet(), 0).pockets.count).toBe(0)
+    expect(report(fixtureSheet({ showPockets: 1 }), 0).pockets.count).toBe(3)
   })
 
   it('names an overlap and a spill', () => {

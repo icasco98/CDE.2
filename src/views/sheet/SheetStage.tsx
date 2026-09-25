@@ -17,6 +17,7 @@ import {
 import {
   DEFAULTS,
   DOOR,
+  OUTSIDE,
   RULE_HINT,
   acrossStoreys,
   addDoor,
@@ -25,7 +26,6 @@ import {
   areaOf,
   bestNeighbour,
   carveBelow,
-  cloneRoom,
   clearColor,
   clearLabel,
   combine,
@@ -45,14 +45,12 @@ import {
   isOpen,
   labelPlan,
   lock,
-  lostDoors,
   makeCorridor,
   makeCourt,
   mirror,
   move,
   newDoors,
   newHistory,
-  openWall,
   outsideBuildable,
   overlapsOf,
   place,
@@ -61,14 +59,11 @@ import {
   pushOthers,
   polyArea,
   r2,
-  reattachDoor,
   redo,
   remember,
   removeDoor,
-  removeRoom,
   report,
   restore,
-  sampleSheet,
   sendBack,
   setArea,
   setColor,
@@ -101,11 +96,14 @@ import {
   type Side4,
 } from '../../sheet'
 import { EXTERIOR, type EdgeKind, type Result as ModelResult } from '../../model'
+import { noStair } from '../../graph/stairs'
 import { onlyThrough } from '../../graph/apart'
 import { session } from '../../app/session'
 import { useProject } from '../../app/useProject'
 import {
   addToProgram,
+  adoptRooms,
+  createAside,
   followProject,
   moveInProgram,
   plotOf,
@@ -168,11 +166,9 @@ import {
   keepSheet,
   keepSpec,
   localMemory,
-  localSample,
   localSheet,
   localSpec,
   storedMemory,
-  storedSample,
   storedSettings,
   storedSheet,
   storedSpec,
@@ -197,6 +193,16 @@ declare global {
 }
 
 type Doc = { sheet: Sheet; history: ReturnType<typeof newHistory> }
+
+// What the sheet sets down while following the project lives as long as the project's undo, which
+// outlasts this screen: a room deleted in the bubbles and undone there comes back where it stood.
+const aside = createAside()
+
+/** The sheet as the project in the session asks for it, read afresh. */
+const followSession = (sheet: Sheet): Sheet => {
+  const project = session.getState()
+  return followProject(sheet, programOf(project.rooms), plotOf(project.plot), project.edges, aside)
+}
 
 type Menu =
   | { kind: 'room'; room: Room; corner: Point | null; at: { x: number; y: number } }
@@ -231,21 +237,12 @@ export function SheetStage() {
   const program = useMemo(() => programOf(project.rooms), [project.rooms])
   const plot = useMemo(() => plotOf(project.plot), [project.plot])
   const [doc, setDoc] = useState<Doc>(() => ({
-    // Nothing saved yet: a project with a brief of its own opens on an empty plot with its program
-    // waiting, and one with no brief opens on the owner's sample, which is the sheet to learn on.
-    sheet: followProject(
-      localSheet() ?? (program.length ? sheetOf([]) : sampleSheet()),
-      program,
-      plot,
-    ),
+    // Nothing saved yet: the plot opens empty with the project's program waiting, and a project
+    // with no program opens on an empty plot with nothing to place.
+    sheet: followSession(localSheet(project.edges) ?? sheetOf([])),
     history: newHistory(),
   }))
   const [memory, setMemory] = useState<Memory>(() => localMemory())
-  // What the brief says right now, for the reads that happen after the link's store answers.
-  const programRef = useRef(program)
-  const plotRef = useRef(plot)
-  programRef.current = program
-  plotRef.current = plot
   const [selection, setSelection] = useState<string[]>([])
   const [drag, setDrag] = useState<Drag | null>(null)
   const [drawing, setDrawing] = useState<Drawing | null>(null)
@@ -279,9 +276,8 @@ export function SheetStage() {
   const links = useRef(createLinks(session))
   const row = useRef<HTMLDivElement | null>(null)
   const settingsWindow = useSettingsWindow()
-  // The owner's spec and sample as last saved by This is it: this browser's, then the link's store's.
+  // The owner's spec as last saved by This is it: this browser's, then the link's store's.
   const spec = useRef<Partial<Settings> | null>(localSpec())
-  const sample = useRef<Sheet | null>(localSample())
   const clipboard = useRef<{ ids: string[]; storey: number; pastes: number } | null>(null)
   const spaceHeld = useRef(false)
   const touched = useRef(false)
@@ -310,15 +306,13 @@ export function SheetStage() {
     }
     let live = true
     void Promise.all([
-      storedSheet(store),
+      storedSheet(store, () => session.getState().edges),
       storedMemory(store),
       storedSettings(store),
       storedSpec(store),
-      storedSample(store),
-    ]).then(([stored, kept, saved, keptSpec, keptSample]) => {
+    ]).then(([stored, kept, saved, keptSpec]) => {
       if (!live) return
       if (keptSpec) spec.current = keptSpec
-      if (keptSample) sample.current = keptSample
       if (!touched.current && (stored || saved)) {
         const held = stored ?? docRef.current.sheet
         const withSettings = saved
@@ -326,7 +320,7 @@ export function SheetStage() {
           : held
         docRef.current = {
           // A sheet out of the link's store is reconciled like any other: the project's brief wins.
-          sheet: followProject(withSettings, programRef.current, plotRef.current),
+          sheet: followSession(withSettings),
           history: newHistory(),
         }
         setDoc(docRef.current)
@@ -339,15 +333,15 @@ export function SheetStage() {
     }
   }, [runtime.ready, runtime.store])
 
-  // Requirements changed while the sheet was open: the project wins, and what it does not name is
-  // kept aside on the sheet rather than thrown away.
+  // The project changed while the sheet was open: the project wins, and what it no longer names
+  // leaves the sheet, set aside for its undo.
   useEffect(() => {
     const held = docRef.current.sheet
-    const next = followProject(held, program, plot)
+    const next = followProject(held, program, plot, project.edges, aside)
     if (next === held) return
     docRef.current = { ...docRef.current, sheet: next }
     setDoc(docRef.current)
-  }, [program, plot])
+  }, [program, plot, project.edges])
 
   useEffect(() => {
     if (!keeping) return
@@ -369,7 +363,6 @@ export function SheetStage() {
 
   const openingsOn = step === 'openings'
   const doorInHand = doorSel ? doorRead(sheet, STOREY, doorSel) : null
-  const lostCount = openingsOn ? lostDoors(sheet, STOREY).length : 0
 
   // Everything read from the sheet is read once per change, so a drag pays for none of it.
   const view: SheetRead = useMemo(() => {
@@ -482,7 +475,32 @@ export function SheetStage() {
     docRef.current = next
     setDoc(next)
     setFlash(null)
+    adopt(next.sheet, next.history.past.length)
     return true
+  }
+
+  /**
+   * A room the sheet made — a court, a corridor, a copy, a piece a cut split off — joins the program
+   * as the step that made it, so the program, the bubbles and the sheet show the same rooms.
+   */
+  const adopt = (sheet: Sheet, depth: number): void => {
+    const made = adoptRooms(session, sheet.rooms)
+    if (!made.ok) {
+      refuse(made)
+      return
+    }
+    if (!made.value.length) return
+    const rooms = session.getState().rooms.filter((room) => made.value.includes(room.id))
+    links.current.rooms(
+      depth,
+      rooms.map(({ id, type, name, targetArea, storey }) => ({
+        id,
+        type,
+        name,
+        targetArea,
+        storey,
+      })),
+    )
   }
 
   /** The storey switch: what was selected on the storey left behind is let go, as the mock does. */
@@ -514,18 +532,19 @@ export function SheetStage() {
     const depth = docRef.current.history.past.length
     const back = undo(docRef.current.sheet, { history: docRef.current.history })
     if (!back.result.ok) return false
-    docRef.current = { sheet: back.sheet, history: back.history }
-    setDoc(docRef.current)
     links.current.undone(depth)
+    // A step taken back may hold a room or a door the project has since let go of.
+    docRef.current = { sheet: followSession(back.sheet), history: back.history }
+    setDoc(docRef.current)
     return true
   }
 
   const stepForward = (): boolean => {
     const forward = redo(docRef.current.sheet, { history: docRef.current.history })
     if (!forward.result.ok) return false
-    docRef.current = { sheet: forward.sheet, history: forward.history }
-    setDoc(docRef.current)
     links.current.redone(forward.history.past.length)
+    docRef.current = { sheet: followSession(forward.sheet), history: forward.history }
+    setDoc(docRef.current)
     return true
   }
 
@@ -535,6 +554,7 @@ export function SheetStage() {
       touched.current = true
       docRef.current = { ...docRef.current, sheet: change.sheet }
       setDoc(docRef.current)
+      adopt(change.sheet, docRef.current.history.past.length)
     }
     return change.result
   }
@@ -553,28 +573,11 @@ export function SheetStage() {
     setDoc(docRef.current)
   }
 
-  const backToSample = () => {
-    const now = docRef.current
-    const saved = sample.current
-    touched.current = true
-    docRef.current = {
-      sheet: saved
-        ? sheetOf(saved.rooms.map(cloneRoom), now.sheet.settings, saved.storeyCount)
-        : sampleSheet(now.sheet.settings),
-      history: remember(now.history, now.sheet),
-    }
-    links.current.prune(docRef.current.history.past.length)
-    setDoc(docRef.current)
-    setSelection([])
-    setMenu(null)
-  }
-
-  /** This is it: the settings now are the spec, and the sheet now is the sample. */
+  /** This is it: the settings now are the spec, for Reset to the spec to put back. */
   const thisIsIt = () => {
     const now = docRef.current.sheet
-    keepSpec(now, runtime.store)
+    keepSpec(now.settings, runtime.store)
     spec.current = { ...now.settings }
-    sample.current = now
     setSpecState('Saved as the spec.')
   }
 
@@ -652,9 +655,19 @@ export function SheetStage() {
       return
     }
     const before = docRef.current.sheet
-    const pair = armed === 'open' ? null : pairAt(before, x, y)
+    const pair = pairAt(before, x, y, armed)
+    if (!pair) {
+      setFlash(doorAt(x, y, doorWidth, before, STOREY)?.why ?? 'No wall there.')
+      setDoorSel(null)
+      return
+    }
+    if (armed === 'open' && pair[1] === OUTSIDE) {
+      setFlash('Only a wall shared with a neighbour can be opened.')
+      return
+    }
+    const edge = edgeFor(pair[0], pair[1])
     // A door is the drawing of an edge: between two rooms with none it asks before it is placed.
-    if (pair && !joined(pair[0], pair[1])) {
+    if (!edge) {
       setOffer({
         x,
         y,
@@ -665,41 +678,37 @@ export function SheetStage() {
       })
       return
     }
-    const change =
-      armed === 'open'
-        ? openWall(before, { x, y, storey: STOREY, joined })
-        : addDoor(before, {
-            x,
-            y,
-            type: armed,
-            width: doorWidth,
-            storey: STOREY,
-            ...(pair ? { pair } : {}),
-          })
-    if (!apply(change)) {
-      if (!change.result.ok && change.result.said === 'No wall there.') setDoorSel(null)
-      return
-    }
-    setDoorSel(newDoors(before, change.sheet).at(-1) ?? null)
+    const change = addDoor(before, {
+      x,
+      y,
+      type: armed,
+      width: doorWidth,
+      storey: STOREY,
+      edge,
+      to: pair[1],
+    })
+    if (apply(change)) setDoorSel(newDoors(before, change.sheet).at(-1) ?? null)
   }
 
-  /** Whether the project holds an edge between two rooms, on any storey. */
-  const joined = (a: string, b: string): boolean =>
-    session
+  /** The project's edge between two ends, the one on this storey first: the edge a door would draw. */
+  const edgeFor = (a: string, b: string): string | null => {
+    const between = session
       .getState()
-      .edges.some((edge) => (edge.a === a && edge.b === b) || (edge.a === b && edge.b === a))
+      .edges.filter((edge) => (edge.a === a && edge.b === b) || (edge.a === b && edge.b === a))
+    return (between.find((edge) => edge.storey === STOREY) ?? between[0])?.id ?? null
+  }
 
   /**
-   * The pair a door put here would draw, read once as it is placed and kept on the door: the room
-   * whose wall it is on and the room across, or the outside. Nothing for a sheet not drawing the
-   * project's program, or a wall no door may take, which addDoor then says why of.
+   * The pair a door put here would draw, read once as it is placed: the room whose wall it is on and
+   * the room across, or the outside. Reading the wall only asks which edge is meant; the door then
+   * draws that edge or asks for it. Nothing for a wall no door may take.
    */
-  const pairAt = (sheet: Sheet, x: number, y: number): [string, string] | null => {
-    const hit = doorAt(x, y, doorWidth, sheet, STOREY)
-    if (!hit || hit.why) return null
+  const pairAt = (sheet: Sheet, x: number, y: number, type: DoorType): [string, string] | null => {
+    const hit = doorAt(x, y, type === 'open' ? 0.6 : doorWidth, sheet, STOREY)
+    if (!hit || (hit.why && type !== 'open')) return null
     const rooms = session.getState().rooms
-    const known = (id: string) => id === EXTERIOR || rooms.some((room) => room.id === id)
-    const across = doorAcross(hit.room, hit.pl, sheet, STOREY)?.id ?? EXTERIOR
+    const known = (id: string) => id === OUTSIDE || rooms.some((room) => room.id === id)
+    const across = doorAcross(hit.room, hit.pl, sheet, STOREY)?.id ?? OUTSIDE
     return known(hit.room.id) && known(across) ? [hit.room.id, across] : null
   }
 
@@ -708,7 +717,7 @@ export function SheetStage() {
     const held = offer
     setOffer(null)
     if (!held) return
-    const kind: EdgeKind = held.type === 'opening' ? 'open' : 'door'
+    const kind: EdgeKind = held.type === 'opening' || held.type === 'open' ? 'open' : 'door'
     const made = session.actions.connect({ a: held.pair[0], b: held.pair[1], kind })
     if (!made.ok) {
       refuse(made)
@@ -721,14 +730,14 @@ export function SheetStage() {
       type: held.type,
       width: held.width,
       storey: STOREY,
-      pair: held.pair,
+      edge: made.value,
+      to: held.pair[1],
     })
     if (!apply(change)) {
       session.actions.disconnect(made.value)
       return
     }
-    links.current.add({
-      depth: docRef.current.history.past.length,
+    links.current.edge(docRef.current.history.past.length, {
       edge: made.value,
       a: held.pair[0],
       b: held.pair[1],
@@ -1491,6 +1500,7 @@ export function SheetStage() {
               room: ref.room,
               door: ref.id,
               step: command.step,
+              storey: STOREY,
             }),
           )
           return
@@ -1567,6 +1577,11 @@ export function SheetStage() {
 
   // ---------- the sentence ----------
 
+  // What the project's graph warns of that no drawing on the sheet can answer.
+  const briefWarnings = noStair(project.rooms, project.storeys).map((check) =>
+    check.sentence.replace(/\.$/, ''),
+  )
+
   const parts: Part[] = measure
     ? measuringSentence(measure)
     : openingsOn
@@ -1576,7 +1591,6 @@ export function SheetStage() {
           hover: doorHover ? { why: doorHover.why, snapped: doorHover.pl.snapped ?? null } : null,
           door: doorInHand,
           sliding: !!doorDrag?.moved,
-          lost: lostCount,
         })
       : drawing
         ? drawingSentence({
@@ -1594,7 +1608,7 @@ export function SheetStage() {
               return room ? r2(areaOf(room)) : 0
             })(),
           })
-        : sentenceOf(view.read, settings)
+        : sentenceOf(view.read, settings, briefWarnings)
 
   if (checked) {
     const waiting = checked.waiting.length
@@ -1626,20 +1640,22 @@ export function SheetStage() {
       <p className="head-line">
         {openingsOn ? (
           <>
-            Openings on the ground floor. Rooms fade to outlines and every click is about a wall or
-            a door. Arm a type in the bar and click a wall: the door lands a jamb from the corner or
-            at the middle. Click near a door to select it and drag it to slide it along its wall; a
-            metre off the wall it comes free for another. A shared wall takes one door for both
-            rooms, a wall on the boundary takes none, and Open wall takes out only the stretch two
-            rooms share. Click a room in the list to light its walls.
+            Openings. Rooms fade to outlines and every click is about a wall or a door. A door is
+            the drawing of a connection: arm a type in the bar and click a wall, and it lands on the
+            connection between the two rooms, or between a room and the outside, asking first when
+            they have none. Click near a door to select it and drag it to slide it along its wall. A
+            door stands on the wall its two rooms share; move them apart and it is not drawn until
+            they meet again. Open wall takes out the whole stretch two rooms share. Click a room in
+            the list to light its walls.
           </>
         ) : (
           <>
-            Zoning by hand on the fresh brief&rsquo;s corner plot, 20 × 25 m, service street south,
-            side street east, north turned 25°. Ground floor. Drag a room from the program and drop
-            it where you want it, or draw it; R turns it; a room dropped on another waits, tinted,
-            or pushes the lower one; right-click it to settle the overlap, or right-click an empty
-            space walled in by rooms to give it away, make it a court, or make it a corridor.
+            Zoning by hand on the project&rsquo;s plot, with the project&rsquo;s program: the rooms
+            here are the rooms of Requirements and the bubbles, no more and no fewer. Drag a room
+            from the program and drop it where you want it, or draw it; R turns it; a room dropped
+            on another waits, tinted, or pushes the lower one; right-click it to settle the overlap,
+            or right-click an empty space walled in by rooms to give it away, make it a court, or
+            make it a corridor, which joins the program.
           </>
         )}
       </p>
@@ -1715,9 +1731,6 @@ export function SheetStage() {
           />
         </span>
         <span className="grp far">
-          <button type="button" onClick={backToSample} title="Put the sample sheet back">
-            Back to the sample
-          </button>
           <button type="button" onClick={clearPlan}>
             Clear the plan
           </button>
@@ -1725,7 +1738,7 @@ export function SheetStage() {
             type="button"
             className="primary"
             onClick={thisIsIt}
-            title="The settings now are the spec; the sheet now is the sample"
+            title="The settings now are the spec, for Reset to the spec to put back"
           >
             This is it
           </button>
@@ -1746,19 +1759,11 @@ export function SheetStage() {
                   room: ref.room,
                   door: ref.id,
                   w: (doorInHand?.width ?? DOOR.door.w) + by,
-                }),
-              )
-            }
-            onRemove={() => doorChoice({ kind: 'remove' })}
-            onReattach={() =>
-              onDoor((ref) =>
-                reattachDoor(docRef.current.sheet, {
-                  room: ref.room,
-                  door: ref.id,
                   storey: STOREY,
                 }),
               )
             }
+            onRemove={() => doorChoice({ kind: 'remove' })}
           />
         )}
         <span className="grp room-tools">
@@ -1879,18 +1884,12 @@ export function SheetStage() {
           openings={openingsOn}
           lit={lit}
           onLight={(room) => setLit((was) => (was === room.id ? null : room.id))}
-          onRemove={(room) => {
-            // A room the brief names goes out of the brief as well as off the sheet; one the sheet
-            // keeps aside is its own, and only the sheet has it to lose.
-            if (!room.aside) refuse(removeFromProgram(session, sheet.rooms, room.id))
-            apply(removeRoom(docRef.current.sheet, { id: room.id }))
-          }}
-          onReorder={(id, before) => refuse(moveInProgram(session, sheet.rooms, id, before))}
+          // The room goes out of the brief, and the sheet follows the brief off the sheet.
+          onRemove={(room) => refuse(removeFromProgram(session, room.id))}
+          onReorder={(id, before) => refuse(moveInProgram(session, id, before))}
           onDrawMenu={setDrawMenuFor}
           onDraw={(id, shape) => startDraw(id, shape)}
-          onAdd={(kind, name, area) =>
-            refuse(addToProgram(session, sheet.rooms, { kind, name, target: area }))
-          }
+          onAdd={(kind, name, area) => refuse(addToProgram(session, { kind, name, target: area }))}
         />
         <div className="middle">
           <div className="sheet-cell">
@@ -2154,6 +2153,7 @@ export function SheetStage() {
           memory={memory}
           onMemory={setMemory}
           sample={runtime.sample}
+          edgeBetween={edgeFor}
           ready={runtime.ready}
           onBegin={agentBegin}
           onEnd={agentEnd}

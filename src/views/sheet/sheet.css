@@ -240,12 +240,6 @@ body:has(main.stage-sheet) {
   border-style: dashed;
 }
 
-/* A room the brief does not name: on the sheet, but not one of the rooms it asks for. */
-.sheet-stage .tray .item.aside {
-  border-style: dotted;
-  opacity: 0.6;
-}
-
 .sheet-stage .tray .item.placed {
   background: transparent;
   border-style: solid;
@@ -1523,24 +1517,6 @@ body:has(main.stage-sheet) {
 }
 
 /* A door whose wall moved away: the ring says where it was left, to put back or remove. */
-.sheet-stage .door-lost {
-  fill: transparent;
-  stroke: var(--warn);
-  stroke-width: 0.06;
-  stroke-dasharray: 0.1 0.08;
-  pointer-events: none;
-}
-
-.sheet-stage svg.sheet.doormode .door-lost {
-  pointer-events: auto;
-  cursor: pointer;
-}
-
-.sheet-stage .door-lost.selected {
-  stroke: var(--select);
-  stroke-width: 0.1;
-}
-
 /* Check: an edge not yet ready or met, dashed from the room under the hand, bold from the one selected. */
 .sheet-stage .check-line {
   stroke: var(--accent);
