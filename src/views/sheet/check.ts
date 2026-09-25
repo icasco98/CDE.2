@@ -18,13 +18,13 @@ import {
 
 export type SheetEdge = { readonly a: string; readonly b: string; readonly storey: number }
 
-export type SheetPair = { readonly a: string; readonly b: string }
+type SheetPair = { readonly a: string; readonly b: string }
 
-export type Step = 'zoning' | 'openings'
+type Step = 'zoning' | 'openings'
 
 export const pairKey = (a: string, b: string): string => (a < b ? `${a}|${b}` : `${b}|${a}`)
 
-export type CheckRead = {
+type CheckRead = {
   /** This storey's edges between two rooms that are not yet ready, or not yet met. */
   readonly waiting: readonly SheetEdge[]
   /** The doors that join a pair kept apart. */

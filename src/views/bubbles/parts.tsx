@@ -3,7 +3,7 @@ import type { Spot } from '../../bubbles/arrange'
 import { categoryLabels } from '../../rulebook'
 
 /** The fill is bubbles.css's to choose, so a bubble and the legend that names it take one class. */
-export function categoryClass(category: string | undefined): string {
+function categoryClass(category: string | undefined): string {
   return category ? `category-${category}` : 'category-none'
 }
 

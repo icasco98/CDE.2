@@ -66,8 +66,8 @@ export function storeyFits(
 }
 
 /**
- * The one sentence both screens say. The storey's own name is left to whatever stands beside it,
- * so the bubbles sheet can put it in front and the totals line can leave it to the row's label.
+ * The fit in one sentence. The storey's own name is left to whatever stands beside it, so the
+ * totals line can leave it to the row's label.
  */
 export function fitSentence(fit: StoreyFit): string {
   const against = `${metres2(fit.needed)} m² of targets on ${metres2(fit.buildable)} m² buildable`

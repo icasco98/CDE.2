@@ -281,7 +281,7 @@ table.program td input[type='number'] {
   margin: 0;
 }
 
-/* The fit against the buildable area, in the same words the bubbles sheet says it in. */
+/* The fit against the buildable area, beside each storey's total. */
 .totals .fit {
   color: #6b655c;
   font-size: 0.8rem;

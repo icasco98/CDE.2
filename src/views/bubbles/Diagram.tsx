@@ -24,7 +24,7 @@ type Gesture =
     }
   | { readonly kind: 'link'; readonly from: Spot; readonly at: Point }
 
-export type DiagramProps = {
+type DiagramProps = {
   readonly arrangement: Arrangement
   readonly rooms: ReadonlyMap<string, BubbleRoom>
   readonly edges: readonly BubbleLink[]
