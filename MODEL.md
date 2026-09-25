@@ -11,13 +11,13 @@ connection from where two walls happen to land.
 
 | Entity | Fields | Notes |
 |---|---|---|
-| **Project** | `id`, `name`, `storeys`, `heights[]`, `plot`, `site`, `household`, `rooms[]`, `edges[]`, `apart[]`, `weights`, `actors[]`, `version` | One JSON document. `site` is the client's two choices, `diwaniyaAtCorner` and `garden` (rear, side or none), which the forces S4 and S5 read. Metres and m². `heights` is the floor-to-floor height of each storey in metres, one entry per storey, 3.5 unless the person changes it; the Municipality's 3 m clear minimum and 15 m maximum are walls in the rulebook, not limits on the field. |
+| **Project** | `id`, `name`, `storeys`, `heights[]`, `plot`, `household`, `rooms[]`, `edges[]`, `apart[]`, `declined[]`, `actors[]`, `version` | One JSON document. Metres and m². `heights` is the floor-to-floor height of each storey in metres, one entry per storey, 3.5 unless the person changes it; the Municipality's 3 m clear minimum and 15 m maximum are walls in the rulebook, not limits on the field. |
 | **Plot** | `on` (boolean: the boundary binds), `polygon`, `north` (degrees from up), `street` (which edges face a street) | `on` false: the plot is drawn for reference and constrains nothing. A rectangle today, any polygon later; same field either way. |
 | **Room** | `id`, `name`, `type`, `storey`, `storeysSpanned`, `targetArea`, `bubble?`, `footprint?`, `pinned` | `type` keys the room-type table. `bubble` is `{x, y}`, the hand's nudge of the room's bubble from where the diagram's arrangement puts it, in the diagram's own units; it keeps the diagram readable and means nothing for the plan. `footprint` is `{polygon, rotation, arcs?}`: a rigid polygon in its own frame, turned about its centre, absent while unplaced. `arcs` remembers which runs of the polygon stand for true arcs (each with its centre, radius and direction in the polygon's frame) so a curved wall exports as an arc and its area is exact; the polygon stays what every calculation works on. A stair is a room with `storeysSpanned > 1`. `pinned` means the solver may not move it. |
 | **Edge** | `id`, `a`, `b`, `kind`, `storey`, `hint?` | `a`/`b` are room ids, or the singleton `EXTERIOR`. `kind` is `door`, `open` (one space flows into the next) or `main-door` (exactly one per project, from `EXTERIOR`). `hint` is a wall position for drawing; losing it changes nothing. |
 | **Keep apart** | `id`, `a`, `b` | Two room ids the program wants apart: no edge between them (they may share a wall or stand far apart; geometry is irrelevant), and neither reached only through the other, that is, `b` is not on every route from `EXTERIOR` to `a` and `a` not on every route to `b`. Not an edge and never drawn as a door. A warning only: nothing is ever refused or moved for it. |
 | **Household** | `familySize`, `bedrooms`, `cars`, `maid`, `driver`, `womensReception`, `masterOnGround` | Who the house is for. The room program is generated from it. `masterOnGround` keeps the master bedroom on the ground floor, a common Kuwaiti arrangement for parents. |
-| **Weights** | one number per family of forces: user requirements, site constraints, environmental factors | The person's own priorities on this project. Kept on the project and in undo; nothing reads them while no solver runs, so they are off screen until one does. The forces inside each family and their default strengths are in the rulebook. |
+| **Declined** | `a`, `b` | A connection the rulebook suggested and the person took out: its two ends, room ids or `EXTERIOR`. The default connections are not made again for a declined pair; Restore forgets it, for the whole project or for one room, and makes the suggestion again. Deleting a room deletes its declined pairs. |
 | **Actor** | `id`, `name`, `role`, `waypoints[]` | Waypoints are room ids. Routes are derived. |
 
 Invariants: an edge joins two rooms that share a storey, or a stair
@@ -69,7 +69,11 @@ overrides one made by hand.
 ## The four stages, one graph
 
 1. **Requirements.** Rooms with target areas, the household, the plot
-   with north and street sides, budget, weights.
+   with north and street sides, budget. Rebuilding the program from
+   the household proposes its storeys: one when the one-storey
+   program, hallway included, fits the buildable ground, else a First
+   with the upper kinds and a stair spanning the storeys, each step
+   said in a sentence; every room's storey stays the person's.
 2. **Bubbles.** The connection graph, built and checked. No plot, no
    setbacks, no physics and no distance: a circle's area is in
    proportion to the room's target area, the largest room setting the
@@ -97,17 +101,27 @@ overrides one made by hand.
    pair of rooms as one cell of a half grid, connected (door or open),
    keep apart, or nothing, editable, the same store and the same undo
    as the diagram, which stays the main view.
-3. **Zoning.** Nothing transfers from the bubble sheet: the zoning
-   sheet opens on the sample plan or empty, and every zone stands where
+3. **Zoning.** The sheet draws the project's rooms and no other: a
+   room deleted anywhere leaves it (an undo brings it back where it
+   stood), a room added on it joins the program, and a room the sheet
+   makes itself (a court or corridor from a pocket, a copy, a piece a
+   cut splits off) joins the program too. An empty program is an empty
+   sheet. No position transfers from the bubbles: every zone stands where
    the hand put it, dropped from the program or drawn. Rooms dragged,
    turned, reshaped and carved by hand on a plot with the Municipality
    setbacks, the mass beside the sheet as the same model in a second
-   window; doors are drawn on walls in the Openings step and are the
-   edges. A door records the edge it draws, its two rooms, set when it
-   is placed and never read off the wall it stands on. A door put on a
-   wall between two rooms with no edge asks to add the connection:
-   yes connects them and places the door as one undo step, no places
-   nothing. The Morph and its proposal are retired (owner, 17 September
+   window. A door is the drawing of one edge, placed in the Openings
+   step: it names its edge and the edge's far end, and stands on the
+   longest run of wall its two rooms share, a fraction of the way
+   along it, or, to the outside, on the outside wall of its room it
+   was placed on. Where the rooms share no wall it fits, or that wall
+   no longer faces outside, it is not drawn and its edge is not met;
+   when they meet again it is drawn where it was. An edge has one door;
+   deleting the edge deletes its door, deleting the door keeps the
+   edge. Which pair a new door draws is read from the wall clicked and
+   the room across it; a wall between two rooms with no edge asks to
+   add the connection: yes connects them and places the door as one
+   undo step, no places nothing. A door never makes an edge. The Morph and its proposal are retired (owner, 17 September
    2026). **Check** on the toolbar, off by default, shows the edges on
    the sheet: nothing is drawn while it is off. With it on, hovering a
    room draws faint dashed lines to every room it has an edge with,
@@ -127,7 +141,9 @@ Each stage adds constraints. None changes the graph.
 
 ## Derived (computed every time, never stored)
 
-- **Findings** from the graph: reachability from the front door,
+- **Findings** from the graph: reachability from the entrances (the
+  front door and every room's own door to the outside), a house of two
+  storeys or more with no stair,
   tier skips (a private room joined to the outside or to a public
   room), a storey whose edges cannot be drawn without crossing,
   keep-apart pairs broken (an edge between them, or one reached only
@@ -149,8 +165,8 @@ Each stage adds constraints. None changes the graph.
   an edge's `kind` may be changed in place and it stays the same edge.
   The rulebook's default connections arrive as edges when a program is
   rebuilt or a room is added; a person disconnects what this house
-  does not want, and a pair taken out is not offered again in that
-  project. In zoning an edge is added only by the door's question
+  does not want, and a suggested pair taken out is kept as declined
+  and not offered again in that project until Restore. In zoning an edge is added only by the door's question
   above, a person answering it. In the bubbles a drag from
   one room to another connects them, and a click on an edge changes
   its kind or disconnects it.
@@ -163,8 +179,8 @@ Each stage adds constraints. None changes the graph.
   storey, in one transaction that one undo reverts. A stair refuses.
 - **Nudge** moves a bubble for readability and is kept; it changes
   nothing else.
-- **Undo** covers rooms, edges, keep-apart pairs, plot, storeys,
-  heights, weights and household. The project's name, actors and
+- **Undo** covers rooms, edges, keep-apart pairs, declined pairs,
+  plot, storeys, heights and household. The project's name, actors and
   camera are outside it.
 
 ## Persistence
