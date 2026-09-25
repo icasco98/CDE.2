@@ -451,6 +451,7 @@ export function SheetStage() {
     for (const id of selection) if (view.rooms.some((r) => r.id === id)) from(id, true)
     return { lines, tray }
   }, [checked, hover, selection, sheet, STOREY, view.rooms])
+  const trayLinked = useMemo(() => new Set(focusLines?.tray.map((line) => line.to)), [focusLines])
   const sheetCheck: SheetCheck | null =
     checked && focusLines
       ? { lines: focusLines.lines, apartDoors: checked.apartDoors, apartRooms: checked.apartRooms }
@@ -1861,6 +1862,7 @@ export function SheetStage() {
         <Program
           sheet={sheet}
           selection={selection}
+          linked={trayLinked}
           drawingId={drawing && !drawing.reshaping ? drawing.id : null}
           drawMenuFor={drawMenuFor}
           onNewDown={(room, event) => {
@@ -2163,6 +2165,7 @@ export function SheetStage() {
             svg={svg.current}
             box={row.current}
             camera={camera}
+            nameOf={nameOf}
           />
         )}
       </div>

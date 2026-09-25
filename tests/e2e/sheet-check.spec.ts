@@ -240,3 +240,90 @@ test('a door joining a pair kept apart is crossed, and both rooms outlined where
   await expect(page.locator(`svg.sheet g.room[data-room="${dining}"]`)).toHaveClass(/apart-through/)
   await expect(sentence(page)).toContainText('1 keep-apart broken')
 })
+
+test.describe('on a short screen, where the program scrolls', () => {
+  test.use({ viewport: { width: 1500, height: 640 } })
+
+  /** Where a tray line ends, in page pixels. */
+  async function endOf(page: Page, key: string) {
+    return page.evaluate((wanted) => {
+      const line = document.querySelector(`[data-tray-line="${wanted}"]`)
+      const frame = line?.closest('svg')?.getBoundingClientRect()
+      if (!(line instanceof SVGLineElement) || !frame) return null
+      return { x: frame.left + line.x2.baseVal.value, y: frame.top + line.y2.baseVal.value }
+    }, key)
+  }
+
+  /** How far a tray line's end stands from the right middle of what it points at, in pixels. */
+  async function missBy(page: Page, key: string, selector: string) {
+    const end = await endOf(page, key)
+    const box = await page.locator(selector).boundingBox()
+    if (!end || !box) return Infinity
+    return Math.abs(end.x - box.x - box.width) + Math.abs(end.y - box.y - box.height / 2)
+  }
+
+  test('a line to a room in the program follows the list as it scrolls, and a tag brings it back', async ({
+    page,
+  }) => {
+    await openSheet(page)
+    const dining = await idOf(page, 'Dining Room')
+    const family = await idOf(page, 'Family Living')
+    await place(page, dining, 9, 7)
+    await check(page).click()
+    await page.locator(`.tray .item[data-room="${dining}"]`).click()
+    await page.mouse.move(5, 5)
+    const key = `${dining}-${family}`
+    const block = `.tray .item[data-room="${family}"]`
+    await expect(page.locator(block)).toHaveClass(/check-linked/)
+
+    const tray = page.locator('.tray')
+    await tray.evaluate((list, id) => {
+      const item = list.querySelector(`.item[data-room="${id}"]`)
+      item?.scrollIntoView({ block: 'center' })
+    }, family)
+    await expect.poll(() => missBy(page, key, block)).toBeLessThan(1.5)
+
+    const arrow = await tray.evaluate((list, id) => {
+      const item = list.querySelector(`.item[data-room="${id}"]`) as HTMLElement
+      const low = item.offsetTop - (list as HTMLElement).offsetTop > list.scrollHeight / 2
+      list.scrollTop = low ? 0 : list.scrollHeight
+      return low ? '↓' : '↑'
+    }, family)
+    const tag = page.locator(`[data-tray-tag="${family}"]`)
+    await expect(tag).toHaveText(`${arrow} Family Living`)
+    await expect.poll(() => missBy(page, key, `[data-tray-tag="${family}"]`)).toBeLessThan(1.5)
+
+    await tag.click()
+    await expect(tag).toHaveCount(0)
+    await expect.poll(() => missBy(page, key, block)).toBeLessThan(1.5)
+  })
+
+  test('measuring forty tray lines stays under 2 ms', async ({ page }) => {
+    await openSheet(page)
+    const dining = await idOf(page, 'Dining Room')
+    await place(page, dining, 9, 7)
+    const took = await page.evaluate(async (from) => {
+      // Served by the dev server as the app loads it, so the timing is the running code's own.
+      const url = '/src/views/sheet/trayReach.ts'
+      const { measureTray }: typeof import('../../src/views/sheet/trayReach') = await import(
+        /* @vite-ignore */ url
+      )
+      const svg = document.querySelector('svg.sheet') as SVGSVGElement
+      const box = document.querySelector('.body-row') as HTMLElement
+      const list = box.querySelector('.tray') as HTMLElement
+      const ids = [...list.querySelectorAll<HTMLElement>('.item')].map((item) => item.dataset.room!)
+      const lines = Array.from({ length: 40 }, (_, i) => ({ from, to: ids[i % ids.length]! }))
+      let best = Infinity
+      for (let round = 0; round < 10; round++) {
+        // A scroll between rounds, so every measure reads a list that has just moved.
+        list.scrollTop = round % 2 ? 0 : list.scrollHeight
+        const started = performance.now()
+        measureTray(lines, [{ id: from }], () => [9, 7], svg, box)
+        best = Math.min(best, performance.now() - started)
+      }
+      return best
+    }, dining)
+    console.info(`tray measure, 40 lines: ${took.toFixed(3)} ms`)
+    expect(took).toBeLessThan(2)
+  })
+})

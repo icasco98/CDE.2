@@ -23,6 +23,8 @@ import { typeFor } from './project'
 type ProgramProps = {
   sheet: Sheet
   selection: string[]
+  /** The rooms in the list Check draws a line to, outlined while the line shows. */
+  linked: ReadonlySet<string>
   /** The room a shape is being drawn for, so its Draw button reads as in hand. */
   drawingId: string | null
   drawMenuFor: string | null
@@ -96,7 +98,7 @@ export function Program(props: ProgramProps) {
                 (props.openings ? props.lit === room.id : props.selection.includes(room.id))
                   ? ' selected'
                   : ''
-              }${room.group ? ' grouped' : ''}`}
+              }${room.group ? ' grouped' : ''}${props.linked.has(room.id) ? ' check-linked' : ''}`}
               data-room={room.id}
               style={{ flex: `${room.target} 1 0`, background: room.color ?? undefined }}
               title={
