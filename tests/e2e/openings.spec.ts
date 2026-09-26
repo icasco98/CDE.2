@@ -63,6 +63,25 @@ const undo = (page: Page) => page.keyboard.press('Control+z')
 
 const doors = (page: Page) => page.locator('svg.sheet .door:not(.preview)')
 
+/** The two ends of the selected door's gap in sheet metres, west end first. */
+async function selectedGap(page: Page): Promise<[number, number][]> {
+  return page.evaluate(() => {
+    const sheet = document.querySelector('svg.sheet') as SVGSVGElement
+    const gap = document.querySelector('svg.sheet .door.selected line.gap') as SVGLineElement
+    const toSheet = sheet.getScreenCTM()!.inverse()
+    const toScreen = gap.getScreenCTM()!
+    const at = (x: number, y: number): [number, number] => {
+      const p = new DOMPoint(x, y).matrixTransform(toScreen).matrixTransform(toSheet)
+      return [p.x, p.y]
+    }
+    const ends = [
+      at(gap.x1.baseVal.value, gap.y1.baseVal.value),
+      at(gap.x2.baseVal.value, gap.y2.baseVal.value),
+    ]
+    return ends.sort((one, other) => one[0] - other[0])
+  })
+}
+
 test.use({ viewport: { width: 1500, height: 1100 } })
 
 test.describe('the Openings step', () => {
@@ -92,7 +111,11 @@ test.describe('the Openings step', () => {
     await expect(who(page)).toHaveText(/Door on (Kitchen|service hallway)/)
     await expect(page.locator('.door-ctl .w')).toHaveText('1.2 m')
     await expect(sentence(page)).toContainText('service hallway serves 5 doors')
-    await clickAt(page, 5.1, 16.37)
+    // A 2 m door aimed 0.6 m past the new door's end, out of its reach, would still overlap it.
+    const [, east] = await selectedGap(page)
+    await page.getByLabel('Door width in metres').fill('2')
+    await page.getByLabel('Door width in metres').press('Enter')
+    await clickAt(page, east[0] + 0.6, east[1])
     await expect(sentence(page)).toContainText('That would overlap the door already on')
     await expect(doors(page)).toHaveCount(before + 1)
     await page.keyboard.press('Delete')
