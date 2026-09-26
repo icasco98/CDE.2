@@ -70,10 +70,14 @@ overrides one made by hand.
 
 1. **Requirements.** Rooms with target areas, the household, the plot
    with north and street sides, budget. Rebuilding the program from
-   the household proposes its storeys: one when the one-storey
-   program, hallway included, fits the buildable ground, else a First
-   with the upper kinds and a stair spanning the storeys, each step
-   said in a sentence; every room's storey stays the person's.
+   the household proposes its storeys: a Ground and a First at least,
+   the kinds the room-type table puts upstairs (bedrooms with their
+   suites) on the First, the master kept down when the household asks,
+   a stair spanning the storeys; then, while the ground's targets with
+   15% added for walls exceed its buildable area, private kinds the
+   table lets stand on either floor follow them up, largest first.
+   Each step is said in a sentence; every room's storey stays the
+   person's.
 2. **Bubbles.** The connection graph, built and checked. No plot, no
    setbacks, no physics and no distance: a circle's area is in
    proportion to the room's target area, the largest room setting the
@@ -103,7 +107,10 @@ overrides one made by hand.
    as the diagram, which stays the main view.
 3. **Zoning.** The sheet draws the project's rooms and no other: a
    room deleted anywhere leaves it (an undo brings it back where it
-   stood), a room added on it joins the program, and a room the sheet
+   stood), a room added on it joins the program, a room moved to
+   another storey on it moves there in the program as the same undo
+   step, and every room it holds stands on the storey the program
+   gives it; a room the sheet
    makes itself (a court or corridor from a pocket, a copy, a piece a
    cut splits off) joins the program too. An empty program is an empty
    sheet. No position transfers from the bubbles: every zone stands where
@@ -112,13 +119,16 @@ overrides one made by hand.
    setbacks, the mass beside the sheet as the same model in a second
    window. A door is the drawing of one edge, placed in the Openings
    step: it names its edge and the edge's far end, and stands on the
-   longest run of wall its two rooms share, a fraction of the way
+   run of wall its two rooms share on the side of its room it was
+   placed on (the longest run when that side shares none), a fraction
+   of the way
    along it, or, to the outside, on the outside wall of its room it
    was placed on. Where the rooms share no wall it fits, or that wall
    no longer faces outside, it is not drawn and its edge is not met;
-   when they meet again it is drawn where it was. An edge has one door;
-   deleting the edge deletes its door, deleting the door keeps the
-   edge. Which pair a new door draws is read from the wall clicked and
+   when they meet again it is drawn where it was. An edge may have
+   several doors, never two overlapping on one wall, and is met while
+   any of them is drawn; deleting the edge deletes its doors, deleting
+   a door keeps the edge and the others. Which pair a new door draws is read from the wall clicked and
    the room across it; a wall between two rooms with no edge asks to
    add the connection: yes connects them and places the door as one
    undo step, no places nothing. A door never makes an edge. The Morph and its proposal are retired (owner, 17 September
@@ -177,6 +187,9 @@ Each stage adds constraints. None changes the graph.
   kinds joined to it and to no other room), drops the edges it can no
   longer hold and says which, and connects the defaults on the new
   storey, in one transaction that one undo reverts. A stair refuses.
+  Sent from the zoning sheet, the rooms the hand moved go, with the
+  companions still waiting in the program; a companion drawn on the
+  sheet stays where it stands.
 - **Nudge** moves a bubble for readability and is kept; it changes
   nothing else.
 - **Undo** covers rooms, edges, keep-apart pairs, declined pairs,
