@@ -64,7 +64,7 @@ const undo = (page: Page) => page.keyboard.press('Control+z')
 const doors = (page: Page) => page.locator('svg.sheet .door:not(.preview)')
 
 /** The two ends of the selected door's gap in sheet metres, west end first. */
-async function selectedGap(page: Page): Promise<[number, number][]> {
+async function selectedGap(page: Page): Promise<[[number, number], [number, number]]> {
   return page.evaluate(() => {
     const sheet = document.querySelector('svg.sheet') as SVGSVGElement
     const gap = document.querySelector('svg.sheet .door.selected line.gap') as SVGLineElement
@@ -78,7 +78,8 @@ async function selectedGap(page: Page): Promise<[number, number][]> {
       at(gap.x1.baseVal.value, gap.y1.baseVal.value),
       at(gap.x2.baseVal.value, gap.y2.baseVal.value),
     ]
-    return ends.sort((one, other) => one[0] - other[0])
+    const [west, east] = ends.sort((one, other) => one[0] - other[0])
+    return [west!, east!]
   })
 }
 
