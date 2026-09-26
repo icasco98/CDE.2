@@ -7,7 +7,8 @@
 
 import { area } from '../../geometry'
 import { ok, type Plot, type Room as ProjectRoom, type Result, type Store } from '../../model'
-import { standingOf, typicalArea } from '../../rulebook'
+import { spansAllStoreys, standingOf, typicalArea } from '../../rulebook'
+import { sendRoomsToStorey, type StoreyMove } from '../../app/sendToStorey'
 import {
   KINDS,
   MAX_STOREYS,
@@ -181,6 +182,55 @@ export function adoptRooms(store: Writing, rooms: readonly Room[]): Result<reado
     }
   })
   return made.ok ? ok(born.map((r) => r.id)) : made
+}
+
+/** A room the sheet moved to another storey: where it stood in the project and where it went. */
+export type StoreyShift = { readonly id: string; readonly from: number; readonly to: number }
+
+/**
+ * Rooms the sheet step moved to another storey go there in the project too, in one step to undo,
+ * by the program's own storey move: the links they can no longer hold are let go with a sentence
+ * each. A companion still waiting in the program goes with its room; one drawn on the sheet stays
+ * where the hand put it. The project gains the storeys they reach, its stairs stretched to the top.
+ * Only rooms whose storey this step changed are read, so a room the program moved stays moved.
+ */
+export function followSheetStoreys(
+  store: Writing,
+  before: Sheet,
+  after: Sheet,
+): Result<{ readonly shifts: readonly StoreyShift[]; readonly letGo: readonly string[] }> {
+  const project = store.getState()
+  const was = new Map(before.rooms.map((r) => [r.id, r]))
+  const shifts: StoreyShift[] = []
+  for (const r of after.rooms) {
+    const old = was.get(r.id)
+    const room = project.rooms.find((each) => each.id === r.id)
+    if (!old || !room || !r.placed || storeyOf(old) === storeyOf(r)) continue
+    if (room.storeysSpanned > 1 || room.storey === storeyOf(r)) continue
+    shifts.push({ id: r.id, from: room.storey, to: storeyOf(r) })
+  }
+  if (!shifts.length) return ok({ shifts, letGo: [] })
+  const wanted = Math.min(MAX_STOREYS, Math.max(...shifts.map((shift) => shift.to + 1)))
+  const stretch = project.rooms.filter(
+    (room) =>
+      spansAllStoreys(room.type) &&
+      room.storey + Math.max(1, room.storeysSpanned) === project.storeys,
+  )
+  const grow = (): Result | void => {
+    if (project.storeys >= wanted) return
+    while (store.getState().storeys < wanted) {
+      const added = store.actions.addStorey()
+      if (!added.ok) return added
+    }
+    for (const room of stretch) {
+      const reaching = store.actions.setStorey(room.id, room.storey, wanted - room.storey)
+      if (!reaching.ok) return reaching
+    }
+  }
+  const drawn = new Set(after.rooms.filter((r) => r.placed).map((r) => r.id))
+  const moves: StoreyMove[] = shifts.map((shift) => ({ id: shift.id, storey: shift.to }))
+  const moved = sendRoomsToStorey(store, moves, (companion) => !drawn.has(companion), grow)
+  return moved.ok ? ok({ shifts, letGo: moved.value }) : moved
 }
 
 /** Whether the plot the project gives is the plot the sheet already stands on. */

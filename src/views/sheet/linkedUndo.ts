@@ -1,11 +1,12 @@
 /**
  * A step on the sheet that changed the project too is one step to undo, though the sheet and the
- * project keep histories of their own: a door placed with the connection it asked for, or a room
- * the sheet made that joined the program. Each such step is remembered by the depth of the sheet's
+ * project keep histories of their own: a door placed with the connection it asked for, a room the
+ * sheet made that joined the program, or a room the sheet moved to another storey. Each such step is remembered by the depth of the sheet's
  * history it made, and undoing or redoing it takes the project's part back or brings it again.
  */
 
 import type { EdgeKind, Store } from '../../model'
+import { sendRoomsToStorey } from '../../app/sendToStorey'
 
 type Linking = Pick<Store, 'undo' | 'redo' | 'getState' | 'actions' | 'transaction'>
 
@@ -16,6 +17,9 @@ type Link = {
   readonly take: () => void
   readonly make: () => void
 }
+
+/** A room the sheet moved to another storey, from where the program had it. */
+export type MovedRoom = { readonly id: string; readonly from: number; readonly to: number }
 
 /** A room as the program had it when the sheet made it, so a redo makes the same room again. */
 export type MadeRoom = {
@@ -76,6 +80,28 @@ export function createLinks(store: Linking) {
               }
           })
         },
+      })
+    },
+
+    /** Rooms the sheet step moved to another storey, moved in the program with it. */
+    storeys(depth: number, moved: readonly MovedRoom[]): void {
+      const at = (pick: (room: MovedRoom) => number) => () =>
+        moved.every(
+          (room) =>
+            store.getState().rooms.find((each) => each.id === room.id)?.storey === pick(room),
+        )
+      const send = (pick: (room: MovedRoom) => number) => () => {
+        sendRoomsToStorey(
+          store,
+          moved.map((room) => ({ id: room.id, storey: pick(room) })),
+          () => false,
+        )
+      }
+      links.push({
+        depth,
+        stands: at((room) => room.to),
+        take: send((room) => room.from),
+        make: send((room) => room.to),
       })
     },
 

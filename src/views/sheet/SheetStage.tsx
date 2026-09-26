@@ -103,6 +103,7 @@ import { useProject } from '../../app/useProject'
 import {
   addToProgram,
   adoptRooms,
+  followSheetStoreys,
   createAside,
   followProject,
   moveInProgram,
@@ -475,32 +476,42 @@ export function SheetStage() {
     docRef.current = next
     setDoc(next)
     setFlash(null)
-    adopt(next.sheet, next.history.past.length)
+    adopt(now.sheet, next.sheet, next.history.past.length)
     return true
   }
 
   /**
    * A room the sheet made — a court, a corridor, a copy, a piece a cut split off — joins the program
-   * as the step that made it, so the program, the bubbles and the sheet show the same rooms.
+   * as the step that made it, and a room it moved to another storey moves in the program too, so the
+   * program, the bubbles and the sheet show the same rooms on the same storeys.
    */
-  const adopt = (sheet: Sheet, depth: number): void => {
+  const adopt = (before: Sheet, sheet: Sheet, depth: number): void => {
     const made = adoptRooms(session, sheet.rooms)
     if (!made.ok) {
       refuse(made)
       return
     }
-    if (!made.value.length) return
-    const rooms = session.getState().rooms.filter((room) => made.value.includes(room.id))
-    links.current.rooms(
-      depth,
-      rooms.map(({ id, type, name, targetArea, storey }) => ({
-        id,
-        type,
-        name,
-        targetArea,
-        storey,
-      })),
-    )
+    if (made.value.length) {
+      const rooms = session.getState().rooms.filter((room) => made.value.includes(room.id))
+      links.current.rooms(
+        depth,
+        rooms.map(({ id, type, name, targetArea, storey }) => ({
+          id,
+          type,
+          name,
+          targetArea,
+          storey,
+        })),
+      )
+    }
+    const moved = followSheetStoreys(session, before, sheet)
+    if (!moved.ok) {
+      refuse(moved)
+      return
+    }
+    if (!moved.value.shifts.length) return
+    links.current.storeys(depth, moved.value.shifts)
+    if (moved.value.letGo.length) setFlash(moved.value.letGo.join(' '))
   }
 
   /** The storey switch: what was selected on the storey left behind is let go, as the mock does. */
@@ -551,10 +562,11 @@ export function SheetStage() {
   // The assistant's changes are not undo steps of their own: one message is one step.
   const agentWrite = (change: Change): Result => {
     if (change.result.ok) {
+      const before = docRef.current.sheet
       touched.current = true
       docRef.current = { ...docRef.current, sheet: change.sheet }
       setDoc(docRef.current)
-      adopt(change.sheet, docRef.current.history.past.length)
+      adopt(before, change.sheet, docRef.current.history.past.length)
     }
     return change.result
   }
