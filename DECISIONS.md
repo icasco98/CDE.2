@@ -435,3 +435,64 @@ A reversal is a new entry, never an edit.
     No margin for walls is added to the fit, so the starting household
     on the starting plot stays on one storey (313.8 of 365.5 m²); the
     rule is provisional and written into rulebook/room-types.md.
+
+38. **Private rooms go upstairs by default.** The architect's ruling:
+    rebuilding the program always proposes a Ground and a First (a
+    project already on more storeys keeps them), with a stair spanning
+    them. The room-type table decides who goes up: the `upper` kinds,
+    the bedrooms with their ensuites and dressing rooms; reception,
+    diwaniya, living, dining, kitchen, guest WC, service, staff and
+    garage stay down. The household's "master bedroom on the ground
+    floor" keeps the master and its suite down. Each placement is a
+    sentence under the button, and every room's storey stays the
+    person's. Reverses 37's one storey when the program fits.
+
+39. **The ground's fit allows 15% for walls.** When the proposal reads
+    the ground against its buildable area, the ground's target areas
+    are raised by 15% for walls and slack (the architect's decision,
+    26 September 2026; provisional, a named constant in the rulebook).
+    While the ground is still over, a private kind the table lets
+    stand on either floor follows the bedrooms up, largest first, each
+    with its sentence; if it is still over the last sentence says by
+    how much. The Requirements totals still read the bare targets, as
+    19 set them. Reference cases: the starting household on the
+    starting plot holds 274.4 of 365.5 m²; a 19 × 23 m plot holds five
+    bedrooms' ground at 294.7 m² bare but not at 338.9 m² with walls,
+    so the family living goes up. Amends 37's "no margin".
+
+40. **A door stands on the shared wall it was placed on.** A door
+    between two rooms records the side of its room it was placed on,
+    north, south, east or west in that room's own frame so turning the
+    room keeps it, with its fraction along the run. It is drawn on the
+    longest run the two share on that side that holds it, else on the
+    longest run of all, else not at all, and Check says its edge is not
+    met. The side is where the hand put it, never a state of the door:
+    there is still nothing lost and nothing to reattach. A door saved
+    without a side stands on the longest run as before; a format-one
+    door records the side of the run its point stood on. Amends 36.
+
+41. **An edge may carry several doors.** Two doors between the living
+    and the dining, or two outside doors from one room, each with its
+    own side, fraction, type, width, swing and hinge. Placing a door on
+    an edge that has one adds another. A door whose gap would overlap
+    one already drawn on the same wall, from either room, is refused
+    with a sentence, on placing, sliding and widening alike. The edge is
+    met while any of its doors is drawn and the walk reads each as the
+    edge drawn; deleting a door keeps the others and the edge, and an
+    edge taken away takes all its doors, which its undo brings back.
+    Amends 36's one door per edge.
+
+42. **A storey changed on the sheet is changed in the program.** Moving
+    a room to another storey on the zoning sheet, by any path (the
+    context menu, the assistant, the mass), moves it in the project by
+    the program's own storey move, linked to the sheet step so one undo
+    takes back both: the links it can no longer hold are let go with a
+    sentence, the defaults made on the new floor. Companions still
+    waiting in the program go with it; one drawn on the sheet stays
+    where the hand put it. The project gains the storeys the sheet
+    reaches, stairs stretched to the top. In the other direction the
+    sheet stands every room it holds, drawn or waiting, on the storey
+    the program gives it, a stair across the storeys excepted, so an
+    undo taken from the program after the sheet was left is followed
+    too. Reverses the "keeps the storey it stands on" of a drawn room
+    in 32's reconciliation; copy to a storey still makes a new room.
