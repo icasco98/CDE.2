@@ -303,18 +303,18 @@ test('a bedroom moved to First says which door it let go', async ({ page }) => {
   )
 })
 
-test('rebuilding a household too big for one storey proposes a First with a stair, and says why', async ({
+test('rebuilding from the default household proposes a Ground and a First, the bedrooms up, and says why', async ({
   page,
 }) => {
   await page.goto('/')
-  await page.getByLabel('Bedrooms').fill('5')
-  await page.getByLabel('Cars').fill('2')
-  await page.getByRole('checkbox', { name: 'Live-in maid' }).check()
-  await page.getByRole('checkbox', { name: 'Driver' }).check()
   await page.getByRole('button', { name: 'Rebuild program from household' }).click()
   const why = page.getByRole('list', { name: 'Why these storeys' })
-  await expect(why).toContainText('over by 49.5 m². A First storey is proposed.')
+  await expect(why).toContainText('Two storeys, Ground and First')
+  await expect(why).toContainText('First takes the private rooms')
   await expect(why).toContainText('A stair spans Ground to First')
+  await expect(why).toContainText('with 15% for walls')
+  await expect(rowNamed(page, 'Master Bedroom').getByLabel('Storey')).toHaveValue('1')
+  await expect(rowNamed(page, 'Kitchen').getByLabel('Storey')).toHaveValue('0')
   await expect(
     page.locator('table.program tbody tr', { has: page.locator('input[value="Stair"]') }),
   ).toHaveCount(1)
