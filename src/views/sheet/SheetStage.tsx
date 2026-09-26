@@ -352,6 +352,13 @@ export function SheetStage() {
 
   useEffect(() => {
     if (!keeping) return
+    const store = runtime.store
+    // Leaving the sheet keeps it at once, so a step taken just before is not lost with the page.
+    return () => keepSheet(docRef.current.sheet, store)
+  }, [keeping, runtime.store])
+
+  useEffect(() => {
+    if (!keeping) return
     const timer = window.setTimeout(() => keepMemory(memory, runtime.store), 400)
     return () => window.clearTimeout(timer)
   }, [memory, keeping, runtime.store])

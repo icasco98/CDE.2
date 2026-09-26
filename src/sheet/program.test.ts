@@ -65,6 +65,20 @@ describe('the program the sheet draws', () => {
     ])
   })
 
+  it('stands a room already drawn on the storey the brief gives it, where it stood', () => {
+    const placed: Room = { ...roomFromProgram(brief[1]!, DEFAULTS), x: 3, y: 4, placed: true }
+    const { sheet } = followProgram(sheetOf([placed]), [{ ...brief[1]!, storey: 1 }], none)
+    const now = sheet.rooms[0]!
+    expect([now.storey, now.x, now.y, now.placed]).toEqual([1, 3, 4, true])
+  })
+
+  it('keeps a drawn stair on every storey whatever storey the brief starts it on', () => {
+    const stair = entry({ id: 's', name: 'Stair', kind: 'stair', cat: 'circulation', storey: 1 })
+    const placed: Room = { ...roomFromProgram(stair, DEFAULTS), storey: 0, placed: true }
+    const { sheet } = followProgram(sheetOf([placed]), [stair], none)
+    expect(sheet.rooms[0]!.storey).toBe(0)
+  })
+
   it('takes the brief’s words for a room it already holds and resizes one still waiting', () => {
     const held = sheetOf([roomFromProgram(brief[1]!, DEFAULTS)])
     const { sheet } = followProgram(held, [{ ...brief[1]!, name: 'Cooking', target: 28 }], none)

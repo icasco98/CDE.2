@@ -195,26 +195,38 @@ test('a room moved up on the sheet is on the First in the program and the bubble
   await page.mouse.click(to.x, to.y, { button: 'right' })
   await page.getByRole('button', { name: /Move up to the first storey/ }).click()
   await expect(page.locator('.say')).toContainText('Kitchen: its door to')
+  await expect(page.locator('.say')).toContainText('ground 0 + first 20')
 
-  const storeyInProgram = async () => {
-    await tab(page, 'Requirements').click()
-    const row = page.locator('table.program tbody tr').filter({
-      has: page.getByLabel('Room name').and(page.locator('[value="Kitchen"]')),
-    })
-    return row.getByLabel('Storey').inputValue()
-  }
-  expect(await storeyInProgram()).toBe('1')
-  await tab(page, 'Bubbles').click()
-  await expect(
-    page.locator('.bubbles-sheet [data-room][data-name="Kitchen"][data-storey="1"]'),
-  ).toHaveCount(1)
-
+  // Undone on the sheet itself: the sheet and the program go back together.
+  await page.keyboard.press('Control+z')
+  await expect(page.locator('.say')).not.toContainText('first 20')
+  expect(await storeyInProgram(page)).toBe('0')
   await tab(page, 'Sheet').click()
   await page.locator('svg.sheet').waitFor()
-  await page.keyboard.press('Control+z')
-  expect(await storeyInProgram()).toBe('0')
+  await page.getByRole('button', { name: 'Ground', exact: true }).click()
+  await expect(kitchen).toHaveCount(1)
+
+  // Moved again, and undone from the program after the sheet was left: the sheet follows it back.
+  await page.mouse.click(to.x, to.y, { button: 'right' })
+  await page.getByRole('button', { name: /Move up to the first storey/ }).click()
+  expect(await storeyInProgram(page)).toBe('1')
   await tab(page, 'Bubbles').click()
-  await expect(
-    page.locator('.bubbles-sheet [data-room][data-name="Kitchen"][data-storey="0"]'),
-  ).toHaveCount(1)
+  await expect(bubble(page, 1)).toHaveCount(1)
+  await page.getByRole('button', { name: 'Undo', exact: true }).click()
+  await expect(bubble(page, 0)).toHaveCount(1)
+  await tab(page, 'Sheet').click()
+  await page.locator('svg.sheet').waitFor()
+  await page.getByRole('button', { name: 'Ground', exact: true }).click()
+  await expect(kitchen).toHaveCount(1)
 })
+
+async function storeyInProgram(page: Page): Promise<string> {
+  await tab(page, 'Requirements').click()
+  const row = page.locator('table.program tbody tr').filter({
+    has: page.getByLabel('Room name').and(page.locator('[value="Kitchen"]')),
+  })
+  return row.getByLabel('Storey').inputValue()
+}
+
+const bubble = (page: Page, storey: number) =>
+  page.locator(`.bubbles-sheet [data-room][data-name="Kitchen"][data-storey="${storey}"]`)

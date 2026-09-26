@@ -7,6 +7,7 @@
  */
 
 import {
+  acrossStoreys,
   cloneRoom,
   doorsOf,
   storeyOf,
@@ -62,14 +63,15 @@ function follow(held: Room, entry: ProgramRoom, settings: Settings): Room {
   r.kind = entry.kind
   r.cat = entry.cat
   r.target = entry.target
-  // A room already drawn keeps its footprint and the storey it stands on; the sentence reads the
-  // new target against the area it has. One still waiting takes the brief's size and storey.
+  // A room already drawn keeps its footprint, and the sentence reads the new target against the
+  // area it has; one still waiting takes the brief's size. Either stands on the brief's storey,
+  // except a stair the sheet stands on every storey.
   if (!r.placed) {
     const size = sizeFor(entry.kind, entry.target, settings)
     r.w = size.w
     r.h = size.h
-    r.storey = entry.storey
   }
+  if (!r.placed || !acrossStoreys(r, settings)) r.storey = entry.storey
   return r
 }
 
