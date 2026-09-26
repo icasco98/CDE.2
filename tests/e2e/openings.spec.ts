@@ -78,7 +78,7 @@ test.describe('the Openings step', () => {
     await expect(page.locator('svg.sheet.doormode')).toBeVisible()
   })
 
-  test('puts a door on the Kitchen’s wall to the service hallway in place of the one it had', async ({
+  test('puts a second door on the Kitchen’s connection to the service hallway, and refuses one on top of it', async ({
     page,
   }) => {
     const before = await doors(page).count()
@@ -87,13 +87,21 @@ test.describe('the Openings step', () => {
     await page.getByLabel('Door width in metres').fill('1.2')
     await page.getByLabel('Door width in metres').press('Enter')
     await clickAt(page, 4, 16.37)
-    // one connection, one door: the new one stands where the old one did not
-    expect(await doors(page).count()).toBe(before)
+    // one connection, two doors: the new one stands beside the one it had
+    await expect(doors(page)).toHaveCount(before + 1)
     await expect(who(page)).toHaveText(/Door on (Kitchen|service hallway)/)
     await expect(page.locator('.door-ctl .w')).toHaveText('1.2 m')
+    await expect(sentence(page)).toContainText('service hallway serves 5 doors')
+    await clickAt(page, 5.1, 16.37)
+    await expect(sentence(page)).toContainText('That would overlap the door already on')
+    await expect(doors(page)).toHaveCount(before + 1)
+    await page.keyboard.press('Delete')
+    await expect(doors(page)).toHaveCount(before)
     await expect(sentence(page)).toContainText('service hallway serves 4 doors')
     await undo(page)
-    expect(await doors(page).count()).toBe(before)
+    await expect(doors(page)).toHaveCount(before + 1)
+    await undo(page)
+    await expect(doors(page)).toHaveCount(before)
   })
 
   test('refuses a wall on the plot boundary, in the mock’s words', async ({ page }) => {
