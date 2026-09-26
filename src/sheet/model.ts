@@ -1,6 +1,7 @@
 /** The zoning sheet's model: a room, a door, the settings, and the sheet they make. */
 
 import { DEFAULT_PLOT, MAX_STOREYS, STOREY_NAME, type PlotSpec } from './plot'
+import type { WallName } from './against'
 
 export type Point = [number, number]
 export type Poly = Point[]
@@ -14,8 +15,9 @@ export const OUTSIDE = 'EXTERIOR'
 
 /**
  * A door is the drawing of an edge: it is held by one room of the edge, `to` is the other end (a room
- * or `OUTSIDE`), both set when it is placed. Between two rooms it stands on the wall they share,
- * `along` of the way along it; to the outside it stands at `at`, a point of its room's frame on the
+ * or `OUTSIDE`), both set when it is placed. Between two rooms it stands on the wall they share on
+ * `side` of its room (in the room's own frame), `along` of the way along it, or on the longest wall
+ * they share when that side shares none; to the outside it stands at `at`, a point of its room's frame on the
  * outside wall it was placed on. Where that wall is not there it is not drawn, and nothing else.
  */
 export type Door = {
@@ -26,6 +28,7 @@ export type Door = {
   w: number
   flip: boolean
   hinge: boolean
+  side?: WallName
   along?: number
   at?: Point
 }

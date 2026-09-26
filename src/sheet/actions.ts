@@ -83,7 +83,16 @@ import {
   roomFromPocket,
   type Pocket,
 } from './pockets'
-import { doorAt, doorSlid, doorSpot, doorStanding, roomForDoor } from './doors'
+import {
+  doorAt,
+  doorClash,
+  doorInTheWay,
+  doorSlid,
+  doorSpot,
+  doorStanding,
+  roomForDoor,
+  type Drawn,
+} from './doors'
 import { DOOR, hasHinge, hasSwing, sizeFor } from './kinds'
 
 export type Result = {
@@ -1115,7 +1124,7 @@ export function makeCorridor(sheet: Sheet, input: { pocket: number; storey: numb
 
 /**
  * A door put on the wall under the hand, drawing the edge named: between its room and `to`, the
- * room across or the outside. An edge has one door, so one it already had is taken off.
+ * room across or the outside. An edge may have several doors, but two never overlap on one wall.
  */
 export function addDoor(
   sheet: Sheet,
@@ -1136,11 +1145,8 @@ export function addDoor(
     if (hit.room.id === input.to) return { ok: false, said: 'A door leads out of its room.' }
     const stands = doorStanding(next, input.storey, hit, { type: input.type, w, to: input.to })
     if ('why' in stands) return { ok: false, said: stands.why }
-    for (const r of next.rooms) {
-      if (!doorsOf(r).some((d) => d.edge === input.edge)) continue
-      r.doors = doorsOf(r).filter((d) => d.edge !== input.edge)
-      if (!r.doors.length) delete r.doors
-    }
+    const inTheWay = doorInTheWay(next, input.storey, hit.room, stands.pl, stands.w)
+    if (inTheWay) return { ok: false, said: overlapSaid(inTheWay) }
     const d: Door = {
       id: freshId('d', doorIds(next)),
       edge: input.edge,
@@ -1163,6 +1169,9 @@ export function addDoor(
   })
 }
 
+const overlapSaid = (other: Drawn) =>
+  `That would overlap the ${DOOR[other.door.type].label.toLowerCase()} already on ${other.room.name}'s wall.`
+
 const findDoor = (sheet: Sheet, roomId: string, doorId: string) => {
   const r = sheet.rooms.find((o) => o.id === roomId && o.placed) ?? null
   const d = r ? (doorsOf(r).find((o) => o.id === doorId) ?? null) : null
@@ -1180,9 +1189,12 @@ export function moveDoor(
     const slid = doorSlid(next, input.storey, r, d, input.x, input.y)
     if (!slid) return { ok: false, said: `${DOOR[d.type].label} on ${r.name} is not drawn here.` }
     if (slid.hit.why) return { ok: false, said: slid.hit.why }
+    delete d.side
     delete d.along
     delete d.at
     Object.assign(d, slid.standing)
+    const clash = doorClash(next, input.storey, r, d)
+    if (clash) return { ok: false, said: overlapSaid(clash) }
     return { ok: true, said: `${DOOR[d.type].label} on ${r.name}` }
   })
 }
@@ -1201,9 +1213,12 @@ export function slideDoor(
     const [x, y] = toWorld(r, pl.seg.a[0] + pl.u[0] * t, pl.seg.a[1] + pl.u[1] * t)
     const slid = doorSlid(next, input.storey, r, d, x, y)
     if (!slid) return { ok: false, said: `${DOOR[d.type].label} on ${r.name} is not drawn here.` }
+    delete d.side
     delete d.along
     delete d.at
     Object.assign(d, slid.standing)
+    const clash = doorClash(next, input.storey, r, d)
+    if (clash) return { ok: false, said: overlapSaid(clash) }
     return { ok: true, said: `${DOOR[d.type].label} on ${r.name}` }
   })
 }
@@ -1221,6 +1236,8 @@ export function setDoorWidth(
     if (room === null || width > room + 1e-6)
       return { ok: false, said: 'That wall is too short for a door that wide.' }
     d.w = width
+    const clash = doorClash(next, input.storey, r, d)
+    if (clash) return { ok: false, said: overlapSaid(clash) }
     return { ok: true, said: `${DOOR[d.type].label} on ${r.name}, ${fmt(d.w)} m` }
   })
 }

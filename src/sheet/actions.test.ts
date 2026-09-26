@@ -56,6 +56,7 @@ import { areaOf, outlineOf, r2, worldPieces } from './geometry'
 import { differencePolygons, area as clipArea } from '../geometry/polygon'
 import { fixtureSheet } from './fixture'
 import { report } from './report'
+import { drawnDoors } from './doors'
 import { pocketsOf } from './pockets'
 
 const room = (over: Partial<Room> = {}): Room => ({
@@ -678,19 +679,44 @@ describe('doors', () => {
     expect(doorsOf(roomOf(placed.sheet, 'a'))).toMatchObject([{ edge: 'e2', to: 'b', along: 0.5 }])
   })
 
-  it('keeps one door to an edge: a second placed on it takes the first one’s place', () => {
-    const once = addDoor(pair(), { x: 10, y: 7.5, type: 'door', storey: 0, edge: 'e2', to: 'b' })
+  it('puts a second door on an edge beside the first, and keeps the edge met when one goes', () => {
+    const once = addDoor(pair(), { x: 10, y: 6.6, type: 'door', storey: 0, edge: 'e2', to: 'b' })
     const twice = addDoor(once.sheet, {
       x: 10,
-      y: 6.6,
+      y: 8.2,
       type: 'sliding',
       width: 1.2,
       storey: 0,
       edge: 'e2',
       to: 'b',
     })
+    expect(twice.result.ok).toBe(true)
     const doors = doorsOf(roomOf(twice.sheet, 'a')).concat(doorsOf(roomOf(twice.sheet, 'b')))
-    expect(doors.map((d) => d.type)).toEqual(['sliding'])
+    expect(doors.map((d) => [d.edge, d.type])).toEqual([
+      ['e2', 'door'],
+      ['e2', 'sliding'],
+    ])
+    const first = doors[0]!
+    const host = twice.sheet.rooms.find((r) => doorsOf(r).includes(first))!
+    const left = removeDoor(twice.sheet, { room: host.id, door: first.id }).sheet
+    expect(drawnDoors(left, 0).map((each) => [each.door.edge, each.door.type])).toEqual([
+      ['e2', 'sliding'],
+    ])
+  })
+
+  it('refuses a door that would overlap one already on the wall', () => {
+    const once = addDoor(pair(), { x: 10, y: 7.5, type: 'door', storey: 0, edge: 'e2', to: 'b' })
+    const onTop = addDoor(once.sheet, {
+      x: 10,
+      y: 7.9,
+      type: 'door',
+      storey: 0,
+      edge: 'e2',
+      to: 'b',
+    })
+    expect(onTop.result.ok).toBe(false)
+    expect(onTop.result.said).toBe("That would overlap the door already on A's wall.")
+    expect(onTop.sheet).toBe(once.sheet)
   })
 
   it('refuses a door where there is no wall, on the boundary, and on a wall the two do not share', () => {

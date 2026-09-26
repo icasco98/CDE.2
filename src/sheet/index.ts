@@ -165,7 +165,15 @@ export {
 } from './pockets'
 
 export type { Hit, Place, Walk } from './doors'
-export { alongAt, doorAcross, doorAt, doorBlocked, doorSlid, drawnDoors, walkTest } from './doors'
+export {
+  doorAcross,
+  doorAt,
+  doorBlocked,
+  doorSlid,
+  drawnDoors,
+  standingAt,
+  walkTest,
+} from './doors'
 
 export type { DoorDrawing, DoorRead, DoorRef, Leaf } from './openings'
 export { doorDrawing, doorNear, doorRead, newDoors } from './openings'

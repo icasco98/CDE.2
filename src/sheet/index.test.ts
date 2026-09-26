@@ -136,12 +136,12 @@ const surface = [
   'pocketsOf',
   'roomFromPocket',
   // doors
-  'alongAt',
   'doorAcross',
   'doorAt',
   'doorBlocked',
   'doorSlid',
   'drawnDoors',
+  'standingAt',
   'walkTest',
   // the Openings step
   'doorDrawing',

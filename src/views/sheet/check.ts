@@ -1,7 +1,7 @@
 /**
  * What Check shows on the zoning sheet, read from the project's edges and keep-apart pairs and from
  * the doors drawn, each drawing the edge it names. An edge is ready in the zoning step when its two
- * rooms share a run of wall a door wide, and met in the Openings step when its door is drawn: a
+ * rooms share a run of wall a door wide, and met in the Openings step when one of its doors is drawn: a
  * door whose rooms have moved apart is not drawn, and its edge is not met. Nothing here changes the
  * sheet or the graph.
  */

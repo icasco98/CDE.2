@@ -6,7 +6,7 @@ import { pocketsOf } from './pockets'
 import { fixtureSheet } from './fixture'
 import { MASS_START, massProjection, orderPrisms, prismsOf } from './mass'
 import { doDeed } from './verbs'
-import { drawnDoors } from './doors'
+import { doorClash, drawnDoors } from './doors'
 import type { Desk } from './desk'
 
 /** The best of five runs after a warm-up, so neither compilation nor a stray collection is charged. */
@@ -35,6 +35,16 @@ it('finds where every door of the test plan stands, on its edge’s wall, inside
   console.log(`drawnDoors on the test plan, 20 doors: ${taken.toFixed(2)} ms, budget 2 ms`)
   expect(drawnDoors(sheet, 0)).toHaveLength(20)
   expect(taken).toBeLessThan(4)
+})
+
+it('checks a door against the others on its wall inside 3 ms, once per placement or drop', () => {
+  const [first] = drawnDoors(sheet, 0)
+  const taken = milliseconds(() => doorClash(sheet, 0, first!.room, first!.door))
+  console.log(`doorClash on the test plan, 20 doors: ${taken.toFixed(2)} ms, budget 3 ms`)
+  expect(drawnDoors(sheet, 0).every((each) => !doorClash(sheet, 0, each.room, each.door))).toBe(
+    true,
+  )
+  expect(taken).toBeLessThan(6)
 })
 
 it('reads how the embedded sheet’s rooms stand to each other inside 5 ms', () => {

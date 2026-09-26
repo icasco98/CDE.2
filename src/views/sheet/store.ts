@@ -7,11 +7,11 @@ import {
   DEFAULTS,
   OUTSIDE,
   SETTINGS_V,
-  alongAt,
   migrate,
   readMemory,
   repair,
   sheetOf,
+  standingAt,
   type Door,
   type Memory,
   type Point,
@@ -150,7 +150,7 @@ function doorsOnEdges(sheet: Sheet, edges: readonly EdgeEnds[]): void {
               w,
               flip,
               hinge,
-              along: other ? alongAt(room, other, at) : 0.5,
+              ...(other ? standingAt(room, other, at) : { along: 0.5 }),
             },
       )
     }

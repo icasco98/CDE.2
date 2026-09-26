@@ -110,6 +110,14 @@ export function followProgram(
   const setDownRooms = sheet.rooms.filter((held) => !taken.has(held.id)).map(cloneRoom)
   const setDownDoors: HeldDoor[] = []
   const standing = new Set(rooms.flatMap((r) => doorsOf(r).map((d) => d.id)))
+  // An edge that kept a door on the sheet has been drawn again since, so what was set down stays down.
+  const drawn = new Set(
+    rooms.flatMap((r) =>
+      doorsOf(r)
+        .filter((d) => edges.has(d.edge))
+        .map((d) => d.edge),
+    ),
+  )
   for (const r of rooms) {
     const kept = doorsOf(r).filter((d) => edges.has(d.edge))
     for (const d of doorsOf(r)) if (!edges.has(d.edge)) setDownDoors.push({ host: r.id, door: d })
@@ -118,7 +126,7 @@ export function followProgram(
         held.host === r.id &&
         edges.has(held.door.edge) &&
         !standing.has(held.door.id) &&
-        !rooms.some((o) => doorsOf(o).some((d) => d.edge === held.door.edge)),
+        !drawn.has(held.door.edge),
     )
     const doors = [...kept, ...back.map((held) => ({ ...held.door }))]
     if (doors.length) r.doors = doors

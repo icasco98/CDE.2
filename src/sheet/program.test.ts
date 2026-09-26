@@ -118,6 +118,26 @@ describe('the program the sheet draws', () => {
     expect(back.sheet.rooms[0]!.doors).toEqual([door])
   })
 
+  it('takes every door of an edge off with it, and puts them all back when it returns', () => {
+    const door = (id: string, along: number): Door => ({
+      id,
+      edge: 'e1',
+      to: 'p1',
+      type: 'door',
+      w: 0.9,
+      along,
+      flip: false,
+      hinge: false,
+    })
+    const both = [door('d1', 0.2), door('d2', 0.8)]
+    const held = sheetOf([{ ...roomFromProgram(brief[1]!, DEFAULTS), doors: both }])
+    const cut = followProgram(held, [brief[1]!], none)
+    expect(cut.sheet.rooms[0]!.doors).toBeUndefined()
+    expect(cut.setDown.doors.map((each) => each.door.id)).toEqual(['d1', 'd2'])
+    const back = followProgram(cut.sheet, [brief[1]!], new Set(['e1']), cut.setDown)
+    expect(back.sheet.rooms[0]!.doors).toEqual(both)
+  })
+
   it('hands back the sheet it was given when the two already agree', () => {
     const once = followProgram(sheetOf([]), brief, none).sheet
     expect(followProgram(once, brief, none).sheet).toBe(once)

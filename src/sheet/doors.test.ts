@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  alongAt,
   doorAcross,
   doorAt,
   doorBlocked,
@@ -8,7 +7,9 @@ import {
   doorSpot,
   doorStanding,
   drawnDoors,
+  doorInTheWay,
   roomForDoor,
+  standingAt,
   walkTest,
 } from './doors'
 import { sheetOf, type Door, type Room, type Sheet } from './model'
@@ -146,7 +147,7 @@ describe('a door is the drawing of its edge', () => {
     a.doors = [between({ along: 0.25 })]
     // The 2 m from y 7 to 9, a quarter of the way from the north end, held a door's half from it.
     expect(drawnAt(sheet, 'a')).toEqual([9, 7.5])
-    expect(alongAt(a, sheet.rooms[1]!, [3, 1.5])).toBe(0.25)
+    expect(standingAt(a, sheet.rooms[1]!, [3, 1.5])).toEqual({ side: 'east', along: 0.25 })
   })
 
   it('draws a door to the outside on its own wall while that wall faces outside', () => {
@@ -175,6 +176,86 @@ describe('a door is the drawing of its edge', () => {
     })
     expect('why' in off && off.why).toBe('A and B share no wall there.')
     expect(a.doors).toHaveLength(1)
+  })
+})
+
+describe('a door on one of two walls the rooms share', () => {
+  /*
+   * A is 3 × 3 at (6, 6). B is an L in a 6 × 4 frame at (6, 6): a 3 × 4 block east of A (x 9 to 12)
+   * and a 2 × 1 strip under A (x 7 to 9, y 9 to 10). They share A's east wall, 3 m, and 2 m of its
+   * south wall.
+   */
+  const east: [number, number][] = [
+    [3, 0],
+    [6, 0],
+    [6, 4],
+    [3, 4],
+  ]
+  const strip: [number, number][] = [
+    [1, 3],
+    [3, 3],
+    [3, 4],
+    [1, 4],
+  ]
+  const twoWalls = (pieces: [number, number][][], doors: Door[] = [], aY = 6) =>
+    sheetOf(
+      [
+        room({ x: 6, y: aY, w: 3, h: 3, doors }),
+        room({ id: 'b', name: 'B', x: 6, y: 6, w: 6, h: 4, pieces }),
+      ],
+      { snapDist: 0, grid: 0 },
+    )
+
+  it('stands on the shorter wall when that is the one clicked', () => {
+    const sheet = twoWalls([east, strip])
+    const a = sheet.rooms[0]!
+    const on = doorStanding(sheet, 0, doorAt(8, 9, 0.9, sheet, 0, a)!, {
+      type: 'door',
+      w: 0.9,
+      to: 'b',
+    })
+    if ('why' in on) throw new Error(on.why)
+    expect(on.standing).toEqual({ side: 'south', along: 0.5 })
+    const placed = twoWalls([east, strip], [between({ ...on.standing })])
+    expect(drawnAt(placed, 'a')).toEqual([8, 9])
+  })
+
+  it('stands on the longest wall when its own side is gone, and on its own again when it is back', () => {
+    const door = between({ side: 'south', along: 0.5 })
+    expect(drawnAt(twoWalls([east], [door]), 'a')).toEqual([9, 7.5])
+    // A moved a metre north: its south wall leaves the strip and it shares y 6 to 8 of B's west wall.
+    expect(drawnAt(twoWalls([east, strip], [door], 5), 'a')).toEqual([9, 7])
+    expect(drawnAt(twoWalls([east, strip], [door]), 'a')).toEqual([8, 9])
+  })
+
+  it('stands on the longest wall when it records no side, as a door saved before sides did', () => {
+    expect(drawnAt(twoWalls([east, strip], [between({ along: 0.5 })]), 'a')).toEqual([9, 7.5])
+  })
+})
+
+describe('several doors on one edge', () => {
+  /** A and B share the wall x = 9 from y 6 to 9. */
+  const pair = (doors: Door[]) =>
+    sheetOf(
+      [
+        room({ x: 6, y: 6, w: 3, h: 3, doors }),
+        room({ id: 'b', name: 'B', x: 9, y: 6, w: 3, h: 3 }),
+      ],
+      { snapDist: 0, grid: 0 },
+    )
+
+  it('draws both doors of an edge on the one wall', () => {
+    const sheet = pair([between({ id: 'd2', along: 0.2 }), between({ id: 'd3', along: 0.8 })])
+    expect(drawnDoors(sheet, 0).map((each) => each.door.id)).toEqual(['d2', 'd3'])
+  })
+
+  it('finds the door a new one would overlap on the same wall, from either room', () => {
+    const sheet = pair([between({ id: 'd2', along: 0.2 })])
+    const b = sheet.rooms[1]!
+    // d2 is held a door's half from the north end, y 6.15 to 7.05 on x = 9, B's west wall too.
+    const at = (y: number) => doorAt(9, y, 0.9, sheet, 0, b)!.pl
+    expect(doorInTheWay(sheet, 0, b, at(7.2), 0.9)?.door.id).toBe('d2')
+    expect(doorInTheWay(sheet, 0, b, at(8.4), 0.9)).toBeNull()
   })
 })
 

@@ -1,7 +1,8 @@
 /**
- * Doors. A door is the drawing of an edge. Between two rooms it stands on the wall the two share,
- * `along` of the way along it; to the outside it stands on the outside wall of its room it was
- * placed on. Where the two rooms share no wall a door wide, or that wall no longer faces outside, it
+ * Doors. A door is the drawing of an edge. Between two rooms it stands on the stretch of wall the two
+ * share on its `side` of the room that holds it, `along` of the way along it, or on the longest
+ * stretch when that side shares none now; to the outside it stands on the outside wall of its room it
+ * was placed on. Where the two rooms share no wall a door wide, or that wall no longer faces outside, it
  * is simply not drawn, and it comes back where it was when the rooms do. Nothing here reads an edge
  * off the walls: the room across a wall is looked up only to ask which pair a new door would draw.
  */
@@ -35,6 +36,7 @@ import {
   type Seg,
 } from './geometry'
 import { isStreetDoor } from './kinds'
+import type { WallName } from './against'
 
 /** Where a door sits: a wall of its room, the run along it, and its normal. */
 export type Place = {
@@ -141,11 +143,32 @@ function stretchesOf(r: Room, o: Room): Stretch[] {
   return out
 }
 
-/** The run of wall two rooms share that a door between them stands on: the longest one. */
-function longestStretch(r: Room, o: Room): Stretch | null {
+const longest = (stretches: readonly Stretch[]): Stretch | null => {
   let best: Stretch | null = null
-  for (const s of stretchesOf(r, o)) if (!best || s.hi - s.lo > best.hi - best.lo) best = s
+  for (const s of stretches) if (!best || s.hi - s.lo > best.hi - best.lo) best = s
   return best
+}
+
+/** The side of its room a wall faces, read in the room's own frame so turning the room keeps it. */
+function sideOf(n: Point): WallName {
+  if (Math.abs(n[0]) > Math.abs(n[1])) return n[0] > 0 ? 'east' : 'west'
+  return n[1] > 0 ? 'south' : 'north'
+}
+
+/** Whether a door of this type and width can be drawn on a stretch at all. */
+const holds = (s: Stretch, d: { type: DoorType; w: number }) => {
+  const w = widthOn(d, s)
+  return w >= (d.type === 'open' ? OPEN_LEAST : d.w) - 1e-6 && s.hi - s.lo >= w - 1e-6
+}
+
+/**
+ * The run of wall two rooms share that a door between them stands on: the longest on the side it
+ * was placed on that still holds it, else the longest of all.
+ */
+function stretchFor(r: Room, o: Room, d: Pick<Door, 'side' | 'type' | 'w'>): Stretch | null {
+  const all = stretchesOf(r, o)
+  const onSide = d.side ? all.filter((s) => sideOf(s.seg.n) === d.side && holds(s, d)) : []
+  return longest(onSide) ?? longest(all)
 }
 
 const middleOf = (s: Stretch, along: number): number => {
@@ -202,10 +225,9 @@ function spotOf(sheet: Sheet, storey: number, r: Room, d: Door): { pl: Place; w:
   }
   const o = placedRooms(sheet, storey).find((each) => each.id === d.to)
   if (!o || isOpen(o)) return null
-  const s = longestStretch(r, o)
-  if (!s) return null
+  const s = stretchFor(r, o, d)
+  if (!s || !holds(s, d)) return null
   const w = widthOn(d, s)
-  if (w < (d.type === 'open' ? OPEN_LEAST : d.w) - 1e-6 || s.hi - s.lo < w - 1e-6) return null
   return { pl: placeOn(s, middleOf(s, d.along ?? 0.5), w), w }
 }
 
@@ -213,10 +235,11 @@ export const doorSpot = (sheet: Sheet, storey: number, r: Room, d: Door): Place 
   spotOf(sheet, storey, r, d)?.pl ?? null
 
 /**
- * How far along the wall two rooms share a point of the first room's frame stands, for a door saved
- * as a point before doors stood on their edge's wall; the middle when the two share no wall now.
+ * Which stretch of the wall two rooms share a point of the first room's frame stands on, and how far
+ * along it, for a door saved as a point before doors stood on their edge's wall; the middle of the
+ * longest when the two share no wall now.
  */
-export function alongAt(r: Room, o: Room, at: Point): number {
+export function standingAt(r: Room, o: Room, at: Point): { side?: WallName; along: number } {
   let best: { s: Stretch; t: number; dist: number } | null = null
   for (const s of stretchesOf(r, o)) {
     const t0 = (at[0] - s.seg.a[0]) * s.u[0] + (at[1] - s.seg.a[1]) * s.u[1]
@@ -225,7 +248,7 @@ export function alongAt(r: Room, o: Room, at: Point): number {
     const dist = Math.hypot(at[0] - p[0]!, at[1] - p[1]!)
     if (!best || dist < best.dist) best = { s, t, dist }
   }
-  return best ? r6(alongOf(best.s, best.t)) : 0.5
+  return best ? { side: sideOf(best.s.seg.n), along: r6(alongOf(best.s, best.t)) } : { along: 0.5 }
 }
 
 /** A door drawn on a storey: its room, itself, where it stands, and how wide it is drawn there. */
@@ -240,6 +263,51 @@ export function drawnDoors(sheet: Sheet, storey: number): Drawn[] {
       if (spot) out.push({ room, door, ...spot })
     }
   return out
+}
+
+/** A door's gap in plot metres: its two ends and the wall's normal there. */
+function gapOf(r: Room, pl: Place, w: number): { a: Point; b: Point; n: Point } {
+  const half = w / 2
+  return {
+    a: toWorld(r, pl.p[0] - pl.u[0] * half, pl.p[1] - pl.u[1] * half),
+    b: toWorld(r, pl.p[0] + pl.u[0] * half, pl.p[1] + pl.u[1] * half),
+    n: worldN(r, pl.n),
+  }
+}
+
+/**
+ * The door already drawn on the same wall whose gap a door of width `w` at `pl` on room `r` would
+ * overlap, whichever of the two rooms holds it; `except` is a door that is being moved.
+ */
+export function doorInTheWay(
+  sheet: Sheet,
+  storey: number,
+  r: Room,
+  pl: Place,
+  w: number,
+  except?: string,
+): Drawn | null {
+  const mine = gapOf(r, pl, w)
+  const run = [mine.b[0] - mine.a[0], mine.b[1] - mine.a[1]]
+  const L = Math.hypot(run[0]!, run[1]!) || 1
+  const u = [run[0]! / L, run[1]! / L]
+  for (const other of drawnDoors(sheet, storey)) {
+    if (other.door.id === except) continue
+    const theirs = gapOf(other.room, other.pl, other.w)
+    if (Math.abs(theirs.n[0] * mine.n[0] + theirs.n[1] * mine.n[1]) < 0.98) continue
+    const off = (theirs.a[0] - mine.a[0]) * mine.n[0] + (theirs.a[1] - mine.a[1]) * mine.n[1]
+    if (Math.abs(off) > 0.06) continue
+    const t0 = (theirs.a[0] - mine.a[0]) * u[0]! + (theirs.a[1] - mine.a[1]) * u[1]!
+    const t1 = (theirs.b[0] - mine.a[0]) * u[0]! + (theirs.b[1] - mine.a[1]) * u[1]!
+    if (Math.min(L, Math.max(t0, t1)) - Math.max(0, Math.min(t0, t1)) > 0.01) return other
+  }
+  return null
+}
+
+/** The drawn door a door of a room now overlaps where it is drawn, or nothing. */
+export function doorClash(sheet: Sheet, storey: number, r: Room, d: Door): Drawn | null {
+  const spot = spotOf(sheet, storey, r, d)
+  return spot ? doorInTheWay(sheet, storey, r, spot.pl, spot.w, d.id) : null
 }
 
 export type Hit = { room: Room; pl: Place; why: string | null }
@@ -315,8 +383,10 @@ export function doorAt(
   }
 }
 
-/** Where a door would stand, as the fields it keeps: how far along its stretch, or its point. */
-export type Standing = { along: number; at?: undefined } | { at: Point; along?: undefined }
+/** Where a door would stand, as the fields it keeps: its stretch and how far along it, or its point. */
+export type Standing =
+  | { side: WallName; along: number; at?: undefined }
+  | { at: Point; side?: undefined; along?: undefined }
 
 /**
  * A door of type `type` put where the hand points, between room `r` and `to`: on the stretch the two
@@ -344,12 +414,11 @@ export function doorStanding(
       hit.pl.t <= each.hi + 0.05,
   )
   if (!s) return { why: `${r.name} and ${o.name} share no wall there.` }
+  if (!holds(s, door)) return { why: 'The wall they share is too short for this door.' }
   const w = widthOn(door, s)
-  if (w < (door.type === 'open' ? OPEN_LEAST : door.w) - 1e-6 || s.hi - s.lo < w - 1e-6)
-    return { why: 'The wall they share is too short for this door.' }
   const pl = placeOn(s, door.type === 'open' ? (s.lo + s.hi) / 2 : hit.pl.t, w)
   pl.snapped = hit.pl.snapped ?? null
-  return { standing: { along: r6(alongOf(s, pl.t)) }, w, pl }
+  return { standing: { side: sideOf(s.seg.n), along: r6(alongOf(s, pl.t)) }, w, pl }
 }
 
 /**
@@ -384,11 +453,14 @@ export function doorSlid(
     }
   }
   const o = sheet.rooms.find((each) => each.id === d.to)
-  const s = o ? longestStretch(r, o) : null
+  const s = o ? stretchFor(r, o, d) : null
   if (!s) return null
   const next = placeOn(s, t, widthOn(d, s))
   const why = Math.abs(off) > 1 ? `A door stays on the wall ${r.name} and ${o!.name} share.` : null
-  return { hit: { room: r, pl: next, why }, standing: { along: r6(alongOf(s, next.t)) } }
+  return {
+    hit: { room: r, pl: next, why },
+    standing: { side: sideOf(s.seg.n), along: r6(alongOf(s, next.t)) },
+  }
 }
 
 /** The widest a door may be drawn where it stands, or nothing when it is not drawn. */
@@ -397,7 +469,7 @@ export function roomForDoor(sheet: Sheet, storey: number, r: Room, d: Door): num
   if (!pl) return null
   if (d.to === OUTSIDE) return pl.L - 0.1
   const o = sheet.rooms.find((each) => each.id === d.to)
-  const s = o ? longestStretch(r, o) : null
+  const s = o ? stretchFor(r, o, d) : null
   return s ? s.hi - s.lo : null
 }
 
