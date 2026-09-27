@@ -8,13 +8,20 @@ are done when the owner is available. A task is marked here as
 Order matters where a task names what it depends on. Tasks with no
 dependency between them may run at the same time.
 
-## Milestone 1: the loop by hand
+## Milestone 1: the loop by hand, done
 
 Done when: the owner enters a twelve-room program with a real plot,
 draws the bubbles, places and rotates the rooms, sees the massing, and
 prints a scaled PDF and a DXF, in under thirty minutes. No solver, no
 findings, no analysis. A run by someone new to the tool is dropped
 from this milestone: no colleague is free to test it soon.
+
+Closed on 27 September 2026: the owner ran the fresh brief through the
+whole loop in about twenty minutes, and the PDF and the DXF open, the
+DXF in AutoCAD. Both drawings need work to reach office standard
+(M4). The work still open below moved to the milestones that own it:
+the known house to M3, windows and neighbours to M4, the assistant's
+own hands to M5, circulation drawn to M3.
 
 ### Agent tasks
 
@@ -28,7 +35,7 @@ from this milestone: no colleague is free to test it soon.
 | A6 | **Zoning.** Salvaged canvas re-pointed at the graph: move, rotate, resize, carve; plot walls; unrealised edge drawn as tension; proposed edge on touch, accepted by a click; doors drawn from edges. | A2, A3, A5 | Every gesture has a Playwright test. Moving a room never changes an edge. | done, PR #19 |
 | A7 | **Massing.** Salvaged 3D re-pointed at the graph: storeys, heights, envelope numbers, click to select. | A3, A6 | A room selected in any view is selected in all three. | done, PR #23 |
 | A8 | **Export.** PDF to scale, DXF, produced in the browser. | A6, A7 | A printed sheet measures true at its stated scale. The DXF opens in AutoCAD with layers per storey. | done, PR #47 |
-| A9 | **Sample project and usability run.** A sample project; the two owner projects run through the whole loop; fix list worked. | A4 to A8, A10 to A12, F1 to F4, G0 to G5, P4 to P7, Z0 to Z5 if approved, O3, O5 | The milestone's done condition is met and timed. | in progress: the owner ran the fresh brief in about twenty minutes, exports failing inside the artifact; fixed, the export to be checked |
+| A9 | **Usability run.** The fresh brief run through the whole loop by the owner, timed; fix list worked. The known house moved to M3. | A4 to A8, A10 to A12, F1 to F4, G0 to G5, P4 to P7, Z0 to Z5, O5 | The milestone's done condition is met and timed. | done: about twenty minutes; the fix list worked in PR #103 and the one closing this milestone |
 | A10 | **Weights as the three families.** The three sliders become user requirements, site constraints and environmental factors, the families in `rulebook/forces.md`; a project saved with the placeholder keys opens with them mapped. | A4 | The three names are on screen; an old project file opens without loss. | done, PR #15 |
 | A11 | **Default connections from the rulebook.** A table of default adjacencies per room kind (kitchen to dining, ensuite to its bedroom, diwaniya to the exterior); rebuilding the program shows them in the bubbles as proposed links a click accepts. Nothing connects without the click. | A5, O2 | Rebuilding the program proposes the defaults; accepting one creates the edge; the table has a source per row. | done, PR #16 |
 | A12 | **Zoom and pan on the zoning sheet.** Wheel and pinch zoom about the pointer, drag to pan on empty sheet, a Fit button; labels stay readable at any zoom. | A6 | A 6 m² ensuite's label is legible without help; every gesture still passes its Playwright test at 3× zoom. | done, PR #24 |
@@ -57,7 +64,7 @@ there, and the zones are the bubbles settled and inflated in place.
 The morph is a proposal the designer accepts or sends back; a plan
 that does not fit is shown spilling, never refused. Order: Z0 with the
 owner, then Z1, then Z2 and Z3 together, then Z4, then Z5. (Z, for
-zones from bubbles; B is taken by milestone 2.) Each starts
+zones from bubbles.) Each starts
 only on the owner's word. If approved, A9 waits on Z5.
 
 | # | Task | Depends on | Done when | Status |
@@ -77,12 +84,12 @@ only on the owner's word. If approved, A9 waits on Z5.
 |---|---|---|---|
 | O1 | Obtain the current texts: the Municipality's private-housing page (done, PR #1) and the firm's working edition of MEW R-6 (open). | rulebook | in progress |
 | O2 | Room-type table for Kuwaiti villas: areas, aspect ranges, tiers. | A4 | done, PR #3 |
-| O3 | The known house: plot, north, program, the built plan. | A9 | in progress: drawings received and recorded in `rulebook/known-house.md`; entered as a project in A9 |
-| O4 | Rulebook part 1, walls: setbacks, ratios, heights, basements, spans. Each with source and confidence. | Milestone 2 | todo |
+| O3 | The known house: plot, north, program, the built plan. | R2 | in progress: drawings received and recorded in `rulebook/known-house.md`; entered as a project in R2 |
+| O4 | Rulebook part 1, walls: setbacks, ratios, heights, basements, spans. Each with source and confidence. | R1 | done for the Municipality, `rulebook/municipality-private-housing.md`, each number to be checked against the page; structural spans not yet given |
 | O5 | A fresh brief for the usability run. | A9 | done, `rulebook/fresh-brief.md` |
-| O6 | Rulebook part 2, forces: name, element, direction, default strength for Kuwait, source. | Milestone 2 | done as a draft, PR #12 |
-| O7 | Revisit the forces: correct strengths, add and remove forces, mark rows `sourced` once the known house and the firm's practice confirm them. Repeats whenever a source arrives. | B1, C1 | in progress, first pass done (PR #66) |
-| O8 | A Kuwait weather file (EPW) for Kuwait Airport or KISR's coastal station, from KISR or the Meteorological Center; the public copies were withdrawn. | Milestone 5 | todo |
+| O6 | Rulebook part 2, forces: name, element, direction, default strength for Kuwait, source. | M3 | done as a draft, PR #12 |
+| O7 | Revisit the forces: correct strengths, add and remove forces, mark rows `sourced` once the known house and the firm's practice confirm them. Repeats whenever a source arrives. | R1 | in progress, first pass done (PR #66) |
+| O8 | A Kuwait weather file (EPW) for Kuwait Airport or KISR's coastal station, from KISR or the Meteorological Center; the public copies were withdrawn. | M7 | todo |
 
 ### Proposed, not approved
 
@@ -95,7 +102,7 @@ approves it, after the fresh brief has run through the tool.
 | P2 | **Two entry paths.** A guided sequence for a client beside the architect; the one-page form for the architect alone. Same store. | Needs P1 to have anything to guide through. |
 | P3 | **AI intake.** Paste a client's text brief; the tool proposes rooms, storeys, wishes and edges, and lists every assumption for confirmation. | Must only produce inputs the screen already accepts, so it follows P1. |
 | P8 | **A planned storey.** A checkbox on a storey marks it as planned, not built now: the stair spans it, its rooms and bubbles work as on any storey, the massing draws it hatched, the area line reports the ratio twice, as built now and with the planned storey, and the PDF and DXF include it, labelled planned. Nothing is deleted to print. The fresh brief's second floor for the son who marries later is the case. | Until A9 shows whether adding the storey as a normal one and reading the ratio with it is enough. The owner's ruling: if it is built, it is exported, never left out. |
-| P9 | **The five analysis questions.** Written before milestone 5, each with a reference case: west sun on facades, court shade, roof gain, glazing per facade against the MEW code, cross-ventilation. Ladybug is asked exactly these. | Needs O8 and the frozen mass to have something to measure. |
+| P9 | **The five analysis questions.** Written before M7, each with a reference case: west sun on facades, court shade, roof gain, glazing per facade against the MEW code, cross-ventilation. Ladybug is asked exactly these. | Needs O8 and the frozen mass to have something to measure. |
 | P10 | **Multi-objective optimisation at the massing level.** Few knobs (orientation, footprint proportions, storey heights, court position, setback use); rules as constraints never traded; the output a front of massings, each with its five numbers and what it gave up, for the architect to choose from. | Needs P9's numbers to have reference cases first; its own milestone after 5. |
 
 ### The final tool from the frozen mock
@@ -117,53 +124,96 @@ brief, branch and pull request, on the owner's word.
 | T6 | **Export re-pointed.** PDF to scale and DXF per storey from A8. | T4 | A printed sheet measures true; the DXF opens with a layer per storey. | done, PR #95 |
 | E1 | **The agent over the actions.** Text to zoning plan through `actions.ts`, the report as its feedback, one Undo for a run; the mock's chat line as the model. | T1, T3 | From the fresh brief's program and two sentences, no help: every room placed, no overlaps, inside the line, every room reached, entry and diwaniya doors, under 40 actions. | done, PR #90 |
 | T7 | **The program comes from Requirements.** Requirements is the brief, the Sheet follows it, a room added on the Sheet is added back; the plot is data. | T2, A4 | Twelve rooms entered in Requirements are the Sheet's program. | done, PR #97 |
+
+## How the milestones run
+
+The owner works in rounds: test the tool in the running app, list what
+got in the way, the list is worked, test again. Every milestone ends
+with the owner's own timed round, and its tasks are the lists those
+rounds produce as much as the ones written here.
+
+## Milestone 2: usable screens
+
+Done when: the owner runs the fresh brief through the whole loop on
+the new screens in under thirty minutes, and every screen says what
+it is for in one line, with the rest of its text one click down.
+
+Making the screens usable, not their look (M6). Starts from the
+owner's first round: too much text on the page hides what matters, so
+a finding the tool did raise was missed.
+
+| # | Task | Depends on | Done when | Status |
+|---|---|---|---|---|
+| U1 | **The owner's list.** The text on every screen cut to one line of purpose; the rest, the hints and the sentence under the sheet, folded one click down; findings and refusals where the eye is. The list grows with each round. | M1 | The owner's round passes and finds nothing hidden that matters. | todo |
+
+## Milestone 3: the rule engine
+
+Done when: every finding shows a one-sentence verdict, with the rule,
+the measured number, the source and the confidence one click down;
+clicking a finding selects its room on every tab; the known house,
+entered as a project, gives findings the owner agrees with; the
+owner's timed round passes.
+
+The graph findings already built stay (no stair, a room not reached,
+a private room onto a public one, rooms kept apart but joined, a
+storey that cannot be drawn flat). The Municipality's rules are in
+`rulebook/municipality-private-housing.md`; the forces in
+`rulebook/forces.md`.
+
+| # | Task | Depends on | Status |
+|---|---|---|---|
+| R1 | **Rulebook as data.** The Municipality's rules and the forces loaded from one file, validated against `MODEL.md`, each with its source and confidence. | O4, O6, O7 | todo |
+| R2 | **The known house as a project.** Entered from `rulebook/known-house.md`: plot, north, program, the built plan; the reference case for every finding. | O3 | todo |
+| R3 | **Findings from the rules.** Ratio per plot band, setbacks, building on the boundary, heights, room minimum sizes and widths, stair widths, light wells; each a sentence with its number. Reference cases from the known house. | R1, R2 | todo |
+| R4 | **Findings from the drawn plan.** A room under its legal size, a door that cannot open, a door on a boundary wall, a wall past the setback, with numbers. | R1, R2 | todo |
+| R5 | **Findings screen.** The verdict on the surface, the detail one click down, assumptions editable in place; a click selects the room on every tab. | R3, R4 | todo |
+| R6 | **The basement storey.** A storey below ground under the Municipality's basement rules (not counted in the ratio, may cover the plot, height limits). The ramp a room spanning basement and ground, walled on the kerb like the entry; the garage bays in the basement by default; the diwaniya there as a household choice. Until this lands the garage stays on the ground floor. | R1 | todo |
+| R7 | **Circulation drawn.** Actors, routes through the doors from the street door to any room, counting the doors passed; an animated walk. | M1 | todo |
+
+## Milestone 4: drawings out
+
+Done when: the PDF and the DXF of the known house meet the office's
+standard as the owner states it; windows are drawn and read; the
+neighbours stand in the mass.
+
+| # | Task | Depends on | Done when | Status |
+|---|---|---|---|---|
+| D1 | **Drawings to office standard.** The PDF sheet and the DXF layers, line weights, text and blocks as the office draws them. The owner states the standard first. | M1 | The owner accepts a printed sheet and the DXF in AutoCAD without redrawing. | todo |
 | W1 | **Windows.** Placed like a door on an outside wall; refused on shared and boundary walls; unlit rooms listed. | T3, T4 | A room with no window and no open wall to one reads unlit. | todo |
 | W2 | **Fog of war.** What a guest sees from the diwaniya door and the family from the family living, read off doors and windows with heights. | W1 | The guest's view on the embedded sheet matches a hand-drawn reference. | todo |
-| W3 | **Circulation drawn.** Actors, routes over doors, an animated walk (B5 re-pointed). | T3 | The route from the street door to the kitchen is drawn and counts its doors. | todo |
-| E2 | **The architect's own hands.** Place a room against another's wall touching; carve or push to settle an overlap it made; take back its own last batch. The chat column scrolls, its deliberation collapsed, its answers short. Its mind is `agent/architect.md` and `agent/lessons.md`. | E1 | From the program and one sentence, no help: every room placed, no overlaps, inside the line, in one or two turns. | todo |
 | N1 | **Neighbours and streets.** 15 m boxes on the neighbours' setback lines and street bands, each with a switch. | T4 | The mass shows the neighbours' boxes; each switch hides its box. | todo |
 
-## Milestone 2: the rule engine
+## Milestone 5: the assistant
 
-Done when: findings from the graph and the geometry each show a
-one-sentence verdict with rule, number, source, assumption and
-confidence one click down; the known house scores as expected;
-circulation routes draw over edges.
+Done when: from the program and one sentence, with no help, the
+assistant places every room, with no overlaps, inside the line, in one
+or two turns, and the owner's round with it passes.
 
-| # | Task | Depends on | Status |
-|---|---|---|---|
-| B1 | Rulebook as data: walls and forces loaded from one file, validated against `MODEL.md`. | O4, O6, O7 | todo |
-| B2 | Graph findings: reachability, tier skips, stair landings, rule violations. Reference cases from the known house. | B1, A9 | todo |
-| B3 | Geometry findings: walls broken, forces unsatisfied, with numbers. Reference cases. | B1, A9 | todo |
-| B4 | Findings screen: verdict on the surface, detail one click down, assumptions editable in place. | B2, B3 | todo |
-| B5 | Circulation: actors, routes over edges, animated walk. | A6 | todo |
-| B0 | **The basement storey.** A storey below ground, its own plot on the bubble sheet, under the Municipality's basement rules from O4 (allowed area, height, whether it counts in the ratio, the ramp's slope and width). The ramp is a room spanning basement and ground, walled on the kerb like the entry. The garage bays stand in the basement by default; the ground frontage carries the ramp instead. The diwaniya may stand in the basement too, as a household choice beside the corner and garden choices, with its own stair or entrance from the street. Until this lands the garage stays on the ground floor as a placeholder. First task of the milestone. | O4, Z5 | todo |
+| # | Task | Depends on | Done when | Status |
+|---|---|---|---|---|
+| E2 | **The architect's own hands.** Place a room against another's wall touching; carve or push to settle an overlap it made; take back its own last batch. The chat column scrolls, its deliberation collapsed, its answers short. Its mind is `agent/architect.md` and `agent/lessons.md`. | E1 | From the program and one sentence, no help: every room placed, no overlaps, inside the line, in one or two turns. | todo |
 
-## Milestone 3: forces and settling
-
-Done when: settle moves unpinned rooms to an equilibrium under the
-weights; grabbing a room pins it and the rest continue; several
-typologies settle side by side; the animation is the solver's own
-steps.
-
-| # | Task | Depends on | Status |
-|---|---|---|---|
-| C1 | Solver over rigid rotatable rooms with collision, forces from B1, walls from B1. Deterministic. | B3 | todo |
-| C2 | Settle, pin, interrupt in the zoning view; steps recorded for playback. | C1 | todo |
-| C3 | Typologies as starting points; compare view. | C2 | todo |
-| C4 | Settle animation across bubbles, zoning and massing. | C2 | todo |
-
-## Milestone 4: visual design
+## Milestone 6: visual design
 
 Two registers: hand-drawn and cut-paper for the story and the bubbles;
 quiet and precise for the plan and the numbers. Starts from the
 owner's references and a written motion language.
 
-## Milestone 5: environment and export
+## Milestone 7: environment
 
 Sun, shadow, radiation per facade, glazing against the energy code,
 passive strategies for a hot-arid climate, via a Python service. IFC
 for Revit when the owner's own workflow needs it.
+
+## Set aside
+
+Kept so they are not lost; none starts without the owner's word.
+
+- **Forces and settling in the zoning.** The bubbles already settle
+  under the site, privacy and link forces (Z2, Z7). Settling the zoned
+  rooms themselves, typologies as starting points and a compare view
+  (formerly C1 to C4) wait until a round asks for them.
+- **W3, circulation drawn,** became R7.
 
 ## How a task runs
 
