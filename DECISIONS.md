@@ -496,3 +496,9 @@ A reversal is a new entry, never an edit.
     undo taken from the program after the sheet was left is followed
     too. Reverses the "keeps the storey it stands on" of a drawn room
     in 32's reconciliation; copy to a storey still makes a new room.
+
+43. **A wall drag moves one room.** Dragging a room's wall changes that
+    room alone by default; the setting that lets a shared wall drag both
+    rooms is off unless the architect switches it on. The owner found
+    the tool unpredictable when dragging one room's wall moved another
+    room.
