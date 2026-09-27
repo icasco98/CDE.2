@@ -2,7 +2,8 @@ import { sheetOf } from '../sheet'
 import { dxfOf, pdfOf } from '../export'
 import { createAside, followProject, plotOf, programOf } from '../views/sheet/project'
 import { localSheet } from '../views/sheet/store'
-import { downloadBlob, fileNameFor } from './files'
+import { artifactDownloads, handOver } from './downloads'
+import { fileNameFor } from './files'
 import { session } from './session'
 
 /**
@@ -21,12 +22,16 @@ export function ExportMenu({ title }: { title: string }) {
       createAside(),
     )
   }
+  const hand = (name: string, blob: Blob) =>
+    void artifactDownloads()
+      .then((downloads) => handOver(name, blob, downloads, new Date()))
+      .then((failed) => failed && session.warn(failed))
   return (
     <>
       <button
         type="button"
         onClick={() =>
-          downloadBlob(
+          hand(
             fileNameFor(title, 'pdf'),
             new Blob([pdfOf(sheet(), title, new Date())], { type: 'application/pdf' }),
           )
@@ -37,10 +42,7 @@ export function ExportMenu({ title }: { title: string }) {
       <button
         type="button"
         onClick={() =>
-          downloadBlob(
-            fileNameFor(title, 'dxf'),
-            new Blob([dxfOf(sheet())], { type: 'image/vnd.dxf' }),
-          )
+          hand(fileNameFor(title, 'dxf'), new Blob([dxfOf(sheet())], { type: 'image/vnd.dxf' }))
         }
       >
         Export DXF
