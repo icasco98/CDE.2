@@ -501,4 +501,5 @@ A reversal is a new entry, never an edit.
     room alone by default; the setting that lets a shared wall drag both
     rooms is off unless the architect switches it on. The owner found
     the tool unpredictable when dragging one room's wall moved another
-    room.
+    room. A sheet or spec saved before this reads it off too, since
+    every save wrote the setting out whole; one saved since keeps it.
