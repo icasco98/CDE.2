@@ -581,7 +581,7 @@ body:has(main.stage-sheet) {
 }
 
 /* The storey below, drawn faint under the one in hand, and what stands open to below on it. */
-.sheet-stage .room.under path.body {
+.sheet-stage .room.under path.outline {
   fill: none;
   stroke: var(--ink-3);
   stroke-width: 0.03;
@@ -592,6 +592,12 @@ body:has(main.stage-sheet) {
 
 .sheet-stage .room.below path.body {
   fill: var(--paper);
+  pointer-events: none;
+}
+
+/* Only the outline is stroked: a room kept as several pieces would otherwise show every seam. */
+.sheet-stage .room.below path.outline {
+  fill: none;
   stroke: var(--ink-2);
   stroke-width: 0.05;
   stroke-dasharray: 0.25 0.12;
@@ -857,18 +863,27 @@ body:has(main.stage-sheet) {
   stroke-dasharray: 0.25 0.15;
 }
 
-.sheet-stage .pocket {
+.sheet-stage .pocket .piece {
   fill: var(--ink-3);
   fill-opacity: 0.16;
-  stroke: var(--ink-3);
-  stroke-width: 0.04;
-  stroke-dasharray: 0.2 0.15;
+  stroke: none;
   cursor: pointer;
 }
 
-.sheet-stage .pocket.picked {
+.sheet-stage .pocket .outline {
+  fill: none;
+  stroke: var(--ink-3);
+  stroke-width: 0.04;
+  stroke-dasharray: 0.2 0.15;
+  pointer-events: none;
+}
+
+.sheet-stage .pocket.picked .piece {
   fill: var(--accent-soft);
   fill-opacity: 0.7;
+}
+
+.sheet-stage .pocket.picked .outline {
   stroke: var(--accent);
   stroke-width: 0.08;
   stroke-dasharray: none;

@@ -25,6 +25,7 @@ import {
   isOpen,
   loopsOf,
   norm,
+  outlineFrom,
   outlineOf,
   piecesOf,
   r2,
@@ -140,10 +141,10 @@ const bodyPath = (r: Room) =>
     )
     .join('')
 
-const wallPath = (r: Room) =>
-  outlineOf(r)
-    .map((s) => `M${p4(s.a[0])} ${p4(s.a[1])}L${p4(s.b[0])} ${p4(s.b[1])}`)
-    .join('')
+const segsPath = (segs: Seg[]) =>
+  segs.map((s) => `M${p4(s.a[0])} ${p4(s.a[1])}L${p4(s.b[0])} ${p4(s.b[1])}`).join('')
+
+const wallPath = (r: Room) => segsPath(outlineOf(r))
 
 const points = (p: Poly) => p.map((v) => `${p4(v[0])},${p4(v[1])}`).join(' ')
 
@@ -239,16 +240,21 @@ export function SheetView(props: SheetViewProps) {
       </defs>
       {background}
       {view.pockets.map((pocket, i) => (
-        <g key={`pocket-${i}`} data-pocket={i}>
+        <g
+          key={`pocket-${i}`}
+          data-pocket={i}
+          className={`pocket${i === props.pocketPicked ? ' picked' : ''}`}
+        >
           {pocket.pieces.map((piece, j) => (
             <polygon
               key={j}
               points={points(piece)}
-              className={`pocket${i === props.pocketPicked ? ' picked' : ''}`}
+              className="piece"
               onPointerDown={(event) => on.onPocketDown(i, event)}
               onContextMenu={(event) => on.onPocketMenu(i, event)}
             />
           ))}
+          <path className="outline" d={segsPath(outlineFrom(pocket.pieces).segs)} />
           <text className="pocket-label" x={p4(pocket.centre[0])} y={p4(pocket.centre[1] + 0.15)}>
             {fmt(pocket.area)} m²
           </text>
@@ -260,8 +266,8 @@ export function SheetView(props: SheetViewProps) {
         )),
       )}
       {under.map((r) => (
-        <g key={`under-${r.id}`} className="room under" transform={frameOf(r)}>
-          <path className="body" d={bodyPath(r)} fillRule="evenodd" />
+        <g key={`under-${r.id}`} className="room under" data-under={r.id} transform={frameOf(r)}>
+          <path className="outline" d={wallPath(r)} />
         </g>
       ))}
       {ghosts.map((r) => {
@@ -274,6 +280,7 @@ export function SheetView(props: SheetViewProps) {
         return (
           <g key={`below-${r.id}`} className={`room below ${r.cat}`} transform={frameOf(r)}>
             <path className="body" d={bodyPath(r)} fillRule="evenodd" />
+            <path className="outline" d={wallPath(r)} />
             <line className="x" x1={p4(x0)} y1={p4(y0)} x2={p4(x1)} y2={p4(y1)} />
             <line className="x" x1={p4(x1)} y1={p4(y0)} x2={p4(x0)} y2={p4(y1)} />
             <text className="below-label" x={p4(c[0])} y={p4(c[1] + 0.15)}>
@@ -389,7 +396,7 @@ export function SheetView(props: SheetViewProps) {
             <path
               className="mate"
               transform={frameOf(drag.lock.mate)}
-              d={bodyPath(drag.lock.mate)}
+              d={wallPath(drag.lock.mate)}
             />
           )}
         </Fragment>

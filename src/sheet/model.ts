@@ -132,7 +132,7 @@ export const DEFAULTS: Settings = {
   guides: 1,
   dims: 'all',
   dimSize: 0.4,
-  sharedWalls: 1,
+  sharedWalls: 0,
   dur: 220,
   ease: 'cubic-bezier(.2,.7,.2,1)',
   allowSpill: 1,
@@ -160,7 +160,7 @@ export const DEFAULTS: Settings = {
   streetLabels: 1,
 }
 
-export const SETTINGS_V = 48
+export const SETTINGS_V = 49
 
 /** The rooms in program order, which is the order of importance, with the storeys they stand on. */
 export type Sheet = {
@@ -178,12 +178,15 @@ export const RULE_HINT: Record<LandingRule, string> = {
 
 export const ruleOf = (v: unknown): LandingRule => (v === 'push' ? 'push' : 'wait')
 
-/** Settings saved by an older page: the boundary switch was never used, so its old default goes. */
+/**
+ * Settings saved by an older page: the boundary switch was never used, so its old default goes; and
+ * every save wrote the shared-wall drag out whole, so the old default goes too (decision 43).
+ */
 export function migrate(saved: Record<string, unknown> | null): Record<string, unknown> | null {
   if (!saved || typeof saved !== 'object') return saved
-  const v = saved.v
-  if (!(typeof v === 'number' && v >= SETTINGS_V) && saved.boundary === 'off')
-    saved.boundary = 'all'
+  const v = typeof saved.v === 'number' ? saved.v : 0
+  if (v < 48 && saved.boundary === 'off') saved.boundary = 'all'
+  if (v < 49) delete saved.sharedWalls
   return saved
 }
 

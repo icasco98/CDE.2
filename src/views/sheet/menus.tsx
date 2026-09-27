@@ -16,6 +16,7 @@ import {
   type Settings,
   type Sheet,
 } from '../../sheet'
+import { useOnScreen } from '../onScreen'
 
 /** Where a menu stands, in pixels inside the sheet's box. */
 type MenuAt = { x: number; y: number }
@@ -66,6 +67,7 @@ const style = (at: MenuAt) => ({
 })
 
 export function RoomMenu(props: RoomMenuProps) {
+  const box = useOnScreen<HTMLDivElement>()
   const sel = props.selection
   const many = sel.length > 1
   const allLocked = sel.every((o) => o.locked)
@@ -74,7 +76,12 @@ export function RoomMenu(props: RoomMenuProps) {
   const these = many ? 'these zones' : 'this zone'
   if (allLocked)
     return (
-      <div className="ctx" style={style(props.at)} onPointerDown={(e) => e.stopPropagation()}>
+      <div
+        ref={box}
+        className="ctx"
+        style={style(props.at)}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
         <div className="head">{head}</div>
         <button type="button" onClick={() => props.onChoose({ kind: 'lock', on: false })}>
           Unlock<span className="m">locked in place</span>
@@ -83,6 +90,7 @@ export function RoomMenu(props: RoomMenuProps) {
     )
   return (
     <div
+      ref={box}
       className="ctx"
       style={style(props.at)}
       onPointerDown={(e) => e.stopPropagation()}
@@ -245,6 +253,7 @@ export function PocketMenu(props: {
   sheet: Sheet
   onChoose: (choice: PocketChoice) => void
 }) {
+  const box = useOnScreen<HTMLDivElement>()
   const why = courtWhy(props.pocket, props.sheet.settings)
   const rows = [...props.pocket.touch.entries()]
     .map(([id, length]) => ({
@@ -255,6 +264,7 @@ export function PocketMenu(props: {
     .sort((p, q) => q.length - p.length)
   return (
     <div
+      ref={box}
       className="ctx"
       style={style(props.at)}
       onPointerDown={(e) => e.stopPropagation()}
@@ -285,8 +295,14 @@ export function PocketMenu(props: {
 
 /** A right-click on empty space that no room walls in says only why there is nothing to do. */
 export function EmptyNote(props: { at: MenuAt; note: string }) {
+  const box = useOnScreen<HTMLDivElement>()
   return (
-    <div className="ctx" style={style(props.at)} onPointerDown={(e) => e.stopPropagation()}>
+    <div
+      ref={box}
+      className="ctx"
+      style={style(props.at)}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
       <div className="why" style={{ maxWidth: '240px' }}>
         {props.note}
       </div>
@@ -302,9 +318,15 @@ export function DoorMenu(props: {
   door: DoorRead
   onChoose: (choice: DoorChoice) => void
 }) {
+  const box = useOnScreen<HTMLDivElement>()
   const { door } = props
   return (
-    <div className="ctx" style={style(props.at)} onPointerDown={(e) => e.stopPropagation()}>
+    <div
+      ref={box}
+      className="ctx"
+      style={style(props.at)}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
       <div className="head">
         {door.label} · {door.room}
       </div>

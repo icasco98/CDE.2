@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { arrange } from '../../bubbles/arrange'
 import { storeyLabel } from '../../rulebook'
 import { fitCamera, type Camera } from '../camera'
+import { useOnScreen } from '../onScreen'
 import { ApartPanel } from './ApartPanel'
 import { ChecksPanel } from './ChecksPanel'
 import { Diagram } from './Diagram'
@@ -21,6 +22,7 @@ export function BubblesView(props: BubblesViewProps) {
   const arrangement = useMemo(() => arrange(rooms, edges, levels), [rooms, edges, levels])
   const [pixels, setPixels] = useState(1)
   const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null)
+  const menuBox = useOnScreen<HTMLDivElement>()
   const named = useMemo(() => new Map(rooms.map((room) => [room.id, room])), [rooms])
   const selectedRoom = named.get(selected ?? '')
   const selectedEdge = edges.find((edge) => edge.id === selected)
@@ -185,6 +187,7 @@ export function BubblesView(props: BubblesViewProps) {
       </div>
       {menu && (
         <div
+          ref={menuBox}
           className="bubbles-menu"
           role="menu"
           style={{ left: menu.x, top: menu.y }}
