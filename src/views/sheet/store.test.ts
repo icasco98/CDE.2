@@ -104,6 +104,10 @@ describe('where the sheet and the memory are kept', () => {
     expect(
       sheetFrom({ ...kept, settings: { ...settings, sharedWalls: 1 } }, [])!.settings.sharedWalls,
     ).toBe(1)
+    expect(
+      sheetFrom({ ...kept, settings: { ...settings, sharedWalls: 1, v: 48 } }, [])!.settings
+        .sharedWalls,
+    ).toBe(0)
     localStorage.setItem(SPEC_KEY, JSON.stringify(settings))
     expect(localSpec()).not.toHaveProperty('sharedWalls')
     localStorage.setItem(SPEC_KEY, JSON.stringify({ ...settings, sharedWalls: 1 }))
