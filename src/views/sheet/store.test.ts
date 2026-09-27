@@ -7,6 +7,7 @@ import {
   SHEET_DOC,
   SHEET_KEY,
   SPEC_DOC,
+  SPEC_KEY,
   keepMemory,
   keepSheet,
   keepSpec,
@@ -93,6 +94,20 @@ describe('where the sheet and the memory are kept', () => {
     const read = sheetFrom(kept, [])!
     expect(read.settings.rule).toBe('push')
     expect(read.settings.grid).toBe(0.5)
+  })
+
+  it('drags one room’s wall alone unless the sheet or the spec saved shared walls on', () => {
+    const kept = sheetKept(fixtureSheet())
+    const settings = { ...(kept.settings as Record<string, unknown>) }
+    delete settings.sharedWalls
+    expect(sheetFrom({ ...kept, settings }, [])!.settings.sharedWalls).toBe(0)
+    expect(
+      sheetFrom({ ...kept, settings: { ...settings, sharedWalls: 1 } }, [])!.settings.sharedWalls,
+    ).toBe(1)
+    localStorage.setItem(SPEC_KEY, JSON.stringify(settings))
+    expect(localSpec()).not.toHaveProperty('sharedWalls')
+    localStorage.setItem(SPEC_KEY, JSON.stringify({ ...settings, sharedWalls: 1 }))
+    expect(localSpec()!.sharedWalls).toBe(1)
   })
 
   it('writes the settings on their own as well, so a link that keeps them reads them back', async () => {

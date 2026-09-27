@@ -132,7 +132,7 @@ export const DEFAULTS: Settings = {
   guides: 1,
   dims: 'all',
   dimSize: 0.4,
-  sharedWalls: 1,
+  sharedWalls: 0,
   dur: 220,
   ease: 'cubic-bezier(.2,.7,.2,1)',
   allowSpill: 1,
