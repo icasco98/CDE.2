@@ -4,6 +4,7 @@
  */
 
 import { downloadBlob } from './files'
+import { session } from './session'
 import { zipOf } from './zip'
 
 type SaveInput = { filename: string; data: string | Blob | ArrayBuffer }
@@ -67,3 +68,9 @@ export async function handOver(
     return `The file could not be saved: ${typeof message === 'string' && message ? message : String(code ?? error)}`
   }
 }
+
+/** Hands a file over the way this view allows, and says so in the message corner when it could not. */
+export const offer = (name: string, blob: Blob): void =>
+  void artifactDownloads()
+    .then((downloads) => handOver(name, blob, downloads, new Date()))
+    .then((failed) => failed && session.warn(failed))

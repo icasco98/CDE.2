@@ -6,7 +6,8 @@ import {
 } from 'react'
 import { deserialize, serialize } from '../model'
 import { ExportMenu } from './ExportMenu'
-import { downloadBlob, fileNameFor } from './files'
+import { offer } from './downloads'
+import { fileNameFor } from './files'
 import { NotYet } from './NotYet'
 import { session, type Message } from './session'
 import { stages } from './stages'
@@ -94,7 +95,7 @@ export function Shell() {
             <button
               type="button"
               onClick={() =>
-                downloadBlob(
+                offer(
                   fileNameFor(project.name, 'json'),
                   new Blob([serialize(project)], { type: 'application/json' }),
                 )
