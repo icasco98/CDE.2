@@ -16,7 +16,7 @@ async function openSheet(page: Page): Promise<void> {
 
 /** The tool opens on Requirements, here and after every reload: the sheet is one click in. */
 async function toSheetTab(page: Page): Promise<void> {
-  await page.locator('nav.tabs').getByRole('button', { name: 'Sheet', exact: true }).click()
+  await page.locator('nav.tabs').getByRole('button', { name: 'Zoning and 3D', exact: true }).click()
   await page.locator('svg.sheet').waitFor()
 }
 

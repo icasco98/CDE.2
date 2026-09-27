@@ -19,8 +19,8 @@ type KeyCommand =
   | { kind: 'undo' }
   | { kind: 'redo' }
   | { kind: 'quarter-turn' }
-  /** The step switch: Zoning and Openings, never Esc. */
-  | { kind: 'step'; to: 'zoning' | 'openings' | 'other' }
+  /** The tab: Zoning and 3D or Openings, never Esc. */
+  | { kind: 'tab'; to: 'zoning' | 'openings' | 'other' }
   | { kind: 'door-swing' }
   | { kind: 'door-hinge' }
   /** Space on a door: the hinge changes side, or a door without a hinge swings the other way. */
@@ -68,9 +68,9 @@ export function keyCommand(press: KeyPress, world: KeyWorld): KeyCommand | null 
   if (command && lower === 'v') return { kind: 'paste' }
   if (command && lower === 'z') return press.shiftKey ? { kind: 'redo' } : { kind: 'undo' }
   if (command) return null
-  if (lower === 'z') return { kind: 'step', to: 'zoning' }
-  if (lower === 'o') return { kind: 'step', to: 'openings' }
-  if (lower === 'd') return { kind: 'step', to: 'other' }
+  if (lower === 'z') return { kind: 'tab', to: 'zoning' }
+  if (lower === 'o') return { kind: 'tab', to: 'openings' }
+  if (lower === 'd') return { kind: 'tab', to: 'other' }
   if (world.openings && world.doorSelected) {
     if (lower === 'f') return { kind: 'door-swing' }
     if (lower === 'h') return { kind: 'door-hinge' }

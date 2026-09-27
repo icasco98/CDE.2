@@ -227,7 +227,16 @@ type TypeIn = {
   apply: (value: number) => Change | null
 }
 
-export function SheetStage() {
+/** Zoning edits rooms, Openings edits doors; the tab decides which, and Esc never changes it. */
+export type SheetMode = 'zoning' | 'openings'
+
+type SheetStageProps = {
+  mode: SheetMode
+  /** The keys Z, O and D ask for the other tab through this. */
+  onMode: (to: SheetMode) => void
+}
+
+export function SheetStage({ mode, onMode }: SheetStageProps) {
   const started = performance.now()
   // The storey in hand: every gesture and every action on this screen works on it.
   const [storey, showStorey] = useState(0)
@@ -261,8 +270,8 @@ export function SheetStage() {
   const [flash, setFlash] = useState<string | null>(null)
   const [tag, setTag] = useState<{ id: string; x: number; y: number } | null>(null)
   const [hover, setHover] = useState<string | null>(null)
-  // The step: Zoning edits rooms, Openings edits doors. Esc never changes it.
-  const [step, setStep] = useState<'zoning' | 'openings'>('zoning')
+  // The mode last drawn, so a change of tab is caught during the render it arrives in.
+  const [modeHeld, holdMode] = useState(mode)
   const [armed, setArmed] = useState<DoorType | null>(null)
   const [doorWidth, pickWidth] = useState(DOOR.door.w)
   const [doorSel, setDoorSel] = useState<DoorRef | null>(null)
@@ -271,7 +280,7 @@ export function SheetStage() {
   const [lit, setLit] = useState<string | null>(null)
   const [drawMenuFor, setDrawMenuFor] = useState<string | null>(null)
   const [specState, setSpecState] = useState('')
-  // Check: the project's edges drawn on the sheet, off until asked for.
+  // Show connections: the project's edges drawn on the sheet, off until asked for.
   const [checking, setChecking] = useState(false)
   const [offer, setOffer] = useState<Offer | null>(null)
   const links = useRef(createLinks(session))
@@ -369,7 +378,7 @@ export function SheetStage() {
     if (frames.length > 400) frames.splice(0, frames.length - 400)
   })
 
-  const openingsOn = step === 'openings'
+  const openingsOn = mode === 'openings'
   const doorInHand = doorSel ? doorRead(sheet, STOREY, doorSel) : null
 
   // Everything read from the sheet is read once per change, so a drag pays for none of it.
@@ -630,11 +639,10 @@ export function SheetStage() {
     setDrag(next)
   }
 
-  // ---------- the Openings step ----------
+  // ---------- the Openings tab ----------
 
-  /** Into Openings: whatever the hand held in Zoning is let go, and every click becomes a wall's. */
-  const goStep = (to: 'zoning' | 'openings') => {
-    if (to === step) return
+  /** Arriving in the other tab: whatever the hand held in the last one is let go. */
+  const letGo = () => {
     if (reshaping) cancelReshape()
     setMeasure(null)
     setDrawing(null)
@@ -648,7 +656,10 @@ export function SheetStage() {
     pickWidth(DOOR.door.w)
     doorDragRef.current = null
     setDoorDrag(null)
-    setStep(to)
+  }
+  if (modeHeld !== mode) {
+    holdMode(mode)
+    letGo()
   }
 
   const armType = (type: DoorType | null) => {
@@ -1208,7 +1219,7 @@ export function SheetStage() {
       if (openingsOn && !doorDrag) {
         const [x, y] = pointAt(event.clientX, event.clientY)
         setDoorHover(armed && armed !== 'open' ? doorAt(x, y, doorWidth, sheet, STOREY) : null)
-        // Check's lines follow the hand in this step too.
+        // The connections' lines follow the hand in this tab too.
         const over = event.target instanceof Element ? event.target.closest('[data-room]') : null
         const id = over?.getAttribute('data-room') ?? null
         if (checking && hover !== id) setHover(id)
@@ -1496,8 +1507,8 @@ export function SheetStage() {
         case 'close-polygon':
           if (held) finishDrawing(held.pts)
           return
-        case 'step':
-          goStep(command.to === 'other' ? (openingsOn ? 'zoning' : 'openings') : command.to)
+        case 'tab':
+          onMode(command.to === 'other' ? (openingsOn ? 'zoning' : 'openings') : command.to)
           return
         case 'door-swing':
           onDoor((ref) => flipDoor(docRef.current.sheet, { room: ref.room, door: ref.id }))
@@ -1528,7 +1539,7 @@ export function SheetStage() {
           onDoor((ref) => removeDoor(docRef.current.sheet, { room: ref.room, door: ref.id }))
           return
         case 'escape':
-          // Esc never leaves the step: it drops the door in hand, then the type armed
+          // Esc never leaves the tab: it drops the door in hand, then the type armed
           if (openingsOn) {
             if (offer) setOffer(null)
             else if (doorSel) setDoorSel(null)
@@ -1631,9 +1642,9 @@ export function SheetStage() {
 
   if (checked) {
     const waiting = checked.waiting.length
-    const said = `${waiting} connection${waiting === 1 ? '' : 's'} not ${openingsOn ? 'met' : 'ready'}`
+    const said = `${waiting} not ${openingsOn ? 'met' : 'ready'}`
     parts.push({
-      lead: 'Check',
+      lead: 'Connections',
       text: checked.broken ? `${said}, ${checked.broken} keep-apart broken` : said,
       bad: waiting > 0 || checked.broken > 0,
     })
@@ -1679,19 +1690,6 @@ export function SheetStage() {
         )}
       </p>
       <div className="tools">
-        <div className="seg steps">
-          {(['zoning', 'openings'] as const).map((to) => (
-            <button
-              key={to}
-              type="button"
-              className={step === to ? 'on' : ''}
-              title={to === 'zoning' ? 'Z' : 'O'}
-              onClick={() => goStep(to)}
-            >
-              {to === 'zoning' ? 'Zoning' : 'Openings'}
-            </button>
-          ))}
-        </div>
         <span className="grp">
           <button type="button" onClick={stepBack} title="Ctrl+Z">
             Undo
@@ -1717,7 +1715,7 @@ export function SheetStage() {
             title="Show the connections: lines from the room under the hand and the room selected"
             onClick={() => setChecking((was) => !was)}
           >
-            Check
+            Show connections
           </button>
           <button
             type="button"

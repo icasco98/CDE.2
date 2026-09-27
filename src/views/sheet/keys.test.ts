@@ -75,10 +75,10 @@ describe('the sheet’s keys', () => {
     expect(keyCommand({ key: 'v', metaKey: true }, idle)).toEqual({ kind: 'paste' })
   })
 
-  it('switches step on Z and O, and never on Esc', () => {
-    expect(keyCommand({ key: 'z' }, idle)).toEqual({ kind: 'step', to: 'zoning' })
-    expect(keyCommand({ key: 'O' }, idle)).toEqual({ kind: 'step', to: 'openings' })
-    expect(keyCommand({ key: 'd' }, idle)).toEqual({ kind: 'step', to: 'other' })
+  it('switches tab on Z and O, and never on Esc', () => {
+    expect(keyCommand({ key: 'z' }, idle)).toEqual({ kind: 'tab', to: 'zoning' })
+    expect(keyCommand({ key: 'O' }, idle)).toEqual({ kind: 'tab', to: 'openings' })
+    expect(keyCommand({ key: 'd' }, idle)).toEqual({ kind: 'tab', to: 'other' })
     expect(keyCommand({ key: 'Escape' }, openings)).toEqual({ kind: 'escape' })
   })
 

@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { seedPlan } from './plan'
 
 /**
- * The Openings step, on the test plan and the edges its doors draw. Every case is one thing an
+ * The Openings tab, on the test plan and the edges its doors draw. Every case is one thing an
  * architect does to a door, and each one puts the sheet back with Ctrl+Z.
  */
 
@@ -14,9 +14,9 @@ const FORMAL = 'r6'
 async function openStep(page: Page): Promise<void> {
   await seedPlan(page)
   await page.goto('/')
-  await page.locator('nav.tabs').getByRole('button', { name: 'Sheet', exact: true }).click()
+  await page.locator('nav.tabs').getByRole('button', { name: 'Zoning and 3D', exact: true }).click()
   await page.locator('svg.sheet').waitFor()
-  await page.getByRole('button', { name: 'Openings', exact: true }).click()
+  await page.locator('nav.tabs').getByRole('button', { name: 'Openings', exact: true }).click()
   await page.locator('svg.sheet.doormode').waitFor()
 }
 
@@ -85,17 +85,22 @@ async function selectedGap(page: Page): Promise<[[number, number], [number, numb
 
 test.use({ viewport: { width: 1500, height: 1100 } })
 
-test.describe('the Openings step', () => {
+test.describe('the Openings tab', () => {
   test.beforeEach(async ({ page }) => openStep(page))
 
-  test('switches on the segmented switch and on Z and O, and never on Esc', async ({ page }) => {
+  test('switches tab on Z, O and D, and never on Esc', async ({ page }) => {
+    const pressed = page.locator('nav.tabs button[aria-pressed="true"]')
     await expect(page.locator('.sheet-stage.openings')).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(page.locator('svg.sheet.doormode')).toBeVisible()
     await page.keyboard.press('z')
     await expect(page.locator('svg.sheet.doormode')).toHaveCount(0)
+    await expect(pressed).toHaveText('Zoning and 3D')
     await page.keyboard.press('o')
     await expect(page.locator('svg.sheet.doormode')).toBeVisible()
+    await expect(pressed).toHaveText('Openings')
+    await page.keyboard.press('d')
+    await expect(pressed).toHaveText('Zoning and 3D')
   })
 
   test('puts a second door on the Kitchen’s connection to the service hallway, and refuses one on top of it', async ({
@@ -221,22 +226,25 @@ test.describe('the Openings step', () => {
     expect(await doors(page).count()).toBe(before)
   })
 
-  test('draws no door while its two rooms stand apart, Check says not met, and it returns with them', async ({
+  test('draws no door while its two rooms stand apart, Show connections says not met, and it returns with them', async ({
     page,
   }) => {
     const before = await doors(page).count()
-    // in Zoning, the Store is moved off the Kitchen it has its door into
-    await page.getByRole('button', { name: 'Zoning', exact: true }).click()
+    // in Zoning and 3D, the Store is moved off the Kitchen it has its door into
+    await page
+      .locator('nav.tabs')
+      .getByRole('button', { name: 'Zoning and 3D', exact: true })
+      .click()
     await drag(page, await onSheet(page, 3, 18.8), await onSheet(page, 3, 13.5))
-    await page.getByRole('button', { name: 'Openings', exact: true }).click()
+    await page.locator('nav.tabs').getByRole('button', { name: 'Openings', exact: true }).click()
     expect(await doors(page).count()).toBe(before - 1)
-    await page.getByRole('button', { name: 'Check', exact: true }).click()
-    await expect(sentence(page)).toContainText(/Check [1-9]\d* connections? not met/)
+    await page.getByRole('button', { name: 'Show connections', exact: true }).click()
+    await expect(sentence(page)).toContainText(/Connections [1-9]\d* not met/)
     await expect(page.locator('.door-lost')).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Put on the nearest wall' })).toHaveCount(0)
     await undo(page)
     expect(await doors(page).count()).toBe(before)
-    await expect(sentence(page)).toContainText('Check 0 connections not met')
+    await expect(sentence(page)).toContainText('Connections 0 not met')
   })
 
   test('lights a room’s walls when it is clicked in the program list', async ({ page }) => {

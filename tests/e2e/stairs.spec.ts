@@ -64,7 +64,10 @@ test.describe('the stair on the zoning sheet', () => {
     const STAIR = 'r1'
     await seedPlan(page)
     await page.goto('/')
-    await page.locator('nav.tabs').getByRole('button', { name: 'Sheet', exact: true }).click()
+    await page
+      .locator('nav.tabs')
+      .getByRole('button', { name: 'Zoning and 3D', exact: true })
+      .click()
     await page.locator('svg.sheet').waitFor()
     const before = await whereOnSheet(page, STAIR)
 

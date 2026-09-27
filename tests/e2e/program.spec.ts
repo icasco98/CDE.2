@@ -65,7 +65,7 @@ test('the twelve rooms entered in Requirements are the Sheet’s program, with t
   await enterTwelveRooms(page)
   const entered = await programEntered(page)
 
-  await tab(page, 'Sheet').click()
+  await tab(page, 'Zoning and 3D').click()
   await page.locator('svg.sheet').waitFor()
 
   await expect(blocks(page)).toHaveCount(12)
@@ -89,7 +89,7 @@ test('a target changed in Requirements is the target the Sheet reads', async ({ 
   const kitchen = rowsOf(page).filter({ has: page.locator('input[value="Kitchen"]') })
   await kitchen.getByLabel('Target area').fill('30')
 
-  await tab(page, 'Sheet').click()
+  await tab(page, 'Zoning and 3D').click()
   await page.locator('svg.sheet').waitFor()
   await expect(page.locator('.tray .item', { hasText: 'Kitchen' }).locator('.a')).toHaveText(
     '30 m²',
@@ -98,7 +98,7 @@ test('a target changed in Requirements is the target the Sheet reads', async ({ 
 
 test('a room added on the Sheet is a room of the brief in Requirements', async ({ page }) => {
   await enterTwelveRooms(page)
-  await tab(page, 'Sheet').click()
+  await tab(page, 'Zoning and 3D').click()
   await page.locator('svg.sheet').waitFor()
 
   await page.locator('.add-room').getByLabel('Kind').selectOption('bedroom')
@@ -124,7 +124,7 @@ test('a room taken out on the Sheet is out of the brief, and the plot is the pro
   await page.getByLabel('Depth (m)').fill('30')
   await page.getByLabel('North (degrees from up)').fill('40')
 
-  await tab(page, 'Sheet').click()
+  await tab(page, 'Zoning and 3D').click()
   await page.locator('svg.sheet').waitFor()
 
   // the plot is 30 by 30 with the Municipality's larger setback: 2 m from a neighbour's boundary
@@ -148,7 +148,7 @@ test('a saved sheet is reconciled with a brief it does not match: the brief wins
   // a plan is drawn and saved, and the sheet opened on it
   await seedPlan(page)
   await page.goto('/')
-  await tab(page, 'Sheet').click()
+  await tab(page, 'Zoning and 3D').click()
   await page.locator('svg.sheet').waitFor()
   expect(await blocks(page).count()).toBeGreaterThan(12)
 
@@ -163,14 +163,14 @@ test('a saved sheet is reconciled with a brief it does not match: the brief wins
     await page.getByLabel('Kind to add').selectOption(kind)
     await page.getByRole('button', { name: 'Add room' }).click()
   }
-  await tab(page, 'Sheet').click()
+  await tab(page, 'Zoning and 3D').click()
   await page.locator('svg.sheet').waitFor()
 
   const drawn = await programDrawn(page)
   const entered = await (async () => {
     await tab(page, 'Requirements').click()
     const rooms = await programEntered(page)
-    await tab(page, 'Sheet').click()
+    await tab(page, 'Zoning and 3D').click()
     return rooms
   })()
   // one list: the sheet draws the brief's rooms and no other
@@ -189,7 +189,7 @@ test('a room deleted in the bubbles is gone from the zoning sheet, and Undo brin
     .first()
     .click()
   await page.locator('svg.bubbles-sheet').press('Delete')
-  await tab(page, 'Sheet').click()
+  await tab(page, 'Zoning and 3D').click()
   await page.locator('svg.sheet').waitFor()
   await expect(page.locator('svg.sheet g.room[data-room="r2"]')).toHaveCount(0)
   await expect(page.locator('.tray .item[data-room="r2"]')).toHaveCount(0)
@@ -201,7 +201,7 @@ test('an empty program is an empty sheet, with no stair and no sample to go back
   page,
 }) => {
   await page.goto('/')
-  await tab(page, 'Sheet').click()
+  await tab(page, 'Zoning and 3D').click()
   await page.locator('svg.sheet').waitFor()
   await expect(page.locator('svg.sheet [data-room]')).toHaveCount(0)
   await expect(blocks(page)).toHaveCount(0)

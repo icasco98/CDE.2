@@ -3,8 +3,8 @@ import { linkedPairs, saved } from './bubbles'
 import { tab } from './tabs'
 
 /*
- * Check on the zoning sheet: the project's edges drawn from the room under the hand and the room
- * selected, gone once the two rooms share a door's width of wall, and in the Openings step once a
+ * Show connections on the zoning sheet: the project's edges drawn from the room under the hand and the room
+ * selected, gone once the two rooms share a door's width of wall, and in the Openings tab once a
  * door drawing the edge is placed; and the question a door asks between two rooms with no edge.
  */
 
@@ -77,7 +77,7 @@ async function besideOf(page: Page, id: string, of: string) {
   )
 }
 
-const check = (page: Page) => page.getByRole('button', { name: 'Check', exact: true })
+const check = (page: Page) => page.getByRole('button', { name: 'Show connections', exact: true })
 const sentence = (page: Page) => page.locator('.say')
 const line = (page: Page, a: string, b: string) =>
   page.locator(`svg.sheet [data-check-line="${a} ${b}"]`)
@@ -86,7 +86,7 @@ const line = (page: Page, a: string, b: string) =>
 async function openSheet(page: Page) {
   await page.goto('/')
   await page.getByRole('button', { name: /rebuild program from household/i }).click()
-  await tab(page, 'Sheet').click()
+  await tab(page, 'Zoning and 3D').click()
   await page.locator('svg.sheet').waitFor()
 }
 
@@ -96,7 +96,7 @@ async function hover(page: Page, id: string) {
   await page.mouse.move(at.x, at.y)
 }
 
-test('Check is off by default; on, a hovered room draws faint lines to its rooms, placed or in the program', async ({
+test('Show connections is off by default; on, a hovered room draws faint lines to its rooms, placed or in the program', async ({
   page,
 }) => {
   await openSheet(page)
@@ -116,7 +116,7 @@ test('Check is off by default; on, a hovered room draws faint lines to its rooms
   await expect(line(page, dining, kitchen)).toHaveClass(/check-line/)
   await expect(line(page, dining, kitchen)).not.toHaveClass(/bold/)
   await expect(page.locator(`[data-tray-line="${dining}-${family}"]`)).toHaveCount(1)
-  await expect(sentence(page)).toContainText(/Check \d+ connections? not ready/)
+  await expect(sentence(page)).toContainText(/Connections \d+ not ready/)
 
   await check(page).click()
   await expect(page.locator('svg.sheet .check-line')).toHaveCount(0)
@@ -141,7 +141,7 @@ test('a selected room draws bold lines to its placed rooms, and a line goes once
   await expect(line(page, dining, kitchen)).toHaveCount(0)
 })
 
-/** Two rooms side by side, and the Openings step with a door armed. */
+/** Two rooms side by side, and the Openings tab with a door armed. */
 async function sideBySide(page: Page, left: string, right: string, opened = false) {
   if (!opened) await openSheet(page)
   const a = await idOf(page, left)
@@ -149,7 +149,7 @@ async function sideBySide(page: Page, left: string, right: string, opened = fals
   await place(page, a, 7, 7)
   await place(page, b, 7, 17)
   await besideOf(page, b, a)
-  await page.getByRole('button', { name: 'Openings', exact: true }).click()
+  await tab(page, 'Openings').click()
   await page.locator('.grp.place').getByRole('button', { name: 'Door', exact: true }).click()
   const box = await boxOf(page, a)
   const other = await boxOf(page, b)
@@ -224,7 +224,7 @@ test('a door joining a pair kept apart is crossed, and both rooms outlined where
     .getByRole('button', { name: 'Keep apart' })
     .click()
   await matrix.getByRole('button', { name: 'Close' }).click()
-  await tab(page, 'Sheet').click()
+  await tab(page, 'Zoning and 3D').click()
   await page.locator('svg.sheet').waitFor()
 
   const { a: dining, b: kitchen, wall } = await sideBySide(page, 'Dining Room', 'Kitchen', true)

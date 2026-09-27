@@ -1304,19 +1304,7 @@ body:has(main.stage-sheet) {
   color: var(--panel);
 }
 
-/* ---------- the Openings step: the doors, and what the step hides ---------- */
-
-.sheet-stage .tools .steps button {
-  min-height: 30px;
-  padding: 5px 14px;
-  font-weight: 600;
-}
-
-.sheet-stage .tools .steps button.on {
-  background: var(--ink);
-  color: var(--paper);
-  border-color: var(--ink);
-}
+/* ---------- the Openings tab: the doors, and what the tab hides ---------- */
 
 .sheet-stage .tools .grp.place button {
   font-weight: 500;

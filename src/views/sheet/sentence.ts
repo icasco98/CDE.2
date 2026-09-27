@@ -161,14 +161,12 @@ export function openingsSentence(read: Report, state: OpeningsState): Part[] {
       },
       ...walkParts(read),
     ]
-  const leaves = 'Zoning (Z) leaves the step'
   if (!state.armed)
     return [
       {
         lead,
         text: `click near a door to select it, drag to slide it · arm a type in the bar to place doors`,
       },
-      { text: leaves },
       ...walkParts(read),
     ]
   if (state.armed === 'open')
@@ -177,7 +175,6 @@ export function openingsSentence(read: Report, state: OpeningsState): Part[] {
         lead,
         text: 'click a wall shared with a neighbour; the whole stretch the two share is opened, never past a corner · Esc puts the tool down',
       },
-      { text: leaves },
       ...walkParts(read),
     ]
   const caught = state.hover?.why
@@ -196,7 +193,6 @@ export function openingsSentence(read: Report, state: OpeningsState): Part[] {
     },
     ...(state.hover?.why ? [{ text: state.hover.why, bad: true }] : []),
     { text: 'click near a door to select it · Esc puts the type down' },
-    { text: leaves },
     ...walkParts(read),
   ]
 }

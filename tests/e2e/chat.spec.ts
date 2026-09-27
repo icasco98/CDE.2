@@ -123,7 +123,10 @@ test.describe('the assistant on the sheet', () => {
     const bare = await browser.newPage()
     await memoryReader(bare)
     await bare.goto('/')
-    await bare.locator('nav.tabs').getByRole('button', { name: 'Sheet', exact: true }).click()
+    await bare
+      .locator('nav.tabs')
+      .getByRole('button', { name: 'Zoning and 3D', exact: true })
+      .click()
     await bare.locator('svg.sheet').waitFor()
     await chatLine(bare).fill('the diwaniya goes on the corner')
     await bare.locator('.chat').getByRole('button', { name: 'Say' }).click()

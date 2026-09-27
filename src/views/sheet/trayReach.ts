@@ -1,5 +1,5 @@
 /**
- * Where each of Check's lines to a room still in the program ends, in the pixels of the box both the
+ * Where each of Show connections' lines to a room still in the program ends, in the pixels of the box both the
  * sheet and the program stand in: at the room's block when the program's list shows it, else at a
  * tag on the list's top or bottom edge that points the way to it.
  */
