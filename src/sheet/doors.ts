@@ -102,10 +102,26 @@ export function doorAcross(r: Room, pl: Place, sheet: Sheet, storey: number): Ro
  */
 type Stretch = { seg: Seg; L: number; u: Point; lo: number; hi: number; fromLo: boolean }
 
-function stretchesOf(r: Room, o: Room): Stretch[] {
-  const walls = worldWalls(o)
+/** A room's walls in its own frame and in the world, read once per room when many doors need them. */
+type Lines = { own: (r: Room) => Seg[]; world: (r: Room) => Seg[] }
+
+const direct: Lines = { own: outlineOf, world: worldWalls }
+
+function linesOnce(): Lines {
+  const own = new Map<Room, Seg[]>()
+  const world = new Map<Room, Seg[]>()
+  const once = (seen: Map<Room, Seg[]>, read: (r: Room) => Seg[]) => (r: Room) => {
+    let segs = seen.get(r)
+    if (!segs) seen.set(r, (segs = read(r)))
+    return segs
+  }
+  return { own: once(own, outlineOf), world: once(world, worldWalls) }
+}
+
+function stretchesOf(r: Room, o: Room, lines: Lines = direct): Stretch[] {
+  const walls = lines.world(o)
   const out: Stretch[] = []
-  for (const seg of outlineOf(r)) {
+  for (const seg of lines.own(r)) {
     const A = toWorld(r, seg.a[0], seg.a[1])
     const B = toWorld(r, seg.b[0], seg.b[1])
     const L = Math.hypot(B[0] - A[0], B[1] - A[1])
@@ -165,8 +181,13 @@ const holds = (s: Stretch, d: { type: DoorType; w: number }) => {
  * The run of wall two rooms share that a door between them stands on: the longest on the side it
  * was placed on that still holds it, else the longest of all.
  */
-function stretchFor(r: Room, o: Room, d: Pick<Door, 'side' | 'type' | 'w'>): Stretch | null {
-  const all = stretchesOf(r, o)
+function stretchFor(
+  r: Room,
+  o: Room,
+  d: Pick<Door, 'side' | 'type' | 'w'>,
+  lines: Lines = direct,
+): Stretch | null {
+  const all = stretchesOf(r, o, lines)
   const onSide = d.side ? all.filter((s) => sideOf(s.seg.n) === d.side && holds(s, d)) : []
   return longest(onSide) ?? longest(all)
 }
@@ -202,8 +223,7 @@ function placeOn(s: Stretch, t: number, w: number): Place {
 }
 
 /** Whether every part of a door's gap still opens onto the outside: no room stands across it. */
-function facesOutside(r: Room, pl: Place, w: number, sheet: Sheet, storey: number): boolean {
-  const onStorey = placedRooms(sheet, storey)
+function facesOutside(r: Room, pl: Place, w: number, onStorey: Room[]): boolean {
   const n = worldN(r, pl.n)
   const reach = Math.max(0, w / 2 - 0.05)
   return [-reach, 0, reach].every((off) => {
@@ -217,15 +237,22 @@ function facesOutside(r: Room, pl: Place, w: number, sheet: Sheet, storey: numbe
  * rooms, on the wall they share when they share one the door fits; to the outside, on its own
  * storey, on the wall it was placed on while that wall still faces outside.
  */
-function spotOf(sheet: Sheet, storey: number, r: Room, d: Door): { pl: Place; w: number } | null {
+function spotOf(
+  sheet: Sheet,
+  storey: number,
+  r: Room,
+  d: Door,
+  onStorey: Room[] = placedRooms(sheet, storey),
+  lines: Lines = direct,
+): { pl: Place; w: number } | null {
   if (d.to === OUTSIDE) {
     if (!d.at || storeyOf(r) !== storey) return null
     const pl = wallNear(r, d.at, d.w)
-    return pl && pl.fits && facesOutside(r, pl, d.w, sheet, storey) ? { pl, w: d.w } : null
+    return pl && pl.fits && facesOutside(r, pl, d.w, onStorey) ? { pl, w: d.w } : null
   }
-  const o = placedRooms(sheet, storey).find((each) => each.id === d.to)
+  const o = onStorey.find((each) => each.id === d.to)
   if (!o || isOpen(o)) return null
-  const s = stretchFor(r, o, d)
+  const s = stretchFor(r, o, d, lines)
   if (!s || !holds(s, d)) return null
   const w = widthOn(d, s)
   return { pl: placeOn(s, middleOf(s, d.along ?? 0.5), w), w }
@@ -257,9 +284,11 @@ export type Drawn = { room: Room; door: Door; pl: Place; w: number }
 /** Every door drawn on a storey. */
 export function drawnDoors(sheet: Sheet, storey: number): Drawn[] {
   const out: Drawn[] = []
-  for (const room of placedRooms(sheet, storey))
+  const onStorey = placedRooms(sheet, storey)
+  const lines = linesOnce()
+  for (const room of onStorey)
     for (const door of doorsOf(room)) {
-      const spot = spotOf(sheet, storey, room, door)
+      const spot = spotOf(sheet, storey, room, door, onStorey, lines)
       if (spot) out.push({ room, door, ...spot })
     }
   return out
