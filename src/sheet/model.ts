@@ -1,6 +1,7 @@
 /** The zoning sheet's model: a room, a door, the settings, and the sheet they make. */
 
 import { DEFAULT_PLOT, MAX_STOREYS, STOREY_NAME, type PlotSpec } from './plot'
+import type { WallName } from './against'
 
 export type Point = [number, number]
 export type Poly = Point[]
@@ -9,14 +10,27 @@ export type Category = 'reception' | 'shared' | 'private' | 'service' | 'circula
 
 export type DoorType = 'door' | 'double' | 'sliding' | 'opening' | 'open' | 'street' | 'street2'
 
-/** A door is the drawing of an edge on a wall of its room: `at` is a point in the room's frame. */
+/** The project's word for the outside, the far end of a door that leads out. */
+export const OUTSIDE = 'EXTERIOR'
+
+/**
+ * A door is the drawing of an edge: it is held by one room of the edge, `to` is the other end (a room
+ * or `OUTSIDE`), both set when it is placed. Between two rooms it stands on the wall they share on
+ * `side` of its room (in the room's own frame), `along` of the way along it, or on the longest wall
+ * they share when that side shares none; to the outside it stands at `at`, a point of its room's frame on the
+ * outside wall it was placed on. Where that wall is not there it is not drawn, and nothing else.
+ */
 export type Door = {
   id: string
+  edge: string
+  to: string
   type: DoorType
   w: number
-  at: Point
   flip: boolean
   hinge: boolean
+  side?: WallName
+  along?: number
+  at?: Point
 }
 
 /**
@@ -24,7 +38,7 @@ export type Door = {
  * the frame's centre, with `pieces` — convex polygons in that frame — when carving or drawing has
  * left it something other than the whole rectangle. `lost` is how much of the frame a cut took, so
  * Restore shape can give it back. `placedAt` is a clock tick, so the newest room gives way in gap
- * closing. `extra` marks a room the sheet itself made, `fixed` one that never moves: a court.
+ * closing. `fixed` marks one that never moves: a court.
  */
 export type Room = {
   id: string
@@ -48,10 +62,7 @@ export type Room = {
   labelAt?: Point
   placedAt?: number
   placed: boolean
-  extra?: boolean
   fixed?: boolean
-  /** Kept from a saved sheet that the project's program does not name: it is the sheet's own. */
-  aside?: boolean
 }
 
 export type LandingRule = 'wait' | 'push'

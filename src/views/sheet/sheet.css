@@ -160,6 +160,7 @@ body:has(main.stage-sheet) {
 }
 
 .sheet-stage .body-row {
+  position: relative;
   display: grid;
   grid-template-columns: 210px minmax(320px, 1fr) 300px;
   gap: 14px;
@@ -237,12 +238,6 @@ body:has(main.stage-sheet) {
 
 .sheet-stage .tray .item.hollow {
   border-style: dashed;
-}
-
-/* A room the brief does not name: on the sheet, but not one of the rooms it asks for. */
-.sheet-stage .tray .item.aside {
-  border-style: dotted;
-  opacity: 0.6;
 }
 
 .sheet-stage .tray .item.placed {
@@ -1309,19 +1304,7 @@ body:has(main.stage-sheet) {
   color: var(--panel);
 }
 
-/* ---------- the Openings step: the doors, and what the step hides ---------- */
-
-.sheet-stage .tools .steps button {
-  min-height: 30px;
-  padding: 5px 14px;
-  font-weight: 600;
-}
-
-.sheet-stage .tools .steps button.on {
-  background: var(--ink);
-  color: var(--paper);
-  border-color: var(--ink);
-}
+/* ---------- the Openings tab: the doors, and what the tab hides ---------- */
 
 .sheet-stage .tools .grp.place button {
   font-weight: 500;
@@ -1522,20 +1505,95 @@ body:has(main.stage-sheet) {
 }
 
 /* A door whose wall moved away: the ring says where it was left, to put back or remove. */
-.sheet-stage .door-lost {
-  fill: transparent;
-  stroke: var(--warn);
+/* Check: an edge not yet ready or met, dashed from the room under the hand, bold from the one selected. */
+.sheet-stage .check-line {
+  stroke: var(--accent);
   stroke-width: 0.06;
-  stroke-dasharray: 0.1 0.08;
+  stroke-dasharray: 0.3 0.22;
+  stroke-opacity: 0.55;
   pointer-events: none;
 }
 
-.sheet-stage svg.sheet.doormode .door-lost {
-  pointer-events: auto;
+.sheet-stage .check-line.bold {
+  stroke-width: 0.13;
+  stroke-opacity: 0.95;
+}
+
+.sheet-stage .apart-door {
+  stroke: #c62828;
+  stroke-width: 0.12;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.sheet-stage .room.apart-through path.wall {
+  stroke: #c62828;
+  stroke-width: 0.16;
+}
+
+/* The lines to rooms still in the program run over the program and the sheet alike. */
+.sheet-stage .tray-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.sheet-stage .tray .item.check-linked {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+/* A room of the program scrolled out of the list: the line ends here, and a click brings it back. */
+.sheet-stage .tray-tag {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 0;
+  max-width: 190px;
+  padding: 0 8px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--accent);
+  font:
+    11px 'Archivo',
+    sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   cursor: pointer;
 }
 
-.sheet-stage .door-lost.selected {
-  stroke: var(--select);
-  stroke-width: 0.1;
+.sheet-stage .tray-lines line {
+  stroke: var(--accent);
+  stroke-width: 1.5px;
+  stroke-dasharray: 6 5;
+  stroke-opacity: 0.55;
+}
+
+.sheet-stage .door-offer {
+  position: absolute;
+  z-index: 6;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--ink);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+}
+
+.sheet-stage .door-offer p {
+  margin: 0 0 6px;
+}
+
+.sheet-stage .door-offer div {
+  display: flex;
+  gap: 6px;
 }

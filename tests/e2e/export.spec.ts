@@ -3,17 +3,22 @@ import { exported, openSheet, textOf } from './exporting'
 
 test('the two buttons hand over a PDF and a DXF of the sheet as it stands', async ({ page }) => {
   await openSheet(page)
-  // One zoning tool, not two: Requirements, Bubbles and the Sheet the export is taken from.
-  await expect(page.locator('nav.tabs button')).toHaveText(['Requirements', 'Bubbles', 'Sheet'])
+  // One zoning tool, not two: the plan tabs share the sheet the export is taken from.
+  await expect(page.locator('nav.tabs button')).toHaveText([
+    'Requirements',
+    'Bubbles',
+    'Zoning and 3D',
+    'Openings',
+  ])
   const rooms = await page.locator('svg.sheet g.room[data-room]:not(.under)').count()
   expect(rooms).toBeGreaterThan(4)
 
   const pdf = await exported(page, 'Export PDF')
-  expect(pdf.suggestedFilename()).toBe('untitled.pdf')
+  expect(pdf.suggestedFilename()).toBe('test-plan.pdf')
   expect((await textOf(pdf)).startsWith('%PDF-')).toBe(true)
 
   const dxf = await exported(page, 'Export DXF')
-  expect(dxf.suggestedFilename()).toBe('untitled.dxf')
+  expect(dxf.suggestedFilename()).toBe('test-plan.dxf')
   const drawing = await textOf(dxf)
   expect(drawing.startsWith('0\nSECTION')).toBe(true)
   expect(drawing.endsWith('0\nEOF\n')).toBe(true)

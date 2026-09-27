@@ -233,7 +233,7 @@ export const TABS: Tab[] = [
       {
         kind: 'note',
         label: 'Rules that are not settings',
-        hint: 'A wall on the plot boundary takes no door. A shared wall takes one door for both rooms. Open wall takes out only the stretch two rooms share, never past a corner.',
+        hint: 'A wall on the plot boundary takes no door. A door on a shared wall serves both rooms; two doors never overlap on one wall. Open wall takes out only the stretch two rooms share, never past a corner.',
       },
     ],
   },

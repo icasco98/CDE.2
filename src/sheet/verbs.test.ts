@@ -5,10 +5,10 @@ import { VERB_NAMES, type Deed } from './verbs'
 import { areaOf, r2 } from './geometry'
 import type { Desk } from './desk'
 import { doorsOf, sheetOf, type Room, type Sheet } from './model'
-import { sampleSheet } from './sample'
+import { fixtureSheet } from './fixture'
 
 /** A desk over one sheet in hand, as the chat column keeps one while a message runs. */
-function desk(start: Sheet = sampleSheet()) {
+function desk(start: Sheet = fixtureSheet(), edges = new Map<string, string>()) {
   let sheet = start
   const said: string[] = []
   const at: Desk = {
@@ -20,6 +20,7 @@ function desk(start: Sheet = sampleSheet()) {
     say: (line) => said.push(line),
     note: () => {},
     request: () => {},
+    edgeBetween: (a, b) => edges.get([a, b].sort().join('|')) ?? null,
   }
   // one list of tools per desk, as one message has one, so a take-back finds this message's batches
   return { at, said, tools: layoutTools(at, 0), sheet: () => sheet }
@@ -326,12 +327,16 @@ describe('the one command carrying the verbs', () => {
   })
 
   it('puts a door on a named wall, and refuses one on the boundary', () => {
-    const at = table(quiet([room({ x: 6, y: 6, w: 4, h: 3 })], { grid: 0.25, snapDist: 0.4 }))
+    const outside = new Map([['EXTERIOR|a', 'e1']])
+    const at = table(
+      quiet([room({ x: 6, y: 6, w: 4, h: 3 })], { grid: 0.25, snapDist: 0.4 }),
+      outside,
+    )
     expect(one(at, { verb: 'door', room: 'A', wall: 'north', along: 0.5 })).toBe(
       'door · Door on A, middle of the wall',
     )
-    expect(doorsOf(roomOf(at.sheet(), 'A')).length).toBe(1)
-    const edge = table(quiet([room({ x: 0, y: 6, w: 4, h: 3 })]))
+    expect(doorsOf(roomOf(at.sheet(), 'A'))).toMatchObject([{ edge: 'e1', to: 'EXTERIOR' }])
+    const edge = table(quiet([room({ x: 0, y: 6, w: 4, h: 3 })]), outside)
     expect(one(edge, { verb: 'door', room: 'A', wall: 'west', along: 0.5 })).toBe(
       'door refused · A wall on the boundary takes no door.',
     )
@@ -343,18 +348,30 @@ describe('the one command carrying the verbs', () => {
     )
   })
 
+  it('places no door where the project holds no connection', () => {
+    const at = table(quiet([room({ x: 6, y: 6, w: 4, h: 3 })]))
+    expect(one(at, { verb: 'door', room: 'A', wall: 'north', along: 0.5 })).toBe(
+      'door refused · A and the outside have no connection; a door draws one, so connect them first',
+    )
+    expect(doorsOf(roomOf(at.sheet(), 'A'))).toEqual([])
+  })
+
   it('opens a wall two rooms share, and refuses a wall that meets no room', () => {
     const at = table(
       quiet([
         room({ x: 6, y: 6, w: 4, h: 3 }),
         room({ id: 'b', name: 'B', x: 10, y: 6, w: 4, h: 3 }),
       ]),
+      new Map([['a|b', 'e2']]),
     )
     expect(one(at, { verb: 'open_wall', room: 'A', wall: 'east', along: 0.5 })).toBe(
       'door · A: wall opened',
     )
+    expect(doorsOf(roomOf(at.sheet(), 'A'))).toMatchObject([
+      { edge: 'e2', to: 'b', type: 'open', w: 2.9, along: 0.5 },
+    ])
     expect(one(at, { verb: 'open_wall', room: 'A', wall: 'north', along: 0.5 })).toBe(
-      'door refused · That wall meets no room. Only a wall shared with a neighbour can be opened.',
+      'door refused · Only a wall shared with a neighbour can be opened.',
     )
   })
 

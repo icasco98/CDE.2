@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { MOVES_PER_CALL, layoutTools, sheetRead, type SheetRead, type StoreyRead } from './agent'
 import { roomNamed, storeyNamed, type Desk } from './desk'
-import { sampleSheet } from './sample'
+import { fixtureSheet } from './fixture'
 import { DEFAULT_PLOT } from './plot'
 import { setStorey } from './actions'
 import type { Changed } from './changes'
 import type { Sheet } from './model'
 
 /** A desk over one sheet in hand, as the chat column keeps one while a message runs. */
-function desk(start: Sheet = sampleSheet()) {
+function desk(start: Sheet = fixtureSheet()) {
   let sheet = start
   const said: string[] = []
   const notes: string[] = []
@@ -22,6 +22,7 @@ function desk(start: Sheet = sampleSheet()) {
     say: (line) => said.push(line),
     note: (text) => notes.push(text),
     request: (text) => asked.push(text),
+    edgeBetween: () => null,
   }
   return { at, said, notes, asked, sheet: () => sheet }
 }
@@ -88,7 +89,7 @@ describe('the tools the architect is given', () => {
   })
 
   it('says how the rooms stand to each other on the embedded sheet', () => {
-    const read = sheetRead(sampleSheet(), 0)
+    const read = sheetRead(fixtureSheet(), 0)
     // the stair stands along the whole back of the family living: 6.25 m of shared wall
     expect(ground(read).sharing[0]).toEqual({ rooms: ['Stair', 'Family Living'], metres: 6.25 })
     expect(
@@ -137,7 +138,7 @@ describe('the tools the architect is given', () => {
   })
 
   it('slides the room lower in the program aside instead when the sheet is set to push', () => {
-    const table = desk(sampleSheet({ rule: 'push' }))
+    const table = desk(fixtureSheet({ rule: 'push' }))
     const out = toolNamed(layoutTools(table.at, 0), 'place_rooms').execute({
       moves: [{ name: 'Bedroom', x: 6, y: 5 }],
     }) as Done
@@ -200,7 +201,7 @@ describe('the tools the architect is given', () => {
   })
 
   it('finds a room by its name, the start of it, or its kind', () => {
-    const sheet = sampleSheet()
+    const sheet = fixtureSheet()
     expect(roomNamed(sheet, 'diwaniya')!.name).toBe('Diwaniya')
     expect(roomNamed(sheet, 'Kitch')!.name).toBe('Kitchen')
     expect(roomNamed(sheet, 'entry-foyer')!.name).toBe('Entry')

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { alongNamed, standAgainst, wallNamed, type Standing } from './against'
-import { sampleSheet } from './sample'
+import { fixtureSheet } from './fixture'
 import { setAngle } from './geometry'
 import { cloneRoom, type Room } from './model'
 import { meetingOf } from './meetings'
 
-const roomIn = (name: string): Room => sampleSheet().rooms.find((r) => r.name === name)!
+const roomIn = (name: string): Room => fixtureSheet().rooms.find((r) => r.name === name)!
 
 const stood = (
   target: Room,

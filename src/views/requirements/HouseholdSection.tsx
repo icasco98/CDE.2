@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { area } from '../../geometry'
 import type { Household, Project } from '../../model'
-import { defaultProgram } from '../../rulebook'
+import { buildableAreaOf, proposeProgram } from '../../rulebook'
 import { connectDefaults } from '../../app/defaultLinks'
-import { openBubbles } from '../../app/openBubbles'
 import { session } from '../../app/session'
 import { CheckField, NumberField, Section } from './fields'
 import { refusalOf } from './refusals'
@@ -11,20 +10,33 @@ import { refusalOf } from './refusals'
 export function HouseholdSection({ project }: { project: Project }) {
   const [changed, setChanged] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
+  const [reasons, setReasons] = useState<readonly string[]>([])
   const household = project.household
 
   const change = (patch: Partial<Household>): void => {
     setProblem(refusalOf(session.actions.setHousehold({ ...household, ...patch })))
+    setReasons([])
     setChanged(true)
   }
 
+  // The storeys are proposed with the program, each decision said in a sentence under the button.
   const rebuild = (): void => {
+    const proposal = proposeProgram(
+      area(project.plot.polygon),
+      buildableAreaOf(project.plot),
+      household,
+      project.storeys,
+    )
     const refusal = session.transaction(() => {
       for (const room of project.rooms) {
         const removed = session.actions.removeRoom(room.id)
         if (!removed.ok) return removed
       }
-      for (const room of defaultProgram(area(project.plot.polygon), household, project.storeys)) {
+      while (session.getState().storeys < proposal.storeys) {
+        const grown = session.actions.addStorey()
+        if (!grown.ok) return grown
+      }
+      for (const room of proposal.rooms) {
         const added = session.actions.addRoom({
           type: room.type,
           name: room.name,
@@ -35,13 +47,11 @@ export function HouseholdSection({ project }: { project: Project }) {
         if (!added.ok) return added
       }
       // The rulebook's default connections come with the program, as edges: the designer removes
-      // what this house does not want rather than accepting one offer at a time. Then every room
-      // is opened where the first arrangement puts it, so the program is on the plot at once.
-      const linked = connectDefaults(session)
-      if (linked && !linked.ok) return linked
-      return openBubbles(session)
+      // what this house does not want rather than accepting one offer at a time.
+      return connectDefaults(session)
     })
     setProblem(refusalOf(refusal))
+    setReasons(refusal.ok ? proposal.reasons : [])
     setChanged(false)
   }
 
@@ -90,6 +100,13 @@ export function HouseholdSection({ project }: { project: Project }) {
           <p className="note">The household changed. Rebuild the program to follow it.</p>
         ) : null}
       </div>
+      {reasons.length > 0 ? (
+        <ul className="note proposal" aria-label="Why these storeys">
+          {reasons.map((reason) => (
+            <li key={reason}>{reason}</li>
+          ))}
+        </ul>
+      ) : null}
       {problem ? <p className="problem">{problem}</p> : null}
     </Section>
   )

@@ -16,7 +16,7 @@ import {
   withRequest,
   type Memory,
 } from './memory'
-import { sampleSheet } from './sample'
+import { fixtureSheet } from './fixture'
 
 const at = (k: number) => `2026-09-18T${String(10 + k).padStart(2, '0')}:05:00.000Z`
 
@@ -31,7 +31,7 @@ const filled = (lines: number): Memory => {
 
 describe('the assistant memory', () => {
   it('keeps at most five plans, the oldest dropped', () => {
-    const sheet = sampleSheet()
+    const sheet = fixtureSheet()
     let memory = newMemory()
     for (let k = 0; k < PLANS_KEPT + 3; k++) memory = withPlan(memory, sheet, 0, at(k))
     expect(memory.plans).toHaveLength(PLANS_KEPT)
@@ -39,7 +39,7 @@ describe('the assistant memory', () => {
   })
 
   it('keeps a plan as room names with their frames', () => {
-    const rooms = planRooms(sampleSheet(), 0)
+    const rooms = planRooms(fixtureSheet(), 0)
     const diwaniya = rooms.find((r) => r.name === 'Diwaniya')
     expect(diwaniya).toBeDefined()
     expect(diwaniya!.w * diwaniya!.h).toBeGreaterThan(35)
@@ -98,7 +98,7 @@ describe('the assistant memory', () => {
   it('reads back what it wrote and leaves out what it cannot read', () => {
     const memory = withPlan(
       withNote(withFeedback(newMemory(), 'go on', at(0)), 'north is 25°', at(1)),
-      sampleSheet(),
+      fixtureSheet(),
       0,
       at(2),
     )

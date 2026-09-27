@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { fixtureSheet } from '../../sheet/fixture'
 import { errorSaid, runMessage } from './agentRun'
 import {
   NOTHING_PLACED,
   newMemory,
-  sampleSheet,
   type Change,
   type Desk,
   type Result,
@@ -18,7 +18,7 @@ function desk(): {
   notes: string[]
   asked: string[]
 } {
-  let sheet = sampleSheet()
+  let sheet = fixtureSheet()
   const said: string[] = []
   const notes: string[] = []
   const asked: string[] = []
@@ -32,6 +32,7 @@ function desk(): {
       say: (line) => said.push(line),
       note: (text) => notes.push(text),
       request: (text) => asked.push(text),
+      edgeBetween: () => null,
     },
     sheet: () => sheet,
     said,

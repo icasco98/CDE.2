@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { seedPlan } from './plan'
 
 /**
  * The storeys and the mass, on the embedded sample. Each case is one thing an architect does, and
@@ -14,8 +15,9 @@ const DIWANIYA = 'r2'
 test.use({ viewport: { width: 1600, height: 1100 } })
 
 async function openSheet(page: Page): Promise<void> {
+  await seedPlan(page)
   await page.goto('/')
-  await page.locator('nav.tabs').getByRole('button', { name: 'Sheet', exact: true }).click()
+  await page.locator('nav.tabs').getByRole('button', { name: 'Zoning and 3D', exact: true }).click()
   await page.locator('svg.sheet').waitFor()
   await page.locator('.mass-svg .m-face').first().waitFor()
 }

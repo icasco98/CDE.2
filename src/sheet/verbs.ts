@@ -31,7 +31,9 @@ import {
 import { wallNamed, wallOn, type WallName } from './against'
 import { fmt, overlapCells, r2, worldPieces } from './geometry'
 import { roomNamed, storeyAsked, type Desk } from './desk'
+import { doorAcross, doorAt } from './doors'
 import {
+  OUTSIDE,
   acrossStoreys,
   heightCap,
   storeyCountOf,
@@ -385,23 +387,47 @@ const VERBS: Record<string, Doing> = {
 
   restore: onOne('restore', (r, sheet, storey) => restore(sheet, { id: r.id, storey })),
 
-  door: onOne('door', (r, sheet, storey, deed) => {
+  door: (desk, storey, deed) => {
+    const got = onSheet(desk.read(), storey, deed.room)
+    if (stuck(got)) return refused('door', got.why)
+    const r = got.r
+    const sheet = desk.read()
     const wall = wallNamed(deed.wall)
-    if (!wall) return 'the wall is north, south, east or west'
+    if (!wall) return refused('door', 'the wall is north, south, east or west')
     const type = doorTypeNamed(deed.type)
-    if (!type) return `${named(deed.type)} is no door: ${DOOR_TYPES.join(', ')}`
+    if (!type) return refused('door', `${named(deed.type)} is no door: ${DOOR_TYPES.join(', ')}`)
     const along = num(deed.along)
     const spot = doorSpot(r, wall, along === null ? 0.5 : along)
-    if (!spot) return `${r.name} shows no ${wall} wall`
+    if (!spot) return refused('door', `${r.name} shows no ${wall} wall`)
     const width = num(deed.width)
-    return addDoor(sheet, {
-      x: spot[0],
-      y: spot[1],
-      type,
-      storey,
-      ...(width === null ? {} : { width }),
-    })
-  }),
+    // A door draws an edge the project holds; the room across is read only to name that edge.
+    const hit = doorAt(spot[0], spot[1], type === 'open' ? 0.6 : 0.9, sheet, storey, r)
+    const across = hit ? (doorAcross(r, hit.pl, sheet, storey)?.id ?? OUTSIDE) : OUTSIDE
+    if (type === 'open' && across === OUTSIDE)
+      return refused('door', 'Only a wall shared with a neighbour can be opened.')
+    const edge = desk.edgeBetween(r.id, across)
+    if (!edge) {
+      const other = sheet.rooms.find((o) => o.id === across)?.name ?? 'the outside'
+      return refused(
+        'door',
+        `${r.name} and ${other} have no connection; a door draws one, so connect them first`,
+      )
+    }
+    return done(
+      'door',
+      desk.write(
+        addDoor(sheet, {
+          x: spot[0],
+          y: spot[1],
+          type,
+          storey,
+          edge,
+          to: across,
+          ...(width === null ? {} : { width }),
+        }),
+      ),
+    )
+  },
 
   open_wall: (desk, storey, deed) => VERBS.door!(desk, storey, { ...deed, type: 'open' }),
 

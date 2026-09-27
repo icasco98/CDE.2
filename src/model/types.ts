@@ -3,22 +3,15 @@ import type { Footprint, Point, Polygon } from '../geometry/types'
 export const EXTERIOR = 'EXTERIOR'
 
 /** The document format; a bump needs a migration in persistence.ts. */
-export const PROJECT_VERSION = 7
-
-/** The three families of forces the tool balances, named in rulebook/forces.md. */
-export const families = ['userRequirements', 'siteConstraints', 'environmentalFactors'] as const
-export type Family = (typeof families)[number]
+export const PROJECT_VERSION = 10
 
 export type EdgeKind = 'door' | 'open' | 'main-door'
 
 /** A room id, or the singleton outside. */
 export type Endpoint = string
 
-/**
- * Where a bubble stands, in the plot's own metres, the frame a footprint uses; and for a
- * corridor, the way it lies, in radians, which is its own to keep once it has one.
- */
-export type Bubble = { readonly x: number; readonly y: number; readonly angle?: number }
+/** The hand's nudge of a bubble from where the diagram's arrangement puts it, in the diagram's units. */
+export type Bubble = { readonly x: number; readonly y: number }
 
 /** Where a door was last drawn on a wall; losing it changes nothing. */
 export type WallHint = { readonly at: Point }
@@ -31,18 +24,6 @@ export type Plot = {
   readonly north: number
   /** Indices of the polygon sides that face a street, side `i` running from vertex `i` to `i + 1`. */
   readonly street: readonly number[]
-}
-
-/** Where the garden goes: the boundary away from the service street, one of the sides, or nowhere. */
-export type Garden = 'rear' | 'side' | 'none'
-
-/**
- * The two site questions the rulebook leaves to the client rather than to the table: S4, whether
- * the diwaniya addresses the corner where two streets meet, and S5, where the garden goes.
- */
-export type Site = {
-  readonly diwaniyaAtCorner: boolean
-  readonly garden: Garden
 }
 
 /** Who the house is for; the program screen reads the rooms it implies from it. */
@@ -78,8 +59,24 @@ export type Edge = {
   readonly hint?: WallHint
 }
 
-/** One number per force; the forces themselves are not defined yet. */
-export type Weights = Readonly<Record<string, number>>
+/**
+ * Two rooms the program wants apart: no edge between them, and neither reached only through the
+ * other. It is not an edge and is never drawn as a door; it warns and refuses nothing.
+ */
+export type Apart = {
+  readonly id: string
+  readonly a: string
+  readonly b: string
+}
+
+/**
+ * A connection the rulebook suggested and the person took out: the pair it joined, a room id or
+ * `EXTERIOR` at either end. It is kept so the suggestion is not made again in this project.
+ */
+export type Declined = {
+  readonly a: Endpoint
+  readonly b: Endpoint
+}
 
 export type Actor = {
   readonly id: string
@@ -96,12 +93,11 @@ export type Project = {
   /** The floor-to-floor height of each storey in metres, one entry per storey. */
   readonly heights: readonly number[]
   readonly plot: Plot
-  /** The client's two answers on this project, which S4 and S5 read. */
-  readonly site: Site
   readonly household: Household
   readonly rooms: readonly Room[]
   readonly edges: readonly Edge[]
-  readonly weights: Weights
+  readonly apart: readonly Apart[]
+  readonly declined: readonly Declined[]
   readonly actors: readonly Actor[]
   readonly version: number
 }

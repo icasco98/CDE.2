@@ -52,7 +52,6 @@ export function Shell() {
   const messages = useMessages()
   const [stageId, setStageId] = useState('requirements')
   const stage = stages.find((entry) => entry.id === stageId)
-  const Screen = stage?.component ?? (() => <NotYet stage="Requirements" />)
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
@@ -103,7 +102,7 @@ export function Shell() {
             >
               Save file
             </button>
-            {stageId === 'sheet' && <ExportMenu title={project.name} />}
+            {stage?.plan && <ExportMenu title={project.name} />}
             <button type="button" onClick={() => session.undo()} disabled={!session.canUndo()}>
               Undo
             </button>
@@ -133,8 +132,8 @@ export function Shell() {
           ))}
         </nav>
       </header>
-      <main className={`stage-${stageId}`}>
-        <Screen />
+      <main className={stage?.plan ? 'stage-sheet' : `stage-${stageId}`}>
+        {stage?.screen(setStageId) ?? <NotYet stage="Requirements" />}
       </main>
       <MessageStack messages={messages} />
     </>

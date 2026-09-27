@@ -201,7 +201,6 @@ export function roomFromPocket(
     y: r6(y),
     angle: 0,
     placed: true,
-    extra: true,
     fixed,
     placedAt,
     pieces: pk.pieces.map((p) => tidy(p.map(([px, py]) => [px - x, py - y] as Point))),

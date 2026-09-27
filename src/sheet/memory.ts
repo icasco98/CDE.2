@@ -100,7 +100,7 @@ export function withRequest(memory: Memory, text: string, at: string): Memory {
 
 export const planRooms = (sheet: Sheet, storey: number): PlanRoom[] =>
   allPlaced(sheet)
-    .filter((r) => storeyOf(r) === storey && !r.extra)
+    .filter((r) => storeyOf(r) === storey)
     .map((r) => ({
       name: r.name,
       x: r2(r.x),

@@ -9,8 +9,7 @@ import {
   areaOf,
   boxCorners,
   centreOfFootprint,
-  doorPlace,
-  doorsOf,
+  drawnDoors,
   loopsOf,
   placedRooms,
   toWorld,
@@ -62,20 +61,16 @@ export type Opening = {
 
 export function openingsOn(sheet: Sheet, storey: number): readonly Opening[] {
   const openings: Opening[] = []
-  for (const room of placedRooms(sheet, storey)) {
-    for (const door of doorsOf(room)) {
-      const place = doorPlace(room, door)
-      if (!place) continue
-      const from = toWorldPoint(room, place.seg.a)
-      const to = toWorldPoint(room, place.seg.b)
-      const run = Math.hypot(to[0] - from[0], to[1] - from[1])
-      if (run < 1e-9) continue
-      openings.push({
-        at: toWorldPoint(room, place.p),
-        along: [(to[0] - from[0]) / run, (to[1] - from[1]) / run],
-        width: door.w,
-      })
-    }
+  for (const { room, pl: place, w } of drawnDoors(sheet, storey)) {
+    const from = toWorldPoint(room, place.seg.a)
+    const to = toWorldPoint(room, place.seg.b)
+    const run = Math.hypot(to[0] - from[0], to[1] - from[1])
+    if (run < 1e-9) continue
+    openings.push({
+      at: toWorldPoint(room, place.p),
+      along: [(to[0] - from[0]) / run, (to[1] - from[1]) / run],
+      width: w,
+    })
   }
   return openings
 }

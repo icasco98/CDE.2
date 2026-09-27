@@ -90,12 +90,15 @@ describe('the table stays inside the model', () => {
 
 describe('the source a person is shown', () => {
   it('is the row the two kinds came from, either way round', () => {
-    expect(connectionSource(EXTERIOR, 'diwaniya', 'door')).toContain('its own street door')
-    expect(connectionSource('diwaniya', EXTERIOR, 'door')).toContain('its own street door')
+    expect(connectionSource(EXTERIOR, 'diwaniya')?.id).toBe('D2')
+    expect(connectionSource('diwaniya', EXTERIOR)?.source).toContain('its own street door')
   })
 
-  it('is empty for a pair the table says nothing about, and for another kind of edge', () => {
-    expect(connectionSource('kitchen', 'master-bedroom', 'door')).toBe('')
-    expect(connectionSource(EXTERIOR, 'diwaniya', 'open')).toBe('')
+  it('stays the row when the edge has been made an opening', () => {
+    expect(connectionSource('dining-room', 'kitchen')?.id).toBe('D12')
+  })
+
+  it('is nothing for a pair the table says nothing about', () => {
+    expect(connectionSource('kitchen', 'master-bedroom')).toBeUndefined()
   })
 })

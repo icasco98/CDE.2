@@ -1,7 +1,7 @@
 /**
- * The Openings step's reading of the sheet: the door under the hand, the doors that lost their wall,
- * what a door is drawn as, and what the sentence says about the one in hand. Nothing here renders
- * and nothing here changes the sheet; the actions do that.
+ * The Openings step's reading of the sheet: the door under the hand, what a door is drawn as, and
+ * what the sentence says about the one in hand. Nothing here renders and nothing here changes the
+ * sheet; the actions do that.
  */
 
 import {
@@ -14,24 +14,13 @@ import {
   type Sheet,
 } from './model'
 import { toWorld } from './geometry'
-import { DOOR, hasHinge, hasSwing, isStreetDoor } from './sample'
-import { doorAcross, doorBlocked, doorPlace, type Place } from './doors'
+import { DOOR, hasHinge, hasSwing, isStreetDoor } from './kinds'
+import { doorBlocked, doorInto, doorSpot, drawnDoors, type Place } from './doors'
 
 /** Which door a click means: the room it belongs to and its id. */
 export type DoorRef = { room: string; id: string }
 
-/** Every door that has lost its wall, so the sentence can count them and the sheet ring them. */
-export function lostDoors(sheet: Sheet, storey: number): { room: Room; door: Door }[] {
-  const out: { room: Room; door: Door }[] = []
-  for (const r of placedRooms(sheet, storey))
-    for (const d of doorsOf(r)) if (!doorPlace(r, d)) out.push({ room: r, door: d })
-  return out
-}
-
-/**
- * The placed door nearest a point, if the point is within reach of its opening. A door that lost its
- * wall answers for the ring drawn where it was left.
- */
+/** The drawn door nearest a point, if the point is within reach of its opening. */
 export function doorNear(
   sheet: Sheet,
   storey: number,
@@ -40,25 +29,16 @@ export function doorNear(
   reach: number,
 ): (DoorRef & { dist: number }) | null {
   let best: (DoorRef & { dist: number }) | null = null
-  const nearer = (room: string, id: string, dist: number) => {
-    if (dist <= reach && (!best || dist < best.dist)) best = { room, id, dist }
+  for (const { room: r, door: d, pl, w } of drawnDoors(sheet, storey)) {
+    const a = toWorld(r, pl.p[0] - pl.u[0] * (w / 2), pl.p[1] - pl.u[1] * (w / 2))
+    const b = toWorld(r, pl.p[0] + pl.u[0] * (w / 2), pl.p[1] + pl.u[1] * (w / 2))
+    const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1
+    const u = [(b[0] - a[0]) / L, (b[1] - a[1]) / L]
+    const t = Math.min(Math.max((x - a[0]) * u[0]! + (y - a[1]) * u[1]!, 0), L)
+    const q = [a[0] + u[0]! * t, a[1] + u[1]! * t]
+    const dist = Math.hypot(x - q[0]!, y - q[1]!)
+    if (dist <= reach && (!best || dist < best.dist)) best = { room: r.id, id: d.id, dist }
   }
-  for (const r of placedRooms(sheet, storey))
-    for (const d of doorsOf(r)) {
-      const pl = doorPlace(r, d)
-      if (!pl) {
-        const wp = toWorld(r, d.at[0], d.at[1])
-        nearer(r.id, d.id, Math.hypot(x - wp[0], y - wp[1]))
-        continue
-      }
-      const a = toWorld(r, pl.p[0] - pl.u[0] * (d.w / 2), pl.p[1] - pl.u[1] * (d.w / 2))
-      const b = toWorld(r, pl.p[0] + pl.u[0] * (d.w / 2), pl.p[1] + pl.u[1] * (d.w / 2))
-      const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1
-      const u = [(b[0] - a[0]) / L, (b[1] - a[1]) / L]
-      const t = Math.min(Math.max((x - a[0]) * u[0]! + (y - a[1]) * u[1]!, 0), L)
-      const q = [a[0] + u[0]! * t, a[1] + u[1]! * t]
-      nearer(r.id, d.id, Math.hypot(x - q[0]!, y - q[1]!))
-    }
   return best
 }
 
@@ -93,17 +73,11 @@ const sweepOf = (h: Point, e: Point, f: Point): 0 | 1 =>
 
 /**
  * A door on its wall: the wall opened, the leaf and its swing, the panels of a sliding door, the
- * jambs of an opening and the mark of a street door. The room across the wall is looked up only for
- * a leaf that swings that way, which is the only one it can be in the way of.
+ * jambs of an opening and the mark of a street door. The room it leads into is the one a leaf that
+ * swings that way can be in the way of; a door not yet placed leads nowhere.
  */
-export function doorDrawing(
-  r: Room,
-  d: Door,
-  pl: Place,
-  sheet: Sheet,
-  storey: number,
-): DoorDrawing {
-  const across = d.flip && hasSwing(d) ? doorAcross(r, pl, sheet, storey) : null
+export function doorDrawing(r: Room, d: Door, pl: Place, sheet: Sheet): DoorDrawing {
+  const across = d.flip && hasSwing(d) ? doorInto(sheet, d) : null
   const [px, py] = pl.p
   const [ux, uy] = pl.u
   const [nx, ny] = pl.n
@@ -176,16 +150,14 @@ export type DoorRead = {
   swingsInto: string | null
   swings: boolean
   hinges: boolean
-  /** False for a door whose wall moved away: it is drawn as a ring and put back or removed. */
-  onWall: boolean
 }
 
+/** The door in hand, while it is drawn; a door whose rooms have moved apart is in no hand. */
 export function doorRead(sheet: Sheet, storey: number, sel: DoorRef): DoorRead | null {
   const r = placedRooms(sheet, storey).find((o) => o.id === sel.room)
   const d = r ? doorsOf(r).find((o) => o.id === sel.id) : undefined
-  if (!r || !d) return null
-  const pl = doorPlace(r, d)
-  const across = pl ? doorAcross(r, pl, sheet, storey) : null
+  if (!r || !d || !doorSpot(sheet, storey, r, d)) return null
+  const across = doorInto(sheet, d)
   return {
     label: DOOR[d.type].label,
     room: r.name,
@@ -194,6 +166,5 @@ export function doorRead(sheet: Sheet, storey: number, sel: DoorRef): DoorRead |
     swingsInto: hasSwing(d) ? (d.flip ? (across ? across.name : 'the outside') : r.name) : null,
     swings: hasSwing(d),
     hinges: hasHinge(d),
-    onWall: !!pl,
   }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { checkProject } from './invariants'
-import { STARTING_HEIGHT_M, startingHousehold, startingSite } from './project'
+import { STARTING_HEIGHT_M, startingHousehold } from './project'
 import { EXTERIOR, PROJECT_VERSION, type Edge, type Project, type Room } from './types'
 
 const room = (id: string, extra: Partial<Room> = {}): Room => ({
@@ -29,11 +29,11 @@ const project = (rooms: readonly Room[], edges: readonly Edge[] = [], storeys = 
   storeys,
   heights: Array.from({ length: storeys }, () => STARTING_HEIGHT_M),
   plot: { on: false, polygon: [], north: 0, street: [] },
-  site: startingSite,
   household: startingHousehold,
   rooms,
   edges,
-  weights: {},
+  apart: [],
+  declined: [],
   actors: [],
   version: PROJECT_VERSION,
 })
@@ -218,5 +218,29 @@ describe('the arcs a footprint remembers', () => {
       },
     })
     expect(codes(project([missing]))).toEqual(['arc-range'])
+  })
+})
+
+describe('keep-apart pairs', () => {
+  const two = [room('diwaniya'), room('family')]
+
+  it('passes for two rooms, on any storeys', () => {
+    const upstairs = [room('garage'), room('bedroom', { storey: 1 })]
+    const pairs = [{ id: 'k1', a: 'garage', b: 'bedroom' }]
+    expect(checkProject({ ...project(upstairs), apart: pairs })).toEqual([])
+  })
+
+  it('fails for a room that is not there, the outside, the same room twice, or a pair twice', () => {
+    const codes = (apart: Project['apart']) =>
+      checkProject({ ...project(two), apart }).map((problem) => problem.code)
+    expect(codes([{ id: 'k1', a: 'diwaniya', b: 'ghost' }])).toEqual(['apart-endpoint'])
+    expect(codes([{ id: 'k1', a: 'diwaniya', b: EXTERIOR }])).toEqual(['apart-endpoint'])
+    expect(codes([{ id: 'k1', a: 'diwaniya', b: 'diwaniya' }])).toEqual(['apart-self'])
+    expect(
+      codes([
+        { id: 'k1', a: 'diwaniya', b: 'family' },
+        { id: 'k2', a: 'family', b: 'diwaniya' },
+      ]),
+    ).toEqual(['apart-duplicate'])
   })
 })

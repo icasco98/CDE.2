@@ -89,8 +89,6 @@ export type Report = {
   openToBelow: string[]
   overlaps: { a: string; b: string; area: number }[]
   spills: string[]
-  /** Rooms on the sheet the brief does not name, kept aside rather than thrown away. */
-  aside: string[]
   boundary: BoundaryRead[]
   shortfalls: { name: string; area: number; target: number }[]
   courts: { name: string; area: number }[]
@@ -117,9 +115,7 @@ export function report(sheet: Sheet, storey: number): Report {
   const p = onStorey.filter((r) => !r.fixed && !isOpen(r))
   const courts = onStorey.filter((r) => r.fixed)
   const placedArea = p.reduce((s, r) => s + areaOf(r), 0)
-  const askedArea = sheet.rooms
-    .filter((r) => !r.extra && !isOpen(r))
-    .reduce((s, r) => s + r.target, 0)
+  const askedArea = sheet.rooms.filter((r) => !isOpen(r)).reduce((s, r) => s + r.target, 0)
   const box = allowedBox(sheet, storey)
   const ov = overlapsOf(sheet, storey)
   const n = storeyCountOf(sheet)
@@ -157,7 +153,6 @@ export function report(sheet: Sheet, storey: number): Report {
       area: r2(o.polys.reduce((s, poly) => s + polyArea(poly), 0)),
     })),
     spills: p.filter((r) => outsideBuildable(r, box)).map((r) => r.name),
-    aside: sheet.rooms.filter((r) => r.aside).map((r) => r.name),
     boundary: SIDES.map((side): BoundaryRead => {
       const used = sideUsed(sheet, side)
       const budget = sheet.plot.budget[side]

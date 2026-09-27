@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createIdGenerator, createStore, EXTERIOR, type Store } from '../model'
 import { defaultProgram } from '../rulebook'
-import { connectDefaults, removedLinks } from './defaultLinks'
+import { connectDefaults, restoreSuggested, takeOut } from './defaultLinks'
 
 let store: Store
 
@@ -60,30 +60,63 @@ describe('the default connections as edges', () => {
     expect(linkNames()).toContain('Kitchen to Laundry')
   })
 
-  it('never offers again a pair the designer has taken out', () => {
+  it('never offers again a suggestion the designer has taken out, and restores it on asking', () => {
     rebuild()
     const project = store.getState()
     const link = project.edges.find((edge) => edge.a !== EXTERIOR && edge.b !== EXTERIOR)
     if (!link) throw new Error('the rebuild made no link between two rooms')
-    store.actions.disconnect(link.id)
-    removedLinks.remember(project.id, link.a, link.b)
-
-    store.transaction(() => connectDefaults(store))
-    expect(store.getState().edges.some((edge) => edge.id === link.id)).toBe(false)
-    expect(
+    const joined = () =>
       store
         .getState()
         .edges.some(
           (edge) =>
             (edge.a === link.a && edge.b === link.b) || (edge.a === link.b && edge.b === link.a),
-        ),
-    ).toBe(false)
+        )
+    store.transaction(() => takeOut(store, link.id))
+    expect(store.getState().declined).toEqual([{ a: link.a, b: link.b }])
+
+    store.transaction(() => connectDefaults(store))
+    expect(joined()).toBe(false)
+
+    store.transaction(() => restoreSuggested(store, link.b))
+    expect(joined()).toBe(true)
+    expect(store.getState().declined).toEqual([])
   })
 
-  it('forgets what was taken out of another project, because a new project starts clean', () => {
-    removedLinks.remember('project-1', 'a', 'b')
-    expect(removedLinks.holds('project-1', 'a', 'b')).toBe(true)
-    expect(removedLinks.holds('project-2', 'a', 'b')).toBe(false)
-    expect(removedLinks.holds('project-1', 'a', 'b')).toBe(false)
+  it('restores one room’s declined suggestions and leaves the others declined', () => {
+    rebuild()
+    const inside = store
+      .getState()
+      .edges.filter((edge) => edge.a !== EXTERIOR && edge.b !== EXTERIOR)
+    const one = inside[0]
+    const two = inside.find(
+      (edge) => ![one?.a, one?.b].includes(edge.a) && ![one?.a, one?.b].includes(edge.b),
+    )
+    if (!one || !two) throw new Error('the rebuild made no two links apart')
+    store.transaction(() => takeOut(store, one.id))
+    store.transaction(() => takeOut(store, two.id))
+    store.transaction(() => restoreSuggested(store, one.a))
+    expect(store.getState().declined).toEqual([{ a: two.a, b: two.b }])
+  })
+
+  it('keeps nothing declined for a connection the rulebook never suggested', () => {
+    rebuild()
+    const project = store.getState()
+    const [first, second] = project.rooms
+    if (!first || !second) throw new Error('no rooms')
+    const unlinked = project.rooms.find(
+      (room) =>
+        room.id !== first.id &&
+        !project.edges.some(
+          (edge) =>
+            (edge.a === first.id && edge.b === room.id) ||
+            (edge.b === first.id && edge.a === room.id),
+        ),
+    )
+    if (!unlinked) throw new Error('every room is linked to the first')
+    const made = store.actions.connect({ a: first.id, b: unlinked.id, kind: 'door' })
+    if (!made.ok) throw new Error('refused')
+    store.transaction(() => takeOut(store, made.value))
+    expect(store.getState().declined).toEqual([])
   })
 })

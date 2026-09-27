@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { changesBetween } from './changes'
 import { move, place, sendBack } from './actions'
-import { sampleSheet } from './sample'
+import { fixtureSheet } from './fixture'
 
 describe('what an action changed', () => {
-  const sheet = sampleSheet()
+  const sheet = fixtureSheet()
 
   it('names a room put on the sheet', () => {
     const after = place(sheet, { id: 'nmu436pzls0vk', x: 11.2, y: 1.5, storey: 0 })
@@ -37,7 +37,7 @@ describe('what an action changed', () => {
 
   it('names a spill that appeared past the line the ground floor may reach', () => {
     // with the boundary shut the ground floor may only stand inside the setback line
-    const tight = place(sampleSheet({ boundary: 'off', allowSpill: 1 }), {
+    const tight = place(fixtureSheet({ boundary: 'off', allowSpill: 1 }), {
       id: 'nmu436pzls0vk',
       x: 10,
       y: 10,

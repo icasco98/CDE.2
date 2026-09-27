@@ -3,7 +3,7 @@ import { commandsPage } from './commands'
 import { promptFor } from './prompt'
 import { newMemory } from './memory'
 import { sheetRead } from './agent'
-import { sampleSheet } from './sample'
+import { fixtureSheet } from './fixture'
 
 describe('the page that teaches the architect its commands', () => {
   const page = commandsPage()
@@ -48,7 +48,7 @@ describe('the page that teaches the architect its commands', () => {
 
   it('is sent with every message, and the prompt still fits', () => {
     const prompt = promptFor({
-      read: sheetRead(sampleSheet(), 0),
+      read: sheetRead(fixtureSheet(), 0),
       memory: newMemory(),
       text: 'lay out the ground floor',
     })

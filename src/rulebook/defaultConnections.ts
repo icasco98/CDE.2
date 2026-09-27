@@ -280,15 +280,16 @@ export const defaultConnections: readonly DefaultConnection[] = [
 ]
 
 /**
- * Why the rulebook wanted a connection between two kinds of room, for the person looking at the
- * link it made. An edge is a pair of rooms and a kind, never a row of a table, so the row is
- * found again from the two kinds; a link the designer drew by hand answers with nothing.
+ * The row of the table that wants a connection between two kinds of room, for the person looking
+ * at the edge. An edge is a pair of rooms, never a row, so the row is found again from the two
+ * kinds, whichever kind the edge has since been given; a pair the table says nothing of has none.
  */
-export function connectionSource(from: string, to: string, kind: EdgeKind): string {
+export function connectionSource(
+  from: string,
+  to: string,
+): { readonly id: string; readonly source: string } | undefined {
   const row = defaultConnections.find(
-    (each) =>
-      each.kind === kind &&
-      ((each.from === from && each.to === to) || (each.from === to && each.to === from)),
+    (each) => (each.from === from && each.to === to) || (each.from === to && each.to === from),
   )
-  return row?.source ?? ''
+  return row && { id: row.id, source: row.source }
 }

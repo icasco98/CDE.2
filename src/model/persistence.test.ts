@@ -57,6 +57,7 @@ function furnished(): Project {
   actions.connect({ a: EXTERIOR, b: hall, kind: 'main-door', hint: { at: [2, 0] } })
   actions.connect({ a: hall, b: stair, kind: 'open' })
   actions.connect({ a: stair, b: bedroom, kind: 'door', storey: 1 })
+  actions.keepApart({ a: hall, b: bedroom })
   actions.setPlot({
     on: true,
     polygon: [
@@ -68,7 +69,7 @@ function furnished(): Project {
     north: 42.5,
     street: [0, 3],
   })
-  actions.setWeights({ privacy: 0.7, compactness: 0.35 })
+  actions.decline(hall, bedroom)
   const actor = must(actions.addActor({ name: 'Guest', role: 'visitor' }))
   actions.addWaypoint(actor, hall)
   return store.getState()
@@ -160,22 +161,22 @@ describe('the project file', () => {
     expect(back.ok && back.value.household.bedrooms).toBe(7)
   })
 
-  it('maps the placeholder weights to the three families and drops the budget key', () => {
-    const project = furnished()
-    const document = {
-      ...project,
-      version: 2,
-      weights: { client: 0.8, climate: 0.2, budget: 0.4 },
+  it('drops the weights and the site answers of a version 9 document and declines nothing', () => {
+    const document: Record<string, unknown> = {
+      ...furnished(),
+      version: 9,
+      weights: { userRequirements: 0.8 },
+      site: { diwaniyaAtCorner: true, garden: 'side' },
     }
+    delete document.declined
     const back = deserialize(JSON.stringify(document))
-    expect(back.ok && back.value.weights).toEqual({
-      userRequirements: 0.8,
-      environmentalFactors: 0.2,
-    })
+    expect(back.ok && back.value.declined).toEqual([])
+    expect(back.ok && 'weights' in back.value).toBe(false)
+    expect(back.ok && 'site' in back.value).toBe(false)
     expect(back.ok && back.value.version).toBe(PROJECT_VERSION)
   })
 
-  it('migrates a version 1 document with placeholder weights through both steps', () => {
+  it('migrates a version 1 document through every step', () => {
     const project = furnished()
     const document: Record<string, unknown> = {
       ...project,
@@ -183,13 +184,17 @@ describe('the project file', () => {
       weights: { client: 0.6, climate: 0.1, budget: 0.9 },
     }
     delete document.household
+    delete document.declined
     const back = deserialize(JSON.stringify(document))
     expect(back.ok && back.value.household).toEqual(startingHousehold)
-    expect(back.ok && back.value.weights).toEqual({
-      userRequirements: 0.6,
-      environmentalFactors: 0.1,
-    })
     expect(back.ok && back.value.version).toBe(PROJECT_VERSION)
+  })
+
+  it('keeps the declined suggestions a document carries', () => {
+    const project = furnished()
+    const back = deserialize(serialize(project))
+    expect(back.ok && back.value.declined).toEqual(project.declined)
+    expect(project.declined).toHaveLength(1)
   })
 
   it('gives a document written before heights 3.5 m for every storey', () => {
@@ -224,44 +229,25 @@ describe('the project file', () => {
     expect(back.ok && back.value.household.masterOnGround).toBe(true)
   })
 
-  it('maps bubbles in the old bands into the plot metres a footprint uses', () => {
-    // A version 5 project of two storeys: the bands were 12 m deep, the first storey's band ran
-    // from 0 to 12 and the ground's from 12 to 24, and x counted either side of nought.
+  it('takes a bubble that stood on the plot off it, since a place there is no nudge', () => {
     const project = furnished()
-    const rooms = project.rooms.map((room, index) => ({
-      ...room,
-      targetArea: 12,
-      bubble: index === 0 ? { x: -6, y: 18 } : { x: 6, y: 6 },
-    }))
-    const back = deserialize(JSON.stringify({ ...project, rooms, version: 5 }))
-    if (!back.ok) throw new Error('the version 5 project was refused')
-    // This plot faces two streets, so the setbacks leave 2 to 18.5 across and 2 to 23.5 down.
-    for (const room of back.value.rooms) {
-      expect(room.bubble?.x).toBeGreaterThanOrEqual(2)
-      expect(room.bubble?.x).toBeLessThanOrEqual(18.5)
-      expect(room.bubble?.y).toBeGreaterThanOrEqual(2)
-      expect(room.bubble?.y).toBeLessThanOrEqual(23.5)
+    const rooms = project.rooms.map((room) => ({ ...room, bubble: { x: 6, y: 18, angle: 1 } }))
+    for (const version of [5, 7]) {
+      const back = deserialize(JSON.stringify({ ...project, rooms, version }))
+      if (!back.ok) throw new Error(`the version ${version} project was refused`)
+      expect(back.value.rooms.every((room) => room.bubble === undefined)).toBe(true)
+      expect(back.value.rooms.map((room) => room.name)).toEqual(
+        project.rooms.map((room) => room.name),
+      )
+      expect(back.value.version).toBe(PROJECT_VERSION)
     }
-    // Across the cloud's width to across the buildable width, and down the band to down its depth:
-    // the leftmost bubble, halfway down the ground band, lands left and halfway down the floor.
-    expect(back.value.rooms[0]?.bubble).toEqual({ x: 2, y: 12.75 })
-    expect(back.value.rooms[1]?.bubble).toEqual({ x: 18.5, y: 2 })
-    expect(back.value.rooms[2]?.bubble).toEqual({ x: 18.5, y: 12.75 })
-    expect(back.value.version).toBe(PROJECT_VERSION)
   })
 
-  it('gives a project written before the two site questions the answers a villa gives', () => {
-    const project: Record<string, unknown> = { ...furnished(), version: 6 }
-    delete project.site
-    const back = deserialize(JSON.stringify(project))
-    expect(back.ok && back.value.site).toEqual({ diwaniyaAtCorner: false, garden: 'rear' })
-    expect(back.ok && back.value.version).toBe(PROJECT_VERSION)
-  })
-
-  it('leaves the answers of a project that already carries them', () => {
-    const project = { ...furnished(), site: { diwaniyaAtCorner: true, garden: 'side' as const } }
-    const back = deserialize(JSON.stringify({ ...project, version: 6 }))
-    expect(back.ok && back.value.site).toEqual({ diwaniyaAtCorner: true, garden: 'side' })
+  it('keeps a nudge written by this version', () => {
+    const project = furnished()
+    const rooms = project.rooms.map((room) => ({ ...room, bubble: { x: 12, y: -4 } }))
+    const back = deserialize(JSON.stringify({ ...project, rooms }))
+    expect(back.ok && back.value.rooms[0]?.bubble).toEqual({ x: 12, y: -4 })
   })
 
   it('leaves a version 5 project with no bubbles exactly as it was', () => {
@@ -273,6 +259,14 @@ describe('the project file', () => {
     })
     const back = deserialize(JSON.stringify({ ...project, rooms, version: 5 }))
     expect(back.ok && back.value.rooms.every((room) => room.bubble === undefined)).toBe(true)
+  })
+
+  it('gives a project written before keep apart an empty list of pairs', () => {
+    const project: Record<string, unknown> = { ...furnished(), version: 8 }
+    delete project.apart
+    const back = deserialize(JSON.stringify(project))
+    expect(back.ok && back.value.apart).toEqual([])
+    expect(back.ok && back.value.version).toBe(PROJECT_VERSION)
   })
 
   it('refuses a version it cannot migrate and one from a newer tool', () => {

@@ -35,6 +35,22 @@ brings with it — a bedroom's ensuite, the diwaniya's WC, a staff
 room's bathroom — and a companion always takes the storey of the room
 it serves. Both columns are the cofounder's judgement and provisional.
 
+**How many storeys a rebuilt program proposes.** Two at least, a
+Ground and a First (the architect's ruling, 26 September 2026): the
+house receives and serves on the ground and sleeps above it. The
+`upper` kinds go up with their companions, the master bedroom and its
+suite staying down when the household asks, and a stair spans the
+storeys. The ground is then read against the floor the Municipality
+setbacks leave, its target areas, hallway included, raised by **15%
+for walls and slack** (the architect's decision, provisional). While
+it is still over, a private-tier kind the table marks `any` (family
+living first, as the largest) follows the bedrooms up, one kind at a
+time; if it is still over, the last sentence says by how much. A
+project already on more storeys keeps them. Each step is said in a
+sentence beside the button, and every room's storey stays the
+person's to change. The rule is provisional: it recommends and never
+refuses. The Requirements totals read the bare targets.
+
 ## The default program
 
 Every villa starts with the standard trio, each a different kind:

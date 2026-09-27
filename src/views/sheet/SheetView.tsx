@@ -56,6 +56,7 @@ import {
 import { snapWord } from './sentence'
 import { frameOf, p4 } from './shape'
 import { Doors, type OpeningsDraw } from './Doors'
+import { CheckMarks, type SheetCheck } from './CheckMarks'
 
 /** How far past the plot the sheet is drawn, so the north arrow and the street names have room. */
 const PAD = 1.6
@@ -119,6 +120,8 @@ type SheetViewProps = {
   /** The Openings step: the doors answer the hand, and the room lit from the program list. */
   openings: OpeningsDraw | null
   lit: string | null
+  /** What Check draws while it is on: lines to connected rooms, and keep-apart pairs broken. */
+  check: SheetCheck | null
   panning: boolean
   camera: Camera
   svgRef: (element: SVGSVGElement | null) => void
@@ -305,7 +308,7 @@ export function SheetView(props: SheetViewProps) {
               drag && 'id' in drag && drag.id === r.id ? ' moving' : ''
             }${r.locked ? ' locked' : ''}${reshaping === r.id ? ' target' : ''}${
               view.walk?.unreached.has(r.id) ? ' unreached' : ''
-            }${props.lit === r.id ? ' lit' : ''}`}
+            }${props.lit === r.id ? ' lit' : ''}${props.check?.apartRooms.has(r.id) ? ' apart-through' : ''}`}
             transform={frameOf(r)}
             data-room={r.id}
             onPointerDown={(event) => on.onRoomDown(r, event)}
@@ -432,6 +435,7 @@ export function SheetView(props: SheetViewProps) {
         )
       })}
       <Doors sheet={sheet} storey={storey} rooms={shown} openings={props.openings} />
+      {props.check && <CheckMarks rooms={shown} check={props.check} />}
       {focus && settings.dims !== 'none' && !reshaping && (
         <Dims room={focus} rooms={shown} settings={settings} plot={plot} typable={!drag} on={on} />
       )}

@@ -277,3 +277,222 @@ A reversal is a new entry, never an edit.
     holds them; the feasible suite carries that one open link and no
     other. Z7 built it, by the cofounder; the springs of 18 and the
     walk of 21 are gone.
+
+23. **The bubble diagram is the connection graph, and nothing else.**
+    The owner's ruling: circles settled on the plot gave nothing that
+    carried into zoning, and what lasts from the stage is the edges,
+    which is where every layout method starts. So the bubbles have no
+    plot, no setbacks, no physics and no scale; a circle's size may
+    hint at its area. The default connections arrive as edges from
+    the program as before, each saying its source (the rulebook row,
+    or by hand). A drag from one room to another connects them, a
+    click on an edge changes its kind or disconnects it, and a pair
+    disconnected is not offered again in the project. Reverses 17,
+    18 and 22, the kerb walls and the canonical start of 20, and the
+    settle's part in 21; the settle, its forces and the weights panel
+    go from the bubble tab. Amends 7: storeys are assigned in the
+    program and shown as columns.
+
+24. **The arrangement is computed, not settled.** One column per
+    storey, every storey side by side; inside a column one row per
+    tier of the room-type table, public at the bottom, semi-public in
+    the middle, private at the top, an exempt room in the row of the
+    first room it is joined to. The same program always draws the
+    same diagram. A nudge by the hand is kept on the room so the
+    diagram stays readable; it is an offset from the computed place
+    and means nothing for the plan. Clicking a storey's name brings it
+    forward; the others fade and stay visible.
+
+25. **A stair is one room in every column it spans.** A stair or lift
+    is drawn in each storey it reaches, and it is the only way an edge
+    crosses from one storey to another. On the zoning sheet a stair
+    placed stands on every storey (the sheet's `stairAcross`, on by
+    default), so moving it on one storey moves it on all.
+
+26. **Keep apart is the opposite of a connection.** A pair of rooms
+    the program wants apart: no edge between them, and neither reached
+    only through the other (on the edge graph, `b` is not on every
+    route from the front door to `a`, nor `a` to `b`). They may share
+    a wall or stand far apart; geometry is not read. It is stored as
+    its own list on the project, not as an edge, under undo, in the
+    file, and a room deleted takes its pairs with it. It is set in the
+    diagram like a connection and drawn as a line unlike any edge. It
+    only warns: a keep-apart pair may still be connected, and nothing
+    is refused or moved for it. The diwaniya and the family living,
+    the diwaniya and the women's reception, the maid's room and the
+    master bedroom, the garage and the bedrooms are the cases.
+
+27. **The graph is checked beside the diagram, on every edit.** Rooms
+    not reached from the front door; a private room joined straight
+    to the outside or to a public room (a tier skip); a storey whose
+    edges cannot be drawn without crossing (the planarity test the
+    brief already used); keep-apart pairs broken, either way. Each
+    check names its rule and its source and ships with a reference
+    case. They warn; they never change the graph.
+
+28. **The matrix is a second window on the same graph.** An optional
+    window lists every pair of rooms once, a half grid, each cell
+    connected (door or open), keep apart, or nothing, and a click on a
+    cell changes it through the same actions and the same undo as the
+    diagram, which stays the main view.
+
+29. **The zoning sheet shows the edges when asked, and a door knows
+    its edge.** Check, off by default, draws each edge as a dashed
+    line from a room hovered or selected, including to a room still
+    in the program. An edge is ready in the zoning step when its two
+    rooms share a run of wall a door wide, corners not counting, and
+    met in the Openings step only when a door drawing it is placed.
+    A door records its two rooms when it is placed: reading the pair
+    off whichever room lies across the wall would be an edge inferred
+    from geometry, which decision 2 forbids. A door placed between
+    two rooms with no edge asks to add the connection; yes is one
+    undo step for the edge and the door, no places nothing. Doors
+    saved before this carry no pair and count for nothing until
+    placed again. Keep-apart pairs broken are marked on the sheet
+    while Check is on. Replaces the proposal of an edge on touch in 2
+    and in MODEL.md: the door's question is the only way zoning adds
+    an edge.
+
+30. **A solver is an option that proposes.** When one comes it is a
+    feature a person turns to, and what it gives is a proposal for
+    the zoning; it never overrides a zoning made by hand. Until then
+    the weights stay on the project, in undo and in the file, and are
+    not on screen, since nothing reads them.
+
+31. **A bubble's area is its room's, and the rows are ordered to
+    uncross.** The owner's ruling on the connection diagram: a 60 m²
+    diwaniya drawn as large as a 3 m² WC hid the program's weight. A
+    circle's area is now in proportion to the target area, the largest
+    room setting the scale so it fits its cell, a room too small to
+    click held to a minimum radius, each row as deep as its largest
+    circle, and a key in the legend at the same scale. Inside a row the
+    rooms are ordered by a fixed number of sweeps of the barycentre
+    rule (each room at the mean place of its neighbours), ties broken
+    by program order and the order with the fewest crossings kept, so
+    connected rooms stand near each other and the same program still
+    draws the same diagram. Each category's rooms on a storey sit in a
+    soft cloud of its colour, like a hand-drawn bubble diagram, and
+    the diagram zooms and pans with the sheet's camera. Amends 23 and
+    24: the size is no longer only a hint, and the order in a row is no
+    longer the program's.
+
+32. **One list of rooms.** The architect's ruling: the program is the
+    only source of rooms, and the program, the bubbles and the zoning
+    sheet always show the same ones. A room deleted anywhere leaves the
+    sheet, set aside for the page's lifetime so the project's undo puts
+    it back where it stood; a room the sheet makes (a court or corridor
+    from a pocket, a copy, a piece a cut splits off) joins the program as
+    the step that made it. The built-in sample house, its fallback on an
+    empty project and "Back to the sample" go, since a hand-built house
+    is what CLAUDE.md forbids and its own stair appeared on the sheet
+    with no bubble; an empty program is an empty sheet. "This is it"
+    keeps the settings as the spec only. The plan stays as test data.
+    Reverses the keeping aside of 29's reconciliation and the "opens on
+    the sample plan" of stage 3.
+
+33. **Every door to the outside is an entrance.** Reachability starts
+    from every edge to `EXTERIOR`, so a diwaniya or a garage with its own
+    street door is reached through it; a house with no main door is still
+    told so. A project of two storeys or more with no stair in the
+    program is told "No stair connects the storeys", beside the bubbles
+    and under the sheet. Amends 27.
+
+34. **A deleted suggestion is kept in the project.** A connection the
+    rulebook suggested and the person took out is stored as declined,
+    under undo, in the file (document version 10), and the defaults skip
+    it after a reload as before it. "Restore suggested connections" in
+    the bubbles forgets all of them, a right-click on a room forgets that
+    room's, and each makes its suggestions again. Replaces the page
+    memory of 23's "not offered again".
+
+35. **The weights and the site answers go.** Nothing read them while no
+    solver runs, and an inert field is dead code. Version 10 drops them
+    from saved projects; the plot stays. Reverses 30's keeping of the
+    weights; a solver that needs them brings them back with a reader.
+
+36. **A door is the drawing of its edge.** A door names its edge and the
+    edge's far end, and is held by the room at the other end. Between
+    two rooms it stands on the longest run of wall they share, a
+    fraction of the way along it counted from the run's western, then
+    northern, end; to the outside, on the outside wall of its room it
+    was placed on. Where the rooms share no wall it fits, or the wall no
+    longer faces outside, it is simply not drawn and Check says its edge
+    is not met; moved back, it is drawn where it was. There is no lost
+    state and nothing to reattach. One door per edge; deleting the edge
+    takes the door, deleting the door keeps the edge. Placing is as
+    before: the wall clicked and the room across name the pair, and a
+    pair with no edge asks for one. Sheets saved before are migrated by
+    matching each door's recorded pair to an edge, the rest dropped.
+    Replaces 29's door on a point of its room's wall.
+
+37. **Rebuilding the program proposes storeys.** The one-storey program,
+    hallway included, is read against the buildable ground: when it fits
+    it stays on one storey; when it does not, a First is proposed, the
+    upper kinds go up with their suites, a stair spans the storeys, and
+    while the ground is still over a private room the table lets stand
+    on either floor (family living first) follows. Each step is a
+    sentence under the button; every room's storey stays the person's.
+    No margin for walls is added to the fit, so the starting household
+    on the starting plot stays on one storey (313.8 of 365.5 m²); the
+    rule is provisional and written into rulebook/room-types.md.
+
+38. **Private rooms go upstairs by default.** The architect's ruling:
+    rebuilding the program always proposes a Ground and a First (a
+    project already on more storeys keeps them), with a stair spanning
+    them. The room-type table decides who goes up: the `upper` kinds,
+    the bedrooms with their ensuites and dressing rooms; reception,
+    diwaniya, living, dining, kitchen, guest WC, service, staff and
+    garage stay down. The household's "master bedroom on the ground
+    floor" keeps the master and its suite down. Each placement is a
+    sentence under the button, and every room's storey stays the
+    person's. Reverses 37's one storey when the program fits.
+
+39. **The ground's fit allows 15% for walls.** When the proposal reads
+    the ground against its buildable area, the ground's target areas
+    are raised by 15% for walls and slack (the architect's decision,
+    26 September 2026; provisional, a named constant in the rulebook).
+    While the ground is still over, a private kind the table lets
+    stand on either floor follows the bedrooms up, largest first, each
+    with its sentence; if it is still over the last sentence says by
+    how much. The Requirements totals still read the bare targets, as
+    19 set them. Reference cases: the starting household on the
+    starting plot holds 274.4 of 365.5 m²; a 19 × 23 m plot holds five
+    bedrooms' ground at 294.7 m² bare but not at 338.9 m² with walls,
+    so the family living goes up. Amends 37's "no margin".
+
+40. **A door stands on the shared wall it was placed on.** A door
+    between two rooms records the side of its room it was placed on,
+    north, south, east or west in that room's own frame so turning the
+    room keeps it, with its fraction along the run. It is drawn on the
+    longest run the two share on that side that holds it, else on the
+    longest run of all, else not at all, and Check says its edge is not
+    met. The side is where the hand put it, never a state of the door:
+    there is still nothing lost and nothing to reattach. A door saved
+    without a side stands on the longest run as before; a format-one
+    door records the side of the run its point stood on. Amends 36.
+
+41. **An edge may carry several doors.** Two doors between the living
+    and the dining, or two outside doors from one room, each with its
+    own side, fraction, type, width, swing and hinge. Placing a door on
+    an edge that has one adds another. A door whose gap would overlap
+    one already drawn on the same wall, from either room, is refused
+    with a sentence, on placing, sliding and widening alike. The edge is
+    met while any of its doors is drawn and the walk reads each as the
+    edge drawn; deleting a door keeps the others and the edge, and an
+    edge taken away takes all its doors, which its undo brings back.
+    Amends 36's one door per edge.
+
+42. **A storey changed on the sheet is changed in the program.** Moving
+    a room to another storey on the zoning sheet, by any path (the
+    context menu, the assistant, the mass), moves it in the project by
+    the program's own storey move, linked to the sheet step so one undo
+    takes back both: the links it can no longer hold are let go with a
+    sentence, the defaults made on the new floor. Companions still
+    waiting in the program go with it; one drawn on the sheet stays
+    where the hand put it. The project gains the storeys the sheet
+    reaches, stairs stretched to the top. In the other direction the
+    sheet stands every room it holds, drawn or waiting, on the storey
+    the program gives it, a stair across the storeys excepted, so an
+    undo taken from the program after the sheet was left is followed
+    too. Reverses the "keeps the storey it stands on" of a drawn room
+    in 32's reconciliation; copy to a storey still makes a new room.

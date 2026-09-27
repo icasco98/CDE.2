@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
+import { fixtureSheet } from '../../sheet/fixture'
 import { describe, expect, it } from 'vitest'
-import { DEFAULTS, sampleSheet, setSetting, type Settings } from '../../sheet'
+import { DEFAULTS, setSetting, type Settings } from '../../sheet'
 import { SettingsWindow } from './Settings'
 import { TABS, rowNames, tabFor, type Row } from './settings'
 
@@ -66,7 +67,7 @@ describe('the settings window', () => {
 })
 
 describe('what each kind of row may be set to', () => {
-  const sheet = sampleSheet()
+  const sheet = fixtureSheet()
   const set = (name: string, value: string | number) =>
     setSetting(sheet, { name, value }).sheet.settings[name as keyof Settings]
 

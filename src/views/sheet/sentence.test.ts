@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULTS, report, sampleSheet, setSetting } from '../../sheet'
+import { fixtureSheet } from '../../sheet/fixture'
+import { DEFAULTS, report, setSetting } from '../../sheet'
 import { drawingSentence, measuringSentence, sentenceOf, snapWord } from './sentence'
 
 const text = (parts: { lead?: string; text: string }[]) =>
   parts.map((p) => (p.lead ? `${p.lead} ${p.text}` : p.text)).join(' · ')
 
 describe('the sentence under the sheet', () => {
-  const sheet = sampleSheet()
+  const sheet = fixtureSheet()
 
   it('opens with the storey, what is placed, what was asked and the buildable area', () => {
     const parts = sentenceOf(report(sheet, 0), sheet.settings)
@@ -24,11 +25,29 @@ describe('the sentence under the sheet', () => {
   })
 
   it('names the shortfalls, the walk and the hallways', () => {
-    const line = text(sentenceOf(report(sheet, 0), sheet.settings))
+    const walk = {
+      reached: 17,
+      all: 17,
+      unreached: [],
+      from: 'outside' as const,
+      hallways: [
+        { name: 'Ground Hallway', doors: 7 },
+        { name: 'service hallway', doors: 4 },
+      ],
+      entryWithoutOutsideDoor: null,
+      diwaniyaWithoutStreetDoor: null,
+      cannotOpen: [],
+    }
+    const line = text(sentenceOf({ ...report(sheet, 0), walk }, sheet.settings))
     expect(line).toContain('Diwaniya 38.5 of 60')
     expect(line).toContain('Walk 17 of 17 reached from outside')
     expect(line).toContain('Ground Hallway serves 7 doors')
     expect(line).toContain('service hallway serves 4 doors')
+  })
+
+  it('says what the project warns of that the sheet cannot draw, a missing stair first', () => {
+    const parts = sentenceOf(report(sheet, 0), sheet.settings, ['No stair connects the storeys'])
+    expect(parts[1]).toEqual({ text: 'No stair connects the storeys', bad: true })
   })
 
   it('counts enclosed spaces only where the settings show them', () => {

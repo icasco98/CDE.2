@@ -168,9 +168,19 @@ describe('one 5 × 4 m room at (2, 3) on the ground', () => {
 })
 
 it('draws a door as a line across the opening on the storey’s door layer', () => {
-  const door: Door = { id: 'd1', type: 'door', w: 0.9, at: [5, 2], flip: false, hinge: false }
-  const kitchen = room('Kitchen', { x: 0, y: 0, w: 5, h: 4 }, { doors: [door] })
+  const kitchen = room('Kitchen', { x: 0, y: 0, w: 5, h: 4 })
   const dining = room('Dining', { x: 5, y: 0, w: 5, h: 4 })
+  const door: Door = {
+    id: 'd1',
+    edge: 'e1',
+    to: dining.id,
+    type: 'door',
+    w: 0.9,
+    along: 0.5,
+    flip: false,
+    hinge: false,
+  }
+  kitchen.doors = [door]
   const doors = itemsIn(dxfOf(sheetOf([kitchen, dining], {}, 1)), 'ENTITIES').filter(
     (item) => valueOf(item, 8) === 'S0-DOORS',
   )

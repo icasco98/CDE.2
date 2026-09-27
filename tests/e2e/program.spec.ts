@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { tab } from './tabs'
+import { seedPlan } from './plan'
 
 /**
  * The brief is the owner's, not the tool's: a program entered on Requirements is the program the
@@ -64,7 +65,7 @@ test('the twelve rooms entered in Requirements are the Sheet’s program, with t
   await enterTwelveRooms(page)
   const entered = await programEntered(page)
 
-  await tab(page, 'Sheet').click()
+  await tab(page, 'Zoning and 3D').click()
   await page.locator('svg.sheet').waitFor()
 
   await expect(blocks(page)).toHaveCount(12)
@@ -88,7 +89,7 @@ test('a target changed in Requirements is the target the Sheet reads', async ({ 
   const kitchen = rowsOf(page).filter({ has: page.locator('input[value="Kitchen"]') })
   await kitchen.getByLabel('Target area').fill('30')
 
-  await tab(page, 'Sheet').click()
+  await tab(page, 'Zoning and 3D').click()
   await page.locator('svg.sheet').waitFor()
   await expect(page.locator('.tray .item', { hasText: 'Kitchen' }).locator('.a')).toHaveText(
     '30 m²',
@@ -97,7 +98,7 @@ test('a target changed in Requirements is the target the Sheet reads', async ({ 
 
 test('a room added on the Sheet is a room of the brief in Requirements', async ({ page }) => {
   await enterTwelveRooms(page)
-  await tab(page, 'Sheet').click()
+  await tab(page, 'Zoning and 3D').click()
   await page.locator('svg.sheet').waitFor()
 
   await page.locator('.add-room').getByLabel('Kind').selectOption('bedroom')
@@ -123,7 +124,7 @@ test('a room taken out on the Sheet is out of the brief, and the plot is the pro
   await page.getByLabel('Depth (m)').fill('30')
   await page.getByLabel('North (degrees from up)').fill('40')
 
-  await tab(page, 'Sheet').click()
+  await tab(page, 'Zoning and 3D').click()
   await page.locator('svg.sheet').waitFor()
 
   // the plot is 30 by 30 with the Municipality's larger setback: 2 m from a neighbour's boundary
@@ -144,35 +145,65 @@ test('a room taken out on the Sheet is out of the brief, and the plot is the pro
 test('a saved sheet is reconciled with a brief it does not match: the brief wins', async ({
   page,
 }) => {
-  // the sample sheet is drawn on first, with no brief entered at all
+  // a plan is drawn and saved, and the sheet opened on it
+  await seedPlan(page)
   await page.goto('/')
-  await tab(page, 'Sheet').click()
+  await tab(page, 'Zoning and 3D').click()
   await page.locator('svg.sheet').waitFor()
-  const sample = await blocks(page).count()
-  expect(sample).toBeGreaterThan(12)
-  // the sheet is the owner's once it is saved, which is what a brief is later reconciled with
-  await expect
-    .poll(() => page.evaluate(() => !!window.localStorage.getItem('cde.sheet')))
-    .toBe(true)
+  expect(await blocks(page).count()).toBeGreaterThan(12)
 
-  // then a brief of twelve rooms arrives, and the sheet is opened again
+  // then the program is taken down to the twelve rooms of another brief, and the sheet opened again
   await tab(page, 'Requirements').click()
+  while ((await rowsOf(page).count()) > 0)
+    await rowsOf(page)
+      .first()
+      .getByRole('button', { name: /Remove/ })
+      .click()
   for (const kind of twelve) {
     await page.getByLabel('Kind to add').selectOption(kind)
     await page.getByRole('button', { name: 'Add room' }).click()
   }
-  await tab(page, 'Sheet').click()
+  await tab(page, 'Zoning and 3D').click()
   await page.locator('svg.sheet').waitFor()
 
   const drawn = await programDrawn(page)
   const entered = await (async () => {
     await tab(page, 'Requirements').click()
     const rooms = await programEntered(page)
-    await tab(page, 'Sheet').click()
+    await tab(page, 'Zoning and 3D').click()
     return rooms
   })()
-  expect(drawn.slice(0, 12).map((block) => block.name)).toEqual(entered.map((room) => room.name))
-  // the sample's own rooms are kept aside on the sheet, and the sentence says how many
-  await expect(page.locator('.tray .item.aside').first()).toBeVisible()
-  await expect(page.locator('.say')).toContainText('the brief does not name')
+  // one list: the sheet draws the brief's rooms and no other
+  expect(drawn.map((block) => block.name)).toEqual(entered.map((room) => room.name))
+  await expect(page.locator('svg.sheet [data-room]')).toHaveCount(0)
+})
+
+test('a room deleted in the bubbles is gone from the zoning sheet, and Undo brings it back', async ({
+  page,
+}) => {
+  await seedPlan(page)
+  await page.goto('/')
+  await tab(page, 'Bubbles').click()
+  await page
+    .locator('.bubbles-sheet [data-room][data-name="Diwaniya"] circle.bubble-shape')
+    .first()
+    .click()
+  await page.locator('svg.bubbles-sheet').press('Delete')
+  await tab(page, 'Zoning and 3D').click()
+  await page.locator('svg.sheet').waitFor()
+  await expect(page.locator('svg.sheet g.room[data-room="r2"]')).toHaveCount(0)
+  await expect(page.locator('.tray .item[data-room="r2"]')).toHaveCount(0)
+  await page.locator('header.shell').getByRole('button', { name: 'Undo' }).click()
+  await expect(page.locator('svg.sheet g.room[data-room="r2"]')).toHaveCount(1)
+})
+
+test('an empty program is an empty sheet, with no stair and no sample to go back to', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await tab(page, 'Zoning and 3D').click()
+  await page.locator('svg.sheet').waitFor()
+  await expect(page.locator('svg.sheet [data-room]')).toHaveCount(0)
+  await expect(blocks(page)).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Back to the sample' })).toHaveCount(0)
 })

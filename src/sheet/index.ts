@@ -1,7 +1,7 @@
 /** The zoning sheet: its model, its geometry, its actions and its report. */
 
 export type { Box, PlotSpec, Side } from './plot'
-export type { ProgramRoom } from './program'
+export type { HeldDoor, ProgramRoom, SetDown } from './program'
 export { followProgram, roomFromProgram } from './program'
 export {
   DEFAULT_PLOT,
@@ -29,6 +29,7 @@ export type {
 } from './model'
 export {
   DEFAULTS,
+  OUTSIDE,
   RULE_HINT,
   SETTINGS_V,
   acrossStoreys,
@@ -168,15 +169,14 @@ export {
   doorAcross,
   doorAt,
   doorBlocked,
-  doorPlace,
-  openWall as openWallOn,
-  setDoorWidth as doorWidth,
-  slideDoor as slideDoorAlong,
+  doorSlid,
+  drawnDoors,
+  standingAt,
   walkTest,
 } from './doors'
 
 export type { DoorDrawing, DoorRead, DoorRef, Leaf } from './openings'
-export { doorDrawing, doorNear, doorRead, lostDoors, newDoors } from './openings'
+export { doorDrawing, doorNear, doorRead, newDoors } from './openings'
 
 export type { LabelPlan } from './labels'
 export { initialsOf, labelPlan, obstaclesOf, spanThrough } from './labels'
@@ -184,20 +184,9 @@ export { initialsOf, labelPlan, obstaclesOf, spanThrough } from './labels'
 export type { BoundaryRead, Report } from './report'
 export { boundaryWalls, report, sideOver, sideUsed } from './report'
 
-export {
-  DOOR,
-  KINDS,
-  KIND_LABEL,
-  PROGRAM,
-  PROGRAM_TAG,
-  freshRooms,
-  hasHinge,
-  hasSwing,
-  isStreetDoor,
-  repair,
-  sampleSheet,
-  sizeFor,
-} from './sample'
+export { meetingOf } from './meetings'
+
+export { DOOR, KINDS, KIND_LABEL, hasHinge, hasSwing, isStreetDoor, repair, sizeFor } from './kinds'
 
 export type { Change, History, Result, Side4 } from './actions'
 export {
@@ -226,15 +215,12 @@ export {
   moveCorner,
   moveDoor,
   newHistory,
-  openWall,
   place,
   pullWall,
   pushOthers,
-  reattachDoor,
   redo,
   remember,
   removeDoor,
-  removeRoom,
   reshape,
   resize,
   restOnGrid,

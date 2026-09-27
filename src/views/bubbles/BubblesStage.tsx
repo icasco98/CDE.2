@@ -1,13 +1,14 @@
 import { useMemo } from 'react'
-import { connectDefaults, removedLinks } from '../../app/defaultLinks'
+import { connectDefaults, restoreSuggested, takeOut } from '../../app/defaultLinks'
 import { selection, useSelection } from '../../app/selection'
 import { sendToStorey } from '../../app/sendToStorey'
 import { session } from '../../app/session'
 import { useProject } from '../../app/useProject'
-import type { Position } from '../../bubbles'
-import { EXTERIOR, type Commit, type EdgeKind, type Family, type Result } from '../../model'
+import { graphChecks } from '../../graph/checks'
+import { EXTERIOR, type Bubble, type Commit, type EdgeKind, type Result } from '../../model'
 import { circulationPerStorey, connectionSource, roomTypeById } from '../../rulebook'
 import { addHallway } from './addHallway'
+import { setPair, type PairChoice } from './setPair'
 import { BubblesView } from './BubblesView'
 
 /** The bubbles view over the app's one store: every callback is a store action, refusals are said out loud. */
@@ -19,23 +20,32 @@ export function BubblesStage() {
     () =>
       project.rooms.map((room) => {
         const kind = roomTypeById(room.type)
-        return { ...room, kind: room.type, category: kind?.category, tier: kind?.tier }
+        return { ...room, category: kind?.category, tier: kind?.tier }
       }),
     [project.rooms],
   )
 
-  /** A default connection keeps the rulebook's own words, which the link says on hover. */
+  /** A connection the rulebook wants says which row and why; any other was added by hand. */
   const edges = useMemo(() => {
     const kindOf = (id: string): string =>
       id === EXTERIOR ? EXTERIOR : (project.rooms.find((room) => room.id === id)?.type ?? '')
     return project.edges.map((edge) => {
-      const source = connectionSource(kindOf(edge.a), kindOf(edge.b), edge.kind)
-      return source ? { ...edge, source } : edge
+      const row = connectionSource(kindOf(edge.a), kindOf(edge.b))
+      return row ? { ...edge, source: `Rulebook ${row.id}: ${row.source}` } : edge
     })
   }, [project.edges, project.rooms])
 
-  const circulation = useMemo(
-    () => circulationPerStorey(project.rooms, project.storeys),
+  const checks = useMemo(
+    () =>
+      graphChecks({ rooms, edges: project.edges, apart: project.apart, storeys: project.storeys }),
+    [rooms, project.edges, project.apart, project.storeys],
+  )
+
+  const hallwayWanted = useMemo(
+    () =>
+      circulationPerStorey(project.rooms, project.storeys).flatMap((entry) =>
+        entry.wanted === undefined ? [] : [{ storey: entry.storey, sentence: entry.wanted }],
+      ),
     [project.rooms, project.storeys],
   )
 
@@ -57,11 +67,45 @@ export function BubblesStage() {
       selection.select(null)
   }
 
-  /** A link taken out is a link this house does not want, so the rulebook is not to offer it again. */
+  const nameOf = (id: string): string =>
+    project.rooms.find((room) => room.id === id)?.name ?? 'the outside'
+  const keptApart = (a: string, b: string): boolean =>
+    project.apart.some((pair) => (pair.a === a && pair.b === b) || (pair.a === b && pair.b === a))
+  const joined = (a: string, b: string): boolean =>
+    project.edges.some((edge) => (edge.a === a && edge.b === b) || (edge.a === b && edge.b === a))
+
+  /** Connecting a pair kept apart is allowed and said out loud, never refused. */
+  const connect = (a: string, b: string): void => {
+    if (!report(session.actions.connect({ a, b, kind: 'door' }))) return
+    if (keptApart(a, b))
+      session.say(`${nameOf(a)} and ${nameOf(b)} are to be kept apart; connected all the same.`)
+  }
+
+  const keepApart = (a: string, b: string): void => {
+    if (!report(session.actions.keepApart({ a, b }))) return
+    if (joined(a, b))
+      session.say(`${nameOf(a)} and ${nameOf(b)} are connected; the pair kept apart warns of it.`)
+  }
+
+  const allowTogether = (id: string): void => {
+    if (!report(session.actions.allowTogether(id))) return
+    if (selection.get() === id) selection.select(null)
+  }
+
+  const setOnePair = (a: string, b: string, choice: PairChoice): void => {
+    if (!report(setPair(session, a, b, choice))) return
+    const after = session.getState()
+    const both =
+      after.apart.some(
+        (pair) => (pair.a === a && pair.b === b) || (pair.a === b && pair.b === a),
+      ) &&
+      after.edges.some((edge) => (edge.a === a && edge.b === b) || (edge.a === b && edge.b === a))
+    if (both) session.say(`${nameOf(a)} and ${nameOf(b)} are kept apart and connected.`)
+  }
+
+  /** A suggestion taken out is one this house does not want, so the project keeps it declined. */
   const disconnect = (edgeId: string): void => {
-    const edge = project.edges.find((each) => each.id === edgeId)
-    if (!report(session.actions.disconnect(edgeId))) return
-    if (edge) removedLinks.remember(project.id, edge.a, edge.b)
+    if (!report(session.transaction(() => takeOut(session, edgeId)))) return
     if (selection.get() === edgeId) selection.select(null)
   }
 
@@ -69,24 +113,14 @@ export function BubblesStage() {
     <BubblesView
       rooms={rooms}
       edges={edges}
+      apart={project.apart}
+      declined={project.declined}
       storeys={project.storeys}
-      circulation={circulation}
-      plot={project.plot}
-      site={project.site}
-      weights={project.weights}
+      checks={checks}
       selected={selected}
-      onMoveBubble={(id: string, at: Position, commit: Commit) =>
-        session.actions.setBubble(id, at, commit)
-      }
-      onDropBubble={(id: string, at: Position) =>
-        report(
-          // Dropped is held: the bubble is put where the hand left it and pinned there in the one
-          // step, so the forces cannot take it back and Let go is what hands it to them again.
-          session.transaction(() => {
-            const put = session.actions.setBubble(id, at)
-            return put.ok ? session.actions.pin(id) : put
-          }),
-        )
+      hallwayWanted={hallwayWanted}
+      onNudge={(id: string, nudge: Bubble, commit: Commit) =>
+        report(session.actions.setBubble(id, nudge, commit))
       }
       onSetStorey={(id: string, storey: number) => {
         // A door the move could not hold is said out loud and fades, as every refusal does.
@@ -94,11 +128,11 @@ export function BubblesStage() {
         if (moved.ok) moved.value.forEach((sentence) => session.say(sentence))
         return report(moved)
       }}
-      onPin={(id: string, pinned: boolean) =>
-        report(pinned ? session.actions.pin(id) : session.actions.unpin(id))
-      }
-      onConnect={(a: string, b: string) => report(session.actions.connect({ a, b, kind: 'door' }))}
+      onConnect={connect}
       onDisconnect={disconnect}
+      onKeepApart={keepApart}
+      onAllowTogether={allowTogether}
+      onSetPair={setOnePair}
       onSetEdgeKind={(edgeId: string, kind: EdgeKind) =>
         report(session.actions.setEdgeKind(edgeId, kind))
       }
@@ -113,8 +147,8 @@ export function BubblesStage() {
           }),
         )
       }
-      onSetWeight={(family: Family, weight: number) =>
-        report(session.actions.setWeights({ ...project.weights, [family]: weight }))
+      onRestore={(room?: string) =>
+        report(session.transaction(() => restoreSuggested(session, room)))
       }
       onSelect={selection.select}
       onRefuse={session.say}
