@@ -130,7 +130,11 @@ describe('what the Bubbles tab reads off each storey', () => {
     ]
     expect(circulationPerStorey(zones, 2)).toEqual([
       { storey: 0, hasHallway: true },
-      { storey: 1, hasHallway: false, wanted: 'First has three private zones and no hallway.' },
+      {
+        storey: 1,
+        hasHallway: false,
+        wanted: 'First has three private-tier zones and no hallway.',
+      },
     ])
   })
 

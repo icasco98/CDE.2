@@ -101,7 +101,7 @@ describe('reached from outside', () => {
 })
 
 describe('tier skips', () => {
-  it('finds a private zone joined to a public one or to the outside, and nothing else', () => {
+  it('finds a private-tier zone joined to a public-tier one or to the outside, and nothing else', () => {
     const skipping = [
       ...connections,
       connection('Bedroom', 'Diwaniya'),
@@ -110,8 +110,8 @@ describe('tier skips', () => {
     ]
     const house = [...zones, zone('Kitchen', 'private'), zone('WC', 'exempt')]
     expect(tierSkips(house, skipping).map((check) => check.sentence)).toEqual([
-      'Bedroom, a private zone, is joined to Diwaniya, a public one.',
-      'Kitchen, a private zone, opens straight onto the outside.',
+      'Bedroom, a private-tier zone, is joined to Diwaniya, a public-tier one.',
+      'Kitchen, a private-tier zone, opens straight onto the outside.',
     ])
   })
 

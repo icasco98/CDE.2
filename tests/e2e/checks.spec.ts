@@ -50,14 +50,14 @@ test('two storeys and no stair: the checks say so', async ({ page }) => {
   )
 })
 
-test('a private zone joined to a public one is a tier skip until the connection goes', async ({
+test('a private-tier zone joined to a public-tier one is a tier skip until the connection goes', async ({
   page,
 }) => {
   await openVilla(page)
   await expect(checks(page).locator('[data-check="tier-skip"]')).toHaveCount(0)
   await connect(page, 'Kitchen', 'Formal Living')
   await expect(checks(page).locator('[data-check="tier-skip"]')).toHaveText(
-    /Kitchen, a private zone, is joined to Formal Living, a public one\./,
+    /Kitchen, a private-tier zone, is joined to Formal Living, a public-tier one\./,
   )
   await page.getByRole('button', { name: 'Undo' }).click()
   await expect(checks(page).locator('[data-check="tier-skip"]')).toHaveCount(0)

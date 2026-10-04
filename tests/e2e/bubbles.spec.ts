@@ -188,7 +188,7 @@ test('deleting the hallway upstairs brings the nudge, and Add hallway answers it
   await selectZone(page, 'First Hallway', 1)
   await page.locator('svg.bubbles-sheet').press('Delete')
   await expect(page.locator('.bubbles-nudge')).toHaveText(
-    /First has three private zones and no hallway\./,
+    /First has three private-tier zones and no hallway\./,
   )
   await page.getByRole('button', { name: 'Add hallway on First' }).click()
   await expect(page.locator('.bubbles-nudge')).toHaveCount(0)
