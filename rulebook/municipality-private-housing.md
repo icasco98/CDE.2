@@ -5,7 +5,7 @@ model and private housing buildings", as amended by Ministerial
 Resolution 451/2016. Retrieved from baladia.gov.kw (construction
 system, page 3) on 10 September 2026 by the owner.
 
-**Status.** Every rule below is a **wall** (hard constraint) and is
+**Status.** Every rule below is a **limit** (hard constraint) and is
 `sourced`. By the owner's decision these are the rules the tool
 follows until the Municipality's own website publishes a change; the
 owner supplies the new text when that happens, and the entry is

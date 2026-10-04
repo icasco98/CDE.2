@@ -85,7 +85,7 @@ only on the owner's word. If approved, A9 waits on Z5.
 | O1 | Obtain the current texts: the Municipality's private-housing page (done, PR #1) and the firm's working edition of MEW R-6 (open). | rulebook | in progress |
 | O2 | Room-type table for Kuwaiti villas: areas, aspect ranges, tiers. | A4 | done, PR #3 |
 | O3 | The known house: plot, north, program, the built plan. | R2 | in progress: drawings received and recorded in `rulebook/known-house.md`; entered as a project in R2 |
-| O4 | Rulebook part 1, walls: setbacks, ratios, heights, basements, spans. Each with source and confidence. | R1 | done for the Municipality, `rulebook/municipality-private-housing.md`, each number to be checked against the page; structural spans not yet given |
+| O4 | Rulebook part 1, limits: setbacks, ratios, heights, basements, spans. Each with source and confidence. | R1 | done for the Municipality, `rulebook/municipality-private-housing.md`, each number to be checked against the page; structural spans not yet given |
 | O5 | A fresh brief for the usability run. | A9 | done, `rulebook/fresh-brief.md` |
 | O6 | Rulebook part 2, forces: name, element, direction, default strength for Kuwait, source. | M3 | done as a draft, PR #12 |
 | O7 | Revisit the forces: correct strengths, add and remove forces, mark rows `sourced` once the known house and the firm's practice confirm them. Repeats whenever a source arrives. | R1 | in progress, first pass done (PR #66) |
@@ -144,6 +144,7 @@ a finding the tool did raise was missed.
 
 | # | Task | Depends on | Done when | Status |
 |---|---|---|---|---|
+| U0 | **The words.** Code and screens renamed to `MODEL.md`'s words (decision 44): room to zone, edge to connection, wall to edge, wall as a rule to limit; the project file migrated on reading. Before U1, so the new screens use the new words. | M1 | Nothing changes in behaviour; every test passes; the guard passes; an old project file opens. | todo |
 | U1 | **The owner's list.** The text on every screen cut to one line of purpose; the rest, the hints and the sentence under the sheet, folded one click down; findings and refusals where the eye is. The list grows with each round. | M1 | The owner's round passes and finds nothing hidden that matters. | todo |
 
 ## Milestone 3: the rule engine
@@ -165,7 +166,7 @@ storey that cannot be drawn flat). The Municipality's rules are in
 | R1 | **Rulebook as data.** The Municipality's rules and the forces loaded from one file, validated against `MODEL.md`, each with its source and confidence. | O4, O6, O7 | todo |
 | R2 | **The known house as a project.** Entered from `rulebook/known-house.md`: plot, north, program, the built plan; the reference case for every finding. | O3 | todo |
 | R3 | **Findings from the rules.** Ratio per plot band, setbacks, building on the boundary, heights, room minimum sizes and widths, stair widths, light wells; each a sentence with its number. Reference cases from the known house. | R1, R2 | todo |
-| R4 | **Findings from the drawn plan.** A room under its legal size, a door that cannot open, a door on a boundary wall, a wall past the setback, with numbers. | R1, R2 | todo |
+| R4 | **Findings from the drawn plan.** A zone under its legal size, a door that cannot open, a door on a boundary edge, an edge past the setback, with numbers. | R1, R2 | todo |
 | R5 | **Findings screen.** The verdict on the surface, the detail one click down, assumptions editable in place; a click selects the room on every tab. | R3, R4 | todo |
 | R6 | **The basement storey.** A storey below ground under the Municipality's basement rules (not counted in the ratio, may cover the plot, height limits). The ramp a room spanning basement and ground, walled on the kerb like the entry; the garage bays in the basement by default; the diwaniya there as a household choice. Until this lands the garage stays on the ground floor. | R1 | todo |
 | R7 | **Circulation drawn.** Actors, routes through the doors from the street door to any room, counting the doors passed; an animated walk. | M1 | todo |
@@ -179,7 +180,7 @@ neighbours stand in the mass.
 | # | Task | Depends on | Done when | Status |
 |---|---|---|---|---|
 | D1 | **Drawings to office standard.** The PDF sheet and the DXF layers, line weights, text and blocks as the office draws them. The owner states the standard first. | M1 | The owner accepts a printed sheet and the DXF in AutoCAD without redrawing. | todo |
-| W1 | **Windows.** Placed like a door on an outside wall; refused on shared and boundary walls; unlit rooms listed. | T3, T4 | A room with no window and no open wall to one reads unlit. | todo |
+| W1 | **Windows.** Placed like a door on an outer edge; refused on shared and boundary edges; unlit zones listed. | T3, T4 | A zone with no window and no open edge to one reads unlit. | todo |
 | W2 | **Fog of war.** What a guest sees from the diwaniya door and the family from the family living, read off doors and windows with heights. | W1 | The guest's view on the embedded sheet matches a hand-drawn reference. | todo |
 | N1 | **Neighbours and streets.** 15 m boxes on the neighbours' setback lines and street bands, each with a switch. | T4 | The mass shows the neighbours' boxes; each switch hides its box. | todo |
 
@@ -191,7 +192,7 @@ or two turns, and the owner's round with it passes.
 
 | # | Task | Depends on | Done when | Status |
 |---|---|---|---|---|
-| E2 | **The architect's own hands.** Place a room against another's wall touching; carve or push to settle an overlap it made; take back its own last batch. The chat column scrolls, its deliberation collapsed, its answers short. Its mind is `agent/architect.md` and `agent/lessons.md`. | E1 | From the program and one sentence, no help: every room placed, no overlaps, inside the line, in one or two turns. | todo |
+| E2 | **The architect's own hands.** Place a zone against another's edge touching; carve or push to settle an overlap it made; take back its own last batch. The chat column scrolls, its deliberation collapsed, its answers short. Its mind is `agent/architect.md` and `agent/lessons.md`. | E1 | From the program and one sentence, no help: every room placed, no overlaps, inside the line, in one or two turns. | todo |
 
 ## Milestone 6: visual design
 
@@ -214,6 +215,8 @@ Kept so they are not lost; none starts without the owner's word.
   rooms themselves, typologies as starting points and a compare view
   (formerly C1 to C4) wait until a round asks for them.
 - **W3, circulation drawn,** became R7.
+- **The architectural plan,** the fifth stage of `MODEL.md`: edges become
+  walls with thickness, doors openings in them. No milestone yet.
 
 ## How a task runs
 

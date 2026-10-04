@@ -38,7 +38,7 @@ Two rows cross a tier boundary anyway (D14, D18); each says in its
 source why the crossing is the one a villa actually makes.
 
 **What the entry can carry.** An entry of eight square metres has about
-three metres of wall to a side at its target aspect, and the front door,
+three metres of edge to a side at its target aspect, and the front door,
 the corridor, the formal living room and the guest WC already spend it.
 D6 and D8 used to open the family living room and the stair off the
 entry as well; the bubble diagram showed that six doors will not go

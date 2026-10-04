@@ -6,7 +6,7 @@ plot, its streets and neighbours), **environmental factors** (sun,
 heat, wind). Each family is one weight on screen. Every concrete force
 below belongs to one family, acts on named rooms, pulls in a stated
 direction, and has a default strength for a Kuwaiti villa with a
-source. Walls are not here: setbacks, ratios, heights and the client's
+source. Limits are not here: setbacks, ratios, heights and the client's
 must-haves are in the Municipality entry and the project, and are
 never traded.
 
@@ -19,12 +19,12 @@ cofounder's judgement. Under decision 9 a provisional force only
 recommends. Rows become `sourced` when the known house and the firm's
 practice confirm them. The environmental rows wait for milestone 3.
 
-**Walls beside the forces.** Under decision 20 the entry on the
-frontage and the garage at the kerb are walls, not forces: the bubble
+**Limits beside the forces.** Under decision 20 the entry on the
+frontage and the garage at the kerb are limits, not forces: the bubble
 stands on the kerb line inside the setback and slides along it. The
 diwaniya is a force (S1), strong, and may stand up to one room's depth
 back behind its own court; its own street door stays on the kerb. The
-service entrance (S7) is a wall on a side boundary near the kitchen.
+service entrance (S7) is a limit on a side boundary near the kitchen.
 
 **Two choices belong to the project, not the table.** Whether the
 diwaniya addresses the corner of two streets (S4) and whether the garden
@@ -42,10 +42,10 @@ the family weight multiplies it. **Acts on** names room kinds from
 |---|---|---|---|---|---|---|
 | U1 | Guest separation | Diwaniya, Diwaniya WC | the street side, with its own entrance, away from Family Living and bedrooms | strong | Diwaniya as an institution with its own door (Al-Razouki; UNESCO inscription) | owner |
 | U2 | Privacy gradient | every room with a tier | public rooms toward the street, private toward the back, a door only between adjacent tiers; a link always wins over the gradient | strong | threshold-zone principle in Arab domestic architecture; room-type tiers; owner | owner |
-| U3 | Kitchen serves dining | Kitchen, Dining Room | sharing a wall with a door | strong | adjacency-matrix practice; firm practice | provisional |
+| U3 | Kitchen serves dining | Kitchen, Dining Room | sharing an edge with a door | strong | adjacency-matrix practice; firm practice | provisional |
 | U4 | Family living is the hub | Family Living | short routes to bedrooms, kitchen and the family entrance | medium | firm practice | provisional |
 | U5 | Bedrooms are quiet | Master Bedroom, Bedroom | away from Diwaniya, Formal Living, Kitchen and the street | strong | room-type tiers; firm practice | owner |
-| U6 | Suite integrity | Ensuite Bathroom, Dressing Room | sharing a wall with their own bedroom, door between | strong | room-type auxiliary flag | provisional |
+| U6 | Suite integrity | Ensuite Bathroom, Dressing Room | sharing an edge with their own bedroom, door between | strong | room-type auxiliary flag | provisional |
 | U7 | Staff near their work | Maid Room, Maid Bathroom | Kitchen, Laundry and the Service Entrance | medium | firm practice; program of government-model houses | provisional |
 | U8 | Driver by the cars | Driver Room, Driver Bathroom | the Garage and the street, with their own door | medium | firm practice | provisional |
 | U9 | Guests find the WC | Guest WC | Formal Living and the Entry, never through a private room | medium | firm practice | owner |
@@ -59,12 +59,12 @@ the family weight multiplies it. **Acts on** names room kinds from
 | Id | Force | Acts on | Pulls toward | Strength | Source | Confidence |
 |---|---|---|---|---|---|---|
 | S1 | Diwaniya to the street | Diwaniya | the service street side, its own door on the kerb; the room may stand one room's depth back behind its own court | strong | Municipality definition of the service street; owner | owner |
-| S2 | Garage at the kerb | Garage | the street boundary, shortest driveway, no room behind it (a wall under decision 20; the force only chooses where along the frontage) | strong | firm practice; owner | owner |
+| S2 | Garage at the kerb | Garage | the street boundary, shortest driveway, no room behind it (a limit under decision 20; the force only chooses where along the frontage) | strong | firm practice; owner | owner |
 | S3 | Neighbour privacy | – | dropped by the owner: setbacks and the privacy gradient are enough | – | – | dropped |
 | S4 | Corner plot | Diwaniya | the corner where two streets meet, addressing both, when the project says so | medium | firm practice; the client's choice per project | project choice |
 | S5 | Garden to the rear | Courtyard, Family Living | the boundary away from the service street, or a side, as the project says | medium | firm practice; the client's choice per project | project choice |
 | S6 | Service to the side | Laundry, Storage, Maid Room | a side boundary, not the street frontage | medium | firm practice; owner | owner |
-| S7 | Service entrance on a side | Service Entrance | a side boundary near the Kitchen: a wall on the side street's kerb where there is one, else on the service street beside the Garage | strong | firm practice; owner | owner |
+| S7 | Service entrance on a side | Service Entrance | a side boundary near the Kitchen: a limit on the side street's kerb where there is one, else on the service street beside the Garage | strong | firm practice; owner | owner |
 | S8 | Kitchen away from the street | Kitchen, Laundry, Maid Room, Storage | never on the frontage; a side or the rear | strong | firm practice; owner | owner |
 
 ## Environmental factors
@@ -82,10 +82,10 @@ the family weight multiplies it. **Acts on** names room kinds from
 
 Each force is evaluated on a placed layout as a satisfaction from 0
 (fully violated) to 1 (fully met), by a rule that names its measure: a
-shared wall exists, an angle between a facade normal and a compass
+shared edge exists, an angle between a facade normal and a compass
 direction, a distance between centroids, an envelope length. That
 measure is what milestone 2 reports and what milestone 3 differentiates
-to move a room. No force ever moves a pinned room or crosses a wall.
+to move a room. No force ever moves a pinned room or crosses a limit.
 
 ## Least certain
 
