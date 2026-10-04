@@ -80,7 +80,7 @@ export const DOOR: Record<DoorType, { w: number; label: string }> = {
   double: { w: 1.8, label: 'Double door' },
   sliding: { w: 1.8, label: 'Sliding door' },
   opening: { w: 1.2, label: 'Opening' },
-  open: { w: 2.4, label: 'Open wall' },
+  open: { w: 2.4, label: 'Open edge' },
   street: { w: 1.2, label: 'Street door' },
   street2: { w: 2, label: 'Double street door' },
 }

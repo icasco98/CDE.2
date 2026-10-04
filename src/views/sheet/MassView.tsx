@@ -1,5 +1,5 @@
 /**
- * The mass beside the sheet: the storeys stacked at their heights, drawn back to front by the wall
+ * The mass beside the sheet: the storeys stacked at their heights, drawn back to front by the edge
  * lines, with the sheet's own gestures when editing in 3D is on. It draws and listens; every number
  * comes from `src/sheet` and every change goes through an action.
  */
@@ -21,7 +21,7 @@ import {
   acrossStoreys,
   allPlaced,
   allowedBox,
-  blindWall,
+  blindEdge,
   boxCorners,
   breaches,
   clearHeight,
@@ -36,7 +36,7 @@ import {
   outlineOf,
   prismsOf,
   recentred,
-  seenWalls,
+  seenEdges,
   setHeight,
   setSetting,
   stH,
@@ -60,7 +60,7 @@ import {
   type Seg,
   type Sheet,
 } from '../../sheet'
-import { beginMove, beginTurn, beginWall, dragTo, dropOf, type Drag } from './gestures'
+import { beginMove, beginTurn, beginEdge, dragTo, dropOf, type Drag } from './gestures'
 import './mass.css'
 
 declare global {
@@ -95,7 +95,7 @@ type MassViewProps = {
 
 /** What the hand holds in the mass, kept only for the shadow, the guide and the height reading. */
 type MassDrag =
-  | { kind: 'move' | 'wall' | 'turn'; from: Sheet; drag: Drag; moved: boolean }
+  | { kind: 'move' | 'edge' | 'turn'; from: Sheet; drag: Drag; moved: boolean }
   | { kind: 'height'; from: Sheet; startY: number; startH: number; moved: boolean }
   | { kind: 'orbit' }
 
@@ -104,7 +104,7 @@ const p2 = (v: number) => Number(v.toFixed(2))
 const pointsOf = (P: MassProjection, pts: Poly, z: number) =>
   pts.map(([x, y]) => `${p2(P.to(x, y, z)[0])},${p2(P.to(x, y, z)[1])}`).join(' ')
 
-/** A colour toned down, as the mock shades a wall by how far it turns from the eye. */
+/** A colour toned down, as the mock shades an edge by how far it turns from the eye. */
 function shade(hex: string, k: number): string {
   const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex)
   if (!m) return hex
@@ -220,7 +220,7 @@ export function MassView(props: MassViewProps) {
   }
 
   /** Every gesture of the mass writes live, so the room moves on the sheet as the hand drags it. */
-  const runDrag = (kind: 'move' | 'wall' | 'turn', drag: Drag, event: ReactPointerEvent) => {
+  const runDrag = (kind: 'move' | 'edge' | 'turn', drag: Drag, event: ReactPointerEvent) => {
     const from = sheetRef.current
     props.onBegin()
     hold({ kind, from, drag, moved: false })
@@ -471,8 +471,8 @@ export function MassView(props: MassViewProps) {
             }${over.has(r.id) ? ' over' : ''}`
             const fill = r.color ?? sheet.settings.colors[r.cat] ?? '#ddd'
             const lines: [string, string, string][] = []
-            const walls = seenWalls(block, P).map((e, j) => {
-              const blind = blindWall(e.a, e.b, plot)
+            const edges = seenEdges(block, P).map((e, j) => {
+              const blind = blindEdge(e.a, e.b, plot)
               const cls = blind ? (breaches(block.h) ? ' blind breach' : ' blind') : ''
               const a0 = P.to(e.a[0], e.a[1], block.z0)
               const b0 = P.to(e.b[0], e.b[1], block.z0)
@@ -502,7 +502,7 @@ export function MassView(props: MassViewProps) {
                 lines.push([
                   `${p2(a[0])},${p2(a[1])}`,
                   `${p2(b[0])},${p2(b[1])}`,
-                  blindWall(e.a, e.b, plot) && e.facing > 0
+                  blindEdge(e.a, e.b, plot) && e.facing > 0
                     ? breaches(block.h)
                       ? ' blind breach'
                       : ' blind'
@@ -511,7 +511,7 @@ export function MassView(props: MassViewProps) {
               }
             return (
               <g key={`b-${i}`}>
-                {walls}
+                {edges}
                 <polygon
                   className={`m-face top${state}`}
                   data-room={r.id}
@@ -563,7 +563,7 @@ export function MassView(props: MassViewProps) {
                   <rect
                     key={`h-${i}`}
                     className="m-hnd"
-                    data-wall={i}
+                    data-edge={i}
                     x={p2(m[0] - 5)}
                     y={p2(m[1] - 5)}
                     width={10}
@@ -572,8 +572,8 @@ export function MassView(props: MassViewProps) {
                     onPointerDown={(event) => {
                       if (event.button !== 0) return
                       event.stopPropagation()
-                      const drag = beginWall(sheet, handles.id, i, groundAt(event))
-                      if (drag) runDrag('wall', drag, event)
+                      const drag = beginEdge(sheet, handles.id, i, groundAt(event))
+                      if (drag) runDrag('edge', drag, event)
                     }}
                   />
                 )

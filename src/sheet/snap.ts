@@ -1,5 +1,5 @@
 /**
- * Snapping. A room looks for walls that run with its own — any wall of any room, whatever the
+ * Snapping. A room looks for edges that run with its own — any edge of any room, whatever the
  * carving left, the setback line and the plot boundary, and the storeys below and above. The nearest
  * pull within the snap distance wins, then the nearest again on a direction across it.
  */
@@ -28,7 +28,7 @@ import {
   norm,
   outlineOf,
   overlapCells,
-  pullWall,
+  pullEdge,
   r2,
   r6,
   rad,
@@ -36,7 +36,7 @@ import {
   toLocal,
   toWorld,
   worldCorners,
-  worldWalls,
+  worldEdges,
   type Seg,
 } from './geometry'
 import { MAX_STOREYS } from './plot'
@@ -45,21 +45,21 @@ import { cloneRoom } from './model'
 /** A line drawn on the sheet to show what a move lined up with. */
 export type Guide = { x1: number; y1: number; x2: number; y2: number }
 
-export type SnapMark = { corner?: Point; wall?: Seg; line?: boolean }
+export type SnapMark = { corner?: Point; edge?: Seg; line?: boolean }
 
 /** A guide is drawn right across the sheet, so it is longer than any plot the tool draws. */
 const ACROSS = 200
 
-/** The lines a wall may snap to besides rooms: the setback line, and the plot boundary. */
+/** The lines an edge may snap to besides rooms: the setback line, and the plot boundary. */
 export const snapBoxes = (plot: PlotSpec = DEFAULT_PLOT): Box[] => [plot.build, plot.box]
 
-export function wallCandidates(
+export function edgeCandidates(
   others: Room[],
   settings: Settings,
   plot: PlotSpec = DEFAULT_PLOT,
 ): Seg[] {
   const out: Seg[] = []
-  for (const o of others) for (const w of worldWalls(o)) out.push(w)
+  for (const o of others) for (const w of worldEdges(o)) out.push(w)
   if (settings.snapBuild)
     for (const B of snapBoxes(plot)) {
       out.push(
@@ -87,10 +87,10 @@ export function gridRest(r: Room, settings: Settings): Room {
 }
 
 /**
- * How far a wall being dragged should go so its line runs through a nearby corner of another room,
- * or lies on another room's parallel wall: the candidate nearest the hand within the snap distance.
+ * How far an edge being dragged should go so its line runs through a nearby corner of another room,
+ * or lies on another room's parallel edge: the candidate nearest the hand within the snap distance.
  */
-export function alignWall(
+export function alignEdge(
   frame: Frame,
   seg: Seg,
   sRaw: number,
@@ -109,8 +109,8 @@ export function alignWall(
   const t = (p: Point) => (p[0] - a[0]) * u[0] + (p[1] - a[1]) * u[1]
   const d = settings.snapDist
   if (!(d > 0)) return { s: sRaw }
-  // Anything on the wall's own line counts, near the wall's run or far along it: a corner across the
-  // plan still lines the wall up. What lies within the run is preferred when both are in reach.
+  // Anything on the edge's own line counts, near the edge's run or far along it: a corner across the
+  // plan still lines the edge up. What lies within the run is preferred when both are in reach.
   let best: { gap: number; s: number; mark: SnapMark; near: boolean } | null = null
   const consider = (off: number, mark: SnapMark, near: boolean) => {
     const gap = Math.abs(off - sRaw)
@@ -127,29 +127,29 @@ export function alignWall(
         tt >= -0.5 && tt <= L + 0.5,
       )
     }
-    for (const w of worldWalls(o)) {
+    for (const w of worldEdges(o)) {
       const wl = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1
       if (Math.abs((u[0] * (w.b[1] - w.a[1]) - u[1] * (w.b[0] - w.a[0])) / wl) > 0.02) continue
       const w0 = Math.min(t(w.a), t(w.b))
       const w1 = Math.max(t(w.a), t(w.b))
       consider(
         (w.a[0] - a[0]) * n[0] + (w.a[1] - a[1]) * n[1],
-        { wall: w },
+        { edge: w },
         !(w1 < -0.5 || w0 > L + 0.5),
       )
     }
   }
-  // A neighbour's wall at any angle: the dragged wall's own corners land on its line, within its run,
-  // so a turned room still meets the walls round it.
+  // A neighbour's edge at any angle: the dragged edge's own corners land on its line, within its run,
+  // so a turned room still meets the edges round it.
   for (const o of others)
-    for (const w of worldWalls(o)) {
+    for (const w of worldEdges(o)) {
       const wl = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1
       const wu: Point = [(w.b[0] - w.a[0]) / wl, (w.b[1] - w.a[1]) / wl]
-      if (Math.abs(wu[0] * u[1] - wu[1] * u[0]) < 0.02) continue // parallel walls are met above
+      if (Math.abs(wu[0] * u[1] - wu[1] * u[0]) < 0.02) continue // parallel edges are met above
       const den = n[0] * wu[1] - n[1] * wu[0]
       if (Math.abs(den) < 1e-6) continue
       for (const p of [a, b]) {
-        // along the pull, where p meets the wall's line
+        // along the pull, where p meets the edge's line
         const s = ((w.a[0] - p[0]) * wu[1] - (w.a[1] - p[1]) * wu[0]) / den
         const q: Point = [p[0] + n[0] * s, p[1] + n[1] * s]
         const tw = (q[0] - w.a[0]) * wu[0] + (q[1] - w.a[1]) * wu[1]
@@ -157,8 +157,8 @@ export function alignWall(
         consider(s, { corner: q, line: true }, tw >= 0 && tw <= wl)
       }
     }
-  // The setback line and the plot boundary: the dragged wall's own corners land on those lines,
-  // whatever the wall's angle, and the boundary is there to meet even where building to it is off.
+  // The setback line and the plot boundary: the dragged edge's own corners land on those lines,
+  // whatever the edge's angle, and the boundary is there to meet even where building to it is off.
   if (settings.snapBuild)
     for (const B of snapBoxes(plot)) {
       for (const [axis, at] of [
@@ -192,7 +192,7 @@ export function alignWall(
   return { s: r6(found.s), guide, mark: found.mark }
 }
 
-/** A room moved: corner to corner first, then wall to wall, then the grid. */
+/** A room moved: corner to corner first, then edge to edge, then the grid. */
 export function snapMove(
   r: Room,
   cands: Seg[],
@@ -218,7 +218,7 @@ export function snapMove(
       corner: hit.at,
     }
   }
-  type Hit = { d: number; move: Point; n: Point; wall: { a: Point; b: Point }; corner?: Point }
+  type Hit = { d: number; move: Point; n: Point; edge: { a: Point; b: Point }; corner?: Point }
   const hits: Hit[] = []
   // any corner within reach of the setback line or the boundary lands on it, a turned room too
   if (settings.snapBuild)
@@ -233,7 +233,7 @@ export function snapMove(
               d: Math.abs(X - c[0]),
               move: [X - c[0], 0],
               n: [nx, 0],
-              wall: { a: [X, B.y], b: [X, B.y + B.h] },
+              edge: { a: [X, B.y], b: [X, B.y + B.h] },
               corner: c,
             })
         for (const [Y, ny] of [
@@ -245,11 +245,11 @@ export function snapMove(
               d: Math.abs(Y - c[1]),
               move: [0, Y - c[1]],
               n: [0, ny],
-              wall: { a: [B.x, Y], b: [B.x + B.w, Y] },
+              edge: { a: [B.x, Y], b: [B.x + B.w, Y] },
               corner: c,
             })
       }
-  for (const m of worldWalls(r)) {
+  for (const m of worldEdges(r)) {
     const ml = Math.hypot(m.b[0] - m.a[0], m.b[1] - m.a[1]) || 1
     const u: Point = [(m.b[0] - m.a[0]) / ml, (m.b[1] - m.a[1]) / ml]
     const t = ([x, y]: Point) => x * u[0] + y * u[1]
@@ -260,11 +260,11 @@ export function snapMove(
       if (Math.abs((u[0] * (o.b[1] - o.a[1]) - u[1] * (o.b[0] - o.a[0])) / ol) > 0.02) continue
       const d = (o.a[0] - m.a[0]) * m.n[0] + (o.a[1] - m.a[1]) * m.n[1]
       if (Math.abs(d) > settings.snapDist) continue
-      // the two walls have to face each other along their run, not merely lie on one line
+      // the two edges have to face each other along their run, not merely lie on one line
       const o0 = Math.min(t(o.a), t(o.b))
       const o1 = Math.max(t(o.a), t(o.b))
       if (o0 > m1 + 0.5 || o1 < m0 - 0.5) continue
-      hits.push({ d: Math.abs(d), move: [d * m.n[0], d * m.n[1]], n: m.n, wall: o })
+      hits.push({ d: Math.abs(d), move: [d * m.n[0], d * m.n[1]], n: m.n, edge: o })
     }
   }
   if (!hits.length) return { rect: gridRest(r, settings), guides }
@@ -277,7 +277,7 @@ export function snapMove(
     mx += second.move[0]
     my += second.move[1]
   } else if (square(r)) {
-    // one way is held by a wall; the other still rests on the grid
+    // one way is held by an edge; the other still rests on the grid
     if (Math.abs(first.n[1]) < 0.02) {
       const y = r.y + my
       my += r6(snapTo(y, settings.grid)) - y
@@ -287,14 +287,14 @@ export function snapMove(
     }
   }
   for (const h of [first, second].filter((x): x is Hit => !!x)) {
-    const u = [h.wall.b[0] - h.wall.a[0], h.wall.b[1] - h.wall.a[1]]
+    const u = [h.edge.b[0] - h.edge.a[0], h.edge.b[1] - h.edge.a[1]]
     const L = Math.hypot(u[0]!, u[1]!) || 1
     const ext = 1.5
     guides.push({
-      x1: r2(h.wall.a[0] - (u[0]! / L) * ext),
-      y1: r2(h.wall.a[1] - (u[1]! / L) * ext),
-      x2: r2(h.wall.b[0] + (u[0]! / L) * ext),
-      y2: r2(h.wall.b[1] + (u[1]! / L) * ext),
+      x1: r2(h.edge.a[0] - (u[0]! / L) * ext),
+      y1: r2(h.edge.a[1] - (u[1]! / L) * ext),
+      x2: r2(h.edge.b[0] + (u[0]! / L) * ext),
+      y2: r2(h.edge.b[1] + (u[1]! / L) * ext),
     })
   }
   return { rect: { ...r, x: r6(r.x + mx), y: r6(r.y + my) }, guides }
@@ -379,7 +379,7 @@ export function snapHeight(
 
 // ---------- drawing a point ----------
 
-/** A wall's line drawn right through the sheet, so a point can line up with it from anywhere. */
+/** An edge's line drawn right through the sheet, so a point can line up with it from anywhere. */
 export const guideOf = (w: { a: Point; b: Point }): Guide => {
   const u = [w.b[0] - w.a[0], w.b[1] - w.a[1]]
   const L = Math.hypot(u[0]!, u[1]!) || 1
@@ -415,7 +415,7 @@ export function anglesNear(pt: Point, onStorey: Room[]): number[] {
   return out
 }
 
-export type SnapKind = 'corner' | 'meet' | 'wall' | 'line' | 'square' | 'angle' | 'grid' | 'free'
+export type SnapKind = 'corner' | 'meet' | 'edge' | 'line' | 'square' | 'angle' | 'grid' | 'free'
 
 export type PointSnap = {
   at: Point
@@ -432,8 +432,8 @@ const gridPt = ([x, y]: Point, settings: Settings): Point => [
 
 /**
  * A drawn point pulled onto what is already there, and told what it caught: a corner of any room
- * first, then where two wall lines meet, then the nearest wall (or its line carried past its end),
- * then the direction of a neighbouring room's walls from the last corner, and last the grid. Shift
+ * first, then where two edge lines meet, then the nearest edge (or its line carried past its end),
+ * then the direction of a neighbouring room's edges from the last corner, and last the grid. Shift
  * held leaves the point exactly where the pointer is.
  */
 export function snapPoint(
@@ -471,8 +471,8 @@ export function snapPoint(
     return res
   }
   if (!(d > 0) || !cands.length) return withAngle({ at: grid, guides: [], kind: 'grid', marks: [] })
-  // Square to a wall, both ways: the last corner sits on a wall, so a guide rises from it at a right
-  // angle and the point rides that guide; or the point comes near a wall, and the foot of the
+  // Square to an edge, both ways: the last corner sits on an edge, so a guide rises from it at a right
+  // angle and the point rides that guide; or the point comes near an edge, and the foot of the
   // perpendicular from the last corner onto it is where the new side meets it square.
   const rise: { w: Seg; n: Point }[] = []
   if (settings.snapSquare && from)
@@ -505,16 +505,16 @@ export function snapPoint(
       marks: [{ type: 'corner', at: hit.c }],
     }
   }
-  const hits: { dd: number; w: Seg; u: Point; off: number; onWall: boolean }[] = []
+  const hits: { dd: number; w: Seg; u: Point; off: number; onEdge: boolean }[] = []
   for (const w of cands) {
     const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1
     const u: Point = [(w.b[0] - w.a[0]) / L, (w.b[1] - w.a[1]) / L]
     const t = (pt[0] - w.a[0]) * u[0] + (pt[1] - w.a[1]) * u[1]
     const off = (pt[0] - w.a[0]) * -u[1] + (pt[1] - w.a[1]) * u[0]
     if (Math.abs(off) > d) continue
-    hits.push({ dd: Math.abs(off), w, u, off, onWall: t >= -0.02 && t <= L + 0.02 })
+    hits.push({ dd: Math.abs(off), w, u, off, onEdge: t >= -0.02 && t <= L + 0.02 })
   }
-  // riding the guide that rises square from the last corner's wall
+  // riding the guide that rises square from the last corner's edge
   let ride: { g: { w: Seg; n: Point }; along: number; off: number } | null = null
   if (from)
     for (const g of rise) {
@@ -541,11 +541,11 @@ export function snapPoint(
     }
     return withAngle({ at: grid, guides: [], kind: 'grid', marks: [] })
   }
-  // a wall itself before its line carried on, then the nearest
-  hits.sort((p, q) => Number(q.onWall) - Number(p.onWall) || p.dd - q.dd)
+  // an edge itself before its line carried on, then the nearest
+  hits.sort((p, q) => Number(q.onEdge) - Number(p.onEdge) || p.dd - q.dd)
   const first = hits[0]!
   if (settings.snapSquare && from) {
-    // landing square: the foot of the perpendicular from the last corner onto the wall in reach
+    // landing square: the foot of the perpendicular from the last corner onto the edge in reach
     for (const h of hits) {
       const w = h.w
       const u = h.u
@@ -568,7 +568,7 @@ export function snapPoint(
         ],
       }
     }
-    // riding the rising guide across a wall line: where the two meet
+    // riding the rising guide across an edge line: where the two meet
     if (ride && Math.abs(ride.g.n[0] * first.u[0] + ride.g.n[1] * first.u[1]) < 0.999) {
       const m = meetLines(
         from,
@@ -607,19 +607,19 @@ export function snapPoint(
   return {
     at: [r6(at[0]), r6(at[1])],
     guides,
-    kind: first.onWall ? 'wall' : 'line',
+    kind: first.onEdge ? 'edge' : 'line',
     marks: [{ type: 'tick', at, u: first.u }],
   }
 }
 
-// ---------- gaps: a wall that nearly meets a neighbour's is pulled onto it ----------
+// ---------- gaps: an edge that nearly meets a neighbour's is pulled onto it ----------
 
-/** The facing walls of two rooms closer than the setting, with how far apart they stand. */
-export function nearWalls(a: Room, b: Room, upTo: number): { d: number; seg: Seg }[] {
+/** The facing edges of two rooms closer than the setting, with how far apart they stand. */
+export function nearEdges(a: Room, b: Room, upTo: number): { d: number; seg: Seg }[] {
   const out: { d: number; seg: Seg }[] = []
-  const wa = worldWalls(a)
+  const wa = worldEdges(a)
   const la = outlineOf(a)
-  const wb = worldWalls(b)
+  const wb = worldEdges(b)
   for (let i = 0; i < wa.length; i++) {
     const m = wa[i]!
     const ml = Math.hypot(m.b[0] - m.a[0], m.b[1] - m.a[1]) || 1
@@ -630,9 +630,9 @@ export function nearWalls(a: Room, b: Room, upTo: number): { d: number; seg: Seg
     for (const o of wb) {
       const ol = Math.hypot(o.b[0] - o.a[0], o.b[1] - o.a[1]) || 1
       if (Math.abs((u[0] * (o.b[1] - o.a[1]) - u[1] * (o.b[0] - o.a[0])) / ol) > 0.02) continue
-      if (m.n[0] * o.n[0] + m.n[1] * o.n[1] > -0.9) continue // the walls must face each other
+      if (m.n[0] * o.n[0] + m.n[1] * o.n[1] > -0.9) continue // the edges must face each other
       const d = (o.a[0] - m.a[0]) * m.n[0] + (o.a[1] - m.a[1]) * m.n[1]
-      if (d < 0.004 || d > upTo) continue // apart, and by a gap not a wall
+      if (d < 0.004 || d > upTo) continue // apart, and by a gap not an edge
       const o0 = Math.min(t(o.a), t(o.b))
       const o1 = Math.max(t(o.a), t(o.b))
       if (Math.min(m1, o1) - Math.max(m0, o0) < 0.3) continue // and overlap along their run
@@ -657,13 +657,13 @@ export function closeGaps(all: Room[], only: Room | null, settings: Settings): S
       if (only && a !== only) continue
       for (const b of all) {
         if (b === a || !b.placed) continue
-        // the newer wall moves, never the older
+        // the newer edge moves, never the older
         if (!only && (a.placedAt ?? 0) < (b.placedAt ?? 0)) continue
-        const near = nearWalls(a, b, upTo)
+        const near = nearEdges(a, b, upTo)
         if (!near.length) continue
         const was = cloneRoom(a)
         const g = near.sort((p, q) => q.d - p.d)[0]!
-        const ok = pullWall(a, g.seg, g.d)
+        const ok = pullEdge(a, g.seg, g.d)
         let alive = true
         if (ok) alive = !!canonicalise(a)
         const clash =

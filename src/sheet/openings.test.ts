@@ -33,9 +33,9 @@ const door = (over: Partial<Door>): Door => ({
 })
 
 /*
- * A kitchen 4 × 3 at (6, 6) beside a dining room 4 × 3 at (10, 6): the two share the wall x = 10.
- * The kitchen has a street door in the middle of its north wall at (8, 6), and a door into the
- * dining room halfway along the shared wall at (10, 7.5).
+ * A kitchen 4 × 3 at (6, 6) beside a dining room 4 × 3 at (10, 6): the two share the edge x = 10.
+ * The kitchen has a street door in the middle of its north edge at (8, 6), and a door into the
+ * dining room halfway along the shared edge at (10, 7.5).
  */
 function house(doors: Door[] = []): Sheet {
   return sheetOf(
@@ -77,7 +77,7 @@ describe('the door under the hand', () => {
 })
 
 describe('what a placement added', () => {
-  it('names the one door a placement put on the wall', () => {
+  it('names the one door a placement put on the edge', () => {
     const before = house()
     const change = addDoor(before, {
       x: 8,
@@ -94,7 +94,7 @@ describe('what a placement added', () => {
 })
 
 describe('a door’s drawing', () => {
-  it('opens the wall the door’s width', () => {
+  it('opens the edge the door’s width', () => {
     const [a, b] = drawingOf(house(), 'inner').gap
     expect(Math.hypot(b[0] - a[0], b[1] - a[1])).toBeCloseTo(0.9, 6)
   })
@@ -124,7 +124,7 @@ describe('a door’s drawing', () => {
     expect(open.jambs).toHaveLength(2)
   })
 
-  it('marks an opened wall with its own line and nothing else', () => {
+  it('marks an opened edge with its own line and nothing else', () => {
     const sheet = house()
     kitchen(sheet).doors![1] = door({
       id: 'inner',
@@ -156,7 +156,7 @@ describe('a door’s drawing', () => {
 })
 
 describe('what the sentence says about the door in hand', () => {
-  it('names the wall, the room it leads into and the way it swings', () => {
+  it('names the edge, the room it leads into and the way it swings', () => {
     expect(doorRead(house(), 0, { room: 'k', id: 'inner' })).toEqual({
       label: 'Door',
       room: 'Kitchen',

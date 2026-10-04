@@ -21,7 +21,7 @@ import {
   type Plot,
   type Project,
   type Result,
-  type WallHint,
+  type EdgeHint,
 } from './types'
 import type { Footprint } from '../geometry/types'
 
@@ -188,7 +188,7 @@ export function createActions(context: Context) {
       b: Endpoint
       kind: ConnectionKind
       storey?: number
-      hint?: WallHint
+      hint?: EdgeHint
     }): Result<string> {
       const project = state()
       const connection = {
@@ -204,10 +204,10 @@ export function createActions(context: Context) {
     },
 
     /**
-     * Where a door is drawn on the wall its two rooms share. It is a hint and nothing else: an
-     * connection that loses it draws its door in the middle of the wall instead, as it always did.
+     * Where a door is drawn on the edge its two rooms share. It is a hint and nothing else: an
+     * connection that loses it draws its door in the middle of the edge instead, as it always did.
      */
-    setConnectionHint(connectionId: string, hint: WallHint): Result {
+    setConnectionHint(connectionId: string, hint: EdgeHint): Result {
       const project = state()
       if (!project.connections.some((connection) => connection.id === connectionId))
         return missing('connection', connectionId)
@@ -247,7 +247,7 @@ export function createActions(context: Context) {
       })
     },
 
-    /** Two rooms the program wants apart; a warning to be read, never a wall. */
+    /** Two rooms the program wants apart; a warning to be read, never a limit. */
     keepApart(input: { a: string; b: string }): Result<string> {
       const project = state()
       const pair = { id: newId('apart'), a: input.a, b: input.b }

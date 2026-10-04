@@ -72,7 +72,7 @@ const sweepOf = (h: Point, e: Point, f: Point): 0 | 1 =>
   (e[0] - h[0]) * (f[1] - h[1]) - (e[1] - h[1]) * (f[0] - h[0]) > 0 ? 1 : 0
 
 /**
- * A door on its wall: the wall opened, the leaf and its swing, the panels of a sliding door, the
+ * A door on its edge: the edge opened, the leaf and its swing, the panels of a sliding door, the
  * jambs of an opening and the mark of a street door. The room it leads into is the one a leaf that
  * swings that way can be in the way of; a door not yet placed leads nowhere.
  */
@@ -141,7 +141,7 @@ export function doorDrawing(r: Room, d: Door, pl: Place, sheet: Sheet): DoorDraw
   }
 }
 
-/** What the sentence says about the door in hand: its wall, its neighbour, and which way it opens. */
+/** What the sentence says about the door in hand: its edge, its neighbour, and which way it opens. */
 export type DoorRead = {
   label: string
   room: string

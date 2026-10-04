@@ -16,7 +16,7 @@ import {
   toLocal,
   toWorld,
   worldPieces,
-  worldWalls,
+  worldEdges,
   type Seg,
 } from './geometry'
 
@@ -49,7 +49,7 @@ export const initialsOf = (name: string) =>
     .map((w) => w[0]!.toUpperCase())
     .join('')
 
-/** The walls of the rooms lying over this one, in its frame: the label must stop at them. */
+/** The edges of the rooms lying over this one, in its frame: the label must stop at them. */
 export function obstaclesOf(
   r: Room,
   sheet: Sheet,
@@ -60,7 +60,7 @@ export function obstaclesOf(
   )
   const segs: Seg[] = []
   for (const o of others)
-    for (const w of worldWalls(o)) {
+    for (const w of worldEdges(o)) {
       const a = toLocal(r, w.a[0], w.a[1])
       const b = toLocal(r, w.b[0], w.b[1])
       segs.push({ a, b, n: [0, 0] })

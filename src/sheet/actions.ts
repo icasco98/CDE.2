@@ -44,7 +44,7 @@ import {
   partArea,
   partsOf,
   polyArea,
-  pullWall as pullWallShape,
+  pullEdge as pullEdgeShape,
   r2,
   r6,
   rotateGroup,
@@ -64,14 +64,14 @@ import {
   type Seg,
 } from './geometry'
 import {
-  alignWall,
+  alignEdge,
   closeGaps,
   gridRest,
   onPlot,
   snapAngle,
   snapHeight,
   snapMove,
-  wallCandidates,
+  edgeCandidates,
 } from './snap'
 import { snapRooms } from './model'
 import { allowedBox, hold, overlapsOf, resolve, settle, type Give } from './settle'
@@ -194,7 +194,7 @@ export type PlaceInput = {
   h?: number
 }
 
-/** Dropped from the program: it snaps to walls, corners and lines, is held inside, and lands. */
+/** Dropped from the program: it snaps to edges, corners and lines, is held inside, and lands. */
 export function place(sheet: Sheet, input: PlaceInput): Change {
   return edit(sheet, (next) => {
     const r = found(next, input.id)
@@ -221,7 +221,7 @@ export function place(sheet: Sheet, input: PlaceInput): Change {
     r.y = r6(input.y)
     const sm = snapMove(
       r,
-      wallCandidates(snapRooms(next, input.storey, r), next.settings, next.plot),
+      edgeCandidates(snapRooms(next, input.storey, r), next.settings, next.plot),
       next.settings,
       next.plot,
     )
@@ -251,7 +251,7 @@ export function move(sheet: Sheet, input: MoveInput): Change {
     const from = group.map((r) => ({ r, x: r.x, y: r.y }))
     const dx = input.axisLock && Math.abs(input.dy) > Math.abs(input.dx) ? 0 : input.dx
     const dy = input.axisLock && Math.abs(input.dx) >= Math.abs(input.dy) ? 0 : input.dy
-    const cands = wallCandidates(
+    const cands = edgeCandidates(
       snapRooms(next, input.storey, null).filter((o) => !input.ids.includes(o.id)),
       next.settings,
       next.plot,
@@ -362,34 +362,34 @@ export function mirror(
   })
 }
 
-// ---------- walls, corners and sizes ----------
+// ---------- edges, corners and sizes ----------
 
-export type WallInput = { id: string; wall: number; distance: number; storey: number }
+export type EdgeInput = { id: string; edge: number; distance: number; storey: number }
 
-/** One wall along its normal, the two it meets following, aligned to what is in reach. */
-export function pullWall(sheet: Sheet, input: WallInput): Change {
+/** One edge along its normal, the two it meets following, aligned to what is in reach. */
+export function pullEdge(sheet: Sheet, input: EdgeInput): Change {
   return edit(sheet, (next) => {
     const r = found(next, input.id)
     if (!r || !r.placed) return { ok: false, said: 'no such room on the sheet' }
     if (r.locked || r.fixed) return { ok: false, said: `${r.name} is locked` }
-    const seg = outlineOf(r)[input.wall]
-    if (!seg) return { ok: false, said: `${r.name} has no such wall` }
+    const seg = outlineOf(r)[input.edge]
+    if (!seg) return { ok: false, said: `${r.name} has no such edge` }
     const frame = { x: r.x, y: r.y, w: r.w, h: r.h, angle: r.angle || 0 }
     const before = cloneRoom(r)
     const others = snapRooms(next, input.storey, r)
-    const al = alignWall(frame, seg, input.distance, others, next.settings, next.plot)
+    const al = alignEdge(frame, seg, input.distance, others, next.settings, next.plot)
     const g = next.settings.grid || 0.05
     let s = al.guide ? al.s : r2(snapTo(input.distance, g))
     const step = s >= 0 ? g : -g
     for (let guard = 0; guard < 400; guard++) {
       Object.assign(r, cloneRoom(before))
       if (Math.abs(s) < 1e-6) break
-      if (pullWallShape(r, seg, s)) {
+      if (pullEdgeShape(r, seg, s)) {
         if (canonicalise(r)) break
       }
       s = r2(s - step)
     }
-    if (Math.abs(s) < 1e-6) return { ok: false, said: 'That wall cannot move there.' }
+    if (Math.abs(s) < 1e-6) return { ok: false, said: 'That edge cannot move there.' }
     r.placedAt = nextClock(next)
     const moved = afterChange(next, input.storey, r)
     return {
@@ -431,7 +431,7 @@ export function moveCorner(
 
 export type Side4 = 'left' | 'right' | 'top' | 'bottom'
 
-/** A plain room's side; with `shared`, the neighbour it shares that wall with follows. */
+/** A plain room's side; with `shared`, the neighbour it shares that edge with follows. */
 export function resize(
   sheet: Sheet,
   input: { id: string; side: Side4; distance: number; shared?: string; storey: number },
@@ -449,7 +449,7 @@ export function resize(
       bottom: { a: [0, f.h], b: [f.w, f.h], n: [0, 1] },
       top: { a: [0, 0], b: [f.w, 0], n: [0, -1] },
     }
-    const al = alignWall(
+    const al = alignEdge(
       f,
       sides[input.side],
       input.distance,
@@ -772,7 +772,7 @@ export function restore(sheet: Sheet, input: { id: string; storey: number }): Ch
 
 /**
  * The selected rooms welded into one: the survivor keeps its name, kind, target and doors, takes the
- * others' footprints and doors, and the others go back to the program. They must share a wall.
+ * others' footprints and doors, and the others go back to the program. They must share an edge.
  */
 export function combine(
   sheet: Sheet,
@@ -795,7 +795,7 @@ export function combine(
     if (partsOf(welded).length > 1)
       return {
         ok: false,
-        said: 'Those rooms do not share a wall, so they cannot be combined. Close the gap first.',
+        said: 'Those rooms do not share an edge, so they cannot be combined. Close the gap first.',
       }
     for (const O of others) sendBackRoom(next, O)
     S.pieces = welded
@@ -814,7 +814,7 @@ export function combine(
   })
 }
 
-/** Corners pulled onto wall lines they all but sit on, so a shared wall reads as one line. */
+/** Corners pulled onto edge lines they all but sit on, so a shared edge reads as one line. */
 function weldToLines(pieces: Poly[], segs: Seg[], tol: number): Poly[] {
   return pieces.map((p) =>
     tidy(
@@ -1123,8 +1123,8 @@ export function makeCorridor(sheet: Sheet, input: { pocket: number; storey: numb
 // ---------- doors ----------
 
 /**
- * A door put on the wall under the hand, drawing the connection named: between its room and `to`, the
- * room across or the outside. A connection may have several doors, but two never overlap on one wall.
+ * A door put on the edge under the hand, drawing the connection named: between its room and `to`, the
+ * room across or the outside. A connection may have several doors, but two never overlap on one edge.
  */
 export function addDoor(
   sheet: Sheet,
@@ -1141,7 +1141,7 @@ export function addDoor(
   return edit(sheet, (next) => {
     const w = input.width ?? DOOR[input.type].w
     const hit = doorAt(input.x, input.y, input.type === 'open' ? 0.6 : w, next, input.storey)
-    if (!hit) return { ok: false, said: 'No wall there.' }
+    if (!hit) return { ok: false, said: 'No edge there.' }
     if (hit.room.id === input.to) return { ok: false, said: 'A door leads out of its room.' }
     const stands = doorStanding(next, input.storey, hit, { type: input.type, w, to: input.to })
     if ('why' in stands) return { ok: false, said: stands.why }
@@ -1160,17 +1160,17 @@ export function addDoor(
     hit.room.doors = [...doorsOf(hit.room), d]
     const snapped = stands.pl.snapped
     if (input.type === 'open')
-      return { ok: true, said: `${hit.room.name}: wall opened`, at: where(hit.room) }
+      return { ok: true, said: `${hit.room.name}: edge opened`, at: where(hit.room) }
     return {
       ok: true,
-      said: `${DOOR[input.type].label} on ${hit.room.name}${snapped === 'middle' ? ', middle of the wall' : snapped === 'jamb' ? ', a jamb from the corner' : ''}`,
+      said: `${DOOR[input.type].label} on ${hit.room.name}${snapped === 'middle' ? ', middle of the edge' : snapped === 'jamb' ? ', a jamb from the corner' : ''}`,
       at: where(hit.room),
     }
   })
 }
 
 const overlapSaid = (other: Drawn) =>
-  `That would overlap the ${DOOR[other.door.type].label.toLowerCase()} already on ${other.room.name}'s wall.`
+  `That would overlap the ${DOOR[other.door.type].label.toLowerCase()} already on ${other.room.name}'s edge.`
 
 const findDoor = (sheet: Sheet, roomId: string, doorId: string) => {
   const r = sheet.rooms.find((o) => o.id === roomId && o.placed) ?? null
@@ -1178,7 +1178,7 @@ const findDoor = (sheet: Sheet, roomId: string, doorId: string) => {
   return { r, d }
 }
 
-/** A door slid along the wall it stands on to the point nearest the hand; it never leaves it. */
+/** A door slid along the edge it stands on to the point nearest the hand; it never leaves it. */
 export function moveDoor(
   sheet: Sheet,
   input: { room: string; door: string; x: number; y: number; storey: number },
@@ -1199,7 +1199,7 @@ export function moveDoor(
   })
 }
 
-/** A grid step along the wall, kept a jamb from the corners. */
+/** A grid step along the edge, kept a jamb from the corners. */
 export function slideDoor(
   sheet: Sheet,
   input: { room: string; door: string; step: number; storey: number },
@@ -1230,11 +1230,11 @@ export function setDoorWidth(
   return edit(sheet, (next) => {
     const { r, d } = findDoor(next, input.room, input.door)
     if (!r || !d) return { ok: false, said: 'no such door' }
-    if (d.type === 'open') return { ok: false, said: 'An opened wall is as wide as the wall.' }
+    if (d.type === 'open') return { ok: false, said: 'An opened edge is as wide as the edge.' }
     const width = r2(Math.min(3, Math.max(0.6, input.w)))
     const room = roomForDoor(next, input.storey, r, d)
     if (room === null || width > room + 1e-6)
-      return { ok: false, said: 'That wall is too short for a door that wide.' }
+      return { ok: false, said: 'That edge is too short for a door that wide.' }
     d.w = width
     const clash = doorClash(next, input.storey, r, d)
     if (clash) return { ok: false, said: overlapSaid(clash) }

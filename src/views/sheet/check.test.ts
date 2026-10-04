@@ -3,7 +3,7 @@ import { sheetOf, type Door, type Room, type Sheet } from '../../sheet'
 import { checkRead, linesFrom, pairKey, type SheetConnection } from './check'
 
 /*
- * Reference cases worked on paper: rooms 4 × 3 m on the ground, standing side by side so the wall
+ * Reference cases worked on paper: rooms 4 × 3 m on the ground, standing side by side so the edge
  * they share is known before anything is measured.
  */
 
@@ -24,7 +24,7 @@ const room = (id: string, over: Partial<Room> = {}): Room => ({
   ...over,
 })
 
-/** A door drawing connection `connection` into room `to`, halfway along the wall the two share. */
+/** A door drawing connection `connection` into room `to`, halfway along the edge the two share. */
 const door = (id: string, connection: string, to: string): Door => ({
   id,
   connection,
@@ -43,9 +43,9 @@ const none = { apart: [], through: new Set<string>() }
 const sheet = (rooms: Room[]): Sheet => sheetOf(rooms)
 
 describe('ready in the zoning step', () => {
-  it('is a shared run of wall a door wide, and not a shorter run or a corner', () => {
+  it('is a shared run of edge a door wide, and not a shorter run or a corner', () => {
     const a = room('a')
-    // b beside a along its whole 3 m wall; c meets a for 0.5 m; d touches a at one corner.
+    // b beside a along its whole 3 m edge; c meets a for 0.5 m; d touches a at one corner.
     const b = room('b', { x: 6 })
     const c = room('c', { x: 6, y: 4.5, h: 3 })
     const d = room('d', { x: 6, y: 5 })
@@ -70,7 +70,7 @@ describe('ready in the zoning step', () => {
 })
 
 describe('met in the Openings step', () => {
-  it('is the door of that connection, drawn on the wall the two rooms share', () => {
+  it('is the door of that connection, drawn on the edge the two rooms share', () => {
     const met = checkRead(
       sheet([room('a', { doors: [door('d1', 'a-b', 'b')] }), room('b', { x: 6 })]),
       0,

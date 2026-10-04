@@ -136,7 +136,7 @@ describe('resizing about an anchor', () => {
     }
   })
 
-  it('keeps the midpoint of the opposite wall still for a wall drag on a turned footprint', () => {
+  it('keeps the midpoint of the opposite edge still for an edge drag on a turned footprint', () => {
     const footprint = rectangle(0, 0, 4, 2, 30)
     const anchor = anchorPointOf(footprint, -1, 0)
     const resized = resizeFromAnchor(footprint, anchor, -1, 0, 9, 2)

@@ -129,7 +129,7 @@ function asRoom(saved: Room): Room {
   return room
 }
 
-/** A door of format 1: a point on its room's wall and, when placed after doors knew it, its pair. */
+/** A door of format 1: a point on its room's edge and, when placed after doors knew it, its pair. */
 type FormatOneDoor = Omit<Door, 'connection' | 'to' | 'along' | 'at'> & {
   at: Point
   pair?: unknown

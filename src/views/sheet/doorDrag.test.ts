@@ -19,7 +19,7 @@ const room = (over: Partial<Room>): Room => ({
   ...over,
 })
 
-/** A beside B, sharing the wall x = 10 from y 6 to 9, and a door between them at (10, 7.5). */
+/** A beside B, sharing the edge x = 10 from y 6 to 9, and a door between them at (10, 7.5). */
 const pair = (): Sheet =>
   sheetOf(
     [
@@ -52,7 +52,7 @@ describe('a door held by the hand', () => {
     expect(doorDrop(drag, sheet, 0)).toBeNull()
   })
 
-  it('slides along the wall its two rooms share while the hand is within a metre of it', () => {
+  it('slides along the edge its two rooms share while the hand is within a metre of it', () => {
     const sheet = pair()
     const drag = doorDragTo(
       beginDoorDrag(sheet, 0, { room: 'a', id: 'd1' }, at)!,
@@ -67,11 +67,11 @@ describe('a door held by the hand', () => {
     expect(doorsOf(change.sheet.rooms[0]!)[0]!.along).toBeCloseTo(0.7, 6)
   })
 
-  it('never comes free for another wall, since the door draws the connection between its two rooms', () => {
+  it('never comes free for another edge, since the door draws the connection between its two rooms', () => {
     const sheet = pair()
     const drag = doorDragTo(beginDoorDrag(sheet, 0, { room: 'a', id: 'd1' }, at)!, [8, 6], sheet, 0)
     const change = doorDrop(drag, sheet, 0)
     expect(change?.result.ok).toBe(false)
-    expect(change?.result.said).toBe('A door stays on the wall A and B share.')
+    expect(change?.result.said).toBe('A door stays on the edge A and B share.')
   })
 })

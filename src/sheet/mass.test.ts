@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   MASS_VIEWS,
-  blindWall,
+  blindEdge,
   breaches,
   heightFromDrag,
   lookFrom,
@@ -9,7 +9,7 @@ import {
   massProjection,
   orderPrisms,
   prismsOf,
-  seenWalls,
+  seenEdges,
   worldLoop,
   MASS_START,
 } from './mass'
@@ -144,7 +144,7 @@ describe('the report of two storeys', () => {
   })
 })
 
-describe('the wall-line tree', () => {
+describe('the edge-line tree', () => {
   const near = room({ id: 'near', name: 'Near', x: 4, y: 16, w: 5, h: 4 })
   const far = room({ id: 'far', name: 'Far', x: 4, y: 4, w: 5, h: 4, angle: 25 })
 
@@ -182,18 +182,18 @@ describe('the wall-line tree', () => {
   })
 })
 
-describe('the walls the eye sees', () => {
-  it('shows the two walls turned toward the viewer and hides the two behind', () => {
+describe('the edges the eye sees', () => {
+  it('shows the two edges turned toward the viewer and hides the two behind', () => {
     const plan = sheet([room({ w: 5, h: 4 })])
     const P = massProjection(lookFrom(MASS_START, 'corner'), 600, 420)
     const prisms = prismsOf(plan, P)
     expect(prisms.length).toBe(1)
-    expect(seenWalls(prisms[0]!, P).length).toBe(2)
+    expect(seenEdges(prisms[0]!, P).length).toBe(2)
   })
 
-  it('reads a wall on the plot boundary as blind, and over 5 m as a breach', () => {
-    expect(blindWall([0, 4], [0, 9])).toBe(true)
-    expect(blindWall([4, 4], [4, 9])).toBe(false)
+  it('reads an edge on the plot boundary as blind, and over 5 m as a breach', () => {
+    expect(blindEdge([0, 4], [0, 9])).toBe(true)
+    expect(blindEdge([4, 4], [4, 9])).toBe(false)
     expect(breaches(5)).toBe(false)
     expect(breaches(6)).toBe(true)
   })

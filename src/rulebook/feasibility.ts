@@ -31,25 +31,25 @@ export type BriefConnection = {
 }
 
 export type Finding = {
-  readonly code: 'crossing' | 'wall' | 'kerb' | 'run'
+  readonly code: 'crossing' | 'edge' | 'kerb' | 'run'
   readonly storey: number
   /** What is wrong and what to do about it, in one sentence. */
   readonly sentence: string
 }
 
-/** How much wall one link needs, in metres, and the area under which a room counts as small. */
+/** How much edge one link needs, in metres, and the area under which a room counts as small. */
 const PER_LINK = 1
 const SMALL_LINK = 0.9
 
 /**
- * How many times that a link really spends of a room's wall. A door needs its metre and a length
- * of wall either side of it to be a door rather than a hole, and the room has to turn the corner
+ * How many times that a link really spends of a room's edge. A door needs its metre and a length
+ * of edge either side of it to be a door rather than a hole, and the room has to turn the corner
  * between one neighbour and the next; three metres of perimeter to a link is what a plan spends.
  * Judgement, like the rest of the table, and among the first numbers the known house will correct.
  */
-const WALL_PER_LINK = 3
+const EDGE_PER_LINK = 3
 
-/** The Municipality's smallest room; under it a door may take a little less wall. */
+/** The Municipality's smallest room; under it a door may take a little less edge. */
 const SMALL_ROOM_M2 = 10
 
 /** A corridor with no width of its own is read at the Municipality's clear minimum, in metres. */
@@ -64,7 +64,7 @@ function standsOn(room: BriefRoom, storey: number): boolean {
 }
 
 /**
- * How many links a room's wall can hold at its target aspect: its perimeter at the most generous
+ * How many links a room's edge can hold at its target aspect: its perimeter at the most generous
  * aspect its kind admits, divided by what a link really spends of it.
  *
  * A corridor is the exception, and it is the reason a corridor exists: it is served down both of
@@ -82,7 +82,7 @@ export function linksHeld(room: BriefRoom): number | undefined {
   const ratio = Math.max(1, kind.proportion.max)
   const short = Math.sqrt(Math.max(room.targetArea, 0) / ratio)
   const long = short * ratio
-  return Math.floor((2 * (short + long)) / (WALL_PER_LINK * per))
+  return Math.floor((2 * (short + long)) / (EDGE_PER_LINK * per))
 }
 
 function radiusOf(area: number): number {
@@ -108,7 +108,7 @@ function graphOn(
 
 /**
  * Every finding this program carries on this plot, storey by storey: the links that cannot be
- * drawn without one crossing another, the rooms asked to touch more than their wall can hold, and
+ * drawn without one crossing another, the rooms asked to touch more than their edge can hold, and
  * the kerb asked to hold more frontage than it has.
  */
 export function feasibility(
@@ -127,7 +127,7 @@ export function feasibility(
       found.push({
         code: 'crossing',
         storey,
-        sentence: `${storeyLabel(storey)}: these links cannot all be drawn without one crossing another, so one pair can never share a wall. Remove a link between two rooms that do not need a door.`,
+        sentence: `${storeyLabel(storey)}: these links cannot all be drawn without one crossing another, so one pair can never share an edge. Remove a link between two rooms that do not need a door.`,
       })
 
     for (const room of rooms) {
@@ -141,13 +141,13 @@ export function feasibility(
       ).length
       if (links <= held) continue
       found.push({
-        code: 'wall',
+        code: 'edge',
         storey,
         sentence: `${room.name} is linked to ${inWords(links)} rooms; at ${metresIn(room.targetArea)} m² it can touch ${inWords(held)}. Remove a link.`,
       })
     }
 
-    // The kerb, one boundary at a time: two rooms walled onto the same street cannot both have the
+    // The kerb, one boundary at a time: two rooms set on the same street cannot both have the
     // frontage. The bubbles may lie over one another by the quarter the model allows, so the run
     // they really need is that much less than the sum of their widths.
     const onKerb = new Map<number, BriefRoom[]>()

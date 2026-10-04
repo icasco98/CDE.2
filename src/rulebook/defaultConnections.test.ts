@@ -66,7 +66,7 @@ describe('the table stays inside the model', () => {
     expect(defaultConnections.every((row) => /^D\d+$/.test(row.id))).toBe(true)
     expect(new Set(numbers).size).toBe(numbers.length)
     expect([...numbers].sort((one, other) => one - other)).toEqual(numbers)
-    // D8 opened the stair off the entry; it is withdrawn, because an entry's wall cannot carry
+    // D8 opened the stair off the entry; it is withdrawn, because an entry's edges cannot carry
     // six doors and D26 already reaches the stair from the corridor.
     expect(numbers).not.toContain(8)
   })

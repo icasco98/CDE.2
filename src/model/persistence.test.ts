@@ -82,7 +82,7 @@ describe('the project file', () => {
     expect(back.ok && back.value).toEqual(project)
   })
 
-  it('round trips a room with a curved wall, at the version it already stood on', () => {
+  it('round trips a room with a curved edge, at the version it already stood on', () => {
     const project = furnished()
     const first = project.rooms[0]
     if (!first?.footprint) throw new Error('the furnished project has no placed room')

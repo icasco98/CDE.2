@@ -36,7 +36,7 @@ const TITLE_PT = 14
 const LABEL_PT = 8
 const NUMBER_PT = 9
 
-/** How thick the white mask over a wall is, in points: enough to cut both lines of a shared wall. */
+/** How thick the white mask over an edge is, in points: enough to cut both lines of a shared edge. */
 const GAP_PT = 2.4
 
 const PLOT_STROKE = { width: 1 }
@@ -202,7 +202,7 @@ function titleBlock(input: {
   ]
 }
 
-/** A door is a gap: the wall is drawn whole and then the opening is masked out in white. */
+/** A door is a gap: the edge is drawn whole and then the opening is masked out in white. */
 function doorGap(opening: Opening, placement: Placement): Draw {
   const run = (opening.width / 2) * placement.pointsPerMetre
   const centre = placement.at(opening.at)

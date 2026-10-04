@@ -5,7 +5,7 @@
  */
 
 import { carveBelow, move, place, pushOthers, setSize, turn } from './actions'
-import { alongNamed, standAgainst, wallNamed, type Standing } from './against'
+import { alongNamed, standAgainst, edgeNamed, type Standing } from './against'
 import { changesBetween, type Changed } from './changes'
 import { roomNamed, storeyNamed, type Desk } from './desk'
 import { doDeed, type Deed } from './verbs'
@@ -69,9 +69,9 @@ export type StoreyRead = {
   storey: string
   lineTheGroundFloorMayReach: { x0: number; y0: number; x1: number; y1: number }
   placed: PlacedRead[]
-  /** Every pair that shares a run of wall, and how long that run is in metres. */
+  /** Every pair that shares a run of edge, and how long that run is in metres. */
   sharing: Sharing[]
-  /** Every pair that does not share a wall but meets at a corner or stands a sliver apart. */
+  /** Every pair that does not share an edge but meets at a corner or stands a sliver apart. */
   allButTouching: Apart[]
   report: Report
 }
@@ -240,7 +240,7 @@ function oneMove(desk: Desk, storey: number, wanted: Record<string, unknown>): s
   })
 }
 
-/** One room put against a named wall of another, the tool working out where that is. */
+/** One room put against a named edge of another, the tool working out where that is. */
 function onePlacing(desk: Desk, storey: number, asked: Record<string, unknown>): string {
   const sheet = desk.read()
   const r = roomNamed(sheet, asked.room)
@@ -250,22 +250,22 @@ function onePlacing(desk: Desk, storey: number, asked: Record<string, unknown>):
   if (!target.placed) return `${target.name} is not on the sheet yet`
   if (storeyOf(target) !== storey)
     return `${target.name} stands on the ${storeyNameOf(storeyOf(target))} storey, not the ${storeyNameOf(storey)}`
-  const wall = wallNamed(asked.wall)
-  if (!wall) return `${r.name}: the wall must be north, south, east or west`
+  const edge = edgeNamed(asked.edge)
+  if (!edge) return `${r.name}: the edge must be north, south, east or west`
   const w = Number(asked.w)
   const h = Number(asked.h)
   const size = sized(w, h) ? { w: r2(w), h: r2(h) } : { w: r.w, h: r.h }
   const offset = asked.offset === undefined ? undefined : Number(asked.offset)
   const standing = standAgainst(
     target,
-    wall,
+    edge,
     { name: r.name, ...size },
     alongNamed(asked.along),
     offset,
   )
   if (!standing.ok) return standing.why
   const said = putRoom(desk, storey, r, standing.standing)
-  return `${said} · against ${target.name}'s ${wall} wall`
+  return `${said} · against ${target.name}'s ${edge} edge`
 }
 
 const placedCount = (sheet: Sheet, storey: number) =>
@@ -301,7 +301,7 @@ export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
       description:
         'The whole house as it stands: the plot, the setback line, and every storey with each room ' +
         'on it (frame x,y the top-left corner in metres, w, h, angle, area, target, height, doors), ' +
-        'how the rooms stand to each other — every pair that shares a run of wall and how long it ' +
+        'how the rooms stand to each other — every pair that shares a run of edge and how long it ' +
         'is, and every pair that only meets at a corner or stands a sliver apart — the rooms still ' +
         'waiting, the report per storey and the floor areas in total. Call it after a batch.',
       inputSchema: { type: 'object', properties: {} },
@@ -314,10 +314,10 @@ export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
     {
       name: 'place_against',
       description:
-        'Put rooms against a named wall of another room, touching it and lying along it: each ' +
-        '{room, against, wall: north|south|east|west of that room, along: start|end|centre, ' +
+        'Put rooms against a named edge of another room, touching it and lying along it: each ' +
+        '{room, against, edge: north|south|east|west of that room, along: start|end|centre, ' +
         'offset: metres from the near end instead, w, h to resize}. The tool works out the ' +
-        'coordinates, the sheet snaps and holds it inside the line, and a wall too short to take the ' +
+        'coordinates, the sheet snaps and holds it inside the line, and an edge too short to take the ' +
         'room is refused with the reason. Several placements in one call, in importance order. ' +
         'storey: the storey by name, the one on screen by default.',
       inputSchema: {
@@ -330,13 +330,13 @@ export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
               properties: {
                 room: { type: 'string' },
                 against: { type: 'string' },
-                wall: { type: 'string' },
+                edge: { type: 'string' },
                 along: { type: 'string' },
                 offset: { type: 'number' },
                 w: { type: 'number' },
                 h: { type: 'number' },
               },
-              required: ['room', 'against', 'wall'],
+              required: ['room', 'against', 'edge'],
             },
           },
           storey: { type: 'string' },
@@ -507,8 +507,8 @@ export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
         'give{between, to}; combine{rooms:[names], into: the one that survives}; lock{rooms}; ' +
         'unlock{rooms}; group{rooms}; ungroup{rooms}; height{room, metres}; ' +
         'storey{rooms, to: a storey by name}; copy{room, to}; cut{room: past the setback}; ' +
-        'restore{room}; door{room, wall:north|south|east|west, type:door|double|sliding|opening|' +
-        'street|street2, along: 0–1 of the way along that wall}; open_wall{room, wall, along}; ' +
+        'restore{room}; door{room, edge:north|south|east|west, type:door|double|sliding|opening|' +
+        'street|street2, along: 0–1 of the way along that edge}; open_edge{room, edge, along}; ' +
         'send_back{rooms}. Each deed says what it did, or refuses with the reason and changes ' +
         'nothing while the rest of the list still runs. storey: by name, the one on screen by default.',
       inputSchema: {

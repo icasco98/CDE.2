@@ -124,7 +124,7 @@ describe('limiting a resize', () => {
     expect(limitResize(from, to, plot)).toBe(to)
   })
 
-  it('stops one at the wall without moving the anchored corner', () => {
+  it('stops one at the edge without moving the anchored corner', () => {
     const from = rectangle(16, 2, 3, 3)
     const anchor = anchorPointOf(from, -1, -1)
     const to = resizeFromAnchor(from, anchor, -1, -1, 9, 3)

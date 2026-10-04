@@ -17,17 +17,17 @@ import {
   type Room,
   type Sheet,
 } from './model'
-import { areaOf, polyArea, r2, worldWalls, type Seg } from './geometry'
+import { areaOf, polyArea, r2, worldEdges, type Seg } from './geometry'
 import { allowedBox, outsideBuildable, overlapsOf } from './settle'
 import { pocketsOf } from './pockets'
 import { walkTest, type Walk } from './doors'
 
 const onLine = (v: number, at: number) => Math.abs(v - at) < 0.02
 
-/** A room's walls that lie on the plot boundary, each with the side it is on. */
-export function boundaryWalls(r: Room, plot: PlotSpec): (Seg & { side: Side })[] {
+/** A room's edges that lie on the plot boundary, each with the side it is on. */
+export function boundaryEdges(r: Room, plot: PlotSpec): (Seg & { side: Side })[] {
   const out: (Seg & { side: Side })[] = []
-  for (const w of worldWalls(r)) {
+  for (const w of worldEdges(r)) {
     const side: Side | null =
       onLine(w.a[0], 0) && onLine(w.b[0], 0)
         ? 'west'
@@ -43,13 +43,13 @@ export function boundaryWalls(r: Room, plot: PlotSpec): (Seg & { side: Side })[]
   return out
 }
 
-/** How much of a side is built to the boundary: the walls' runs, overlaps counted once. */
+/** How much of a side is built to the boundary: the edges' runs, overlaps counted once. */
 export function sideUsed(sheet: Sheet, side: Side): number {
   const runs: [number, number][] = []
   const k = side === 'west' || side === 'east' ? 1 : 0 // the coordinate that runs along that side
   for (const r of allPlaced(sheet))
     if (storeyOf(r) === 0 && !r.fixed && !isOpen(r))
-      for (const w of boundaryWalls(r, sheet.plot))
+      for (const w of boundaryEdges(r, sheet.plot))
         if (w.side === side) runs.push([Math.min(w.a[k], w.b[k]), Math.max(w.a[k], w.b[k])])
   runs.sort((p, q) => p[0] - q[0])
   let used = 0

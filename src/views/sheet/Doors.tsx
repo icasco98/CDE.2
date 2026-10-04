@@ -1,6 +1,6 @@
 /**
- * The doors on the sheet: each one drawn on its wall in its room's frame where its two rooms share
- * one, and the door the hand is about to place drawn faint over the wall under it.
+ * The doors on the sheet: each one drawn on its edge in its room's frame where its two rooms share
+ * one, and the door the hand is about to place drawn faint over the edge under it.
  */
 
 import {
@@ -31,7 +31,7 @@ export type OpeningsDraw = {
   /** The type armed in the toolbar, and where it would land under the pointer. */
   armed: { type: Door['type']; w: number } | null
   armedAt: Hit | null
-  /** Where the dragged door would land; refused walls are drawn in the warning colour. */
+  /** Where the dragged door would land; refused edges are drawn in the warning colour. */
   draggedTo: Hit | null
   dragged: { type: Door['type']; w: number } | null
   onDoorDown: (room: Room, door: Door, event: ReactPointerEvent) => void
@@ -135,7 +135,7 @@ function SnapNote({ room, pl }: { room: Room; pl: Place }) {
   const wp = toWorld(room, pl.p[0], pl.p[1])
   return (
     <text className="snap-note" x={p4(wp[0])} y={p4(wp[1] - 0.5)} textAnchor="middle">
-      {pl.snapped === 'middle' ? 'middle of the wall' : 'a jamb from the corner'}
+      {pl.snapped === 'middle' ? 'middle of the edge' : 'a jamb from the corner'}
     </text>
   )
 }

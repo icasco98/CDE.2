@@ -32,7 +32,7 @@ describe('the name on a room', () => {
     expect(initialsOf('Diwaniya WC')).toBe('DW')
   })
 
-  it('names the rooms lying over this one, as walls in its own frame', () => {
+  it('names the rooms lying over this one, as edges in its own frame', () => {
     const a = room()
     const b = room({ id: 'b', name: 'B', x: 8, y: 4, w: 4, h: 4 })
     const obs = obstaclesOf(a, sheetOf([a, b]), 0)

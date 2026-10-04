@@ -6,7 +6,7 @@ import { setAngle } from './geometry'
 
 const roomIn = (name: string): Room => fixtureSheet().rooms.find((r) => r.name === name)!
 
-/** Two plain rooms side by side, the second's left wall this far from the first's right wall. */
+/** Two plain rooms side by side, the second's left edge this far from the first's right edge. */
 const pair = (gap: number, h = 4, y = 0): [Room, Room] => {
   const one = { ...roomIn('Bedroom'), name: 'One', x: 0, y: 0, w: 5, h: 4, angle: 0 }
   const other = { ...roomIn('Bedroom'), name: 'Other', x: 5 + gap, y, w: 3, h, angle: 0 }
@@ -14,14 +14,14 @@ const pair = (gap: number, h = 4, y = 0): [Room, Room] => {
 }
 
 describe('how the rooms stand to each other', () => {
-  it('measures the wall a known pair shares on the embedded sheet', () => {
+  it('measures the edge a known pair shares on the embedded sheet', () => {
     // The stair stands at x 1.5..7.75, y 9..12.37; the family living at x 0..7.75, y 0..9.
-    // They meet along y = 9 from x 1.5 to x 7.75: six and a quarter metres of shared wall.
+    // They meet along y = 9 from x 1.5 to x 7.75: six and a quarter metres of shared edge.
     const met = meetingOf(roomIn('Stair'), roomIn('Family Living'))
     expect(met).toEqual({ rooms: ['Stair', 'Family Living'], metres: 6.25 })
   })
 
-  it('says a known pair meets at a corner and shares no wall', () => {
+  it('says a known pair meets at a corner and shares no edge', () => {
     // The entry's north-west corner and the guest WC's south-east corner are both at 11.39, 7.
     expect(meetingOf(roomIn('Entry'), roomIn('Guest WC'))).toEqual({
       rooms: ['Entry', 'Guest WC'],
@@ -30,7 +30,7 @@ describe('how the rooms stand to each other', () => {
     })
   })
 
-  it('reads the embedded ground floor in full, the longest shared wall first', () => {
+  it('reads the embedded ground floor in full, the longest shared edge first', () => {
     const meetings = meetingsOf(fixtureSheet(), 0)
     expect(meetings.sharing[0]).toEqual({ rooms: ['Stair', 'Family Living'], metres: 6.25 })
     expect(meetings.sharing.map((one) => one.metres)).toEqual(
@@ -46,7 +46,7 @@ describe('how the rooms stand to each other', () => {
     expect(meetingOf(...pair(NEAR_GAP + 0.1))).toBeNull()
   })
 
-  it('counts only the run two walls truly share', () => {
+  it('counts only the run two edges truly share', () => {
     // the second room stands half off the end of the first: two of its four metres are against it
     const [one, other] = pair(0, 4, 2)
     expect(meetingOf(one, other)).toEqual({ rooms: ['One', 'Other'], metres: 2 })
@@ -57,7 +57,7 @@ describe('how the rooms stand to each other', () => {
     expect(meetingOf(one, other)).toBeNull()
   })
 
-  it('follows a turned room, measuring the wall it truly shares', () => {
+  it('follows a turned room, measuring the edge it truly shares', () => {
     const one = { ...roomIn('Bedroom'), name: 'One', x: 0, y: 0, w: 5, h: 4, angle: 0 }
     const turned = cloneRoom(one)
     turned.name = 'Turned'

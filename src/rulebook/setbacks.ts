@@ -1,4 +1,4 @@
-import { area, differencePolygons, outwardWalls, type Point, type Polygon } from '../geometry'
+import { area, differencePolygons, outwardEdges, type Point, type Polygon } from '../geometry'
 
 /** The plot as the setbacks read one: its boundary and which of its sides face a street. */
 export type PlotShape = {
@@ -58,19 +58,19 @@ function strip(
  * setback can pinch a plot in two, and the larger part is the one a house is drawn in.
  */
 export function buildableArea(plot: PlotShape): Polygon {
-  const walls = outwardWalls(plot.polygon)
-  if (walls.length < 3) return []
+  const edges = outwardEdges(plot.polygon)
+  if (edges.length < 3) return []
   const plotArea = area(plot.polygon)
-  const depths = walls.map((_wall, index) => setbackDepth(plotArea, plot.street.includes(index)))
-  const strips = walls
-    .map((wall, index) =>
+  const depths = edges.map((_edge, index) => setbackDepth(plotArea, plot.street.includes(index)))
+  const strips = edges
+    .map((edge, index) =>
       strip(
-        wall.from,
-        wall.to,
-        [-wall.normal[0], -wall.normal[1]],
+        edge.from,
+        edge.to,
+        [-edge.normal[0], -edge.normal[1]],
         depths[index] ?? 0,
-        depths[(index + walls.length - 1) % walls.length] ?? 0,
-        depths[(index + 1) % walls.length] ?? 0,
+        depths[(index + edges.length - 1) % edges.length] ?? 0,
+        depths[(index + 1) % edges.length] ?? 0,
       ),
     )
     .filter((quad) => quad.length > 0)

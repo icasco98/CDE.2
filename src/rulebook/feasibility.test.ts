@@ -58,7 +58,7 @@ describe('the brief checked before a bubble moves', () => {
     const found = feasibility(rooms, joined(pairs), plot, 1)
     expect(found.map((each) => each.code)).toContain('crossing')
     expect(found.find((each) => each.code === 'crossing')?.sentence).toBe(
-      'Ground: these links cannot all be drawn without one crossing another, so one pair can never share a wall. Remove a link between two rooms that do not need a door.',
+      'Ground: these links cannot all be drawn without one crossing another, so one pair can never share an edge. Remove a link between two rooms that do not need a door.',
     )
   })
 
@@ -83,7 +83,7 @@ describe('the brief checked before a bubble moves', () => {
     ])
   })
 
-  it('says when a room is asked to touch more rooms than its wall can hold', () => {
+  it('says when a room is asked to touch more rooms than its edge can hold', () => {
     const rooms = [
       room('wc', 'diwaniya-wc', 5, 'Diwaniya WC'),
       room('a', 'diwaniya', 45),
@@ -102,12 +102,12 @@ describe('the brief checked before a bubble moves', () => {
       plot,
       1,
     )
-    expect(found.find((each) => each.code === 'wall')?.sentence).toBe(
+    expect(found.find((each) => each.code === 'edge')?.sentence).toBe(
       'Diwaniya WC is linked to four rooms; at 5 m² it can touch three. Remove a link.',
     )
   })
 
-  it('counts a door to the street among the links a wall has to hold', () => {
+  it('counts a door to the street among the links an edge has to hold', () => {
     const rooms = [room('wc', 'guest-wc', 3, 'Guest WC'), room('a', 'entry-foyer', 8)]
     const connections: BriefConnection[] = [
       { a: 'wc', b: 'a', storey: 0 },
@@ -116,7 +116,7 @@ describe('the brief checked before a bubble moves', () => {
     ]
     expect(linksHeld(rooms[0] as BriefRoom)).toBe(2)
     expect(
-      feasibility(rooms, connections, plot, 1).filter((each) => each.code === 'wall'),
+      feasibility(rooms, connections, plot, 1).filter((each) => each.code === 'edge'),
     ).toHaveLength(1)
   })
 
@@ -127,7 +127,7 @@ describe('the brief checked before a bubble moves', () => {
     expect(linksHeld(room('entry', 'entry-foyer', 8))).toBe(4)
   })
 
-  it('says when the walled rooms ask for more kerb than the frontage has', () => {
+  it('says when the rooms on the kerb ask for more than the frontage has', () => {
     const narrow: Plot = {
       ...plot,
       polygon: [

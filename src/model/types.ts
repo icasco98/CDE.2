@@ -13,8 +13,8 @@ export type Endpoint = string
 /** The hand's nudge of a bubble from where the diagram's arrangement puts it, in the diagram's units. */
 export type Bubble = { readonly x: number; readonly y: number }
 
-/** Where a door was last drawn on a wall; losing it changes nothing. */
-export type WallHint = { readonly at: Point }
+/** Where a door was last drawn on an edge; losing it changes nothing. */
+export type EdgeHint = { readonly at: Point }
 
 export type Plot = {
   /** Whether the boundary binds: rooms are held inside it and setbacks apply, or it is drawn for reference only. */
@@ -56,7 +56,7 @@ export type Connection = {
   readonly b: Endpoint
   readonly kind: ConnectionKind
   readonly storey: number
-  readonly hint?: WallHint
+  readonly hint?: EdgeHint
 }
 
 /**

@@ -154,7 +154,7 @@ export function Diagram(props: DiagramProps) {
     }
     const target = spotAt(arrangement, at)
     if (!target || target.id === held.from.id) return
-    // Keep apart is about two rooms, not a wall between them, so storeys do not matter to it.
+    // Keep apart is about two rooms, not an edge between them, so storeys do not matter to it.
     if (props.makes === 'apart') {
       if (target.id !== EXTERIOR && held.from.id !== EXTERIOR)
         props.onKeepApart(held.from.id, target.id)

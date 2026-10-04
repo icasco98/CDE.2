@@ -71,7 +71,7 @@ test('nothing on the Sheet tab is below the fold on a 1280 by 720 window', async
   )
 })
 
-/** Snapping off, so what a nudge moves by is the grid's step and not a neighbour's wall. */
+/** Snapping off, so what a nudge moves by is the grid's step and not a neighbour's edge. */
 async function noSnapping(page: Page): Promise<void> {
   await openTab(page, 'Snapping')
   await page.locator('[data-setting="snapDist"] input[type=range]').fill('0')

@@ -18,7 +18,7 @@ export type DefaultConnection = {
 const provisional = 'provisional'
 
 const suiteBathroom =
-  'U6 suite integrity: the ensuite shares a wall with its own bedroom, door between.'
+  'U6 suite integrity: the ensuite shares an edge with its own bedroom, door between.'
 const suiteDressing = 'U6 suite integrity: the dressing room belongs to its own bedroom.'
 const bedroomOffCorridor =
   'U2 and U5: a bedroom is reached from the corridor, never through another bedroom.'
@@ -80,7 +80,7 @@ export const defaultConnections: readonly DefaultConnection[] = [
     kind: 'door',
     pairing: 'each',
     source:
-      "U4: family living is the hub, reached off the corridor the front door opens into. An entry's wall cannot carry six doors, so the corridor takes the rooms the entry receives into.",
+      "U4: family living is the hub, reached off the corridor the front door opens into. An entry's edges cannot carry six doors, so the corridor takes the rooms the entry receives into.",
     confidence: provisional,
   },
   {
@@ -126,7 +126,7 @@ export const defaultConnections: readonly DefaultConnection[] = [
     to: 'dining-room',
     kind: 'door',
     pairing: 'each',
-    source: 'U3: the kitchen serves the dining room, sharing a wall with a door.',
+    source: 'U3: the kitchen serves the dining room, sharing an edge with a door.',
     confidence: provisional,
   },
   {
@@ -256,7 +256,7 @@ export const defaultConnections: readonly DefaultConnection[] = [
     kind: 'open',
     pairing: 'each',
     source:
-      "U11: the stair stands on the corridor it serves, open to it. An entry's wall cannot carry six doors, so this is the whole of how the stair is reached from the front door.",
+      "U11: the stair stands on the corridor it serves, open to it. An entry's edges cannot carry six doors, so this is the whole of how the stair is reached from the front door.",
     confidence: provisional,
   },
   {

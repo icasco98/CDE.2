@@ -13,7 +13,7 @@ import {
   type Result,
   type Room,
   type Violation,
-  type WallHint,
+  type EdgeHint,
 } from './types'
 
 export type Document = Record<string, unknown>
@@ -110,7 +110,7 @@ export function parseProject(document: Document): Result<Project> {
     }
   }
 
-  const hint = (value: unknown, at: string): WallHint => ({
+  const hint = (value: unknown, at: string): EdgeHint => ({
     at: point(nested(value, at).at, `${at}.at`),
   })
 

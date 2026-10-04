@@ -6,7 +6,7 @@ import { tab } from './tabs'
 
 /*
  * The storey below is drawn faint under the one in hand. A room kept as several pieces is drawn
- * there by its outer walls only, not by the seams between its pieces.
+ * there by its outer edges only, not by the seams between its pieces.
  */
 
 const DINING = 'r7'

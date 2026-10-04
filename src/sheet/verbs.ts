@@ -28,7 +28,7 @@ import {
   unlock,
   type Change,
 } from './actions'
-import { wallNamed, wallOn, type WallName } from './against'
+import { edgeNamed, edgeOn, type EdgeName } from './against'
 import { fmt, overlapCells, r2, worldPieces } from './geometry'
 import { roomNamed, storeyAsked, type Desk } from './desk'
 import { doorAcross, doorAt } from './doors'
@@ -102,17 +102,17 @@ function allOnSheet(
   return rooms.length ? { rooms } : { why: 'name the rooms' }
 }
 
-const walledBy = (pk: Pocket, sheet: Sheet) =>
+const enclosedBy = (pk: Pocket, sheet: Sheet) =>
   [...pk.touch.keys()]
     .map((id) => sheet.rooms.find((r) => r.id === id)?.name)
     .filter(Boolean)
     .join(', ')
 
 const spacesHere = (pockets: Pocket[], sheet: Sheet) =>
-  pockets.map((pk) => `${fmt(pk.area)} m² walled by ${walledBy(pk, sheet)}`).join('; ')
+  pockets.map((pk) => `${fmt(pk.area)} m² enclosed by ${enclosedBy(pk, sheet)}`).join('; ')
 
 /**
- * The enclosed space a deed means, by the rooms that wall it in; the only one on the storey needs no
+ * The enclosed space a deed means, by the rooms that enclose it; the only one on the storey needs no
  * naming. A refusal says which spaces there are, so the next deed can name one.
  */
 function spaceFor(
@@ -136,7 +136,7 @@ function spaceFor(
             `${pockets.length} enclosed spaces here — ${spacesHere(pockets, sheet)}: ` +
             'name the rooms round the one you mean',
         }
-  // the space between the rooms named is the smallest they all wall in, not the leftover round them
+  // the space between the rooms named is the smallest they all enclose, not the leftover round them
   let at = -1
   for (let i = 0; i < pockets.length; i++)
     if (
@@ -148,7 +148,7 @@ function spaceFor(
     ? { at, pocket: pockets[at]! }
     : {
         why:
-          `no enclosed space walled by ${round.map((r) => r.name).join(' and ')} — ` +
+          `no enclosed space enclosed by ${round.map((r) => r.name).join(' and ')} — ` +
           `${spacesHere(pockets, sheet)}`,
       }
 }
@@ -173,7 +173,7 @@ const DOOR_ALIAS: Record<string, DoorType> = {
   'sliding door': 'sliding',
   'street door': 'street',
   'double street door': 'street2',
-  'open wall': 'open',
+  'open edge': 'open',
 }
 
 const DOOR_TYPES: readonly DoorType[] = [
@@ -195,11 +195,11 @@ const doorTypeNamed = (value: unknown): DoorType | null => {
 }
 
 /**
- * Where a door goes: a fraction along the named wall, measured from its top-left end as `along` is
- * everywhere else, and a hand's width inside the room so the wall found is that room's own.
+ * Where a door goes: a fraction along the named edge, measured from its top-left end as `along` is
+ * everywhere else, and a hand's width inside the room so the edge found is that room's own.
  */
-function doorSpot(r: Room, wall: WallName, along: number): Point | null {
-  const found = wallOn(r, wall)
+function doorSpot(r: Room, edge: EdgeName, along: number): Point | null {
+  const found = edgeOn(r, edge)
   if (!found) return null
   const { seg, length } = found
   const first: Point =
@@ -340,7 +340,7 @@ const VERBS: Record<string, Doing> = {
     const to = onSheet(desk.read(), storey, deed.to)
     if (stuck(to)) return refused('give', to.why)
     if (!space.pocket.touch.has(to.r.id))
-      return refused('give', `${to.r.name} does not wall that space in`)
+      return refused('give', `${to.r.name} does not enclose that space`)
     return done(
       'give',
       desk.write(givePocket(desk.read(), { pocket: space.at, room: to.r.id, storey })),
@@ -392,19 +392,19 @@ const VERBS: Record<string, Doing> = {
     if (stuck(got)) return refused('door', got.why)
     const r = got.r
     const sheet = desk.read()
-    const wall = wallNamed(deed.wall)
-    if (!wall) return refused('door', 'the wall is north, south, east or west')
+    const edge = edgeNamed(deed.edge)
+    if (!edge) return refused('door', 'the edge is north, south, east or west')
     const type = doorTypeNamed(deed.type)
     if (!type) return refused('door', `${named(deed.type)} is no door: ${DOOR_TYPES.join(', ')}`)
     const along = num(deed.along)
-    const spot = doorSpot(r, wall, along === null ? 0.5 : along)
-    if (!spot) return refused('door', `${r.name} shows no ${wall} wall`)
+    const spot = doorSpot(r, edge, along === null ? 0.5 : along)
+    if (!spot) return refused('door', `${r.name} shows no ${edge} edge`)
     const width = num(deed.width)
     // A door draws a connection the project holds; the room across is read only to name that connection.
     const hit = doorAt(spot[0], spot[1], type === 'open' ? 0.6 : 0.9, sheet, storey, r)
     const across = hit ? (doorAcross(r, hit.pl, sheet, storey)?.id ?? OUTSIDE) : OUTSIDE
     if (type === 'open' && across === OUTSIDE)
-      return refused('door', 'Only a wall shared with a neighbour can be opened.')
+      return refused('door', 'Only an edge shared with a neighbour can be opened.')
     const connection = desk.connectionBetween(r.id, across)
     if (!connection) {
       const other = sheet.rooms.find((o) => o.id === across)?.name ?? 'the outside'
@@ -429,7 +429,7 @@ const VERBS: Record<string, Doing> = {
     )
   },
 
-  open_wall: (desk, storey, deed) => VERBS.door!(desk, storey, { ...deed, type: 'open' }),
+  open_edge: (desk, storey, deed) => VERBS.door!(desk, storey, { ...deed, type: 'open' }),
 
   send_back: onMany('send back', (rooms, sheet) => sendBack(sheet, { ids: ids(rooms) })),
 }

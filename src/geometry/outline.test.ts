@@ -3,7 +3,7 @@ import { buildingOutline, ringsToPath } from './outline'
 import { area, rectangleToPolygon } from './polygon'
 
 describe('the building outline', () => {
-  it('is one ring around two rooms that share a wall, of area 8', () => {
+  it('is one ring around two rooms that share an edge, of area 8', () => {
     const rings = buildingOutline([
       rectangleToPolygon({ left: 0, top: 0, width: 2, depth: 2 }),
       rectangleToPolygon({ left: 2, top: 0, width: 2, depth: 2 }),

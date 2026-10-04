@@ -19,7 +19,7 @@ export const snapTo = (v: number, g: number) => (g > 0 ? Math.round(v / g) * g :
 export const rad = (d: number) => (d * Math.PI) / 180
 export const norm = (d: number) => ((d % 360) + 360) % 360
 
-/** A wall of a footprint: from `a` to `b` the way the room is walked, with the way out of it. */
+/** An edge of a footprint: from `a` to `b` the way the room is walked, with the way out of it. */
 export type Seg = { a: Point; b: Point; n: Point }
 
 export const polySigned = (p: Poly) => signedArea(p)
@@ -80,7 +80,7 @@ export function centreOfFootprint(r: Room): Point {
 }
 
 /**
- * The upright box round the room's real walls, not round its frame: a drawn or carved shape is held
+ * The upright box round the room's real edges, not round its frame: a drawn or carved shape is held
  * on the plot, and tested against the lines, by the corners it actually has.
  */
 export function bboxOf(r: Room): Box {
@@ -240,11 +240,11 @@ export function overlapCells(a: Room, b: Room): Poly[] {
   return out
 }
 
-// ---------- the walls a room shows ----------
+// ---------- the edges a room shows ----------
 
 /**
  * Every piece edge no neighbouring piece sits against, in the room's own frame, with the way out of
- * the room noted so a wall can be dragged, and which pieces lie against which.
+ * the room noted so an edge can be dragged, and which pieces lie against which.
  */
 export function outlineFrom(pieces: Poly[]): { segs: Seg[]; against: [number, number][] } {
   type Line = {
@@ -280,7 +280,7 @@ export function outlineFrom(pieces: Poly[]): { segs: Seg[]; against: [number, nu
   })
   const segs: Seg[] = []
   const against: [number, number][] = []
-  // Each wall runs the way the room is walked, so one wall can find the two it meets.
+  // Each edge runs the way the room is walked, so one edge can find the two it meets.
   const walk = (a: Point, b: Point, n: Point): Seg =>
     (b[0] - a[0]) * -n[1] + (b[1] - a[1]) * n[0] < 0 ? { a: b, b: a, n } : { a, b, n }
   for (const ln of lines.values()) {
@@ -297,16 +297,16 @@ export function outlineFrom(pieces: Poly[]): { segs: Seg[]; against: [number, nu
     for (let i = 0; i + 1 < marks.length; i++) {
       const m = (marks[i]! + marks[i + 1]!) / 2
       const on = ln.spans.filter((s) => m > s[0] + 1e-9 && m < s[1] - 1e-9)
-      const wall = on.length === 1
+      const edge = on.length === 1
       if (on.length === 2 && on[0]![4] !== on[1]![4]) against.push([on[0]![4], on[1]![4]])
-      if (wall && run === null) {
+      if (edge && run === null) {
         run = marks[i]!
         out = [on[0]![2], on[0]![3]]
       }
-      if (wall && i + 2 === marks.length) {
+      if (edge && i + 2 === marks.length) {
         if (marks[i + 1]! - run! > 5e-3) segs.push(walk(pt(run!), pt(marks[i + 1]!), out!))
         run = null
-      } else if (!wall && run !== null) {
+      } else if (!edge && run !== null) {
         if (marks[i]! - run > 5e-3) segs.push(walk(pt(run), pt(marks[i]!), out!))
         run = null
       }
@@ -340,8 +340,8 @@ export const partArea = (part: Poly[]) => part.reduce((s, p) => s + polyArea(p),
 export const same = (p: Point, q: Point) =>
   Math.abs(p[0] - q[0]) < 1e-6 && Math.abs(p[1] - q[1]) < 1e-6
 
-/** The walls chained into closed loops, so a wall knows the two it meets. */
-export function chainWalls(segs: Seg[]): Seg[][] | null {
+/** The edges chained into closed loops, so an edge knows the two it meets. */
+export function chainEdges(segs: Seg[]): Seg[][] | null {
   if (!segs.length) return null
   const key = (p: Point) => `${Math.round(p[0] * 1e3)}|${Math.round(p[1] * 1e3)}`
   const leaving = new Map<string, Seg[]>()
@@ -365,7 +365,7 @@ export function chainWalls(segs: Seg[]): Seg[][] | null {
       if (!opts.length) break
       if (opts.length === 1) cur = opts[0]
       else {
-        // where more than two walls meet, keep to the room: take the sharpest turn back
+        // where more than two edges meet, keep to the room: take the sharpest turn back
         const back = dirOf(cur) + Math.PI
         let best: { t: number; o: Seg } | null = null
         for (const o of opts) {
@@ -381,9 +381,9 @@ export function chainWalls(segs: Seg[]): Seg[][] | null {
   return loops.length ? loops : null
 }
 
-export const loopsOf = (r: Room) => chainWalls(outlineOf(r))
+export const loopsOf = (r: Room) => chainEdges(outlineOf(r))
 
-/** A corner that is not really a corner, and a wall too short to be a wall, both go. */
+/** A corner that is not really a corner, and an edge too short to be an edge, both go. */
 export function simplifyLoop(pts: Poly): Poly {
   let out = pts.slice()
   for (let pass = 0; pass < 4 && out.length > 3; pass++) {
@@ -533,7 +533,7 @@ export function canonicalise(room: Room): Room | null {
   const parts = partsOf(ps)
   if (parts.length > 1)
     ps = parts.reduce((best, part) => (partArea(part) > partArea(best) ? part : best))
-  const loops = chainWalls(outlineFrom(ps).segs)
+  const loops = chainEdges(outlineFrom(ps).segs)
   if (loops) {
     const rings = loops.map((l) => l.map((e) => e.a))
     const outer = rings.reduce((best, p) => (polyArea(p) > polyArea(best) ? p : best))
@@ -650,11 +650,11 @@ export function cutToSetback(
 }
 
 /**
- * A wall moved along its own normal. The two walls it meets follow it, so the room keeps one clean
- * outline instead of growing a stub; where the shape will not take it, the wall simply stops and
+ * An edge moved along its own normal. The two edges it meets follow it, so the room keeps one clean
+ * outline instead of growing a stub; where the shape will not take it, the edge simply stops and
  * this returns null.
  */
-export function pullWall(room: Room, seg: Seg, s: number): Room | null {
+export function pullEdge(room: Room, seg: Seg, s: number): Room | null {
   const r = room
   if (Math.abs(s) < 1e-6) return null
   const loops = loopsOf(r)
@@ -675,7 +675,7 @@ export function pullWall(room: Room, seg: Seg, s: number): Room | null {
     r.pieces = triangulate(poly)
     return r
   }
-  // A room with a hole in it has no single outline to follow: that wall moves as a strip.
+  // A room with a hole in it has no single outline to follow: that edge moves as a strip.
   const [a, b] = [seg.a, seg.b]
   const quad = tidy([a, b, [b[0] + s * n[0], b[1] + s * n[1]], [a[0] + s * n[0], a[1] + s * n[1]]])
   let ps = piecesOf(r)
@@ -688,10 +688,10 @@ export function pullWall(room: Room, seg: Seg, s: number): Room | null {
   return r
 }
 
-// ---------- the walls as they stand on the plot ----------
+// ---------- the edges as they stand on the plot ----------
 
-/** Every wall of a room as it stands in the world, with the way out of the room. */
-export function worldWalls(r: Room): Seg[] {
+/** Every edge of a room as it stands in the world, with the way out of the room. */
+export function worldEdges(r: Room): Seg[] {
   const a = rad(r.angle || 0)
   const c = Math.cos(a)
   const sn = Math.sin(a)
@@ -702,8 +702,8 @@ export function worldWalls(r: Room): Seg[] {
   }))
 }
 
-/** The corners of a room as it stands in the world: every end of every wall it shows. */
-export const worldCorners = (r: Room): Point[] => worldWalls(r).map((w) => w.a)
+/** The corners of a room as it stands in the world: every end of every edge it shows. */
+export const worldCorners = (r: Room): Point[] => worldEdges(r).map((w) => w.a)
 
 export const worldN = (r: Room, n: Point): Point => {
   const a = rad(r.angle || 0)
@@ -712,7 +712,7 @@ export const worldN = (r: Room, n: Point): Point => {
   return [n[0] * c - n[1] * sn, n[0] * sn + n[1] * c]
 }
 
-/** The wall's side of a plain room, when it is a whole side: those still drag a shared wall. */
+/** The edge's side of a plain room, when it is a whole side: those still drag a shared edge. */
 export function sideOf(r: Room, seg: Seg): 'left' | 'right' | 'top' | 'bottom' | null {
   if (r.pieces && r.pieces.length) return null
   const t = 1e-6

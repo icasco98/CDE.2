@@ -1,7 +1,7 @@
 /**
  * What Check shows on the zoning sheet, read from the project's connections and keep-apart pairs and from
  * the doors drawn, each drawing the connection it names. A connection is ready in the zoning step when its two
- * rooms share a run of wall a door wide, and met in the Openings step when one of its doors is drawn: a
+ * rooms share a run of edge a door wide, and met in the Openings step when one of its doors is drawn: a
  * door whose rooms have moved apart is not drawn, and its connection is not met. Nothing here changes the
  * sheet or the graph.
  */
@@ -43,7 +43,7 @@ type CheckRead = {
   readonly broken: number
 }
 
-/** Whether two placed rooms share a run of wall at least a door wide; a corner is not a run. */
+/** Whether two placed rooms share a run of edge at least a door wide; a corner is not a run. */
 function sharesADoorsWidth(one: Room, other: Room, sheet: Sheet): boolean {
   const together =
     storeyOf(one) === storeyOf(other) ||

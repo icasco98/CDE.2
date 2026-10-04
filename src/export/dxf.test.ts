@@ -186,7 +186,7 @@ it('draws a door as a line across the opening on the storey’s door layer', () 
   )
   expect(doors.map((item) => item.type)).toEqual(['LINE'])
   const drawn = doors[0] as Item
-  // The shared wall runs down the sheet at x 5 from y 0 to 4, so the door is the 0.9 m about its
+  // The shared edge runs down the sheet at x 5 from y 0 to 4, so the door is the 0.9 m about its
   // middle, which is y 22.55 to 23.45 once the drawing is turned y up.
   const ends = [pointOf(drawn), [Number(valueOf(drawn, 11)), Number(valueOf(drawn, 21))]]
   expect([...ends].sort()).toEqual(

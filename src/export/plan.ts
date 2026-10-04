@@ -1,6 +1,6 @@
 /**
  * What both drawings read from a sheet: the plot, the setback line, the shapes standing on one
- * storey and the openings in their walls, in plot metres with y running south, as the sheet holds
+ * storey and the openings in their edges, in plot metres with y running south, as the sheet holds
  * them. Nothing here writes to the sheet.
  */
 
@@ -42,7 +42,7 @@ export function standingOn(sheet: Sheet, storey: number): readonly Placed[] {
       [0, room.h],
     ]
     const outlines =
-      loops.length > 0 ? loops.map((loop) => loop.map((wall) => wall.a)) : [rectangle]
+      loops.length > 0 ? loops.map((loop) => loop.map((edge) => edge.a)) : [rectangle]
     return {
       room,
       loops: outlines.map((loop) => loop.map((corner) => toWorldPoint(room, corner))),
@@ -52,7 +52,7 @@ export function standingOn(sheet: Sheet, storey: number): readonly Placed[] {
   })
 }
 
-/** A door as a gap: where it sits in the world, the way its wall runs, and how wide the gap is. */
+/** A door as a gap: where it sits in the world, the way its edge runs, and how wide the gap is. */
 export type Opening = {
   readonly at: Point
   readonly along: Point

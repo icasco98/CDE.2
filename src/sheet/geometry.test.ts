@@ -3,7 +3,7 @@ import {
   areaOf,
   bboxOf,
   canonicalise,
-  chainWalls,
+  chainEdges,
   clipHalf,
   cutBy,
   cutToSetback,
@@ -17,7 +17,7 @@ import {
   overlapCells,
   partsOf,
   polyArea,
-  pullWall,
+  pullEdge,
   r2,
   setAngle,
   sideOf,
@@ -29,7 +29,7 @@ import {
   triangulate,
   weld,
   worldCorners,
-  worldWalls,
+  worldEdges,
 } from './geometry'
 import { RECT, type Poly, type Room } from './model'
 
@@ -130,7 +130,7 @@ describe('pieces', () => {
   })
 })
 
-describe('the walls a room shows', () => {
+describe('the edges a room shows', () => {
   it('drops the seam between two pieces that sit against each other', () => {
     const { segs } = outlineFrom([
       RECT(2, 2),
@@ -172,8 +172,8 @@ describe('the walls a room shows', () => {
     ).toBe(2)
   })
 
-  it('chains the walls into a closed loop', () => {
-    const loops = chainWalls(outlineFrom([RECT(3, 2)]).segs)
+  it('chains the edges into a closed loop', () => {
+    const loops = chainEdges(outlineFrom([RECT(3, 2)]).segs)
     expect(loops!.length).toBe(1)
     expect(loops![0]!.length).toBe(4)
   })
@@ -187,7 +187,7 @@ describe('the walls a room shows', () => {
     ).toBeNull()
   })
 
-  it('drops a corner that is not a corner and a wall too short to be one', () => {
+  it('drops a corner that is not a corner and an edge too short to be one', () => {
     const poly: Poly = [
       [0, 0],
       [2, 0],
@@ -231,11 +231,11 @@ describe('a room on the plot', () => {
     expect([r2(b.w), r2(b.h)]).toEqual([3, 4])
   })
 
-  it('gives every wall its way out of the room', () => {
-    const walls = worldWalls(room())
-    expect(walls.length).toBe(4)
+  it('gives every edge its way out of the room', () => {
+    const edges = worldEdges(room())
+    expect(edges.length).toBe(4)
     expect(worldCorners(room()).length).toBe(4)
-    for (const w of walls) expect(r2(Math.hypot(w.n[0], w.n[1]))).toBe(1)
+    for (const w of edges) expect(r2(Math.hypot(w.n[0], w.n[1]))).toBe(1)
   })
 
   it('folds a quarter turn into the rectangle so the room is square again', () => {
@@ -272,17 +272,17 @@ describe('cutting', () => {
     expect(cutToSetback(room({ x: 5, y: 5 })).cut).toBe(false)
   })
 
-  it('pulls a wall along its normal, the walls it meets following', () => {
+  it('pulls an edge along its normal, the edges it meets following', () => {
     const r = room({ x: 0, y: 0, w: 4, h: 4, pieces: triangulate(RECT(4, 4)) })
     const seg = outlineOf(r).find((s) => s.n[0] === 1)!
-    const pulled = pullWall(r, seg, 1)!
+    const pulled = pullEdge(r, seg, 1)!
     expect(r2(areaOf(pulled))).toBe(20)
   })
 
-  it('stops a wall that would turn the room inside out', () => {
+  it('stops an edge that would turn the room inside out', () => {
     const r = room({ x: 0, y: 0, w: 4, h: 4, pieces: triangulate(RECT(4, 4)) })
     const seg = outlineOf(r).find((s) => s.n[0] === 1)!
-    expect(pullWall(r, seg, -4)).toBeNull()
+    expect(pullEdge(r, seg, -4)).toBeNull()
   })
 
   it('rebuilds a room from its own outline and drops the slivers', () => {

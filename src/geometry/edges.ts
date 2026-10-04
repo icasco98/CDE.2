@@ -1,35 +1,35 @@
 import { edgesOf, signedArea } from './polygon'
 import type { Point, Polygon } from './types'
 
-/** A run of wall two polygons hold in common, one end to the other. */
-export type SharedWall = { readonly from: Point; readonly to: Point }
+/** A run of edge two polygons hold in common, one end to the other. */
+export type SharedEdge = { readonly from: Point; readonly to: Point }
 
-/** How far apart two walls may lie and still be read as the one wall, in metres. */
-export const WALL_TOLERANCE = 0.05
+/** How far apart two edges may lie and still be read as the one edge, in metres. */
+export const EDGE_TOLERANCE = 0.05
 
-export function wallLength(wall: SharedWall): number {
-  return Math.hypot(wall.to[0] - wall.from[0], wall.to[1] - wall.from[1])
+export function edgeLength(edge: SharedEdge): number {
+  return Math.hypot(edge.to[0] - edge.from[0], edge.to[1] - edge.from[1])
 }
 
-export function wallMidpoint(wall: SharedWall): Point {
-  return [(wall.from[0] + wall.to[0]) / 2, (wall.from[1] + wall.to[1]) / 2]
+export function edgeMidpoint(edge: SharedEdge): Point {
+  return [(edge.from[0] + edge.to[0]) / 2, (edge.from[1] + edge.to[1]) / 2]
 }
 
-/** The unit direction along the wall; a wall of no length is read as running east. */
-export function wallDirection(wall: SharedWall): Point {
-  const run = wallLength(wall)
+/** The unit direction along the edge; an edge of no length is read as running east. */
+export function edgeDirection(edge: SharedEdge): Point {
+  const run = edgeLength(edge)
   if (run < 1e-9) return [1, 0]
-  return [(wall.to[0] - wall.from[0]) / run, (wall.to[1] - wall.from[1]) / run]
+  return [(edge.to[0] - edge.from[0]) / run, (edge.to[1] - edge.from[1]) / run]
 }
 
 /**
  * Every run along which an edge of `a` and an edge of `b` lie on the same line within
- * `tolerance` and overlap in extent. A shared wall is a fact about the drawing and nothing
- * more: it is read to warn that a door has been drawn where the walls do not meet, and it
+ * `tolerance` and overlap in extent. A shared edge is a fact about the drawing and nothing
+ * more: it is read to warn that a door has been drawn where the edges do not meet, and it
  * never makes a connection of its own.
  */
-export function sharedWalls(a: Polygon, b: Polygon, tolerance: number): SharedWall[] {
-  const out: SharedWall[] = []
+export function sharedEdges(a: Polygon, b: Polygon, tolerance: number): SharedEdge[] {
+  const out: SharedEdge[] = []
   for (const [a1, a2] of edgesOf(a)) {
     const dx = a2[0] - a1[0]
     const dy = a2[1] - a1[1]
@@ -55,18 +55,18 @@ export function sharedWalls(a: Polygon, b: Polygon, tolerance: number): SharedWa
 }
 
 /** One edge of a polygon with the unit normal that points away from its inside. */
-export type OutwardWall = { readonly from: Point; readonly to: Point; readonly normal: Point }
+export type OutwardEdge = { readonly from: Point; readonly to: Point; readonly normal: Point }
 
 /** Every edge of `polygon` with its outward normal, read from the ring's own winding. */
-export function outwardWalls(polygon: Polygon): OutwardWall[] {
+export function outwardEdges(polygon: Polygon): OutwardEdge[] {
   const outward = signedArea(polygon) >= 0 ? 1 : -1
-  const walls: OutwardWall[] = []
+  const edges: OutwardEdge[] = []
   for (const [a, b] of edgesOf(polygon)) {
     const ex = b[0] - a[0]
     const ey = b[1] - a[1]
     const length = Math.hypot(ex, ey)
     if (length < 1e-12) continue
-    walls.push({ from: a, to: b, normal: [(outward * ey) / length, (-outward * ex) / length] })
+    edges.push({ from: a, to: b, normal: [(outward * ey) / length, (-outward * ex) / length] })
   }
-  return walls
+  return edges
 }

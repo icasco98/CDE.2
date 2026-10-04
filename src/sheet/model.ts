@@ -1,7 +1,7 @@
 /** The zoning sheet's model: a room, a door, the settings, and the sheet they make. */
 
 import { DEFAULT_PLOT, MAX_STOREYS, STOREY_NAME, type PlotSpec } from './plot'
-import type { WallName } from './against'
+import type { EdgeName } from './against'
 
 export type Point = [number, number]
 export type Poly = Point[]
@@ -15,10 +15,10 @@ export const OUTSIDE = 'EXTERIOR'
 
 /**
  * A door is the drawing of a connection: it is held by one room of the connection, `to` is the other end (a room
- * or `OUTSIDE`), both set when it is placed. Between two rooms it stands on the wall they share on
- * `side` of its room (in the room's own frame), `along` of the way along it, or on the longest wall
+ * or `OUTSIDE`), both set when it is placed. Between two rooms it stands on the edge they share on
+ * `side` of its room (in the room's own frame), `along` of the way along it, or on the longest edge
  * they share when that side shares none; to the outside it stands at `at`, a point of its room's frame on the
- * outside wall it was placed on. Where that wall is not there it is not drawn, and nothing else.
+ * outside edge it was placed on. Where that edge is not there it is not drawn, and nothing else.
  */
 export type Door = {
   id: string
@@ -28,7 +28,7 @@ export type Door = {
   w: number
   flip: boolean
   hinge: boolean
-  side?: WallName
+  side?: EdgeName
   along?: number
   at?: Point
 }
@@ -82,7 +82,7 @@ export type Settings = {
   guides: number
   dims: 'all' | 'size' | 'none'
   dimSize: number
-  sharedWalls: number
+  sharedEdges: number
   dur: number
   ease: string
   allowSpill: number
@@ -132,7 +132,7 @@ export const DEFAULTS: Settings = {
   guides: 1,
   dims: 'all',
   dimSize: 0.4,
-  sharedWalls: 0,
+  sharedEdges: 0,
   dur: 220,
   ease: 'cubic-bezier(.2,.7,.2,1)',
   allowSpill: 1,
@@ -160,7 +160,7 @@ export const DEFAULTS: Settings = {
   streetLabels: 1,
 }
 
-export const SETTINGS_V = 49
+export const SETTINGS_V = 50
 
 /** The rooms in program order, which is the order of importance, with the storeys they stand on. */
 export type Sheet = {
@@ -178,15 +178,23 @@ export const RULE_HINT: Record<LandingRule, string> = {
 
 export const ruleOf = (v: unknown): LandingRule => (v === 'push' ? 'push' : 'wait')
 
+/** The shared-edge drag's key before decision 44 named a zone's outline its edges. */
+const SHARED_EDGES_BEFORE_50 = 'sharedWalls'
+
 /**
- * Settings saved by an older page: the boundary switch was never used, so its old default goes; and
- * every save wrote the shared-wall drag out whole, so the old default goes too (decision 43).
+ * Settings saved by an older page: the boundary switch was never used, so its old default goes;
+ * every save wrote the shared-edge drag out whole, so the old default goes too (decision 43); and
+ * the drag saved since is read under its new name.
  */
 export function migrate(saved: Record<string, unknown> | null): Record<string, unknown> | null {
   if (!saved || typeof saved !== 'object') return saved
   const v = typeof saved.v === 'number' ? saved.v : 0
   if (v < 48 && saved.boundary === 'off') saved.boundary = 'all'
-  if (v < 49) delete saved.sharedWalls
+  if (v < 49) delete saved[SHARED_EDGES_BEFORE_50]
+  if (v < 50 && SHARED_EDGES_BEFORE_50 in saved) {
+    saved.sharedEdges ??= saved[SHARED_EDGES_BEFORE_50]
+    delete saved[SHARED_EDGES_BEFORE_50]
+  }
   return saved
 }
 

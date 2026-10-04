@@ -246,7 +246,7 @@ export function RoomMenu(props: RoomMenuProps) {
 
 export type PocketChoice = { kind: 'give'; room: string } | { kind: 'court' } | { kind: 'corridor' }
 
-/** Every room that walls the space in, then a court and a corridor. */
+/** Every room that encloses the space, then a court and a corridor. */
 export function PocketMenu(props: {
   at: MenuAt
   pocket: Pocket
@@ -278,7 +278,7 @@ export function PocketMenu(props: {
           onClick={() => props.onChoose({ kind: 'give', room: row.room.id })}
         >
           {row.room.name}
-          <span className="m">{fmt(row.length)} m of wall</span>
+          <span className="m">{fmt(row.length)} m of edge</span>
         </button>
       ))}
       <div className="head">Or make it</div>
@@ -293,7 +293,7 @@ export function PocketMenu(props: {
   )
 }
 
-/** A right-click on empty space that no room walls in says only why there is nothing to do. */
+/** A right-click on empty space that no room encloses says only why there is nothing to do. */
 export function EmptyNote(props: { at: MenuAt; note: string }) {
   const box = useOnScreen<HTMLDivElement>()
   return (

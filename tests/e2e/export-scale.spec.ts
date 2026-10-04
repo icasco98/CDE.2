@@ -27,7 +27,7 @@ test('draws a 20 m plot edge 200 mm wide, to better than half a percent', async 
   // The plot line is centred on the sheet, as the frame round it is, so it shows as a pair of long
   // vertical lines an equal distance either side of the middle. The frame is the widest such pair
   // and the plot the next: the setback line is dashed, so no column of it runs the height, and a
-  // room's walls are far too short to count at all.
+  // room's edges are far too short to count at all.
   const middle = ((lines[0] ?? 0) + (lines[lines.length - 1] ?? 0)) / 2
   const paired = lines
     .filter((x) => x < middle)

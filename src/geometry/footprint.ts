@@ -76,7 +76,7 @@ export function translateFootprint(footprint: Footprint, delta: Point): Footprin
   }
 }
 
-/** Where a corner (`±1, ±1`) or a wall midpoint (`0, ±1`, `±1, 0`) of the footprint sits on the sheet. */
+/** Where a corner (`±1, ±1`) or an edge midpoint (`0, ±1`, `±1, 0`) of the footprint sits on the sheet. */
 export function anchorPointOf(footprint: Footprint, sx: Handle, sy: Handle): Point {
   const frame = frameOf(footprint)
   const bounds = boundingBox(footprint.polygon)

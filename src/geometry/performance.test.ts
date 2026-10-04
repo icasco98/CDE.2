@@ -4,8 +4,8 @@ import { buildingOutline } from './outline'
 import type { Footprint, Point, Polygon } from './types'
 
 /**
- * A twenty-vertex room on a six-by-five grid of rooms that meet along their walls, five vertices
- * to a wall and a depth that alternates, so the walls only partly match and really have to be
+ * A twenty-vertex room on a six-by-five grid of rooms that meet along their edges, five vertices
+ * to an edge and a depth that alternates, so the edges only partly match and really have to be
  * resolved against each other.
  */
 function room(index: number): Polygon {

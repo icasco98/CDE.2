@@ -13,7 +13,7 @@ export type {
   Result,
   Room,
   Violation,
-  WallHint,
+  EdgeHint,
 } from './types'
 export type { Commit } from './actions'
 export { createIdGenerator } from './ids'

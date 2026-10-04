@@ -4,7 +4,7 @@ import { isPlanar, type Pair } from '../rulebook/planarity'
 import type { Check, CheckConnection, CheckRoom } from './types'
 
 const rule =
-  "A storey's connections can be drawn without one crossing another, or some pair can never share a wall."
+  "A storey's connections can be drawn without one crossing another, or some pair can never share an edge."
 const source = "Planarity by Demoucron's test, as the brief check reads it (decision 21)."
 
 function standsOn(room: CheckRoom, storey: number): boolean {

@@ -1,5 +1,5 @@
 /**
- * The question a door asks when it is put on a wall between two rooms with no connection: a door is the
+ * The question a door asks when it is put on an edge between two rooms with no connection: a door is the
  * drawing of a connection, so it is placed only with the connection it draws, or not at all.
  */
 export function DoorOffer(props: {

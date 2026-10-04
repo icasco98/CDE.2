@@ -29,7 +29,7 @@ it('reads the embedded sheet’s report inside 5 ms', () => {
   expect(taken).toBeLessThan(10)
 })
 
-it('finds where every door of the test plan stands, on its connection’s wall, inside 2 ms', () => {
+it('finds where every door of the test plan stands, on its connection’s edge, inside 2 ms', () => {
   // Read once per change of the sheet, never per frame of a drag: a drag re-renders from the memo.
   const taken = milliseconds(() => drawnDoors(sheet, 0))
   console.log(`drawnDoors on the test plan, 20 doors: ${taken.toFixed(2)} ms, budget 2 ms`)
@@ -37,7 +37,7 @@ it('finds where every door of the test plan stands, on its connection’s wall, 
   expect(taken).toBeLessThan(4)
 })
 
-it('checks a door against the others on its wall inside 3 ms, once per placement or drop', () => {
+it('checks a door against the others on its edge inside 3 ms, once per placement or drop', () => {
   const [first] = drawnDoors(sheet, 0)
   const taken = milliseconds(() => doorClash(sheet, 0, first!.room, first!.door))
   console.log(`doorClash on the test plan, 20 doors: ${taken.toFixed(2)} ms, budget 3 ms`)
@@ -68,7 +68,7 @@ it('finds the embedded sheet’s enclosed spaces inside 20 ms', () => {
   expect(taken).toBeLessThan(40)
 })
 
-it('sorts the mass’s wall-line tree inside 4 ms for 60 prisms', () => {
+it('sorts the mass’s edge-line tree inside 4 ms for 60 prisms', () => {
   const P = massProjection(MASS_START, 600, 420)
   const crowd = {
     ...sheet,
@@ -81,7 +81,7 @@ it('sorts the mass’s wall-line tree inside 4 ms for 60 prisms', () => {
   const prisms = prismsOf(crowd, P)
   expect(prisms.length).toBeGreaterThanOrEqual(40)
   const taken = milliseconds(() => orderPrisms(prisms, P))
-  console.log(`the wall-line tree for ${prisms.length} prisms: ${taken.toFixed(2)} ms, budget 4 ms`)
+  console.log(`the edge-line tree for ${prisms.length} prisms: ${taken.toFixed(2)} ms, budget 4 ms`)
   expect(taken).toBeLessThan(8)
 })
 

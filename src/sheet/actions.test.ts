@@ -25,7 +25,7 @@ import {
   moveDoor,
   newHistory,
   place,
-  pullWall,
+  pullEdge,
   pushOthers,
   redo,
   remember,
@@ -169,22 +169,22 @@ describe('placing and moving', () => {
   })
 })
 
-describe('walls, corners and sizes', () => {
-  it('pulls a wall out and the room grows', () => {
+describe('edges, corners and sizes', () => {
+  it('pulls an edge out and the room grows', () => {
     const sheet = quiet([room({ x: 6, y: 6, w: 4, h: 4 })])
     const seg = outlineOf(sheet.rooms[0]!).findIndex((s) => s.n[0] === 1)
-    const out = pullWall(sheet, { id: 'a', wall: seg, distance: 1, storey: 0 })
+    const out = pullEdge(sheet, { id: 'a', edge: seg, distance: 1, storey: 0 })
     expect(out.result.ok).toBe(true)
     expect(r2(areaOf(roomOf(out.sheet, 'a')))).toBe(20)
   })
 
-  it('refuses a wall that is not there, and a locked room', () => {
+  it('refuses an edge that is not there, and a locked room', () => {
     const sheet = quiet([room()])
-    expect(pullWall(sheet, { id: 'a', wall: 9, distance: 1, storey: 0 }).result.said).toBe(
-      'A has no such wall',
+    expect(pullEdge(sheet, { id: 'a', edge: 9, distance: 1, storey: 0 }).result.said).toBe(
+      'A has no such edge',
     )
     expect(
-      pullWall(quiet([room({ locked: true })]), { id: 'a', wall: 0, distance: 1, storey: 0 }).result
+      pullEdge(quiet([room({ locked: true })]), { id: 'a', edge: 0, distance: 1, storey: 0 }).result
         .said,
     ).toBe('A is locked')
   })
@@ -219,7 +219,7 @@ describe('walls, corners and sizes', () => {
     ).toBe('Only a carved or drawn room has corners to move.')
   })
 
-  it('drags a side, and a shared wall drags both rooms', () => {
+  it('drags a side, and a shared edge drags both rooms', () => {
     const sheet = quiet([
       room({ x: 6, y: 6, w: 4, h: 3 }),
       room({ id: 'b', x: 10, y: 6, w: 4, h: 3 }),
@@ -451,7 +451,7 @@ describe('a turned room cut and restored', () => {
 })
 
 describe('combining, grouping and locking', () => {
-  it('combines two rooms that share a wall into the survivor', () => {
+  it('combines two rooms that share an edge into the survivor', () => {
     const sheet = quiet([
       room({ id: 'a', name: 'A', x: 6, y: 6, w: 4, h: 3 }),
       room({ id: 'b', name: 'B', x: 10, y: 6, w: 4, h: 3 }),
@@ -462,10 +462,10 @@ describe('combining, grouping and locking', () => {
     expect(roomOf(out.sheet, 'b').placed).toBe(false)
   })
 
-  it('refuses rooms that share no wall', () => {
+  it('refuses rooms that share no edge', () => {
     const sheet = quiet([room(), room({ id: 'b', x: 14, y: 14 })])
     expect(combine(sheet, { ids: ['a', 'b'], survivor: 'a', storey: 0 }).result.said).toBe(
-      'Those rooms do not share a wall, so they cannot be combined. Close the gap first.',
+      'Those rooms do not share an edge, so they cannot be combined. Close the gap first.',
     )
     expect(combine(sheet, { ids: ['a'], survivor: 'a', storey: 0 }).result.said).toBe(
       'Pick the room that survives.',
@@ -613,7 +613,7 @@ describe('enclosed spaces', () => {
 
   const holeIndex = (sheet: Sheet) => pocketsOf(sheet, 0).findIndex((p) => r2(p.area) === 8)
 
-  it('gives the space to the room that walls it in', () => {
+  it('gives the space to the room that encloses it', () => {
     const sheet = ring()
     const out = givePocket(sheet, { pocket: holeIndex(sheet), room: 'n', storey: 0 })
     expect(out.result.area).toBe(8)
@@ -655,25 +655,25 @@ describe('enclosed spaces', () => {
 })
 
 describe('doors', () => {
-  const walled = () => quiet([room({ x: 6, y: 6, w: 4, h: 3 })], { grid: 0.25, snapDist: 0.4 })
+  const alone = () => quiet([room({ x: 6, y: 6, w: 4, h: 3 })], { grid: 0.25, snapDist: 0.4 })
   const out = { connection: 'e1', to: 'EXTERIOR' }
-  /** A beside B, sharing the wall x = 10 from y 6 to 9. */
+  /** A beside B, sharing the edge x = 10 from y 6 to 9. */
   const pair = () =>
     quiet(
       [room({ x: 6, y: 6, w: 4, h: 3 }), room({ id: 'b', name: 'B', x: 10, y: 6, w: 4, h: 3 })],
       { grid: 0.25, snapDist: 0.4 },
     )
 
-  it('puts a door on the wall under the hand, drawing the connection it is given', () => {
-    const placed = addDoor(walled(), { x: 8, y: 6, type: 'door', storey: 0, ...out })
+  it('puts a door on the edge under the hand, drawing the connection it is given', () => {
+    const placed = addDoor(alone(), { x: 8, y: 6, type: 'door', storey: 0, ...out })
     expect(placed.result.ok).toBe(true)
-    expect(placed.result.said).toBe('Door on A, middle of the wall')
+    expect(placed.result.said).toBe('Door on A, middle of the edge')
     expect(doorsOf(roomOf(placed.sheet, 'a'))).toMatchObject([
       { connection: 'e1', to: 'EXTERIOR', at: [2, 0] },
     ])
   })
 
-  it('puts a door between two rooms on the wall they share, halfway along it', () => {
+  it('puts a door between two rooms on the edge they share, halfway along it', () => {
     const placed = addDoor(pair(), {
       x: 10,
       y: 7.5,
@@ -720,7 +720,7 @@ describe('doors', () => {
     ])
   })
 
-  it('refuses a door that would overlap one already on the wall', () => {
+  it('refuses a door that would overlap one already on the edge', () => {
     const once = addDoor(pair(), {
       x: 10,
       y: 7.5,
@@ -738,39 +738,39 @@ describe('doors', () => {
       to: 'b',
     })
     expect(onTop.result.ok).toBe(false)
-    expect(onTop.result.said).toBe("That would overlap the door already on A's wall.")
+    expect(onTop.result.said).toBe("That would overlap the door already on A's edge.")
     expect(onTop.sheet).toBe(once.sheet)
   })
 
-  it('refuses a door where there is no wall, on the boundary, and on a wall the two do not share', () => {
-    expect(addDoor(walled(), { x: 1, y: 1, type: 'door', storey: 0, ...out }).result.said).toBe(
-      'No wall there.',
+  it('refuses a door where there is no edge, on the boundary, and on an edge the two do not share', () => {
+    expect(addDoor(alone(), { x: 1, y: 1, type: 'door', storey: 0, ...out }).result.said).toBe(
+      'No edge there.',
     )
     const onBoundary = quiet([room({ x: 0, y: 6, w: 4, h: 3 })])
     expect(addDoor(onBoundary, { x: 0, y: 7.5, type: 'door', storey: 0, ...out }).result.said).toBe(
-      'A wall on the boundary takes no door.',
+      'An edge on the boundary takes no door.',
     )
     expect(
       addDoor(pair(), { x: 8, y: 6, type: 'door', storey: 0, connection: 'e2', to: 'b' }).result
         .said,
-    ).toBe('A and B share no wall there.')
+    ).toBe('A and B share no edge there.')
   })
 
   it('slides, widens, swings, hinges and removes a door', () => {
-    const placed = addDoor(walled(), { x: 8, y: 6, type: 'door', storey: 0, ...out }).sheet
+    const placed = addDoor(alone(), { x: 8, y: 6, type: 'door', storey: 0, ...out }).sheet
     const id = doorsOf(roomOf(placed, 'a'))[0]!.id
     const slid = slideDoor(placed, { room: 'a', door: id, step: 0.25, storey: 0 })
     expect(r2(doorsOf(roomOf(slid.sheet, 'a'))[0]!.at![0])).toBe(2.25)
     const wide = setDoorWidth(placed, { room: 'a', door: id, w: 1.2, storey: 0 })
     expect(doorsOf(roomOf(wide.sheet, 'a'))[0]!.w).toBe(1.2)
-    // the 4 m wall holds a 3 m door with 5 cm to spare at each end, and nothing wider
+    // the 4 m edge holds a 3 m door with 5 cm to spare at each end, and nothing wider
     expect(setDoorWidth(placed, { room: 'a', door: id, w: 3, storey: 0 }).result.ok).toBe(true)
     const narrow = quiet([room({ x: 6, y: 6, w: 2.6, h: 3 })], { grid: 0.25, snapDist: 0.4 })
     const inNarrow = addDoor(narrow, { x: 7.3, y: 6, type: 'door', storey: 0, ...out }).sheet
     const narrowId = doorsOf(roomOf(inNarrow, 'a'))[0]!.id
     expect(
       setDoorWidth(inNarrow, { room: 'a', door: narrowId, w: 2.6, storey: 0 }).result.said,
-    ).toBe('That wall is too short for a door that wide.')
+    ).toBe('That edge is too short for a door that wide.')
     expect(doorsOf(roomOf(flipDoor(placed, { room: 'a', door: id }).sheet, 'a'))[0]!.flip).toBe(
       true,
     )
@@ -781,7 +781,7 @@ describe('doors', () => {
   })
 
   it('refuses to adjust a door that is not there', () => {
-    const sheet = walled()
+    const sheet = alone()
     expect(slideDoor(sheet, { room: 'a', door: 'd9', step: 1, storey: 0 }).result.said).toBe(
       'no such door',
     )
@@ -795,13 +795,13 @@ describe('doors', () => {
   })
 
   it('refuses a swing on an opening and a hinge on a double door', () => {
-    const placed = addDoor(walled(), { x: 8, y: 6, type: 'opening', storey: 0, ...out }).sheet
+    const placed = addDoor(alone(), { x: 8, y: 6, type: 'opening', storey: 0, ...out }).sheet
     const id = doorsOf(roomOf(placed, 'a'))[0]!.id
     expect(flipDoor(placed, { room: 'a', door: id }).result.said).toBe('A opening does not swing.')
     expect(hingeDoor(placed, { room: 'a', door: id }).result.said).toBe('A opening has no hinge.')
   })
 
-  it('slides a door along the wall its rooms share, and never onto another wall', () => {
+  it('slides a door along the edge its rooms share, and never onto another edge', () => {
     const placed = addDoor(pair(), {
       x: 10,
       y: 7.5,
@@ -816,10 +816,10 @@ describe('doors', () => {
     expect(r2(doorsOf(roomOf(slid.sheet, 'a'))[0]!.along!)).toBe(0.73)
     expect(
       moveDoor(placed.sheet, { room: 'a', door: id, x: 14, y: 6, storey: 0 }).result.said,
-    ).toBe('A door stays on the wall A and B share.')
+    ).toBe('A door stays on the edge A and B share.')
   })
 
-  it('opens the whole wall two rooms share, and refuses one they do not', () => {
+  it('opens the whole edge two rooms share, and refuses one they do not', () => {
     const opened = addDoor(pair(), {
       x: 10,
       y: 7.5,
@@ -828,17 +828,17 @@ describe('doors', () => {
       connection: 'e2',
       to: 'b',
     })
-    expect(opened.result.said).toBe('A: wall opened')
+    expect(opened.result.said).toBe('A: edge opened')
     expect(doorsOf(roomOf(opened.sheet, 'a'))).toMatchObject([
       { type: 'open', w: 2.9, along: 0.5, connection: 'e2' },
     ])
-    expect(addDoor(walled(), { x: 10, y: 7.5, type: 'open', storey: 0, ...out }).result.said).toBe(
-      'Only a wall shared with a neighbour can be opened.',
+    expect(addDoor(alone(), { x: 10, y: 7.5, type: 'open', storey: 0, ...out }).result.said).toBe(
+      'Only an edge shared with a neighbour can be opened.',
     )
   })
 
   it('keeps the connection it draws when the door slides', () => {
-    const placed = addDoor(walled(), { x: 8, y: 6, type: 'door', storey: 0, ...out }).sheet
+    const placed = addDoor(alone(), { x: 8, y: 6, type: 'door', storey: 0, ...out }).sheet
     const door = doorsOf(roomOf(placed, 'a'))[0]!
     const slid = slideDoor(placed, { room: 'a', door: door.id, step: 0.25, storey: 0 })
     expect(doorsOf(roomOf(slid.sheet, 'a'))[0]!).toMatchObject({ connection: 'e1', to: 'EXTERIOR' })

@@ -82,7 +82,7 @@ describe('parting two rooms', () => {
     expect(partingMove(a, room({ id: 'c', x: 9, y: 9 }))).toBeNull()
   })
 
-  it('parts a turned room along its own wall', () => {
+  it('parts a turned room along its own edge', () => {
     const a = room({ x: 0, y: 0, w: 6, h: 6, angle: 45 })
     const m = partingMove(a, room({ id: 'b', x: 3.5, y: 3.5, w: 2, h: 2, angle: 45 }))!
     expect(r2(Math.hypot(m[0], m[1]))).toBeGreaterThan(0)

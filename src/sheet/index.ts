@@ -68,7 +68,7 @@ export {
   BLIND_BREACH,
   MASS_START,
   MASS_VIEWS,
-  blindWall,
+  blindEdge,
   breaches,
   heightFromDrag,
   lookFrom,
@@ -77,7 +77,7 @@ export {
   orderPrisms,
   prismsOf,
   recentred,
-  seenWalls,
+  seenEdges,
   turnedBy,
   worldLoop,
   zoomedBy,
@@ -89,7 +89,7 @@ export {
   bboxOf,
   canonicalise,
   centreOfFootprint,
-  chainWalls,
+  chainEdges,
   cutBy,
   cutToSetback as cutShapeToSetback,
   diffConvex,
@@ -106,7 +106,7 @@ export {
   overlapRect,
   partsOf,
   polyArea,
-  pullWall as pullWallShape,
+  pullEdge as pullEdgeShape,
   r2,
   r6,
   rotateGroup,
@@ -124,20 +124,20 @@ export {
   unionBox,
   worldCorners,
   worldPieces,
-  worldWalls,
+  worldEdges,
 } from './geometry'
 
 export type { Guide, PointSnap, SnapKind } from './snap'
 export {
-  alignWall,
+  alignEdge,
   closeGaps,
   gridRest,
-  nearWalls,
+  nearEdges,
   snapAngle,
   snapHeight,
   snapMove,
   snapPoint,
-  wallCandidates,
+  edgeCandidates,
 } from './snap'
 
 export type { Give } from './settle'
@@ -182,7 +182,7 @@ export type { LabelPlan } from './labels'
 export { initialsOf, labelPlan, obstaclesOf, spanThrough } from './labels'
 
 export type { BoundaryRead, Report } from './report'
-export { boundaryWalls, report, sideOver, sideUsed } from './report'
+export { boundaryEdges, report, sideOver, sideUsed } from './report'
 
 export { meetingOf } from './meetings'
 
@@ -216,7 +216,7 @@ export {
   moveDoor,
   newHistory,
   place,
-  pullWall,
+  pullEdge,
   pushOthers,
   redo,
   remember,

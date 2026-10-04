@@ -51,7 +51,7 @@ const room = (over: Partial<Room> = {}): Room => ({
 
 describe('the settings', () => {
   it('holds the mock’s defaults and its version', () => {
-    expect(SETTINGS_V).toBe(49)
+    expect(SETTINGS_V).toBe(50)
     expect(DEFAULTS.rule).toBe('wait')
     expect(DEFAULTS.jamb).toBe(0.15)
     expect(DEFAULTS.grid).toBe(0.25)
@@ -75,9 +75,10 @@ describe('the settings', () => {
     expect(migrate(null)).toBeNull()
   })
 
-  it('drops the shared-wall drag an older page wrote out whole, and keeps one saved since', () => {
-    expect(migrate({ sharedWalls: 1, v: 48 })).not.toHaveProperty('sharedWalls')
-    expect(migrate({ sharedWalls: 1, v: 49 })!.sharedWalls).toBe(1)
+  it('drops the shared-edge drag an older page wrote out whole, and keeps one saved since', () => {
+    expect(migrate({ sharedWalls: 1, v: 48 })).toEqual({ v: 48 })
+    expect(migrate({ sharedWalls: 1, v: 49 })).toEqual({ sharedEdges: 1, v: 49 })
+    expect(migrate({ sharedEdges: 1, v: 50 })!.sharedEdges).toBe(1)
   })
 
   it('copies a sheet without sharing anything with it', () => {

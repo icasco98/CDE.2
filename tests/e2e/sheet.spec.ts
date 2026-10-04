@@ -77,12 +77,12 @@ test.use({ viewport: { width: 1500, height: 1100 } })
 test.describe('the zoning sheet', () => {
   test.beforeEach(async ({ page }) => openSheet(page))
 
-  test('drops the Bedroom from the program beside Formal Living, snapping to its wall', async ({
+  test('drops the Bedroom from the program beside Formal Living, snapping to its edge', async ({
     page,
   }) => {
     const before = await placedArea(page)
     const block = await centreOf(page, `.tray .item[data-room="${BEDROOM}"] .n`)
-    // the Bedroom is 4.25 m wide, so its right wall comes within reach of Formal Living's at x 11.39
+    // the Bedroom is 4.25 m wide, so its right edge comes within reach of Formal Living's at x 11.39
     const beside = await onSheet(page, 9.465, 4.25)
     await page.mouse.move(block.x, block.y)
     await page.mouse.down()
@@ -171,7 +171,7 @@ test.describe('the zoning sheet', () => {
     await expect(page.locator('svg.sheet .turn text')).toHaveText('25°')
   })
 
-  test('moves one wall of the Kitchen a metre out, and the room reads its new area', async ({
+  test('moves one edge of the Kitchen a metre out, and the room reads its new area', async ({
     page,
   }) => {
     await page.locator(`svg.sheet g.room[data-room="${KITCHEN}"] path.body`).click()
@@ -180,7 +180,7 @@ test.describe('the zoning sheet', () => {
     await drag(page, await onSheet(page, 7.75, 18.085), await onSheet(page, 8.75, 18.085))
 
     await expect(blockOf(page, KITCHEN)).toHaveText('19 of 21')
-    // the wall moved alone: the frame still stands where it did
+    // the edge moved alone: the frame still stands where it did
     expect(
       await page.locator(`svg.sheet g.room[data-room="${KITCHEN}"]`).getAttribute('transform'),
     ).toContain('translate(1.5 16.37)')
@@ -240,7 +240,7 @@ test.describe('the zoning sheet', () => {
     await expect(blockOf(page, DIWANIYA)).toHaveText('38.5 of 60')
   })
 
-  test('offers an enclosed space to the rooms that wall it, with the court refused and why', async ({
+  test('offers an enclosed space to the rooms that enclose it, with the court refused and why', async ({
     page,
   }) => {
     await expect(blockOf(page, STAIR)).toHaveText('21.1 of 15')
@@ -282,7 +282,7 @@ test.describe('the zoning sheet', () => {
     const b = await onSheet(page, 7.72, 0.03)
     await page.mouse.click(b.x, b.y)
 
-    // Family Living's top wall: 7.75 m from corner to corner, straight across the sheet
+    // Family Living's top edge: 7.75 m from corner to corner, straight across the sheet
     await expect(sentence(page)).toContainText('7.8 m at 0°')
     await expect(sentence(page)).toContainText('7.8 across, 0 down')
     await expect(sentence(page)).toContainText('on a corner to on a corner')

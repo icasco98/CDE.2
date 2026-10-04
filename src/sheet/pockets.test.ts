@@ -28,7 +28,7 @@ const room = (over: Partial<Room> = {}): Room => ({
   ...over,
 })
 
-/** Rooms round a 2 × 4 hole inside the setback line, the west room giving it the most wall. */
+/** Rooms round a 2 × 4 hole inside the setback line, the west room giving it the most edge. */
 function ringRooms(): Room[] {
   return [
     room({ id: 'n', name: 'N', x: 4, y: 4, w: 6, h: 2 }),
@@ -40,13 +40,13 @@ function ringRooms(): Room[] {
 }
 
 describe('enclosed spaces', () => {
-  it('finds the space four rooms leave between them, with the walls round it', () => {
+  it('finds the space four rooms leave between them, with the edges round it', () => {
     const sheet = sheetOf(ringRooms(), { boundary: 'off' })
     const pockets = pocketsOf(sheet, 0)
     const hole = pockets.find((p) => r2(p.area) === 8)!
     expect(hole).toBeDefined()
     expect(hole.centre.map(r2)).toEqual([7, 8])
-    // the two rooms east of it stand on one line, so that run of wall is credited to the first
+    // the two rooms east of it stand on one line, so that run of edge is credited to the first
     expect([...hole.touch.keys()].sort()).toEqual(['e1', 'n', 's', 'w'])
     expect(r2(hole.touch.get('w')!)).toBe(4)
     expect(hole.ring).not.toBeNull()
@@ -76,7 +76,7 @@ describe('enclosed spaces', () => {
     expect(courtWhy(hole, { ...DEFAULTS, courtArea: 8, courtSide: 1.5 })).toBe('')
   })
 
-  it('offers the space to the room that gives it the most wall', () => {
+  it('offers the space to the room that gives it the most edge', () => {
     const sheet = sheetOf(ringRooms(), { boundary: 'off' })
     const hole = pocketsOf(sheet, 0).find((p) => r2(p.area) === 8)!
     expect(bestNeighbour(hole, sheet)!.id).toBe('w')

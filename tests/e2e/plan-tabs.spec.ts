@@ -77,8 +77,8 @@ test('a door is placed from the Openings tab, and kept across a change of tab', 
   await page.locator('svg.sheet.doormode').waitFor()
   const before = await doors(page).count()
   await page.locator('.grp.place').getByRole('button', { name: 'Door', exact: true }).click()
-  const wall = await onSheet(page, 4, 16.37)
-  await page.mouse.click(wall.x, wall.y)
+  const edge = await onSheet(page, 4, 16.37)
+  await page.mouse.click(edge.x, edge.y)
   await expect(doors(page)).toHaveCount(before + 1)
 
   await tab(page, 'Zoning and 3D').click()

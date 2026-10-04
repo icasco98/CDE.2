@@ -285,7 +285,7 @@ async function rayCast(page: Page): Promise<{ sampled: number; wrong: unknown[] 
         if (lo > hi) [lo, hi] = [hi, lo]
         const poly = prism.poly
         let inside = true
-        // the middle of the block says which side of each wall is its own
+        // the middle of the block says which side of each edge is its own
         const mid = poly.reduce(
           (a, p) => [a[0] + p[0] / poly.length, a[1] + p[1] / poly.length],
           [0, 0],

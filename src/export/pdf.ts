@@ -24,7 +24,7 @@ export type Draw =
       readonly points: readonly Point[]
       readonly closed: boolean
       readonly stroke?: Stroke
-      /** Filled with this grey before it is stroked; a white fill is how a gap is cut in a wall. */
+      /** Filled with this grey before it is stroked; a white fill is how a gap is cut in an edge. */
       readonly fillGrey?: number
     }
   | {

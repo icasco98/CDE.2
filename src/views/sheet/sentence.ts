@@ -20,12 +20,12 @@ export type Part = { lead?: string; text: string; bad?: boolean }
 export const snapWord = (kind: string): string =>
   kind === 'corner'
     ? 'on a corner'
-    : kind === 'wall' || kind === 'line'
-      ? 'on a wall line'
+    : kind === 'edge' || kind === 'line'
+      ? 'on an edge line'
       : kind === 'meet'
         ? 'where two lines meet'
         : kind === 'square'
-          ? 'square to the wall'
+          ? 'square to the edge'
           : kind === 'angle'
             ? "along a neighbour's angle"
             : kind === 'grid'
@@ -129,7 +129,7 @@ function walkParts(read: Report): Part[] {
 export type OpeningsState = {
   armed: DoorType | null
   width: number
-  /** What the wall under the pointer would take, or why it will not. */
+  /** What the edge under the pointer would take, or why it will not. */
   hover: { why: string | null; snapped: 'jamb' | 'middle' | null } | null
   door: DoorRead | null
   sliding: boolean
@@ -145,7 +145,7 @@ export function openingsSentence(read: Report, state: OpeningsState): Part[] {
     return [
       {
         lead,
-        text: 'sliding along its wall; a door stays on the wall its two rooms share',
+        text: 'sliding along its edge; a door stays on the edge its two rooms share',
       },
     ]
   const door = state.door
@@ -173,7 +173,7 @@ export function openingsSentence(read: Report, state: OpeningsState): Part[] {
     return [
       {
         lead,
-        text: 'click a wall shared with a neighbour; the whole stretch the two share is opened, never past a corner · Esc puts the tool down',
+        text: 'click an edge shared with a neighbour; the whole stretch the two share is opened, never past a corner · Esc puts the tool down',
       },
       ...walkParts(read),
     ]
@@ -181,13 +181,13 @@ export function openingsSentence(read: Report, state: OpeningsState): Part[] {
     ? null
     : state.hover?.snapped
       ? state.hover.snapped === 'middle'
-        ? 'middle of the wall'
+        ? 'middle of the edge'
         : 'a jamb from the corner'
       : null
   return [
     {
       lead,
-      text: `click a wall to place a ${DOOR[state.armed].label.toLowerCase()} of ${fmt(state.width)} m${
+      text: `click an edge to place a ${DOOR[state.armed].label.toLowerCase()} of ${fmt(state.width)} m${
         caught ? ` · ${caught}` : ''
       }`,
     },

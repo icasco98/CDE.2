@@ -2,7 +2,7 @@ import { frameOf, outlineOf, placeInFrame, sheetToLocalPolygon } from './footpri
 import { area, boundingBox, differencePolygons, rectangleToPolygon, type Rect } from './polygon'
 import type { Footprint, Polygon } from './types'
 
-/** Half a centimetre: the polygon booleans land a vertex a hair either side of a wall, and a room 2.9999 m wide is not under a 3 m minimum. */
+/** Half a centimetre: the polygon booleans land a vertex a hair either side of an edge, and a room 2.9999 m wide is not under a 3 m minimum. */
 const TOLERANCE = 0.005
 
 /**
@@ -32,7 +32,7 @@ export function subtractPolygons(
 
 /**
  * `subject` with every cutter taken out of it, in the subject's own frame, so its rotation is
- * kept. A carve changes the shape of the polygon, so its arcs no longer stand for its walls and
+ * kept. A carve changes the shape of the polygon, so its arcs no longer stand for its edges and
  * are dropped; a carve that takes nothing off leaves the footprint, and its arcs, as they were.
  */
 export function carveFootprint(

@@ -9,7 +9,7 @@ import {
   beginMove,
   beginNew,
   beginTurn,
-  beginWall,
+  beginEdge,
   closesPolygon,
   dragTo,
   drawnAt,
@@ -32,7 +32,7 @@ const formal = () => sheet.rooms.find((r) => r.id === 'r6')!
 const kitchen = () => sheet.rooms.find((r) => r.id === 'r8')!
 
 describe('dropping a room from the program', () => {
-  it('follows the pointer and snaps onto the wall it comes near', () => {
+  it('follows the pointer and snaps onto the edge it comes near', () => {
     const begun = beginNew(sheet, 'nmu436pzls0vk')!
     expect(begun.kind).toBe('new')
     const held = dragTo(begun, [9.465, 4.25], still, sheet, 0)
@@ -90,19 +90,19 @@ describe('the box that selects', () => {
   })
 })
 
-describe('one wall of a carved room', () => {
-  it('moves that wall alone and leaves the frame’s other sides where they were', () => {
-    const wall = outlineOf(kitchen()).findIndex(
+describe('one edge of a carved room', () => {
+  it('moves that edge alone and leaves the frame’s other sides where they were', () => {
+    const edge = outlineOf(kitchen()).findIndex(
       (seg) => seg.n[0] > 0.999 && Math.abs(seg.a[0] - kitchen().w) < 1e-6,
     )
     const held = dragTo(
-      beginWall(sheet, 'r8', wall, [7.75, 18.085])!,
+      beginEdge(sheet, 'r8', edge, [7.75, 18.085])!,
       [8.75, 18.085],
       still,
       sheet,
       0,
     )
-    if (held.kind !== 'wall') throw new Error('the drag lost its shape')
+    if (held.kind !== 'edge') throw new Error('the drag lost its shape')
     const shown = held.preview.get('r8')!
     expect(areaOf(shown)).toBeCloseTo(19.0175, 3)
     const change = dropOf(held, sheet, 0)!

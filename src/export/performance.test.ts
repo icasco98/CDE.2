@@ -5,7 +5,7 @@ import { pdfOf } from './sheet'
 
 const on = new Date('2026-09-11T09:00:00Z')
 
-/** Thirty rooms, ten to a storey on a five-by-two grid, each with a door on its east wall. */
+/** Thirty rooms, ten to a storey on a five-by-two grid, each with a door on its east edge. */
 function house(): Sheet {
   const rooms: Room[] = []
   for (let storey = 0; storey < 3; storey += 1) {

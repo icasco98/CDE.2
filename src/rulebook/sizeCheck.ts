@@ -50,7 +50,7 @@ export function pastRange(rooms: readonly MeasuredRoom[], plotAreaM2: number): r
 /**
  * What the storey and the house come to against the floor they are allowed: the setbacks for the
  * one, the Municipality's building ratio for the other. Both are said where both are passed,
- * because they are two different walls and a person fixes them differently.
+ * because they are two different limits and a person fixes them differently.
  */
 export function pastAllowed(input: {
   readonly storey: number

@@ -1,7 +1,7 @@
 /**
  * Pockets: empty space with rooms on every side. The buildable area less every room, as convex
- * pieces, sorted into the spaces that hang together; each one can be given to a room that walls it
- * in, or made a court or a corridor.
+ * pieces, sorted into the spaces that hang together; each one can be given to a room that encloses
+ * it, or made a court or a corridor.
  */
 
 import {
@@ -17,7 +17,7 @@ import {
 import {
   areaOf,
   canonicalise,
-  chainWalls,
+  chainEdges,
   facing,
   fmt,
   insideConvex,
@@ -34,11 +34,11 @@ import {
   toLocal,
   weld,
   worldPieces,
-  worldWalls,
+  worldEdges,
 } from './geometry'
 import { allowedBox, outsideBuildable } from './settle'
 
-/** An enclosed empty space: its convex pieces, its area, its middle, and the walls round it. */
+/** An enclosed empty space: its convex pieces, its area, its middle, and the edges round it. */
 export type Pocket = {
   pieces: Poly[]
   area: number
@@ -48,7 +48,7 @@ export type Pocket = {
 }
 
 export function pocketsOf(sheet: Sheet, storey: number): Pocket[] {
-  // the setback line, and the boundary where building to it is allowed, count as walls
+  // the setback line, and the boundary where building to it is allowed, count as edges
   const A = allowedBox(sheet, storey)
   let free: Poly[] = [
     [
@@ -68,13 +68,13 @@ export function pocketsOf(sheet: Sheet, storey: number): Pocket[] {
     const segs = outlineFrom(part).segs
     const area = partArea(part)
     if (area < 0.05) continue
-    // which rooms wall it in, by how much wall each gives it
+    // which rooms enclose it, by how much edge each gives it
     const touch = new Map<string, number>()
     for (const sg of segs) {
       const mid: Point = [(sg.a[0] + sg.b[0]) / 2, (sg.a[1] + sg.b[1]) / 2]
       const len = Math.hypot(sg.b[0] - sg.a[0], sg.b[1] - sg.a[1])
       for (const r of placed) {
-        const hit = worldWalls(r).some((w) => {
+        const hit = worldEdges(r).some((w) => {
           const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1
           const u = [(w.b[0] - w.a[0]) / L, (w.b[1] - w.a[1]) / L]
           const t = (mid[0] - w.a[0]) * u[0]! + (mid[1] - w.a[1]) * u[1]!
@@ -87,7 +87,7 @@ export function pocketsOf(sheet: Sheet, storey: number): Pocket[] {
         }
       }
     }
-    if (!touch.size) continue // no room walls it: nothing to give it to
+    if (!touch.size) continue // no room encloses it: nothing to give it to
     let A2 = 0
     let X = 0
     let Y = 0
@@ -98,7 +98,7 @@ export function pocketsOf(sheet: Sheet, storey: number): Pocket[] {
       X += c[0] * a
       Y += c[1] * a
     }
-    const loops = chainWalls(segs)
+    const loops = chainEdges(segs)
     const ring = loops
       ? loops
           .map((l) => l.map((e) => e.a))
@@ -209,7 +209,7 @@ export function roomFromPocket(
   return r
 }
 
-/** The room that gives a space the most wall, which is the one the bar offers it to. */
+/** The room that gives a space the most edge, which is the one the bar offers it to. */
 export function bestNeighbour(pk: Pocket, sheet: Sheet): Room | null {
   let best: { r: Room; len: number } | null = null
   for (const [id, len] of pk.touch) {

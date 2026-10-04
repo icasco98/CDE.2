@@ -2,7 +2,7 @@ export type Point = readonly [number, number]
 export type Polygon = readonly Point[]
 
 /**
- * The circle a curved wall runs on, in the polygon's own frame, and the way round it: `clockwise`
+ * The circle a curved edge runs on, in the polygon's own frame, and the way round it: `clockwise`
  * is clockwise as the plan is drawn, where y runs down.
  */
 export type Circle = {

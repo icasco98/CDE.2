@@ -96,22 +96,26 @@ describe('where the sheet and the memory are kept', () => {
     expect(read.settings.grid).toBe(0.5)
   })
 
-  it('drags one room’s wall alone unless the sheet or the spec saved shared walls on', () => {
+  it('drags one room’s edge alone unless the sheet or the spec saved shared edges on', () => {
     const kept = sheetKept(fixtureSheet())
     const settings = { ...(kept.settings as Record<string, unknown>) }
-    delete settings.sharedWalls
-    expect(sheetFrom({ ...kept, settings }, [])!.settings.sharedWalls).toBe(0)
+    delete settings.sharedEdges
+    expect(sheetFrom({ ...kept, settings }, [])!.settings.sharedEdges).toBe(0)
     expect(
-      sheetFrom({ ...kept, settings: { ...settings, sharedWalls: 1 } }, [])!.settings.sharedWalls,
+      sheetFrom({ ...kept, settings: { ...settings, sharedEdges: 1 } }, [])!.settings.sharedEdges,
     ).toBe(1)
     expect(
       sheetFrom({ ...kept, settings: { ...settings, sharedWalls: 1, v: 48 } }, [])!.settings
-        .sharedWalls,
+        .sharedEdges,
     ).toBe(0)
+    expect(
+      sheetFrom({ ...kept, settings: { ...settings, sharedWalls: 1, v: 49 } }, [])!.settings
+        .sharedEdges,
+    ).toBe(1)
     localStorage.setItem(SPEC_KEY, JSON.stringify(settings))
-    expect(localSpec()).not.toHaveProperty('sharedWalls')
-    localStorage.setItem(SPEC_KEY, JSON.stringify({ ...settings, sharedWalls: 1 }))
-    expect(localSpec()!.sharedWalls).toBe(1)
+    expect(localSpec()).not.toHaveProperty('sharedEdges')
+    localStorage.setItem(SPEC_KEY, JSON.stringify({ ...settings, sharedEdges: 1 }))
+    expect(localSpec()!.sharedEdges).toBe(1)
   })
 
   it('writes the settings on their own as well, so a link that keeps them reads them back', async () => {

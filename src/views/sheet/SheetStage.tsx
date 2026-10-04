@@ -142,7 +142,7 @@ import {
   beginNew,
   beginResize,
   beginTurn,
-  beginWall,
+  beginEdge,
   closesPolygon,
   dragTo,
   drawnAt,
@@ -678,7 +678,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
     setDoorSel(null)
   }
 
-  /** A click on the sheet in Openings: a door nearby is taken, else the armed type lands on a wall. */
+  /** A click on the sheet in Openings: a door nearby is taken, else the armed type lands on an edge. */
   const doorClick = (event: ReactPointerEvent) => {
     if (event.button !== 0) return
     event.preventDefault()
@@ -696,12 +696,12 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
     const before = docRef.current.sheet
     const pair = pairAt(before, x, y, armed)
     if (!pair) {
-      setFlash(doorAt(x, y, doorWidth, before, STOREY)?.why ?? 'No wall there.')
+      setFlash(doorAt(x, y, doorWidth, before, STOREY)?.why ?? 'No edge there.')
       setDoorSel(null)
       return
     }
     if (armed === 'open' && pair[1] === OUTSIDE) {
-      setFlash('Only a wall shared with a neighbour can be opened.')
+      setFlash('Only an edge shared with a neighbour can be opened.')
       return
     }
     const connection = connectionFor(pair[0], pair[1])
@@ -741,9 +741,9 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
   }
 
   /**
-   * The pair a door put here would draw, read once as it is placed: the room whose wall it is on and
-   * the room across, or the outside. Reading the wall only asks which connection is meant; the door then
-   * draws that connection or asks for it. Nothing for a wall no door may take.
+   * The pair a door put here would draw, read once as it is placed: the room whose edge it is on and
+   * the room across, or the outside. Reading the edge only asks which connection is meant; the door then
+   * draws that connection or asks for it. Nothing for an edge no door may take.
    */
   const pairAt = (sheet: Sheet, x: number, y: number, type: DoorType): [string, string] | null => {
     const hit = doorAt(x, y, type === 'open' ? 0.6 : doorWidth, sheet, STOREY)
@@ -1045,9 +1045,9 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
         at: inBox(event.clientX, event.clientY),
       })
     },
-    onWallDown: (
+    onEdgeDown: (
       room: Room,
-      wall: number,
+      edge: number,
       side: Side4 | null,
       shared: string | null,
       event: ReactPointerEvent,
@@ -1057,7 +1057,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
       event.stopPropagation()
       const at = pointAt(event.clientX, event.clientY)
       hold(
-        side ? beginResize(sheet, room.id, side, shared, at) : beginWall(sheet, room.id, wall, at),
+        side ? beginResize(sheet, room.id, side, shared, at) : beginEdge(sheet, room.id, edge, at),
       )
     },
     onCornerDown: (room: Room, index: number, loop: Point[], event: ReactPointerEvent) => {
@@ -1158,7 +1158,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
             sheet.plot.build,
           )
             ? 'Outside the line the ground floor may reach.'
-            : 'No room walls this space yet, so there is nothing to give it to.',
+            : 'No room encloses this space yet, so there is nothing to give it to.',
           at: where,
         })
     },
@@ -1682,13 +1682,13 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
       <p className="head-line">
         {openingsOn ? (
           <>
-            Openings. Rooms fade to outlines and every click is about a wall or a door. A door is
-            the drawing of a connection: arm a type in the bar and click a wall, and it lands on the
-            connection between the two rooms, or between a room and the outside, asking first when
-            they have none. Click near a door to select it and drag it to slide it along its wall. A
-            door stands on the wall its two rooms share; move them apart and it is not drawn until
-            they meet again. Open wall takes out the whole stretch two rooms share. Click a room in
-            the list to light its walls.
+            Openings. Rooms fade to outlines and every click is about an edge or a door. A door is
+            the drawing of a connection: arm a type in the bar and click an edge, and it lands on
+            the connection between the two rooms, or between a room and the outside, asking first
+            when they have none. Click near a door to select it and drag it to slide it along its
+            edge. A door stands on the edge its two rooms share; move them apart and it is not drawn
+            until they meet again. Open edge takes out the whole stretch two rooms share. Click a
+            room in the list to light its edges.
           </>
         ) : (
           <>
@@ -1696,7 +1696,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
             here are the rooms of Requirements and the bubbles, no more and no fewer. Drag a room
             from the program and drop it where you want it, or draw it; R turns it; a room dropped
             on another waits, tinted, or pushes the lower one; right-click it to settle the overlap,
-            or right-click an empty space walled in by rooms to give it away, make it a court, or
+            or right-click an empty space enclosed by rooms to give it away, make it a court, or
             make it a corridor, which joins the program.
           </>
         )}

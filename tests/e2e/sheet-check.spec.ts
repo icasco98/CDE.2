@@ -4,7 +4,7 @@ import { tab } from './tabs'
 
 /*
  * Show connections on the zoning sheet: the project's connections drawn from the room under the hand and the room
- * selected, gone once the two rooms share a door's width of wall, and in the Openings tab once a
+ * selected, gone once the two rooms share a door's width of edge, and in the Openings tab once a
  * door drawing the connection is placed; and the question a door asks between two rooms with no connection.
  */
 
@@ -66,7 +66,7 @@ async function place(page: Page, id: string, x: number, y: number) {
   await expect(page.locator(`svg.sheet g.room[data-room="${id}"]`)).toHaveCount(1)
 }
 
-/** A placed room moved so its left wall stands on another's right wall, tops aligned. */
+/** A placed room moved so its left edge stands on another's right edge, tops aligned. */
 async function besideOf(page: Page, id: string, of: string) {
   const other = await boxOf(page, of)
   const mine = await boxOf(page, id)
@@ -123,7 +123,7 @@ test('Show connections is off by default; on, a hovered room draws faint lines t
   await expect(page.locator('[data-tray-line]')).toHaveCount(0)
 })
 
-test('a selected room draws bold lines to its placed rooms, and a line goes once the two share a wall', async ({
+test('a selected room draws bold lines to its placed rooms, and a line goes once the two share an edge', async ({
   page,
 }) => {
   await openSheet(page)
@@ -153,20 +153,20 @@ async function sideBySide(page: Page, left: string, right: string, opened = fals
   await page.locator('.grp.place').getByRole('button', { name: 'Door', exact: true }).click()
   const box = await boxOf(page, a)
   const other = await boxOf(page, b)
-  const wall = { x: box.x + box.w, y: Math.max(box.y, other.y) + Math.min(box.h, other.h) / 2 }
-  return { a, b, wall }
+  const edge = { x: box.x + box.w, y: Math.max(box.y, other.y) + Math.min(box.h, other.h) / 2 }
+  return { a, b, edge }
 }
 
 const doors = (page: Page) => page.locator('svg.sheet .door:not(.preview)')
 
-test('in Openings a door on the wall of a connection meets it, and the line goes', async ({
+test('in Openings a door on the edge of a connection meets it, and the line goes', async ({
   page,
 }) => {
-  const { a: dining, b: kitchen, wall } = await sideBySide(page, 'Dining Room', 'Kitchen')
+  const { a: dining, b: kitchen, edge } = await sideBySide(page, 'Dining Room', 'Kitchen')
   await check(page).click()
   const before = await doors(page).count()
   await page.mouse.click(
-    ...(Object.values(await onSheet(page, wall.x, wall.y)) as [number, number]),
+    ...(Object.values(await onSheet(page, edge.x, edge.y)) as [number, number]),
   )
   await expect(page.getByRole('dialog', { name: 'Add connection' })).toHaveCount(0)
   await expect(doors(page)).toHaveCount(before + 1)
@@ -177,11 +177,11 @@ test('in Openings a door on the wall of a connection meets it, and the line goes
 test('a door between two rooms with no connection asks, and yes adds both as one undo step', async ({
   page,
 }) => {
-  const { wall } = await sideBySide(page, 'Kitchen', 'Formal Living')
+  const { edge } = await sideBySide(page, 'Kitchen', 'Formal Living')
   await expect.poll(() => linkedPairs(page)).not.toContain('Formal Living to Kitchen')
   const before = await doors(page).count()
   await page.mouse.click(
-    ...(Object.values(await onSheet(page, wall.x, wall.y)) as [number, number]),
+    ...(Object.values(await onSheet(page, edge.x, edge.y)) as [number, number]),
   )
   const offer = page.getByRole('dialog', { name: 'Add connection' })
   await expect(offer).toContainText(
@@ -199,10 +199,10 @@ test('a door between two rooms with no connection asks, and yes adds both as one
 test('a door between two rooms with no connection asks, and no places nothing', async ({
   page,
 }) => {
-  const { wall } = await sideBySide(page, 'Kitchen', 'Formal Living')
+  const { edge } = await sideBySide(page, 'Kitchen', 'Formal Living')
   const before = await doors(page).count()
   await page.mouse.click(
-    ...(Object.values(await onSheet(page, wall.x, wall.y)) as [number, number]),
+    ...(Object.values(await onSheet(page, edge.x, edge.y)) as [number, number]),
   )
   const offer = page.getByRole('dialog', { name: 'Add connection' })
   await offer.getByRole('button', { name: 'Cancel' }).click()
@@ -231,9 +231,9 @@ test('a door joining a pair kept apart is crossed, and both rooms outlined where
   await tab(page, 'Zoning and 3D').click()
   await page.locator('svg.sheet').waitFor()
 
-  const { a: dining, b: kitchen, wall } = await sideBySide(page, 'Dining Room', 'Kitchen', true)
+  const { a: dining, b: kitchen, edge } = await sideBySide(page, 'Dining Room', 'Kitchen', true)
   await page.mouse.click(
-    ...(Object.values(await onSheet(page, wall.x, wall.y)) as [number, number]),
+    ...(Object.values(await onSheet(page, edge.x, edge.y)) as [number, number]),
   )
   await expect(page.locator('svg.sheet [data-apart-door]')).toHaveCount(0)
   await check(page).click()

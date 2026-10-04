@@ -481,17 +481,17 @@ body:has(main.stage-sheet) {
   pointer-events: none;
 }
 
-.sheet-stage .bwall {
+.sheet-stage .bedge {
   pointer-events: none;
 }
 
-.sheet-stage .bwall line {
+.sheet-stage .bedge line {
   stroke: var(--ink);
   stroke-width: 0.2;
   stroke-linecap: butt;
 }
 
-.sheet-stage .bwall text {
+.sheet-stage .bedge text {
   font:
     0.32px 'Archivo',
     sans-serif;
@@ -499,11 +499,11 @@ body:has(main.stage-sheet) {
   letter-spacing: 0.04em;
 }
 
-.sheet-stage .bwall.over line {
+.sheet-stage .bedge.over line {
   stroke: var(--warn);
 }
 
-.sheet-stage .bwall.over text {
+.sheet-stage .bedge.over text {
   fill: var(--warn);
 }
 
@@ -542,7 +542,7 @@ body:has(main.stage-sheet) {
   fill-opacity: 0.85;
 }
 
-.sheet-stage .room path.wall {
+.sheet-stage .room path.edge {
   fill: none;
   stroke: var(--room-line);
   stroke-width: 0.07;
@@ -571,7 +571,7 @@ body:has(main.stage-sheet) {
   fill-opacity: 1;
 }
 
-.sheet-stage .room.open path.wall {
+.sheet-stage .room.open path.edge {
   stroke: var(--build);
   stroke-dasharray: 0.3 0.2;
 }
@@ -622,7 +622,7 @@ body:has(main.stage-sheet) {
 }
 
 /* Hover is shared with the mass: the room under the pointer there reads as under it here. */
-.sheet-stage .room.hover path.wall {
+.sheet-stage .room.hover path.edge {
   stroke: var(--accent);
 }
 
@@ -632,16 +632,16 @@ body:has(main.stage-sheet) {
   border-color: var(--ink);
 }
 
-.sheet-stage .room.selected path.wall {
+.sheet-stage .room.selected path.edge {
   stroke: var(--select);
   stroke-width: 0.12;
 }
 
-.sheet-stage .room.over path.wall {
+.sheet-stage .room.over path.edge {
   stroke: var(--warn);
 }
 
-.sheet-stage .room:hover path.wall {
+.sheet-stage .room:hover path.edge {
   stroke-width: 0.11;
 }
 
@@ -649,7 +649,7 @@ body:has(main.stage-sheet) {
   fill-opacity: 0.55;
 }
 
-.sheet-stage .room.locked path.wall {
+.sheet-stage .room.locked path.edge {
   stroke: var(--ink-2);
 }
 
@@ -980,7 +980,7 @@ body:has(main.stage-sheet) {
   fill-opacity: 0.12;
 }
 
-.sheet-stage svg.sheet.reshaping .room.target path.wall {
+.sheet-stage svg.sheet.reshaping .room.target path.edge {
   stroke: var(--ink);
   stroke-width: 0.16;
 }
@@ -1378,12 +1378,12 @@ body:has(main.stage-sheet) {
   cursor: pointer;
 }
 
-/* The rooms fade to outlines, so the step reads as being about the walls and what opens them. */
+/* The rooms fade to outlines, so the step reads as being about the edges and what opens them. */
 .sheet-stage svg.sheet.doormode .room path.body {
   fill-opacity: 0.12;
 }
 
-.sheet-stage svg.sheet.doormode .room path.wall {
+.sheet-stage svg.sheet.doormode .room path.edge {
   stroke: var(--ink-2);
   stroke-width: 0.08;
 }
@@ -1392,7 +1392,7 @@ body:has(main.stage-sheet) {
   fill: var(--ink-3);
 }
 
-.sheet-stage .room.lit path.wall {
+.sheet-stage .room.lit path.edge {
   stroke: var(--accent);
   stroke-width: 0.14;
 }
@@ -1401,7 +1401,7 @@ body:has(main.stage-sheet) {
   fill-opacity: 0.25;
 }
 
-.sheet-stage .room.unreached path.wall {
+.sheet-stage .room.unreached path.edge {
   stroke: var(--ink-3);
 }
 
@@ -1519,7 +1519,7 @@ body:has(main.stage-sheet) {
   stroke: var(--warn);
 }
 
-/* A door whose wall moved away: the ring says where it was left, to put back or remove. */
+/* A door whose edge moved away: the ring says where it was left, to put back or remove. */
 /* Check: a connection not yet ready or met, dashed from the room under the hand, bold from the one selected. */
 .sheet-stage .check-line {
   stroke: var(--accent);
@@ -1541,7 +1541,7 @@ body:has(main.stage-sheet) {
   pointer-events: none;
 }
 
-.sheet-stage .room.apart-through path.wall {
+.sheet-stage .room.apart-through path.edge {
   stroke: #c62828;
   stroke-width: 0.16;
 }

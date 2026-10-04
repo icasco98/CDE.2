@@ -7,7 +7,7 @@ export const GRID_M = 0.25
 /** A gap this small is already touching, and closing it would be a move nobody asked for. */
 const CLOSED_M = 0.02
 
-/** Within about five degrees: a wall only snaps flush against one running the same way. */
+/** Within about five degrees: an edge only snaps flush against one running the same way. */
 const PARALLEL_SIN = 0.09
 
 export function snapToGrid(value: number): number {
@@ -67,7 +67,7 @@ export function snapRectangleToNeighbours(
 
 /**
  * The point on `outlines` a dragged corner should land on: one of their own corners within
- * `reach` if there is one, else the nearest point along a wall, else nothing. Corners win at
+ * `reach` if there is one, else the nearest point along an edge, else nothing. Corners win at
  * equal reach, since landing exactly on another room's corner is the more useful alignment.
  * Every polygon here is read in whichever one frame the caller put them in.
  */
@@ -78,8 +78,8 @@ export function nearestNeighbourPoint(
 ): Point | null {
   let corner: Point | null = null
   let cornerDistance = reach
-  let wall: Point | null = null
-  let wallDistance = reach
+  let edge: Point | null = null
+  let edgeDistance = reach
   for (const polygon of outlines) {
     for (const [a, b] of edgesOf(polygon)) {
       const toCorner = Math.hypot(p[0] - a[0], p[1] - a[1])
@@ -88,21 +88,21 @@ export function nearestNeighbourPoint(
         corner = a
       }
       const q = nearestPointOnSegment(p, a, b)
-      const toWall = Math.hypot(p[0] - q[0], p[1] - q[1])
-      if (toWall < wallDistance) {
-        wallDistance = toWall
-        wall = q
+      const toEdge = Math.hypot(p[0] - q[0], p[1] - q[1])
+      if (toEdge < edgeDistance) {
+        edgeDistance = toEdge
+        edge = q
       }
     }
   }
-  return corner ?? wall
+  return corner ?? edge
 }
 
 /**
- * The extra push along `normal` that would bring the wall `a`-`b` flush with a parallel wall of
+ * The extra push along `normal` that would bring the edge `a`-`b` flush with a parallel edge of
  * `outlines` within `reach`, or 0 when none is. Read in the same one frame as the outlines.
  */
-export function wallSnapOffset(
+export function edgeSnapOffset(
   a: Point,
   b: Point,
   normal: Point,

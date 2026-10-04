@@ -19,7 +19,7 @@ import {
   isGhost,
   areaOf,
   bboxOf,
-  boundaryWalls,
+  boundaryEdges,
   facing,
   fmt,
   isOpen,
@@ -76,7 +76,7 @@ export type SheetRead = {
   overlaps: { ids: [string, string]; polys: Poly[] }[]
   pockets: Pocket[]
   read: Report
-  /** The sides built past their budget, so a boundary wall is drawn in the warning colour. */
+  /** The sides built past their budget, so an edge on the boundary is drawn in the warning colour. */
   over: Set<string>
   /** How many doors in each room stands, and which the walk never reaches: the Openings step only. */
   walk: { depth: Map<string, number>; unreached: Set<string> } | null
@@ -85,9 +85,9 @@ export type SheetRead = {
 export type SheetHandlers = {
   onRoomDown: (room: Room, event: ReactPointerEvent) => void
   onRoomMenu: (room: Room, event: ReactMouseEvent) => void
-  onWallDown: (
+  onEdgeDown: (
     room: Room,
-    wall: number,
+    edge: number,
     side: Side4 | null,
     shared: string | null,
     event: ReactPointerEvent,
@@ -144,13 +144,13 @@ const bodyPath = (r: Room) =>
 const segsPath = (segs: Seg[]) =>
   segs.map((s) => `M${p4(s.a[0])} ${p4(s.a[1])}L${p4(s.b[0])} ${p4(s.b[1])}`).join('')
 
-const wallPath = (r: Room) => segsPath(outlineOf(r))
+const edgePath = (r: Room) => segsPath(outlineOf(r))
 
 const points = (p: Poly) => p.map((v) => `${p4(v[0])},${p4(v[1])}`).join(' ')
 
-/** A plain room's neighbour on the other side of a whole shared wall, which a drag takes with it. */
-function sharedWallOf(r: Room, side: Side4, rooms: Room[], settings: Settings): Room | null {
-  if (!settings.sharedWalls || !square(r) || (r.pieces && r.pieces.length)) return null
+/** A plain room's neighbour on the other side of a whole shared edge, which a drag takes with it. */
+function sharedEdgeOf(r: Room, side: Side4, rooms: Room[], settings: Settings): Room | null {
+  if (!settings.sharedEdges || !square(r) || (r.pieces && r.pieces.length)) return null
   const tol = 0.02
   const right = (o: Room) => o.x + o.w
   const bottom = (o: Room) => o.y + o.h
@@ -267,7 +267,7 @@ export function SheetView(props: SheetViewProps) {
       )}
       {under.map((r) => (
         <g key={`under-${r.id}`} className="room under" data-under={r.id} transform={frameOf(r)}>
-          <path className="outline" d={wallPath(r)} />
+          <path className="outline" d={edgePath(r)} />
         </g>
       ))}
       {ghosts.map((r) => {
@@ -280,7 +280,7 @@ export function SheetView(props: SheetViewProps) {
         return (
           <g key={`below-${r.id}`} className={`room below ${r.cat}`} transform={frameOf(r)}>
             <path className="body" d={bodyPath(r)} fillRule="evenodd" />
-            <path className="outline" d={wallPath(r)} />
+            <path className="outline" d={edgePath(r)} />
             <line className="x" x1={p4(x0)} y1={p4(y0)} x2={p4(x1)} y2={p4(y1)} />
             <line className="x" x1={p4(x1)} y1={p4(y0)} x2={p4(x0)} y2={p4(y1)} />
             <text className="below-label" x={p4(c[0])} y={p4(c[1] + 0.15)}>
@@ -293,12 +293,12 @@ export function SheetView(props: SheetViewProps) {
         shown
           .filter((r) => !r.fixed && !isOpen(r))
           .flatMap((r) =>
-            boundaryWalls(r, plot).map((wall, i) => (
-              <BoundaryWall
+            boundaryEdges(r, plot).map((edge, i) => (
+              <BoundaryEdge
                 key={`b-${r.id}-${i}`}
-                wall={wall}
-                over={view.over.has(wall.side)}
-                street={plot.streets.includes(wall.side) ? plot.name[wall.side] : null}
+                edge={edge}
+                over={view.over.has(edge.side)}
+                street={plot.streets.includes(edge.side) ? plot.name[edge.side] : null}
               />
             )),
           )}
@@ -329,7 +329,7 @@ export function SheetView(props: SheetViewProps) {
                 d={`M${p4(r.w - 0.55)} 0.42h0.35v0.28h-0.35zM${p4(r.w - 0.48)} 0.42v-0.12a0.105 0.105 0 0 1 0.21 0v0.12`}
               />
             )}
-            <path className="wall" d={wallPath(r)} />
+            <path className="edge" d={edgePath(r)} />
             {spill && (
               <rect className="spill" x={0.04} y={0.04} width={r.w - 0.08} height={r.h - 0.08} />
             )}
@@ -396,7 +396,7 @@ export function SheetView(props: SheetViewProps) {
             <path
               className="mate"
               transform={frameOf(drag.lock.mate)}
-              d={wallPath(drag.lock.mate)}
+              d={edgePath(drag.lock.mate)}
             />
           )}
         </Fragment>
@@ -559,22 +559,22 @@ function StreetLabel({ side, plot }: { side: Side; plot: PlotSpec }) {
   )
 }
 
-function BoundaryWall({
-  wall,
+function BoundaryEdge({
+  edge,
   over,
   street,
 }: {
-  wall: Seg & { side: string }
+  edge: Seg & { side: string }
   over: boolean
   street: string | null
 }) {
-  const length = Math.hypot(wall.b[0] - wall.a[0], wall.b[1] - wall.a[1])
-  const mx = (wall.a[0] + wall.b[0]) / 2 - wall.n[0] * 0.28
-  const my = (wall.a[1] + wall.b[1]) / 2 - wall.n[1] * 0.28
-  const angle = wall.side === 'west' ? -90 : wall.side === 'east' ? 90 : 0
+  const length = Math.hypot(edge.b[0] - edge.a[0], edge.b[1] - edge.a[1])
+  const mx = (edge.a[0] + edge.b[0]) / 2 - edge.n[0] * 0.28
+  const my = (edge.a[1] + edge.b[1]) / 2 - edge.n[1] * 0.28
+  const angle = edge.side === 'west' ? -90 : edge.side === 'east' ? 90 : 0
   return (
-    <g className={`bwall${over ? ' over' : ''}`}>
-      <line x1={p4(wall.a[0])} y1={p4(wall.a[1])} x2={p4(wall.b[0])} y2={p4(wall.b[1])} />
+    <g className={`bedge${over ? ' over' : ''}`}>
+      <line x1={p4(edge.a[0])} y1={p4(edge.a[1])} x2={p4(edge.b[0])} y2={p4(edge.b[1])} />
       {length >= 1.6 && (
         <text
           x={p4(mx)}
@@ -661,11 +661,11 @@ function SnapMarks({ snap, at }: { snap: NonNullable<Drawing['snap']>; at: Point
     snap.kind === 'corner'
       ? 'corner'
       : snap.kind === 'meet'
-        ? 'where two walls meet'
-        : snap.kind === 'wall'
-          ? 'on the wall'
+        ? 'where two edges meet'
+        : snap.kind === 'edge'
+          ? 'on the edge'
           : snap.kind === 'line'
-            ? 'in line with a wall'
+            ? 'in line with an edge'
             : snap.kind === 'angle' && snap.ray
               ? `${Math.round(snap.ray.angle)}°, with the neighbours · ${fmt(snap.ray.length)} m`
               : snapWord(snap.kind)
@@ -906,7 +906,7 @@ function gapsRound(r: Room, rooms: Room[], plot: PlotSpec) {
   return list.filter((gap) => Math.abs(gap.to - gap.from) >= 0.05)
 }
 
-/** One handle per wall on the wall, a handle on every corner of a carved room, and the turning knob. */
+/** One handle per edge on the edge, a handle on every corner of a carved room, and the turning knob. */
 function Handles({
   room,
   rooms,
@@ -936,10 +936,10 @@ function Handles({
           const angle = r2((Math.atan2(seg.b[1] - seg.a[1], seg.b[0] - seg.a[0]) * 180) / Math.PI)
           const cls = Math.abs(seg.n[0]) > 0.999 ? 'h' : Math.abs(seg.n[1]) > 0.999 ? 'v' : 'd'
           const side = sideOf(room, seg)
-          const shared = side ? sharedWallOf(room, side, rooms, settings) : null
+          const shared = side ? sharedEdgeOf(room, side, rooms, settings) : null
           return (
             <rect
-              key={`wall-${i}`}
+              key={`edge-${i}`}
               className={`handle ${cls}${shared ? ' shared' : ''}`}
               x={r2(mx - s / 2)}
               y={r2(my - s / 2)}
@@ -948,7 +948,7 @@ function Handles({
               rx={0.04}
               transform={`rotate(${angle} ${r2(mx)} ${r2(my)})`}
               onPointerDown={(event) =>
-                on.onWallDown(room, i, side, shared ? shared.id : null, event)
+                on.onEdgeDown(room, i, side, shared ? shared.id : null, event)
               }
             />
           )

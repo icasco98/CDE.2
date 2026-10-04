@@ -112,16 +112,16 @@ describe('point in polygon', () => {
 })
 
 describe('the boundary', () => {
-  it('finds the nearest point on a wall, not merely somewhere inside', () => {
+  it('finds the nearest point on an edge, not merely somewhere inside', () => {
     expect(nearestPointOnBoundary(room, [1, 3])).toEqual([0, 3])
     expect(nearestPointOnBoundary(room, [10, 10])).toEqual([4, 6])
   })
 
-  it('finds the real nearest wall of the L, not a side of its bounding box', () => {
+  it('finds the real nearest edge of the L, not a side of its bounding box', () => {
     expect(nearestPointOnBoundary(lShape, [5, 3])).toEqual([5, 2])
   })
 
-  it('reads a point within the tolerance of a wall as on it', () => {
+  it('reads a point within the tolerance of an edge as on it', () => {
     expect(pointOnBoundary(room, [0.01, 3], 0.05)).toBe(true)
     expect(pointOnBoundary(room, [0.1, 3], 0.05)).toBe(false)
   })

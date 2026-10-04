@@ -90,16 +90,16 @@ describe('the tools the architect is given', () => {
 
   it('says how the rooms stand to each other on the embedded sheet', () => {
     const read = sheetRead(fixtureSheet(), 0)
-    // the stair stands along the whole back of the family living: 6.25 m of shared wall
+    // the stair stands along the whole back of the family living: 6.25 m of shared edge
     expect(ground(read).sharing[0]).toEqual({ rooms: ['Stair', 'Family Living'], metres: 6.25 })
     expect(
       ground(read).allButTouching.find((pair) => pair.rooms.includes('Guest WC')),
     ).toMatchObject({ rooms: ['Entry', 'Guest WC'], how: 'a corner' })
   })
 
-  it('places a waiting room and snaps it onto the wall it was put beside', () => {
+  it('places a waiting room and snaps it onto the edge it was put beside', () => {
     const table = desk()
-    // Formal Living's left wall is at x 11.39; the Bedroom is asked for a hand's width off it.
+    // Formal Living's left edge is at x 11.39; the Bedroom is asked for a hand's width off it.
     const out = toolNamed(layoutTools(table.at, 0), 'place_rooms').execute({
       moves: [{ name: 'Bedroom', x: 11.2, y: 1.5 }],
     }) as Done
@@ -217,30 +217,30 @@ describe('the tools the architect is given', () => {
   })
 })
 
-describe('putting a room against a wall', () => {
-  it('stands a room flush to each end of the wall, and says what it stands against', () => {
+describe('putting a room against an edge', () => {
+  it('stands a room flush to each end of the edge, and says what it stands against', () => {
     const along = (align: string) => {
       const table = desk()
       const out = toolNamed(layoutTools(table.at, 0), 'place_against').execute({
-        placements: [{ room: 'Bedroom', against: 'Family Living', wall: 'east', along: align }],
+        placements: [{ room: 'Bedroom', against: 'Family Living', edge: 'east', along: align }],
       }) as Done
       const bedroom = ground(out.house).placed.find((r) => r.name === 'Bedroom')!
       return { bedroom, out }
     }
-    // Family Living stands at x 0..7.75, y 0..9: its east wall is the 9 m run at x = 7.75
+    // Family Living stands at x 0..7.75, y 0..9: its east edge is the 9 m run at x = 7.75
     const start = along('start')
     expect(start.bedroom.x).toBe(7.75)
     expect(start.bedroom.y).toBe(0)
-    expect(start.out.landed[0]).toContain("against Family Living's east wall")
+    expect(start.out.landed[0]).toContain("against Family Living's east edge")
     const end = along('end')
     expect(end.bedroom.x).toBe(7.75)
     expect(end.bedroom.y + end.bedroom.h).toBeCloseTo(9, 2)
   })
 
-  it('shares a wall with the room it was put against', () => {
+  it('shares an edge with the room it was put against', () => {
     const table = desk()
     const out = toolNamed(layoutTools(table.at, 0), 'place_against').execute({
-      placements: [{ room: 'Bedroom', against: 'Family Living', wall: 'east', along: 'start' }],
+      placements: [{ room: 'Bedroom', against: 'Family Living', edge: 'east', along: 'start' }],
     }) as Done
     const shared = ground(out.house).sharing.find(
       (pair) => pair.rooms.includes('Bedroom') && pair.rooms.includes('Family Living'),
@@ -248,31 +248,31 @@ describe('putting a room against a wall', () => {
     expect(shared!.metres).toBeGreaterThan(1.5)
   })
 
-  it('takes an offset along the wall instead of an alignment', () => {
+  it('takes an offset along the edge instead of an alignment', () => {
     const table = desk()
     toolNamed(layoutTools(table.at, 0), 'place_against').execute({
       placements: [
-        { room: 'Bedroom', against: 'Family Living', wall: 'east', offset: 2, w: 4, h: 3 },
+        { room: 'Bedroom', against: 'Family Living', edge: 'east', offset: 2, w: 4, h: 3 },
       ],
     })
     const bedroom = ground(sheetRead(table.sheet(), 0)).placed.find((r) => r.name === 'Bedroom')!
     expect(bedroom.y).toBeCloseTo(2, 1)
   })
 
-  it('refuses a wall too short for the room, with the reason, and changes nothing', () => {
+  it('refuses an edge too short for the room, with the reason, and changes nothing', () => {
     const table = desk()
     const before = JSON.stringify(table.sheet().rooms)
     const out = toolNamed(layoutTools(table.at, 0), 'place_against').execute({
-      placements: [{ room: 'Bedroom', against: 'Guest WC', wall: 'north', w: 12, h: 4 }],
+      placements: [{ room: 'Bedroom', against: 'Guest WC', edge: 'north', w: 12, h: 4 }],
     }) as Done
     expect(out.landed[0]).toContain('needs 12 m along it')
     expect(JSON.stringify(table.sheet().rooms)).toBe(before)
   })
 
-  it('refuses a room on another storey than the wall it was asked for', () => {
+  it('refuses a room on another storey than the edge it was asked for', () => {
     const table = desk()
     const out = toolNamed(layoutTools(table.at, 0), 'place_against').execute({
-      placements: [{ room: 'Bedroom', against: 'Family Living', wall: 'east' }],
+      placements: [{ room: 'Bedroom', against: 'Family Living', edge: 'east' }],
       storey: 'First',
     }) as Done
     expect(out.landed[0]).toContain('stands on the Ground storey')

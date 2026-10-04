@@ -6,7 +6,7 @@
  */
 
 import {
-  alignWall,
+  alignEdge,
   bboxOf,
   canonicalise,
   centreOf,
@@ -21,8 +21,8 @@ import {
   place,
   placedRooms,
   polyArea,
-  pullWall,
-  pullWallShape,
+  pullEdge,
+  pullEdgeShape,
   r2,
   r6,
   reshape,
@@ -40,7 +40,7 @@ import {
   triangulate,
   turn,
   unionBox,
-  wallCandidates,
+  edgeCandidates,
   type Change,
   type Guide,
   type Point,
@@ -82,9 +82,9 @@ export type Drag =
     } & Marks)
   | { kind: 'mark'; start: Point; now: Point; keep: string[]; moved: boolean }
   | ({
-      kind: 'wall'
+      kind: 'edge'
       id: string
-      wall: number
+      edge: number
       seg: Seg
       start: Point
       distance: number
@@ -135,7 +135,7 @@ const takeRooms = (sheet: Sheet, storey: number, ids: string[]): Room[] =>
   placedRooms(sheet, storey).filter((r) => ids.includes(r.id))
 
 const candidatesFor = (sheet: Sheet, storey: number, except: string[]): Seg[] =>
-  wallCandidates(
+  edgeCandidates(
     snapRooms(sheet, storey, null).filter((o) => !except.includes(o.id)),
     sheet.settings,
     sheet.plot,
@@ -193,17 +193,17 @@ export function marked(drag: Drag, sheet: Sheet, storey: number): string[] {
   return [...new Set([...drag.keep, ...caught])]
 }
 
-// ---------- one wall, one corner, one side ----------
+// ---------- one edge, one corner, one side ----------
 
-export function beginWall(sheet: Sheet, id: string, wall: number, at: Point): Drag | null {
+export function beginEdge(sheet: Sheet, id: string, edge: number, at: Point): Drag | null {
   const r = roomById(sheet, id)
   if (!r) return null
-  const seg = outlineOf(r)[wall]
+  const seg = outlineOf(r)[edge]
   if (!seg) return null
   return {
-    kind: 'wall',
+    kind: 'edge',
     id,
-    wall,
+    edge,
     seg,
     start: at,
     distance: 0,
@@ -342,11 +342,11 @@ export function dragTo(drag: Drag, at: Point, mods: Mods, sheet: Sheet, storey: 
         corner: snap.corner ?? null,
       }
     }
-    case 'wall': {
+    case 'edge': {
       const r = roomById(sheet, drag.id)
       if (!r) return drag
       const distance = alongNormal(r, drag.seg, at, drag.start)
-      const pulled = pulledWall(
+      const pulled = pulledEdge(
         r,
         drag.seg,
         distance,
@@ -461,7 +461,7 @@ export function dragTo(drag: Drag, at: Point, mods: Mods, sheet: Sheet, storey: 
   }
 }
 
-/** How far the hand has pulled a wall along its own normal, read in the room's own frame. */
+/** How far the hand has pulled an edge along its own normal, read in the room's own frame. */
 function alongNormal(r: Room, seg: Seg, at: Point, start: Point): number {
   const a = ((r.angle || 0) * Math.PI) / 180
   const dx = at[0] - start[0]
@@ -472,10 +472,10 @@ function alongNormal(r: Room, seg: Seg, at: Point, start: Point): number {
 }
 
 /**
- * One wall pulled as far as the shape will take it: the hand may ask for more than a clean room can
- * give, so the wall stops at the furthest grid step that still leaves one.
+ * One edge pulled as far as the shape will take it: the hand may ask for more than a clean room can
+ * give, so the edge stops at the furthest grid step that still leaves one.
  */
-function pulledWall(
+function pulledEdge(
   r: Room,
   seg: Seg,
   distance: number,
@@ -483,7 +483,7 @@ function pulledWall(
   settings: Settings,
   plot: PlotSpec,
 ): { room: Room | null; guide?: Guide; corner: Point | null } {
-  const aligned = alignWall(
+  const aligned = alignEdge(
     { x: r.x, y: r.y, w: r.w, h: r.h, angle: r.angle || 0 },
     seg,
     distance,
@@ -497,14 +497,14 @@ function pulledWall(
   for (let guard = 0; guard < 400; guard++) {
     if (Math.abs(s) < 1e-6) break
     const clone = cloneRoom(r)
-    if (pullWallShape(clone, seg, s) && canonicalise(clone))
+    if (pullEdgeShape(clone, seg, s) && canonicalise(clone))
       return { room: clone, guide: aligned.guide, corner: aligned.mark?.corner ?? null }
     s = r2(s - step)
   }
   return { room: null, guide: aligned.guide, corner: aligned.mark?.corner ?? null }
 }
 
-/** A plain room's side, with the neighbour that shares that wall following it. */
+/** A plain room's side, with the neighbour that shares that edge following it. */
 function resized(
   r: Room,
   side: Side4,
@@ -514,7 +514,7 @@ function resized(
   storey: number,
 ): { rooms: Room[]; guide?: Guide; corner: Point | null } {
   const frame = { x: r.x, y: r.y, w: r.w, h: r.h, angle: r.angle || 0 }
-  const aligned = alignWall(
+  const aligned = alignEdge(
     frame,
     sideSeg(r, side),
     distance,
@@ -576,8 +576,8 @@ export function dropOf(drag: Drag, sheet: Sheet, storey: number): Change | null 
         storey,
         axisLock: drag.axisLock,
       })
-    case 'wall':
-      return pullWall(sheet, { id: drag.id, wall: drag.wall, distance: drag.distance, storey })
+    case 'edge':
+      return pullEdge(sheet, { id: drag.id, edge: drag.edge, distance: drag.distance, storey })
     case 'resize':
       return resize(sheet, {
         id: drag.id,

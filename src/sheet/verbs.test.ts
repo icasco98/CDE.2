@@ -96,7 +96,7 @@ describe('the one command carrying the verbs', () => {
       'cut',
       'restore',
       'door',
-      'open_wall',
+      'open_edge',
       'send_back',
     ])
   })
@@ -219,7 +219,7 @@ describe('the one command carrying the verbs', () => {
     expect(one(many, { verb: 'corridor' })).toContain('enclosed spaces here')
   })
 
-  it('gives an enclosed space to a room that walls it in, and refuses one that does not', () => {
+  it('gives an enclosed space to a room that encloses it, and refuses one that does not', () => {
     const at = table(ring())
     expect(one(at, { verb: 'give', between: ['N', 'S', 'W', 'E'], to: 'N' })).toBe(
       'give · 8 m² given to N',
@@ -231,11 +231,11 @@ describe('the one command carrying the verbs', () => {
       }),
     )
     expect(one(other, { verb: 'give', between: ['N', 'S', 'W', 'E'], to: 'F' })).toBe(
-      'give refused · F does not wall that space in',
+      'give refused · F does not enclose that space',
     )
   })
 
-  it('combines rooms that share a wall, and refuses rooms that share none', () => {
+  it('combines rooms that share an edge, and refuses rooms that share none', () => {
     const at = table()
     expect(one(at, { verb: 'combine', rooms: ['Kitchen', 'Store'], into: 'Kitchen' })).toBe(
       'combine · Store combined into Kitchen',
@@ -244,7 +244,7 @@ describe('the one command carrying the verbs', () => {
     expect(
       one(apart, { verb: 'combine', rooms: ['Kitchen', 'Formal Living'], into: 'Kitchen' }),
     ).toBe(
-      'combine refused · Those rooms do not share a wall, so they cannot be combined. ' +
+      'combine refused · Those rooms do not share an edge, so they cannot be combined. ' +
         'Close the gap first.',
     )
     expect(one(apart, { verb: 'combine', rooms: ['Kitchen'], into: 'Kitchen' })).toBe(
@@ -326,37 +326,37 @@ describe('the one command carrying the verbs', () => {
     expect(r2(areaOf(roomOf(over.sheet(), 'A')))).toBe(12)
   })
 
-  it('puts a door on a named wall, and refuses one on the boundary', () => {
+  it('puts a door on a named edge, and refuses one on the boundary', () => {
     const outside = new Map([['EXTERIOR|a', 'e1']])
     const at = table(
       quiet([room({ x: 6, y: 6, w: 4, h: 3 })], { grid: 0.25, snapDist: 0.4 }),
       outside,
     )
-    expect(one(at, { verb: 'door', room: 'A', wall: 'north', along: 0.5 })).toBe(
-      'door · Door on A, middle of the wall',
+    expect(one(at, { verb: 'door', room: 'A', edge: 'north', along: 0.5 })).toBe(
+      'door · Door on A, middle of the edge',
     )
     expect(doorsOf(roomOf(at.sheet(), 'A'))).toMatchObject([{ connection: 'e1', to: 'EXTERIOR' }])
     const connection = table(quiet([room({ x: 0, y: 6, w: 4, h: 3 })]), outside)
-    expect(one(connection, { verb: 'door', room: 'A', wall: 'west', along: 0.5 })).toBe(
-      'door refused · A wall on the boundary takes no door.',
+    expect(one(connection, { verb: 'door', room: 'A', edge: 'west', along: 0.5 })).toBe(
+      'door refused · An edge on the boundary takes no door.',
     )
-    expect(one(connection, { verb: 'door', room: 'A', wall: 'up' })).toBe(
-      'door refused · the wall is north, south, east or west',
+    expect(one(connection, { verb: 'door', room: 'A', edge: 'up' })).toBe(
+      'door refused · the edge is north, south, east or west',
     )
-    expect(one(connection, { verb: 'door', room: 'A', wall: 'north', type: 'gate' })).toContain(
+    expect(one(connection, { verb: 'door', room: 'A', edge: 'north', type: 'gate' })).toContain(
       'is no door',
     )
   })
 
   it('places no door where the project holds no connection', () => {
     const at = table(quiet([room({ x: 6, y: 6, w: 4, h: 3 })]))
-    expect(one(at, { verb: 'door', room: 'A', wall: 'north', along: 0.5 })).toBe(
+    expect(one(at, { verb: 'door', room: 'A', edge: 'north', along: 0.5 })).toBe(
       'door refused · A and the outside have no connection; a door draws one, so connect them first',
     )
     expect(doorsOf(roomOf(at.sheet(), 'A'))).toEqual([])
   })
 
-  it('opens a wall two rooms share, and refuses a wall that meets no room', () => {
+  it('opens an edge two rooms share, and refuses an edge that meets no room', () => {
     const at = table(
       quiet([
         room({ x: 6, y: 6, w: 4, h: 3 }),
@@ -364,14 +364,14 @@ describe('the one command carrying the verbs', () => {
       ]),
       new Map([['a|b', 'e2']]),
     )
-    expect(one(at, { verb: 'open_wall', room: 'A', wall: 'east', along: 0.5 })).toBe(
-      'door · A: wall opened',
+    expect(one(at, { verb: 'open_edge', room: 'A', edge: 'east', along: 0.5 })).toBe(
+      'door · A: edge opened',
     )
     expect(doorsOf(roomOf(at.sheet(), 'A'))).toMatchObject([
       { connection: 'e2', to: 'b', type: 'open', w: 2.9, along: 0.5 },
     ])
-    expect(one(at, { verb: 'open_wall', room: 'A', wall: 'north', along: 0.5 })).toBe(
-      'door refused · Only a wall shared with a neighbour can be opened.',
+    expect(one(at, { verb: 'open_edge', room: 'A', edge: 'north', along: 0.5 })).toBe(
+      'door refused · Only an edge shared with a neighbour can be opened.',
     )
   })
 

@@ -55,15 +55,15 @@ const readings = (page: Page) => page.evaluate(() => window.agentResults as Read
 
 test.use({ viewport: { width: 1600, height: 1100 } })
 
-test('two rooms put against each other share a wall', async ({ page }) => {
+test('two rooms put against each other share an edge', async ({ page }) => {
   await fakeArchitect(page, {
     first: [
       {
         tool: 'place_against',
         input: {
           placements: [
-            { room: 'Bedroom', against: 'Family Living', wall: 'east', along: 'start' },
-            { room: 'Guest WC', against: 'Bedroom', wall: 'south', along: 'start', w: 3, h: 2.5 },
+            { room: 'Bedroom', against: 'Family Living', edge: 'east', along: 'start' },
+            { room: 'Guest WC', against: 'Bedroom', edge: 'south', along: 'start', w: 3, h: 2.5 },
           ],
         },
       },
@@ -77,7 +77,7 @@ test('two rooms put against each other share a wall', async ({ page }) => {
   await expect(page.locator('svg.sheet g.room[data-room="nmu436pzls0vk"]')).toHaveCount(1)
   const [read] = await readings(page)
   const ground = read!.house.storeys[0]!
-  expect(read!.landed[0]).toContain("against Family Living's east wall")
+  expect(read!.landed[0]).toContain("against Family Living's east edge")
   const withLiving = ground.sharing.find(
     (pair) => pair.rooms.includes('Bedroom') && pair.rooms.includes('Family Living'),
   )
@@ -150,7 +150,7 @@ test('one Ctrl+Z takes back everything a message did', async ({ page }) => {
       {
         tool: 'place_against',
         input: {
-          placements: [{ room: 'Bedroom', against: 'Family Living', wall: 'east', along: 'start' }],
+          placements: [{ room: 'Bedroom', against: 'Family Living', edge: 'east', along: 'start' }],
         },
       },
       { tool: 'place_rooms', input: { moves: [{ name: 'Store', x: 2, y: 2 }] } },

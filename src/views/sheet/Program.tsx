@@ -30,7 +30,7 @@ type ProgramProps = {
   drawMenuFor: string | null
   onNewDown: (room: Room, event: ReactPointerEvent) => void
   onPick: (room: Room) => void
-  /** In the Openings step the column is a room list: a click lights that room's walls. */
+  /** In the Openings step the column is a room list: a click lights that room's edges. */
   openings: boolean
   lit: string | null
   onLight: (room: Room) => void
@@ -101,7 +101,7 @@ export function Program(props: ProgramProps) {
               style={{ flex: `${room.target} 1 0`, background: room.color ?? undefined }}
               title={
                 props.openings
-                  ? `${room.name}: click to light its walls`
+                  ? `${room.name}: click to light its edges`
                   : `${room.name} · ${fmt(room.target)} m² · ${fmt(room.w)} × ${fmt(room.h)} m${
                       room.placed ? ': click to select it' : ': drag it onto the sheet, or Draw it'
                     }`

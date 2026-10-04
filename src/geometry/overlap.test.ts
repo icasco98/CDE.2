@@ -27,7 +27,7 @@ describe('two footprints overlap', () => {
     expect(footprintsOverlap(rectangle(0, 0, 5, 5), rectangle(4, 4, 3, 3))).toBe(true)
   })
 
-  it('but not when they only meet along a shared wall', () => {
+  it('but not when they only meet along a shared edge', () => {
     expect(footprintsOverlap(rectangle(0, 0, 4, 4), rectangle(4, 0, 4, 4))).toBe(false)
   })
 
@@ -56,7 +56,7 @@ describe('a turned footprint', () => {
     expect(footprintsOverlap(diamond, rectangle(2.8, 2.8, 4, 4))).toBe(true)
   })
 
-  it('meets a neighbour turned the same way flush, wall to wall, without overlapping', () => {
+  it('meets a neighbour turned the same way flush, edge to edge, without overlapping', () => {
     const a = rectangle(-1, -1, 2, 2, 45)
     const b = rectangle(Math.SQRT2 - 1, Math.SQRT2 - 1, 2, 2, 45)
     expect(footprintsOverlap(a, b)).toBe(false)
@@ -88,7 +88,7 @@ describe('the oriented bounding box', () => {
 })
 
 describe('the area two rooms really hold in common', () => {
-  it('is nothing for rooms standing apart or brought flush wall to wall', () => {
+  it('is nothing for rooms standing apart or brought flush edge to edge', () => {
     expect(sharedArea(rectangle(0, 0, 4, 4), rectangle(9, 0, 4, 4))).toBe(0)
     expect(sharedArea(rectangle(0, 0, 4, 4), rectangle(4, 0, 4, 4))).toBeCloseTo(0, 9)
   })

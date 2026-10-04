@@ -183,7 +183,7 @@ describe('keep apart', () => {
     ])
   })
 
-  it('says nothing of a pair whose rooms share a wall with no connection and no route through', () => {
+  it('says nothing of a pair whose rooms share an edge with no connection and no route through', () => {
     expect(apartBroken(rooms, connections, [{ a: 'Diwaniya', b: 'Family' }])).toEqual([])
   })
 })
