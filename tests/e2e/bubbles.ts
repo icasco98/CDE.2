@@ -84,7 +84,7 @@ export async function saved(page: Page): Promise<Saved> {
 const pairName = (a: string, b: string) => [a, b].sort((x, y) => (x < y ? -1 : 1)).join(' to ')
 
 /** Every connection as the two names it joins, sorted, so a test reads the graph as a person would. */
-export async function linkedPairs(page: Page): Promise<readonly string[]> {
+export async function connectedPairs(page: Page): Promise<readonly string[]> {
   const project = await saved(page)
   const name = (id: string) => project.zones?.find((zone) => zone.id === id)?.name ?? 'Outside'
   return (project.connections ?? [])

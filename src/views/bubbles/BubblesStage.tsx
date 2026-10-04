@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { connectDefaults, restoreSuggested, takeOut } from '../../app/defaultLinks'
+import { connectDefaults, restoreSuggested, takeOut } from '../../app/connectionDefaults'
 import { selection, useSelection } from '../../app/selection'
 import { sendToStorey } from '../../app/sendToStorey'
 import { session } from '../../app/session'
@@ -153,7 +153,7 @@ export function BubblesStage() {
           session.transaction(() => {
             const added = addHallway(session, project.zones, storey, project.storeys)
             if (!added.ok) return added
-            // The corridor arrives linked to what it serves, as every other zone does.
+            // The corridor arrives connected to what it serves, as every other zone does.
             return connectDefaults(session)
           }),
         )

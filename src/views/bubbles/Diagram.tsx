@@ -13,8 +13,8 @@ import { storeyLabel } from '../../rulebook'
 import { pointerAt, viewBoxOf, type Camera } from '../camera'
 import { DRAG_PX, usePanZoom } from './panZoom'
 import { Clouds } from './Clouds'
-import { Apart, Bubble, Link, Outside } from './parts'
-import type { BubbleApart, BubbleLink, BubbleZone, DragMakes } from './types'
+import { Apart, Bubble, ConnectionLine, Outside } from './parts'
+import type { BubbleApart, BubbleConnection, BubbleZone, DragMakes } from './types'
 
 /** Said when a drag ends on a zone of another storey; only a stair joins two storeys. */
 const ONE_STOREY =
@@ -30,19 +30,19 @@ type Gesture =
       readonly start: Nudge
       readonly moved: boolean
     }
-  | { readonly kind: 'link'; readonly from: Spot; readonly at: Point }
+  | { readonly kind: 'pair'; readonly from: Spot; readonly at: Point }
 
 type DiagramProps = {
   readonly arrangement: Arrangement
   readonly zones: ReadonlyMap<string, BubbleZone>
-  readonly connections: readonly BubbleLink[]
+  readonly connections: readonly BubbleConnection[]
   readonly apart: readonly BubbleApart[]
   /** What a drag from a zone's ring makes when it lands on another zone. */
   readonly makes: DragMakes
   readonly selected: string | null
   /** The storey brought forward; the others fade and stay. */
   readonly focus: number | null
-  readonly titleOf: (connection: BubbleLink) => string
+  readonly titleOf: (connection: BubbleConnection) => string
   readonly onFocus: (storey: number) => void
   readonly onNudge: (id: string, nudge: Nudge, commit: Commit) => void
   readonly onConnect: (a: string, b: string) => void
@@ -110,7 +110,7 @@ export function Diagram(props: DiagramProps) {
   function reach(event: ReactPointerEvent, spot: Spot): void {
     if (event.button !== 0) return
     event.stopPropagation()
-    begin({ kind: 'link', from: spot, at: unitsAt(event.clientX, event.clientY) })
+    begin({ kind: 'pair', from: spot, at: unitsAt(event.clientX, event.clientY) })
   }
 
   function menu(event: ReactMouseEvent, spot: Spot): void {
@@ -124,7 +124,7 @@ export function Diagram(props: DiagramProps) {
     const held = gestureRef.current
     if (!held) return
     const at = unitsAt(event.clientX, event.clientY)
-    if (held.kind === 'link') {
+    if (held.kind === 'pair') {
       begin({ ...held, at })
       return
     }
@@ -222,7 +222,7 @@ export function Diagram(props: DiagramProps) {
 
   /** The zone whose connections stand out and the rest fade: the one drawn from, under the hand, or selected. */
   const focused =
-    gesture?.kind === 'link'
+    gesture?.kind === 'pair'
       ? gesture.from.id
       : (hovered ?? (selected !== null && zones.has(selected) ? selected : null))
   const near = useMemo(() => {
@@ -248,8 +248,8 @@ export function Diagram(props: DiagramProps) {
       ref={svgRef}
       className={[
         'bubbles-sheet',
-        ...(gesture?.kind === 'link'
-          ? ['bubbles-linking', ...(props.makes === 'apart' ? ['bubbles-parting'] : [])]
+        ...(gesture?.kind === 'pair'
+          ? ['bubbles-pairing', ...(props.makes === 'apart' ? ['bubbles-parting'] : [])]
           : []),
         ...(near ? ['bubbles-focusing'] : []),
       ].join(' ')}
@@ -307,7 +307,7 @@ export function Diagram(props: DiagramProps) {
         const to = where({ id: connection.b, storey: connection.storey })
         if (!from || !to) return null
         return (
-          <Link
+          <ConnectionLine
             key={connection.id}
             id={connection.id}
             from={from}
@@ -384,13 +384,13 @@ export function Diagram(props: DiagramProps) {
           />
         )
       })}
-      {gesture?.kind === 'link' && (
+      {gesture?.kind === 'pair' && (
         <line
           x1={gesture.from.x}
           y1={gesture.from.y}
           x2={gesture.at.x}
           y2={gesture.at.y}
-          className="link-drawn"
+          className="pair-drawn"
         />
       )}
     </svg>

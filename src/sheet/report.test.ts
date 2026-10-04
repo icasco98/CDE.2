@@ -85,6 +85,30 @@ describe('the report of the embedded sheet', () => {
   })
 })
 
+describe('what a storey asks', () => {
+  /**
+   * Reference case: a 20 m² hall on the ground, a 30 m² bedroom upstairs still in the tray and a
+   * 12 m² stair standing on the ground. The ground asks 20 + 12 = 32 m², the first storey 30 + 12 =
+   * 42 m², since a stair that crosses storeys stands on each of them; with the stair kept to its
+   * own storey the first asks 30 m².
+   */
+  const sheet = (stairAcross: number) =>
+    sheetOf(
+      [
+        zone({ target: 20 }),
+        zone({ id: 'b', name: 'Bedroom', target: 30, storey: 1, placed: false }),
+        zone({ id: 's', name: 'Stair', kind: 'stair', cat: 'circulation', target: 12, x: 12 }),
+      ],
+      { stairAcross },
+    )
+
+  it('reads the targets of the zones on that storey, the stair on each storey it crosses', () => {
+    expect(report(sheet(1), 0).askedArea).toBe(32)
+    expect(report(sheet(1), 1).askedArea).toBe(42)
+    expect(report(sheet(0), 1).askedArea).toBe(30)
+  })
+})
+
 describe('the boundary', () => {
   it('finds an edge on the west boundary and measures overlapping runs once', () => {
     const sheet = sheetOf([

@@ -9,7 +9,7 @@ import { Diagram } from './Diagram'
 import { ConnectionPanel } from './ConnectionPanel'
 import { Matrix } from './Matrix'
 import { Legend } from './parts'
-import { STAIR_STAYS, type BubbleLink, type BubblesViewProps, type DragMakes } from './types'
+import { STAIR_STAYS, type BubbleConnection, type BubblesViewProps, type DragMakes } from './types'
 import './bubbles.css'
 
 export function BubblesView(props: BubblesViewProps) {
@@ -65,7 +65,7 @@ export function BubblesView(props: BubblesViewProps) {
     props.declined.filter((pair) => pair.a === id || pair.b === id).length
 
   const nameOf = (id: string): string => named.get(id)?.name ?? 'Outside'
-  const titleOf = (connection: BubbleLink): string =>
+  const titleOf = (connection: BubbleConnection): string =>
     `${nameOf(connection.a)} ↔ ${nameOf(connection.b)}, ${connection.kind}. ${connection.source ?? 'Added by hand.'}`
 
   return (

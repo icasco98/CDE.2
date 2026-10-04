@@ -1,7 +1,7 @@
 /*
- * Whether a graph can be drawn on a sheet with no link crossing another. A storey whose links
- * cannot be is a storey whose program asked for what geometry cannot give, and decision 21 says
- * the tool must say so on the brief rather than settle for ever trying.
+ * Whether a graph can be drawn on a sheet with no connection crossing another. A storey whose
+ * connections cannot be is a storey whose program asked for what geometry cannot give, and
+ * decision 21 says the tool must say so on the brief rather than settle for ever trying.
  *
  * The test is Demoucron's: start from a cycle, then take the pieces hanging off what is drawn one
  * at a time and put each into a face that can hold it. A piece with no face left to go in is the
@@ -245,8 +245,8 @@ function blockIsPlanar(graph: Graph): boolean {
 }
 
 /**
- * Whether these zones and the links between them can be drawn with no link crossing another. A
- * graph is planar when every one of its blocks is, so the blocks are tested one at a time.
+ * Whether these zones and the connections between them can be drawn with none crossing another.
+ * A graph is planar when every one of its blocks is, so the blocks are tested one at a time.
  */
 export function isPlanar(nodes: readonly string[], pairs: readonly Pair[]): boolean {
   const whole = graphOf(nodes, pairs)

@@ -241,7 +241,7 @@ test('a brief asking a 5 m² WC to touch four zones says so on the Requirements 
   })
   await seed(page, {
     id: 'project_z2',
-    name: 'Over-linked WC',
+    name: 'Over-connected WC',
     storeys: 1,
     heights: [3.5],
     plot: {
@@ -284,7 +284,7 @@ test('a brief asking a 5 m² WC to touch four zones says so on the Requirements 
   })
   await page.goto('/')
   await expect(page.locator('.findings')).toContainText(
-    'Diwaniya WC is linked to four zones; at 5 m² it can touch three. Remove a link.',
+    'Diwaniya WC is connected to four zones; at 5 m² it can touch three. Remove a connection.',
   )
 })
 
@@ -312,7 +312,7 @@ test('rebuilding from the default household proposes a Ground and a First, the b
   await expect(why).toContainText('Two storeys, Ground and First')
   await expect(why).toContainText('First takes the private zones')
   await expect(why).toContainText('A stair spans Ground to First')
-  await expect(why).toContainText('with 15% for walls')
+  await expect(why).toContainText('238.6 m² of targets on 365.5 m² buildable, 126.9 m² to spare')
   await expect(rowNamed(page, 'Master Bedroom').getByLabel('Storey')).toHaveValue('1')
   await expect(rowNamed(page, 'Kitchen').getByLabel('Storey')).toHaveValue('0')
   await expect(

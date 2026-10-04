@@ -76,7 +76,7 @@ function wantsHallway(zones: readonly CirculationZone[], storey: number): string
   const here = onStorey(zones, storey)
   const privateZones = here.filter((zone) => zoneTypeById(zone.type)?.tier === 'private')
   if (privateZones.length >= 2)
-    return `${storeyLabel(storey)} has ${inWords(privateZones.length)} private zones and no hallway.`
+    return `${storeyLabel(storey)} has ${inWords(privateZones.length)} private-tier zones and no hallway.`
   const stair = here.some((zone) => zone.type === 'stair')
   const offIt = here.some((zone) => zone.type !== 'stair' && !companionKinds.has(zone.type))
   return stair && offIt ? `${storeyLabel(storey)} has a stair and no hallway.` : undefined

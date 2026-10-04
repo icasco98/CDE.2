@@ -116,7 +116,7 @@ function rimToRim(from: Spot, to: Spot): readonly [number, number, number, numbe
   return [from.x + ux * from.r, from.y + uy * from.r, to.x - ux * to.r, to.y - uy * to.r]
 }
 
-type LinkProps = {
+type ConnectionLineProps = {
   readonly id: string
   readonly from: Spot
   readonly to: Spot
@@ -133,16 +133,16 @@ type LinkProps = {
 /** Half the gap between the two lines of an opening, in the diagram's units. */
 const OPEN_HALF = 3
 
-export const Link = memo(function Link(props: LinkProps) {
+export const ConnectionLine = memo(function ConnectionLine(props: ConnectionLineProps) {
   const [x1, y1, x2, y2] = rimToRim(props.from, props.to)
   const run = Math.hypot(x2 - x1, y2 - y1) || 1
   const nx = (-(y2 - y1) / run) * OPEN_HALF
   const ny = ((x2 - x1) / run) * OPEN_HALF
   const select = (event: ReactPointerEvent): void => props.onSelect(event, props.id)
-  const stroke = props.selected ? 'link link-selected' : 'link'
-  const classes = ['link-group', `link-${props.kind}`]
-  if (props.dimmed) classes.push('link-dimmed')
-  if (props.near) classes.push('link-near')
+  const stroke = props.selected ? 'connection connection-selected' : 'connection'
+  const classes = ['connection-group', `connection-${props.kind}`]
+  if (props.dimmed) classes.push('line-dimmed')
+  if (props.near) classes.push('line-near')
   return (
     <g
       data-connection={props.id}
@@ -152,7 +152,7 @@ export const Link = memo(function Link(props: LinkProps) {
     >
       <title>{props.title}</title>
       {/* A line is too thin to aim at, so a wide invisible twin takes the click. */}
-      <line x1={x1} y1={y1} x2={x2} y2={y2} className="link-grip" onPointerDown={select} />
+      <line x1={x1} y1={y1} x2={x2} y2={y2} className="line-grip" onPointerDown={select} />
       {props.kind === 'open' ? (
         <>
           <line x1={x1 + nx} y1={y1 + ny} x2={x2 + nx} y2={y2 + ny} className={stroke} />
@@ -187,12 +187,12 @@ export const Apart = memo(function Apart(props: ApartProps) {
   const select = (event: ReactPointerEvent): void => props.onSelect(event, props.id)
   const classes = ['apart-group']
   if (props.selected) classes.push('apart-selected')
-  if (props.dimmed) classes.push('link-dimmed')
-  if (props.near) classes.push('link-near')
+  if (props.dimmed) classes.push('line-dimmed')
+  if (props.near) classes.push('line-near')
   return (
     <g data-apart={props.id} className={classes.join(' ')}>
       <title>{props.title}</title>
-      <line x1={x1} y1={y1} x2={x2} y2={y2} className="link-grip" onPointerDown={select} />
+      <line x1={x1} y1={y1} x2={x2} y2={y2} className="line-grip" onPointerDown={select} />
       <line x1={x1} y1={y1} x2={x2} y2={y2} className="apart" />
       <path
         d={`M${mx - CROSS} ${my - CROSS}L${mx + CROSS} ${my + CROSS}M${mx + CROSS} ${my - CROSS}L${mx - CROSS} ${my + CROSS}`}
@@ -229,21 +229,25 @@ const legendRows = [
     label,
     mark: <circle cx={12} cy={6} r={5} className={`legend-swatch ${categoryClass(category)}`} />,
   })),
-  { key: 'door', label: 'Door', mark: <line x1={2} y1={6} x2={22} y2={6} className="link" /> },
+  {
+    key: 'door',
+    label: 'Door',
+    mark: <line x1={2} y1={6} x2={22} y2={6} className="connection" />,
+  },
   {
     key: 'open',
     label: 'Open',
     mark: (
       <>
-        <line x1={2} y1={3} x2={22} y2={3} className="link" />
-        <line x1={2} y1={9} x2={22} y2={9} className="link" />
+        <line x1={2} y1={3} x2={22} y2={3} className="connection" />
+        <line x1={2} y1={9} x2={22} y2={9} className="connection" />
       </>
     ),
   },
   {
     key: 'main-door',
     label: 'Front door',
-    mark: <line x1={2} y1={6} x2={22} y2={6} className="link link-main" />,
+    mark: <line x1={2} y1={6} x2={22} y2={6} className="connection connection-main" />,
   },
   {
     key: 'apart',

@@ -470,7 +470,10 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
     for (const id of selection) if (view.zones.some((r) => r.id === id)) from(id, true)
     return { lines, tray }
   }, [checked, hover, selection, sheet, STOREY, view.zones])
-  const trayLinked = useMemo(() => new Set(focusLines?.tray.map((line) => line.to)), [focusLines])
+  const trayConnected = useMemo(
+    () => new Set(focusLines?.tray.map((line) => line.to)),
+    [focusLines],
+  )
   const sheetCheck: SheetCheck | null =
     checked && focusLines
       ? { lines: focusLines.lines, apartDoors: checked.apartDoors, apartZones: checked.apartZones }
@@ -1896,7 +1899,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
         <Program
           sheet={sheet}
           selection={selection}
-          linked={trayLinked}
+          connected={trayConnected}
           drawingId={drawing && !drawing.reshaping ? drawing.id : null}
           drawMenuFor={drawMenuFor}
           onNewDown={(zone, event) => {

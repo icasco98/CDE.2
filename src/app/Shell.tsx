@@ -8,9 +8,8 @@ import { deserialize, serialize } from '../model'
 import { ExportMenu } from './ExportMenu'
 import { offer } from './downloads'
 import { fileNameFor } from './files'
-import { NotYet } from './NotYet'
 import { session, type Message } from './session'
-import { stages } from './stages'
+import { stages, type Stage } from './stages'
 import { useMessages, useProject } from './useProject'
 
 /** At most four, newest at the bottom; older ones are dropped rather than scrolled to. */
@@ -51,8 +50,10 @@ function MessageStack({ messages }: { messages: readonly Message[] }) {
 export function Shell() {
   const project = useProject()
   const messages = useMessages()
-  const [stageId, setStageId] = useState('requirements')
-  const stage = stages.find((entry) => entry.id === stageId)
+  const [stage, setStage] = useState<Stage>(stages[0]!)
+  // A screen names the stage it hands over to; a name no stage has leaves the person where they are.
+  const go = (id: string): void =>
+    setStage((current) => stages.find((entry) => entry.id === id) ?? current)
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
@@ -103,7 +104,7 @@ export function Shell() {
             >
               Save file
             </button>
-            {stage?.plan && <ExportMenu title={project.name} />}
+            {stage.plan && <ExportMenu title={project.name} />}
             <button type="button" onClick={() => session.undo()} disabled={!session.canUndo()}>
               Undo
             </button>
@@ -125,17 +126,15 @@ export function Shell() {
             <button
               key={entry.id}
               type="button"
-              aria-pressed={entry.id === stageId}
-              onClick={() => setStageId(entry.id)}
+              aria-pressed={entry.id === stage.id}
+              onClick={() => setStage(entry)}
             >
               {entry.label}
             </button>
           ))}
         </nav>
       </header>
-      <main className={stage?.plan ? 'stage-sheet' : `stage-${stageId}`}>
-        {stage?.screen(setStageId) ?? <NotYet stage="Requirements" />}
-      </main>
+      <main className={stage.plan ? 'stage-sheet' : `stage-${stage.id}`}>{stage.screen(go)}</main>
       <MessageStack messages={messages} />
     </>
   )

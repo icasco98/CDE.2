@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { storeyLabel } from '../../rulebook'
 import type { PairChoice } from './setPair'
-import type { BubbleApart, BubbleLink, BubbleZone } from './types'
+import type { BubbleApart, BubbleConnection, BubbleZone } from './types'
 
 type Cell = { readonly a: BubbleZone; readonly b: BubbleZone }
 
@@ -31,7 +31,7 @@ const between = (a: string, b: string) => (pair: { a: string; b: string }) =>
  */
 export function Matrix(props: {
   readonly zones: readonly BubbleZone[]
-  readonly connections: readonly BubbleLink[]
+  readonly connections: readonly BubbleConnection[]
   readonly apart: readonly BubbleApart[]
   readonly onSet: (a: string, b: string, choice: PairChoice) => void
   readonly onClose: () => void

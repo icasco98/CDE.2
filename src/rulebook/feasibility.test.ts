@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { area } from '../geometry'
 import { createIdGenerator, createStore, EXTERIOR, type Plot } from '../model'
-import { feasibility, linksHeld, type BriefConnection, type BriefZone } from './feasibility'
+import { feasibility, connectionsHeld, type BriefConnection, type BriefZone } from './feasibility'
 import { impliedConnections } from './impliedConnections'
 import { defaultProgram } from './program'
 
@@ -33,8 +33,13 @@ function defaultVilla(storeys: number) {
   const opened = store.getState()
   for (const each of defaultProgram(area(plot.polygon), opened.household, storeys))
     store.actions.addZone(each)
-  for (const link of impliedConnections(store.getState().zones, store.getState().connections))
-    store.actions.connect({ a: link.a, b: link.b, kind: link.kind, storey: link.storey })
+  for (const implied of impliedConnections(store.getState().zones, store.getState().connections))
+    store.actions.connect({
+      a: implied.a,
+      b: implied.b,
+      kind: implied.kind,
+      storey: implied.storey,
+    })
   return store.getState()
 }
 
@@ -48,7 +53,7 @@ describe('the brief checked before a bubble moves', () => {
     }
   })
 
-  it('says when a storey’s links cannot be drawn without a crossing', () => {
+  it('says when a storey’s connections cannot be drawn without a crossing', () => {
     const names = ['a', 'b', 'c', 'd', 'e']
     const zones = names.map((id) => zone(id, 'zone-other', 20))
     const pairs: (readonly [string, string])[] = []
@@ -58,7 +63,7 @@ describe('the brief checked before a bubble moves', () => {
     const found = feasibility(zones, joined(pairs), plot, 1)
     expect(found.map((each) => each.code)).toContain('crossing')
     expect(found.find((each) => each.code === 'crossing')?.sentence).toBe(
-      'Ground: these links cannot all be drawn without one crossing another, so one pair can never share an edge. Remove a link between two zones that do not need a door.',
+      'Ground: these connections cannot all be drawn without one crossing another, so one pair can never share an edge. Remove a connection between two zones that do not need a door.',
     )
   })
 
@@ -103,18 +108,18 @@ describe('the brief checked before a bubble moves', () => {
       1,
     )
     expect(found.find((each) => each.code === 'edge')?.sentence).toBe(
-      'Diwaniya WC is linked to four zones; at 5 m² it can touch three. Remove a link.',
+      'Diwaniya WC is connected to four zones; at 5 m² it can touch three. Remove a connection.',
     )
   })
 
-  it('counts a door to the street among the links an edge has to hold', () => {
+  it('counts a door to the street among the connections an edge has to hold', () => {
     const zones = [zone('wc', 'guest-wc', 3, 'Guest WC'), zone('a', 'entry-foyer', 8)]
     const connections: BriefConnection[] = [
       { a: 'wc', b: 'a', storey: 0 },
       { a: EXTERIOR, b: 'wc', storey: 0 },
       { a: 'wc', b: 'nobody', storey: 0 },
     ]
-    expect(linksHeld(zones[0] as BriefZone)).toBe(2)
+    expect(connectionsHeld(zones[0] as BriefZone)).toBe(2)
     expect(
       feasibility(zones, connections, plot, 1).filter((each) => each.code === 'edge'),
     ).toHaveLength(1)
@@ -123,8 +128,8 @@ describe('the brief checked before a bubble moves', () => {
   it('reads a corridor off both its long sides, because that is what a corridor is for', () => {
     // Twelve square metres at the Municipality's 1.20 m clear is a ten-metre run with a door every
     // metre down each side of it; an eight-metre entry has space for the four the rulebook gives it.
-    expect(linksHeld(zone('hall', 'hallway', 12))).toBe(20)
-    expect(linksHeld(zone('entry', 'entry-foyer', 8))).toBe(4)
+    expect(connectionsHeld(zone('hall', 'hallway', 12))).toBe(20)
+    expect(connectionsHeld(zone('entry', 'entry-foyer', 8))).toBe(4)
   })
 
   it('says when the zones on the kerb ask for more than the frontage has', () => {

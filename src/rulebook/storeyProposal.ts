@@ -1,5 +1,5 @@
 import type { Household } from '../model'
-import { storeyFits, storeyLabel } from './fit'
+import { storeyFits, storeyLabel, type StoreyFit } from './fit'
 import { defaultProgram, type ProgramZone } from './program'
 import { zoneTypeById } from './sizes'
 import { listedNames, metresIn } from './words'
@@ -11,24 +11,9 @@ export type StoreyProposal = {
   readonly reasons: readonly string[]
 }
 
-/**
- * What walls and slack add to the ground's target areas before they are read against the buildable
- * floor: the architect's decision (26 September 2026), provisional.
- */
-const WALL_ALLOWANCE = 0.15
-
-type GroundFit = { readonly needed: number; readonly over: boolean; readonly difference: number }
-
-/** The ground's targets with the wall allowance, against its buildable area, to a tenth of a m². */
-function groundOf(zones: readonly ProgramZone[], buildableM2: number, storeys: number): GroundFit {
-  const targets = storeyFits(zones, buildableM2, storeys)[0]!.needed
-  const needed = Math.round(targets * (1 + WALL_ALLOWANCE) * 10) / 10
-  const buildable = Math.round(buildableM2 * 10) / 10
-  return {
-    needed,
-    over: needed > buildable,
-    difference: Math.round(Math.abs(buildable - needed) * 10) / 10,
-  }
+/** The ground's bare targets against its buildable area, as the Requirements totals read them. */
+function groundOf(zones: readonly ProgramZone[], buildableM2: number, storeys: number): StoreyFit {
+  return storeyFits(zones, buildableM2, storeys)[0]!
 }
 
 /**
@@ -47,9 +32,9 @@ function liftable(zones: readonly ProgramZone[]): readonly string[] {
 /**
  * The program the household implies, on a Ground and a First at least: the private zones the
  * zone-type table puts upstairs go up with their suites, a stair spans the storeys, and the rest
- * stays on the ground. The ground is then read against its buildable area with the wall allowance;
- * while it is over, a private zone the table lets stand on either floor follows the bedrooms up,
- * largest first. A project already on more storeys keeps them.
+ * stays on the ground. The ground's targets are then read against its buildable area; while it is
+ * over, a private zone the table lets stand on either floor follows the bedrooms up, largest first.
+ * A project already on more storeys keeps them.
  */
 export function proposeProgram(
   plotAreaM2: number,
@@ -86,11 +71,11 @@ export function proposeProgram(
     raised.add(type)
     zones = defaultProgram(plotAreaM2, household, levels, raised)
     reasons.push(
-      `${zoneTypeById(type)?.label ?? type} goes up too: the ground was over by ${metresIn(ground.difference)} m² with walls allowed for, and the table lets it stand on either floor.`,
+      `${zoneTypeById(type)?.label ?? type} goes up too: the ground was over by ${metresIn(ground.difference)} m², and the table lets it stand on either floor.`,
     )
   }
   const ground = groundOf(zones, buildableM2, levels)
-  const against = `${metresIn(ground.needed)} m² with ${WALL_ALLOWANCE * 100}% for walls, on ${metresIn(buildableM2)} m² buildable`
+  const against = `${metresIn(ground.needed)} m² of targets on ${metresIn(ground.buildable)} m² buildable`
   reasons.push(
     ground.over
       ? `The ground is still over its buildable area: ${against}, over by ${metresIn(ground.difference)} m²; move zones up or reduce them.`

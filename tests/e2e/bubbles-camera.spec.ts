@@ -4,7 +4,7 @@ import {
   connect,
   drag,
   connectionBetween,
-  linkedPairs,
+  connectedPairs,
   openVilla,
   zoneNamed,
   selectZone,
@@ -88,12 +88,12 @@ test('at three times closer a drag from the ring connects, a drag nudges, and a 
 }) => {
   await openVilla(page)
   const whole = await viewBox(page)
-  await expect.poll(() => linkedPairs(page)).not.toContain('Family Living to Kitchen')
+  await expect.poll(() => connectedPairs(page)).not.toContain('Family Living to Kitchen')
   await zoomOver(page, 'Kitchen', 3)
   await expect.poll(async () => (await viewBox(page)).width).toBeCloseTo(whole.width / 3, 3)
 
   await connect(page, 'Kitchen', 'Family Living')
-  await expect.poll(() => linkedPairs(page)).toContain('Family Living to Kitchen')
+  await expect.poll(() => connectedPairs(page)).toContain('Family Living to Kitchen')
 
   const across = async () => Number(await zoneNamed(page, 'Family Living').getAttribute('data-x'))
   const before = await across()
@@ -103,7 +103,7 @@ test('at three times closer a drag from the ring connects, a drag nudges, and a 
 
   const connection = await connectionBetween(page, 'Kitchen', 'Family Living')
   const grip = (await page
-    .locator(`[data-connection="${connection!.id}"] .link-grip`)
+    .locator(`[data-connection="${connection!.id}"] .line-grip`)
     .boundingBox())!
   await page.mouse.click(grip.x + grip.width / 2, grip.y + grip.height / 2)
   await expect(page.getByRole('region', { name: 'Connection' })).toContainText(

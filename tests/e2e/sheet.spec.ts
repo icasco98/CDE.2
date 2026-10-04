@@ -316,6 +316,38 @@ test.describe('the zoning sheet', () => {
   })
 })
 
+test.describe('on a 1280 × 720 screen', () => {
+  test.use({ viewport: { width: 1280, height: 720 } })
+
+  test('the form that adds a zone stays in the program column, clear of the sentence', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Rebuild program from household' }).click()
+    await page.locator('nav.tabs').getByRole('button', { name: 'Zoning and 3D' }).click()
+    await page.locator('svg.sheet').waitFor()
+    const boxes = await page.evaluate(() => {
+      const rect = (element: Element) => {
+        const { left, top, right, bottom } = element.getBoundingClientRect()
+        return { left, top, right, bottom }
+      }
+      const say = document.querySelector('.sheet-stage .say')
+      const tray = document.querySelector('.sheet-stage .tray')
+      const fields = [
+        ...document.querySelectorAll('.sheet-stage .add-zone > *, .add-zone .add-line > *'),
+      ]
+      if (!say || !tray || fields.length === 0) throw new Error('no sentence, tray or form')
+      return { say: rect(say), tray: rect(tray), fields: fields.map(rect) }
+    })
+    const apart = (a: typeof boxes.say, b: typeof boxes.say) =>
+      a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top
+    for (const field of boxes.fields) {
+      expect(apart(field, boxes.say)).toBe(true)
+      expect(field.right).toBeLessThanOrEqual(boxes.tray.right + 0.5)
+    }
+  })
+})
+
 declare global {
   interface Window {
     sheetFrames?: number[]

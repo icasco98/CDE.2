@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createIdGenerator, createStore, EXTERIOR, type Store } from '../model'
 import { defaultProgram } from '../rulebook'
-import { connectDefaults, restoreSuggested, takeOut } from './defaultLinks'
+import { connectDefaults, restoreSuggested, takeOut } from './connectionDefaults'
 
 let store: Store
 
@@ -15,7 +15,7 @@ function rebuild(): void {
   })
 }
 
-const linkNames = (): readonly string[] => {
+const connectionNames = (): readonly string[] => {
   const project = store.getState()
   const nameOf = (id: string): string =>
     id === EXTERIOR ? 'Outside' : (project.zones.find((zone) => zone.id === id)?.name ?? id)
@@ -29,17 +29,17 @@ beforeEach(() => {
 })
 
 describe('the default connections made in the project', () => {
-  it('gives a rebuilt program the links the rulebook expects, as real connections', () => {
+  it('gives a rebuilt program the connections the rulebook expects, as real connections', () => {
     rebuild()
-    expect(linkNames()).toContain('Outside to Entry')
-    expect(linkNames()).toContain('Kitchen to Dining Room')
-    expect(linkNames()).toContain('Hallway to Master Bedroom')
+    expect(connectionNames()).toContain('Outside to Entry')
+    expect(connectionNames()).toContain('Kitchen to Dining Room')
+    expect(connectionNames()).toContain('Hallway to Master Bedroom')
     expect(
       store.getState().connections.filter((connection) => connection.kind === 'main-door'),
     ).toHaveLength(1)
   })
 
-  it('is one step to undo, zones and links together', () => {
+  it('is one step to undo, zones and connections together', () => {
     rebuild()
     expect(store.getState().connections.length).toBeGreaterThan(0)
     store.undo()
@@ -54,38 +54,38 @@ describe('the default connections made in the project', () => {
     expect(store.getState().connections).toHaveLength(before)
   })
 
-  it('links a zone added afterwards to what the table expects it to touch', () => {
+  it('connects a zone added afterwards to what the table expects it to touch', () => {
     rebuild()
     const before = store.getState().connections.length
     const added = store.actions.addZone({ type: 'laundry', name: 'Laundry', targetArea: 8 })
     store.transaction(() => connectDefaults(store))
     expect(added.ok).toBe(true)
     expect(store.getState().connections.length).toBeGreaterThan(before)
-    expect(linkNames()).toContain('Kitchen to Laundry')
+    expect(connectionNames()).toContain('Kitchen to Laundry')
   })
 
   it('never offers again a suggestion the designer has taken out, and restores it on asking', () => {
     rebuild()
     const project = store.getState()
-    const link = project.connections.find(
+    const taken = project.connections.find(
       (connection) => connection.a !== EXTERIOR && connection.b !== EXTERIOR,
     )
-    if (!link) throw new Error('the rebuild made no link between two zones')
+    if (!taken) throw new Error('the rebuild made no connection between two zones')
     const joined = () =>
       store
         .getState()
         .connections.some(
           (connection) =>
-            (connection.a === link.a && connection.b === link.b) ||
-            (connection.a === link.b && connection.b === link.a),
+            (connection.a === taken.a && connection.b === taken.b) ||
+            (connection.a === taken.b && connection.b === taken.a),
         )
-    store.transaction(() => takeOut(store, link.id))
-    expect(store.getState().declined).toEqual([{ a: link.a, b: link.b }])
+    store.transaction(() => takeOut(store, taken.id))
+    expect(store.getState().declined).toEqual([{ a: taken.a, b: taken.b }])
 
     store.transaction(() => connectDefaults(store))
     expect(joined()).toBe(false)
 
-    store.transaction(() => restoreSuggested(store, link.b))
+    store.transaction(() => restoreSuggested(store, taken.b))
     expect(joined()).toBe(true)
     expect(store.getState().declined).toEqual([])
   })
@@ -100,7 +100,7 @@ describe('the default connections made in the project', () => {
       (connection) =>
         ![one?.a, one?.b].includes(connection.a) && ![one?.a, one?.b].includes(connection.b),
     )
-    if (!one || !two) throw new Error('the rebuild made no two links apart')
+    if (!one || !two) throw new Error('the rebuild made no two connections apart')
     store.transaction(() => takeOut(store, one.id))
     store.transaction(() => takeOut(store, two.id))
     store.transaction(() => restoreSuggested(store, one.a))
@@ -112,7 +112,7 @@ describe('the default connections made in the project', () => {
     const project = store.getState()
     const [first, second] = project.zones
     if (!first || !second) throw new Error('no zones')
-    const unlinked = project.zones.find(
+    const unconnected = project.zones.find(
       (zone) =>
         zone.id !== first.id &&
         !project.connections.some(
@@ -121,8 +121,8 @@ describe('the default connections made in the project', () => {
             (connection.b === first.id && connection.a === zone.id),
         ),
     )
-    if (!unlinked) throw new Error('every zone is linked to the first')
-    const made = store.actions.connect({ a: first.id, b: unlinked.id, kind: 'door' })
+    if (!unconnected) throw new Error('every zone is connected to the first')
+    const made = store.actions.connect({ a: first.id, b: unconnected.id, kind: 'door' })
     if (!made.ok) throw new Error('refused')
     store.transaction(() => takeOut(store, made.value))
     expect(store.getState().declined).toEqual([])

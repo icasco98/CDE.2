@@ -51,13 +51,13 @@ export function crossings(segments: readonly (readonly [Point, Point])[]): numbe
 }
 
 /**
- * Rows reordered to uncross the `links` between them. A link to an id not in any row ends at
+ * Rows reordered to uncross the `connections` between them. One to an id not in any row ends at
  * `fixed`'s point for it (the outside), and `side` keeps a zone at the left (-1) or right (1) end of
  * its row whatever its neighbours say.
  */
 export function uncross<K, R extends { readonly id: string }>(
   rows: Rows<K, R>,
-  links: readonly (readonly [string, string])[],
+  connections: readonly (readonly [string, string])[],
   place: Place<K>,
   fixed: ReadonlyMap<string, Point>,
   side: (zone: R) => number,
@@ -65,7 +65,7 @@ export function uncross<K, R extends { readonly id: string }>(
   const program = new Map<string, number>()
   for (const row of rows.values()) for (const zone of row) program.set(zone.id, program.size)
   const neighbours = new Map<string, string[]>()
-  for (const [a, b] of links) {
+  for (const [a, b] of connections) {
     if (a === b) continue
     neighbours.set(a, [...(neighbours.get(a) ?? []), b])
     neighbours.set(b, [...(neighbours.get(b) ?? []), a])
@@ -76,7 +76,7 @@ export function uncross<K, R extends { readonly id: string }>(
     const where = (id: string) => at.get(id) ?? fixed.get(id)
     const segments: [Point, Point][] = []
     let length = 0
-    for (const [a, b] of links) {
+    for (const [a, b] of connections) {
       const from = where(a)
       const to = where(b)
       if (!from || !to || a === b) continue

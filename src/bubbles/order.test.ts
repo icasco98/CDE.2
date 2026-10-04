@@ -10,7 +10,7 @@ const zone = (id: string, tier: string): ArrangeZone => ({
   storeysSpanned: 1,
 })
 
-const link = (a: string, b: string): ArrangeConnection => ({ a, b, storey: 0 })
+const connection = (a: string, b: string): ArrangeConnection => ({ a, b, storey: 0 })
 
 /**
  * The crossings of straight lines between the circles' centres, as the diagram draws them, with the
@@ -71,7 +71,11 @@ describe('the rows ordered so fewer lines cross', () => {
     zone('liv-e', 'semi-public'),
     zone('liv-f', 'semi-public'),
   ]
-  const connections = [link('bed-a', 'liv-f'), link('bed-b', 'liv-e'), link('bed-c', 'liv-d')]
+  const connections = [
+    connection('bed-a', 'liv-f'),
+    connection('bed-b', 'liv-e'),
+    connection('bed-c', 'liv-d'),
+  ]
 
   it('takes the reference graph from three crossings to none', () => {
     expect(crossed(zones, connections, [])).toBe(3)
@@ -85,7 +89,12 @@ describe('the rows ordered so fewer lines cross', () => {
     // Every bedroom joined to every living room: one crossing whatever the order.
     const square = [zone('a', 'private'), zone('b', 'private')]
     const below = [zone('c', 'semi-public'), zone('d', 'semi-public')]
-    const all = [link('a', 'c'), link('a', 'd'), link('b', 'c'), link('b', 'd')]
+    const all = [
+      connection('a', 'c'),
+      connection('a', 'd'),
+      connection('b', 'c'),
+      connection('b', 'd'),
+    ]
     expect(crossed([...square, ...below], all, [])).toBe(1)
     expect(crossed([...square, ...below], all)).toBe(1)
     expect(orderOf([...square, ...below], all, 'private')).toEqual(['a', 'b'])

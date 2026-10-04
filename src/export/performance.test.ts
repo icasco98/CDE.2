@@ -2,6 +2,7 @@ import { expect, it } from 'vitest'
 import { sheetOf, type Door, type Zone, type Sheet } from '../sheet'
 import { dxfOf } from './dxf'
 import { pdfOf } from './sheet'
+import { milliseconds } from '../../tests/milliseconds'
 
 const on = new Date('2026-09-11T09:00:00Z')
 
@@ -41,18 +42,6 @@ function house(): Sheet {
     }
   }
   return sheetOf(zones, {}, 3)
-}
-
-/** The best of five runs after a warm-up, so neither compilation nor a stray collection is charged. */
-function milliseconds(work: () => void): number {
-  for (let run = 0; run < 5; run += 1) work()
-  let best = Infinity
-  for (let run = 0; run < 5; run += 1) {
-    const started = performance.now()
-    work()
-    best = Math.min(best, performance.now() - started)
-  }
-  return best
 }
 
 const sheet = house()

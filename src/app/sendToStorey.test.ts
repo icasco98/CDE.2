@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createIdGenerator, createStore, EXTERIOR, type Store } from '../model'
 import { defaultProgram } from '../rulebook'
-import { connectDefaults } from './defaultLinks'
+import { connectDefaults } from './connectionDefaults'
 import { sendToStorey } from './sendToStorey'
 
 let store: Store
@@ -28,7 +28,7 @@ const storeyOf = (name: string): number =>
   store.getState().zones.find((zone) => zone.name === name)?.storey ?? -1
 
 /** Everything the named zone is joined to, in the words the program calls those zones by. */
-const linksOf = (name: string): readonly string[] => {
+const connectionsOf = (name: string): readonly string[] => {
   const project = store.getState()
   const id = idOf(name)
   const nameOf = (each: string): string =>
@@ -50,16 +50,16 @@ describe('a zone sent to another storey', () => {
     expect(storeyOf('Ensuite, Master Bedroom')).toBe(1)
   })
 
-  it('loses the links it can no longer hold and finds the ones upstairs', () => {
-    expect(linksOf('Master Bedroom')).toContain('Ground Hallway')
+  it('loses the connections it can no longer hold and finds the ones upstairs', () => {
+    expect(connectionsOf('Master Bedroom')).toContain('Ground Hallway')
     expect(sendToStorey(store, idOf('Master Bedroom'), 1).ok).toBe(true)
-    expect(linksOf('Master Bedroom')).not.toContain('Ground Hallway')
-    expect(linksOf('Master Bedroom')).toContain('First Hallway')
-    // The suite is one zone and its bathroom wherever it stands, so that link is made again.
-    expect(linksOf('Master Bedroom')).toContain('Ensuite, Master Bedroom')
+    expect(connectionsOf('Master Bedroom')).not.toContain('Ground Hallway')
+    expect(connectionsOf('Master Bedroom')).toContain('First Hallway')
+    // The suite is one zone and its bathroom wherever it stands, so that connection is made again.
+    expect(connectionsOf('Master Bedroom')).toContain('Ensuite, Master Bedroom')
   })
 
-  it('is one step to undo, the move and the links together', () => {
+  it('is one step to undo, the move and the connections together', () => {
     const before = store.getState()
     expect(sendToStorey(store, idOf('Master Bedroom'), 1).ok).toBe(true)
     store.undo()
@@ -69,8 +69,8 @@ describe('a zone sent to another storey', () => {
 
   it('keeps a door to the outside, which stands on every storey', () => {
     expect(sendToStorey(store, idOf('Diwaniya'), 1).ok).toBe(true)
-    expect(linksOf('Diwaniya')).toContain('Outside')
-    expect(linksOf('Diwaniya')).toContain('Diwaniya WC')
+    expect(connectionsOf('Diwaniya')).toContain('Outside')
+    expect(connectionsOf('Diwaniya')).toContain('Diwaniya WC')
     expect(storeyOf('Diwaniya WC')).toBe(1)
   })
 

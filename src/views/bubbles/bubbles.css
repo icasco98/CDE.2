@@ -146,7 +146,7 @@
   outline: 2px solid #6d6862;
 }
 
-.bubbles-linking {
+.bubbles-pairing {
   cursor: crosshair;
 }
 
@@ -257,35 +257,35 @@
 
 /* A storey not brought forward stays in view and in reach, only fainter. */
 .bubbles-sheet .bubble-dimmed,
-.bubbles-sheet .link-dimmed {
+.bubbles-sheet .line-dimmed {
   opacity: 0.3;
 }
 
-.bubbles-sheet .link,
-.bubbles .legend .link {
+.bubbles-sheet .connection,
+.bubbles .legend .connection {
   stroke: #6f6a62;
   stroke-width: 2px;
   pointer-events: none;
 }
 
-.bubbles-sheet .link-main-door .link,
-.bubbles .legend .link-main {
+.bubbles-sheet .connection-main-door .connection,
+.bubbles .legend .connection-main {
   stroke: #1f1d1a;
   stroke-width: 3.5px;
 }
 
-.bubbles-sheet .link-selected {
+.bubbles-sheet .connection-selected {
   stroke: #2f6f8f;
   stroke-width: 4px;
 }
 
-.bubbles-sheet .link-grip {
+.bubbles-sheet .line-grip {
   stroke: transparent;
   stroke-width: 14px;
   cursor: pointer;
 }
 
-.bubbles-sheet .link-drawn {
+.bubbles-sheet .pair-drawn {
   stroke: #2f6f8f;
   stroke-width: 2.5px;
   stroke-dasharray: 7 5;
@@ -367,7 +367,7 @@
 /* A zone in focus, under the hand or selected: its connections bold, everything else faint. */
 .bubbles-sheet .bubble,
 .bubbles-sheet .outside,
-.bubbles-sheet .link-group,
+.bubbles-sheet .connection-group,
 .bubbles-sheet .apart-group,
 .bubbles-sheet .through {
   transition: opacity 120ms;
@@ -375,18 +375,18 @@
 
 .bubbles-sheet.bubbles-focusing .bubble:not(.bubble-near),
 .bubbles-sheet.bubbles-focusing .outside:not(.bubble-near),
-.bubbles-sheet.bubbles-focusing .link-group:not(.link-near),
-.bubbles-sheet.bubbles-focusing .apart-group:not(.link-near),
+.bubbles-sheet.bubbles-focusing .connection-group:not(.line-near),
+.bubbles-sheet.bubbles-focusing .apart-group:not(.line-near),
 .bubbles-sheet.bubbles-focusing .through:not(.through-near) {
   opacity: 0.18;
 }
 
-.bubbles-sheet.bubbles-focusing .link-near .link:not(.link-selected) {
+.bubbles-sheet.bubbles-focusing .line-near .connection:not(.connection-selected) {
   stroke: #2b2822;
   stroke-width: 3.5px;
 }
 
-.bubbles-sheet.bubbles-focusing .link-near .apart {
+.bubbles-sheet.bubbles-focusing .line-near .apart {
   stroke-width: 3.5px;
 }
 
@@ -422,7 +422,7 @@
   stroke-width: 4px;
 }
 
-.bubbles-sheet.bubbles-parting .link-drawn {
+.bubbles-sheet.bubbles-parting .pair-drawn {
   stroke: #b3261e;
 }
 

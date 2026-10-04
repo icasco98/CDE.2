@@ -97,7 +97,8 @@ describe('the program the sheet draws', () => {
     const { sheet, setDown } = followProgram(fixtureSheet(), brief, none)
     expect(sheet.zones.map((r) => r.name)).toEqual(['Diwaniya', 'Kitchen', 'Master Bedroom'])
     expect(setDown.zones.map((r) => r.name)).toContain('Stair')
-    expect(report(sheet, 0).askedArea).toBe(52.5 + 21 + 29)
+    expect(report(sheet, 0).askedArea).toBe(52.5 + 21)
+    expect(report(sheet, 1).askedArea).toBe(29)
   })
 
   it('draws nothing when the brief names no zones at all', () => {

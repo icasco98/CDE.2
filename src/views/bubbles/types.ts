@@ -18,7 +18,7 @@ export type BubbleZone = {
   readonly tier?: string
 }
 
-export type BubbleLink = {
+export type BubbleConnection = {
   readonly id: string
   readonly a: string
   readonly b: string
@@ -35,7 +35,7 @@ export type DragMakes = 'connect' | 'apart'
 
 export type BubblesViewProps = {
   readonly zones: readonly BubbleZone[]
-  readonly connections: readonly BubbleLink[]
+  readonly connections: readonly BubbleConnection[]
   readonly apart: readonly BubbleApart[]
   /** The suggested connections the person took out, which Restore brings back. */
   readonly declined: readonly { readonly a: string; readonly b: string }[]
