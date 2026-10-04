@@ -85,9 +85,11 @@ overrides one made by hand.
    the household proposes its storeys: a Ground and a First at least,
    the kinds the zone-type table puts upstairs (bedrooms with their
    suites) on the First, the master kept down when the household asks,
-   a stair spanning the storeys; then, while the ground's targets with
-   15% added for walls to come exceed its buildable area, private kinds
-   the table lets stand on either floor follow them up, largest first.
+   a stair spanning the storeys; then, while the ground's targets
+   exceed its buildable area, private kinds the table lets stand on
+   either floor follow them up, largest first. Areas are zone areas:
+   no allowance is made for walls, which have their real area in the
+   architectural plan.
    Each step is said in a sentence; every zone's storey stays the
    person's.
 2. **Bubbles.** The connection graph, built and checked. No plot, no
