@@ -8,13 +8,13 @@ export function ApartPanel(props: {
 }) {
   const { pair, nameOf } = props
   return (
-    <section className="bubbles-panel edge-panel" aria-label="Keep apart">
+    <section className="bubbles-panel connection-panel" aria-label="Keep apart">
       <h2>
         Keep apart: {nameOf(pair.a)} ↔ {nameOf(pair.b)}
       </h2>
       <p>
-        No edge between them, and neither reached only through the other. A warning only: nothing is
-        refused or moved for it.
+        No connection between them, and neither reached only through the other. A warning only:
+        nothing is refused or moved for it.
       </p>
       <button type="button" onClick={props.onAllow}>
         Allow together

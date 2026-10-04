@@ -33,9 +33,9 @@ const linksOf = (name: string): readonly string[] => {
   const id = idOf(name)
   const nameOf = (each: string): string =>
     each === EXTERIOR ? 'Outside' : (project.rooms.find((room) => room.id === each)?.name ?? each)
-  return project.edges
-    .filter((edge) => edge.a === id || edge.b === id)
-    .map((edge) => nameOf(edge.a === id ? edge.b : edge.a))
+  return project.connections
+    .filter((connection) => connection.a === id || connection.b === id)
+    .map((connection) => nameOf(connection.a === id ? connection.b : connection.a))
 }
 
 beforeEach(() => {
@@ -64,7 +64,7 @@ describe('a room sent to another storey', () => {
     expect(sendToStorey(store, idOf('Master Bedroom'), 1).ok).toBe(true)
     store.undo()
     expect(store.getState().rooms).toEqual(before.rooms)
-    expect(store.getState().edges).toEqual(before.edges)
+    expect(store.getState().connections).toEqual(before.connections)
   })
 
   it('keeps a door to the outside, which stands on every storey', () => {

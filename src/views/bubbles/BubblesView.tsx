@@ -6,26 +6,29 @@ import { useOnScreen } from '../onScreen'
 import { ApartPanel } from './ApartPanel'
 import { ChecksPanel } from './ChecksPanel'
 import { Diagram } from './Diagram'
-import { EdgePanel } from './EdgePanel'
+import { ConnectionPanel } from './ConnectionPanel'
 import { Matrix } from './Matrix'
 import { Legend } from './parts'
 import { STAIR_STAYS, type BubbleLink, type BubblesViewProps, type DragMakes } from './types'
 import './bubbles.css'
 
 export function BubblesView(props: BubblesViewProps) {
-  const { rooms, edges, apart, storeys, selected, hallwayWanted } = props
+  const { rooms, connections, apart, storeys, selected, hallwayWanted } = props
   const [focus, setFocus] = useState<number | null>(null)
   const [makes, setMakes] = useState<DragMakes>('connect')
   const [matrix, setMatrix] = useState(false)
   const [camera, setCamera] = useState<Camera>(fitCamera)
   const levels = Math.max(1, Math.trunc(storeys))
-  const arrangement = useMemo(() => arrange(rooms, edges, levels), [rooms, edges, levels])
+  const arrangement = useMemo(
+    () => arrange(rooms, connections, levels),
+    [rooms, connections, levels],
+  )
   const [pixels, setPixels] = useState(1)
   const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null)
   const menuBox = useOnScreen<HTMLDivElement>()
   const named = useMemo(() => new Map(rooms.map((room) => [room.id, room])), [rooms])
   const selectedRoom = named.get(selected ?? '')
-  const selectedEdge = edges.find((edge) => edge.id === selected)
+  const selectedConnection = connections.find((connection) => connection.id === selected)
   const selectedPair = apart.find((pair) => pair.id === selected)
 
   /** The next floor up, and the ground again from the top: one button walks a room through the storeys. */
@@ -41,7 +44,7 @@ export function BubblesView(props: BubblesViewProps) {
   }
 
   function removeSelected(): void {
-    if (selectedEdge) props.onDisconnect(selectedEdge.id)
+    if (selectedConnection) props.onDisconnect(selectedConnection.id)
     else if (selectedPair) props.onAllowTogether(selectedPair.id)
     else if (selectedRoom) props.onRemoveRoom(selectedRoom.id)
   }
@@ -62,8 +65,8 @@ export function BubblesView(props: BubblesViewProps) {
     props.declined.filter((pair) => pair.a === id || pair.b === id).length
 
   const nameOf = (id: string): string => named.get(id)?.name ?? 'Outside'
-  const titleOf = (edge: BubbleLink): string =>
-    `${nameOf(edge.a)} ↔ ${nameOf(edge.b)}, ${edge.kind}. ${edge.source ?? 'Added by hand.'}`
+  const titleOf = (connection: BubbleLink): string =>
+    `${nameOf(connection.a)} ↔ ${nameOf(connection.b)}, ${connection.kind}. ${connection.source ?? 'Added by hand.'}`
 
   return (
     <div
@@ -72,7 +75,7 @@ export function BubblesView(props: BubblesViewProps) {
       onKeyDown={(event) => {
         if (matrix || (event.key !== 'Delete' && event.key !== 'Backspace')) return
         if (event.target instanceof HTMLInputElement) return
-        if (!selectedRoom && !selectedEdge && !selectedPair) return
+        if (!selectedRoom && !selectedConnection && !selectedPair) return
         event.preventDefault()
         removeSelected()
       }}
@@ -148,7 +151,7 @@ export function BubblesView(props: BubblesViewProps) {
         <Diagram
           arrangement={arrangement}
           rooms={named}
-          edges={edges}
+          connections={connections}
           apart={apart}
           makes={makes}
           selected={selected}
@@ -166,12 +169,12 @@ export function BubblesView(props: BubblesViewProps) {
           onCamera={setCamera}
         />
         <div className="bubbles-side">
-          {selectedEdge && (
-            <EdgePanel
-              edge={selectedEdge}
+          {selectedConnection && (
+            <ConnectionPanel
+              connection={selectedConnection}
               nameOf={nameOf}
-              onSetKind={(kind) => props.onSetEdgeKind(selectedEdge.id, kind)}
-              onDelete={() => props.onDisconnect(selectedEdge.id)}
+              onSetKind={(kind) => props.onSetConnectionKind(selectedConnection.id, kind)}
+              onDelete={() => props.onDisconnect(selectedConnection.id)}
             />
           )}
           {selectedPair && (
@@ -212,7 +215,7 @@ export function BubblesView(props: BubblesViewProps) {
       {matrix && (
         <Matrix
           rooms={rooms}
-          edges={edges}
+          connections={connections}
           apart={apart}
           onSet={props.onSetPair}
           onClose={() => setMatrix(false)}

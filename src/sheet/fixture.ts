@@ -1,6 +1,6 @@
 /**
  * A drawn plan the sheet's tests read: rooms placed by hand on two storeys, with the doors drawn on
- * them and the edges those doors draw, kept as test data only.
+ * them and the connections those doors draw, kept as test data only.
  */
 
 import { sheetOf, type Door, type Poly, type Room, type Settings, type Sheet } from './model'
@@ -445,12 +445,12 @@ const EMBEDDED_ROOMS: SavedRoom[] = [
   },
 ]
 
-/** The doors of the plan, by the room that holds each: every one names the edge it draws. */
+/** The doors of the plan, by the room that holds each: every one names the connection it draws. */
 const DOORS: Record<string, Door[]> = {
   r0: [
     {
       id: 'dmu3ypmqrqt7j',
-      edge: 'e-r0-r16',
+      connection: 'e-r0-r16',
       to: 'r16',
       type: 'opening',
       w: 1.7,
@@ -460,7 +460,7 @@ const DOORS: Record<string, Door[]> = {
     },
     {
       id: 'dmu41ksjdtice',
-      edge: 'e-EXTERIOR-r0',
+      connection: 'e-EXTERIOR-r0',
       to: 'EXTERIOR',
       type: 'street2',
       w: 1.7,
@@ -470,7 +470,7 @@ const DOORS: Record<string, Door[]> = {
     },
     {
       id: 'dmu41p7feb2qv',
-      edge: 'e-r0-r6',
+      connection: 'e-r0-r6',
       to: 'r6',
       type: 'opening',
       w: 3,
@@ -482,7 +482,7 @@ const DOORS: Record<string, Door[]> = {
   r1: [
     {
       id: 'dmu42k3d6v62v',
-      edge: 'e-r1-r16',
+      connection: 'e-r1-r16',
       to: 'r16',
       type: 'open',
       w: 3.27,
@@ -494,7 +494,7 @@ const DOORS: Record<string, Door[]> = {
   r2: [
     {
       id: 'dmu41nkhpgn2u',
-      edge: 'e-r2-r3',
+      connection: 'e-r2-r3',
       to: 'r3',
       type: 'opening',
       w: 1.2,
@@ -504,7 +504,7 @@ const DOORS: Record<string, Door[]> = {
     },
     {
       id: 'dmu41uk3gzug2',
-      edge: 'e-EXTERIOR-r2',
+      connection: 'e-EXTERIOR-r2',
       to: 'EXTERIOR',
       type: 'street',
       w: 1.2,
@@ -514,7 +514,7 @@ const DOORS: Record<string, Door[]> = {
     },
     {
       id: 'dmu41q18ldt40',
-      edge: 'e-r2-r7',
+      connection: 'e-r2-r7',
       to: 'r7',
       type: 'sliding',
       w: 2.5,
@@ -526,7 +526,7 @@ const DOORS: Record<string, Door[]> = {
   r5: [
     {
       id: 'dmu41l0s9u07g',
-      edge: 'e-r16-r5',
+      connection: 'e-r16-r5',
       to: 'r16',
       type: 'opening',
       w: 1.7,
@@ -538,7 +538,7 @@ const DOORS: Record<string, Door[]> = {
   r8: [
     {
       id: 'dmu41mdvxyou6',
-      edge: 'e-nmu3y9058w92y-r8',
+      connection: 'e-nmu3y9058w92y-r8',
       to: 'nmu3y9058w92y',
       type: 'door',
       w: 0.9,
@@ -548,7 +548,7 @@ const DOORS: Record<string, Door[]> = {
     },
     {
       id: 'dmu41mkp6ha7x',
-      edge: 'e-EXTERIOR-r8',
+      connection: 'e-EXTERIOR-r8',
       to: 'EXTERIOR',
       type: 'door',
       w: 0.9,
@@ -560,7 +560,7 @@ const DOORS: Record<string, Door[]> = {
   r10: [
     {
       id: 'dmu3yq1lt207l',
-      edge: 'e-r10-r16',
+      connection: 'e-r10-r16',
       to: 'r16',
       type: 'door',
       w: 0.9,
@@ -572,7 +572,7 @@ const DOORS: Record<string, Door[]> = {
   r11: [
     {
       id: 'dmu41ogbkbr3g',
-      edge: 'e-nmu3y9058w92y-r11',
+      connection: 'e-nmu3y9058w92y-r11',
       to: 'nmu3y9058w92y',
       type: 'door',
       w: 0.9,
@@ -582,7 +582,7 @@ const DOORS: Record<string, Door[]> = {
     },
     {
       id: 'dmu42c7rvrhps',
-      edge: 'e-r11-r12',
+      connection: 'e-r11-r12',
       to: 'r12',
       type: 'door',
       w: 0.9,
@@ -594,7 +594,7 @@ const DOORS: Record<string, Door[]> = {
   r13: [
     {
       id: 'dmu41n3gsjgzq',
-      edge: 'e-EXTERIOR-r13',
+      connection: 'e-EXTERIOR-r13',
       to: 'EXTERIOR',
       type: 'door',
       w: 0.9,
@@ -604,7 +604,7 @@ const DOORS: Record<string, Door[]> = {
     },
     {
       id: 'dmu41y3dzm6jg',
-      edge: 'e-r13-r14',
+      connection: 'e-r13-r14',
       to: 'r14',
       type: 'door',
       w: 0.9,
@@ -616,7 +616,7 @@ const DOORS: Record<string, Door[]> = {
   r15: [
     {
       id: 'dmu41y1pit73w',
-      edge: 'e-r15-r8',
+      connection: 'e-r15-r8',
       to: 'r8',
       type: 'door',
       w: 0.9,
@@ -628,7 +628,7 @@ const DOORS: Record<string, Door[]> = {
   r16: [
     {
       id: 'dmu41ked5cml0',
-      edge: 'e-EXTERIOR-r16',
+      connection: 'e-EXTERIOR-r16',
       to: 'EXTERIOR',
       type: 'street2',
       w: 2,
@@ -638,7 +638,7 @@ const DOORS: Record<string, Door[]> = {
     },
     {
       id: 'dmu41uupye9yl',
-      edge: 'e-r16-r7',
+      connection: 'e-r16-r7',
       to: 'r7',
       type: 'sliding',
       w: 2.5,
@@ -650,7 +650,7 @@ const DOORS: Record<string, Door[]> = {
   nmu3xhurkamdb: [
     {
       id: 'dmu41rcx3prtn',
-      edge: 'e-nmu3xhurkamdb-nmu3y9058w92y',
+      connection: 'e-nmu3xhurkamdb-nmu3y9058w92y',
       to: 'nmu3y9058w92y',
       type: 'door',
       w: 0.9,
@@ -662,7 +662,7 @@ const DOORS: Record<string, Door[]> = {
   nmu3y9058w92y: [
     {
       id: 'dmu42micq75ps',
-      edge: 'e-nmu3y9058w92y-r16',
+      connection: 'e-nmu3y9058w92y-r16',
       to: 'r16',
       type: 'opening',
       w: 1.2,
@@ -673,8 +673,8 @@ const DOORS: Record<string, Door[]> = {
   ],
 }
 
-/** The edges the plan's doors draw, as a project would hold them. */
-export const FIXTURE_EDGES: {
+/** The connections the plan's doors draw, as a project would hold them. */
+export const FIXTURE_CONNECTIONS: {
   id: string
   a: string
   b: string

@@ -113,10 +113,10 @@ describe('the program the sheet draws', () => {
     expect(back.sheet.rooms).toMatchObject([{ id: 'p2', x: 3, y: 4, placed: true }])
   })
 
-  it('takes a door off with its edge, and puts it back when the edge returns', () => {
+  it('takes a door off with its connection, and puts it back when the connection returns', () => {
     const door: Door = {
       id: 'd1',
-      edge: 'e1',
+      connection: 'e1',
       to: 'p1',
       type: 'door',
       w: 0.9,
@@ -132,10 +132,10 @@ describe('the program the sheet draws', () => {
     expect(back.sheet.rooms[0]!.doors).toEqual([door])
   })
 
-  it('takes every door of an edge off with it, and puts them all back when it returns', () => {
+  it('takes every door of a connection off with it, and puts them all back when it returns', () => {
     const door = (id: string, along: number): Door => ({
       id,
-      edge: 'e1',
+      connection: 'e1',
       to: 'p1',
       type: 'door',
       w: 0.9,

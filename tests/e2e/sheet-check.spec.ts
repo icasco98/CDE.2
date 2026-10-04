@@ -3,9 +3,9 @@ import { linkedPairs, saved } from './bubbles'
 import { tab } from './tabs'
 
 /*
- * Show connections on the zoning sheet: the project's edges drawn from the room under the hand and the room
+ * Show connections on the zoning sheet: the project's connections drawn from the room under the hand and the room
  * selected, gone once the two rooms share a door's width of wall, and in the Openings tab once a
- * door drawing the edge is placed; and the question a door asks between two rooms with no edge.
+ * door drawing the connection is placed; and the question a door asks between two rooms with no connection.
  */
 
 type At = { x: number; y: number }
@@ -159,7 +159,9 @@ async function sideBySide(page: Page, left: string, right: string, opened = fals
 
 const doors = (page: Page) => page.locator('svg.sheet .door:not(.preview)')
 
-test('in Openings a door on the wall of an edge meets it, and the line goes', async ({ page }) => {
+test('in Openings a door on the wall of a connection meets it, and the line goes', async ({
+  page,
+}) => {
   const { a: dining, b: kitchen, wall } = await sideBySide(page, 'Dining Room', 'Kitchen')
   await check(page).click()
   const before = await doors(page).count()
@@ -172,7 +174,7 @@ test('in Openings a door on the wall of an edge meets it, and the line goes', as
   await expect(line(page, dining, kitchen)).toHaveCount(0)
 })
 
-test('a door between two rooms with no edge asks, and yes adds both as one undo step', async ({
+test('a door between two rooms with no connection asks, and yes adds both as one undo step', async ({
   page,
 }) => {
   const { wall } = await sideBySide(page, 'Kitchen', 'Formal Living')
@@ -194,7 +196,9 @@ test('a door between two rooms with no edge asks, and yes adds both as one undo 
   await expect.poll(() => linkedPairs(page)).not.toContain('Formal Living to Kitchen')
 })
 
-test('a door between two rooms with no edge asks, and no places nothing', async ({ page }) => {
+test('a door between two rooms with no connection asks, and no places nothing', async ({
+  page,
+}) => {
   const { wall } = await sideBySide(page, 'Kitchen', 'Formal Living')
   const before = await doors(page).count()
   await page.mouse.click(

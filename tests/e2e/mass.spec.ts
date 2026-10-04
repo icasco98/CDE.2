@@ -260,7 +260,7 @@ test.describe('the mass', () => {
 
 /**
  * The mock's own check: at a grid of pixels, the room the drawing puts on top is the room a ray from
- * the eye meets first. Samples at an edge, where a pixel is shared, are left out.
+ * the eye meets first. Samples on an edge, where a pixel is shared, are left out.
  */
 async function rayCast(page: Page): Promise<{ sampled: number; wrong: unknown[] }> {
   return page.evaluate(() => {

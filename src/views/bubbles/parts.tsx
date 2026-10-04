@@ -145,7 +145,7 @@ export const Link = memo(function Link(props: LinkProps) {
   if (props.near) classes.push('link-near')
   return (
     <g
-      data-edge={props.id}
+      data-connection={props.id}
       data-kind={props.kind}
       data-storey={props.storey}
       className={classes.join(' ')}
@@ -179,7 +179,7 @@ type ApartProps = {
 /** Half the reach of the cross on a keep-apart line, in the diagram's units. */
 const CROSS = 5
 
-/** Two rooms kept apart: a red dashed line with a cross at its middle, unlike any edge. */
+/** Two rooms kept apart: a red dashed line with a cross at its middle, unlike any connection. */
 export const Apart = memo(function Apart(props: ApartProps) {
   const [x1, y1, x2, y2] = rimToRim(props.from, props.to)
   const mx = (x1 + x2) / 2

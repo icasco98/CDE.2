@@ -1,9 +1,9 @@
 /**
  * The program the sheet draws: the rooms the brief asks for, in the order of importance, as the
- * project holds them, and the edges its doors draw. The sheet follows both exactly — a room in the
+ * project holds them, and the connections its doors draw. The sheet follows both exactly — a room in the
  * brief keeps whatever the hand has done to it, a room the brief no longer names leaves the sheet,
- * and a door whose edge is gone goes with it — and nothing here knows what a project is: the caller
- * hands over the list and the edges, and keeps what was set down so an undo can give it back.
+ * and a door whose connection is gone goes with it — and nothing here knows what a project is: the caller
+ * hands over the list and the connections, and keeps what was set down so an undo can give it back.
  */
 
 import {
@@ -89,13 +89,13 @@ const sameRoom = (one: Room, other: Room): boolean =>
 
 /**
  * The sheet brought in line with the brief: the brief's rooms in the brief's order and nothing else,
- * each door drawing an edge the project still holds. What was set down aside earlier comes back when
- * the brief names its room or holds its edge again, which is how an undo in the brief is followed.
+ * each door drawing a connection the project still holds. What was set down aside earlier comes back when
+ * the brief names its room or holds its connection again, which is how an undo in the brief is followed.
  */
 export function followProgram(
   sheet: Sheet,
   program: readonly ProgramRoom[],
-  edges: ReadonlySet<string>,
+  connections: ReadonlySet<string>,
   aside: SetDown = { rooms: [], doors: [] },
 ): { readonly sheet: Sheet; readonly setDown: SetDown } {
   const taken = new Set<string>()
@@ -112,23 +112,24 @@ export function followProgram(
   const setDownRooms = sheet.rooms.filter((held) => !taken.has(held.id)).map(cloneRoom)
   const setDownDoors: HeldDoor[] = []
   const standing = new Set(rooms.flatMap((r) => doorsOf(r).map((d) => d.id)))
-  // An edge that kept a door on the sheet has been drawn again since, so what was set down stays down.
+  // A connection that kept a door on the sheet has been drawn again since, so what was set down stays down.
   const drawn = new Set(
     rooms.flatMap((r) =>
       doorsOf(r)
-        .filter((d) => edges.has(d.edge))
-        .map((d) => d.edge),
+        .filter((d) => connections.has(d.connection))
+        .map((d) => d.connection),
     ),
   )
   for (const r of rooms) {
-    const kept = doorsOf(r).filter((d) => edges.has(d.edge))
-    for (const d of doorsOf(r)) if (!edges.has(d.edge)) setDownDoors.push({ host: r.id, door: d })
+    const kept = doorsOf(r).filter((d) => connections.has(d.connection))
+    for (const d of doorsOf(r))
+      if (!connections.has(d.connection)) setDownDoors.push({ host: r.id, door: d })
     const back = aside.doors.filter(
       (held) =>
         held.host === r.id &&
-        edges.has(held.door.edge) &&
+        connections.has(held.door.connection) &&
         !standing.has(held.door.id) &&
-        !drawn.has(held.door.edge),
+        !drawn.has(held.door.connection),
     )
     const doors = [...kept, ...back.map((held) => ({ ...held.door }))]
     if (doors.length) r.doors = doors

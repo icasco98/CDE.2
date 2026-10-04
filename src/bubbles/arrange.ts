@@ -21,7 +21,11 @@ export type ArrangeRoom = {
   readonly bubble?: Bubble
 }
 
-export type ArrangeEdge = { readonly a: Endpoint; readonly b: Endpoint; readonly storey: number }
+export type ArrangeConnection = {
+  readonly a: Endpoint
+  readonly b: Endpoint
+  readonly storey: number
+}
 
 /** One room drawn in one storey's column; a stair has one in every column it spans. */
 export type Spot = {
@@ -87,7 +91,7 @@ type Placed = { readonly room: ArrangeRoom; readonly tier: Tier }
  */
 function bandsOf(
   rooms: readonly ArrangeRoom[],
-  edges: readonly ArrangeEdge[],
+  connections: readonly ArrangeConnection[],
   storey: number,
 ): ReadonlyMap<Tier, readonly ArrangeRoom[]> {
   const here = rooms.filter((room) => standsOn(room, storey))
@@ -101,9 +105,12 @@ function bandsOf(
     }
   for (const room of here) {
     if (placed.has(room.id)) continue
-    const anchor = edges
-      .filter((edge) => edge.storey === storey && (edge.a === room.id || edge.b === room.id))
-      .map((edge) => placed.get(edge.a === room.id ? edge.b : edge.a))
+    const anchor = connections
+      .filter(
+        (connection) =>
+          connection.storey === storey && (connection.a === room.id || connection.b === room.id),
+      )
+      .map((connection) => placed.get(connection.a === room.id ? connection.b : connection.a))
       .find((each) => each !== undefined && byId.has(each.room.id))
     const tier = anchor?.tier ?? 'semi-public'
     const row = rows.get(tier)!
@@ -147,11 +154,11 @@ function downOf(band: Band, index: number): number {
 
 export function arrange(
   rooms: readonly ArrangeRoom[],
-  edges: readonly ArrangeEdge[],
+  connections: readonly ArrangeConnection[],
   storeys: number,
 ): Arrangement {
   const levels = Math.max(1, Math.trunc(storeys))
-  const inBands = Array.from({ length: levels }, (_, storey) => bandsOf(rooms, edges, storey))
+  const inBands = Array.from({ length: levels }, (_, storey) => bandsOf(rooms, connections, storey))
   const scale = scaleFor(rooms.map((room) => room.targetArea))
   // A band is as deep on every column as on its busiest, so a tier reads across the whole diagram.
   const bands: Band[] = []
@@ -176,7 +183,9 @@ export function arrange(
   const perStorey = inBands.map((rows, storey) =>
     uncross(
       rows,
-      edges.filter((edge) => edge.storey === storey).map((edge) => [edge.a, edge.b] as const),
+      connections
+        .filter((connection) => connection.storey === storey)
+        .map((connection) => [connection.a, connection.b] as const),
       (tier, index, count) => ({ x: acrossOf(index, count), y: downOf(byTier.get(tier)!, index) }),
       new Map([[EXTERIOR, { x: 0, y: outsideY }]]),
       (room) => sideOf(room, storey),
@@ -205,8 +214,9 @@ export function arrange(
         })
       }
     }
-    const outdoors = edges.some(
-      (edge) => edge.storey === storey && (edge.a === EXTERIOR || edge.b === EXTERIOR),
+    const outdoors = connections.some(
+      (connection) =>
+        connection.storey === storey && (connection.a === EXTERIOR || connection.b === EXTERIOR),
     )
     if (storey === 0 || outdoors)
       outside.push({ id: EXTERIOR, storey, x: x + width / 2, y: outsideY, r: OUTSIDE })

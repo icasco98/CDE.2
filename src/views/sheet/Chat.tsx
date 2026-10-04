@@ -33,8 +33,8 @@ type ChatProps = {
   memory: Memory
   onMemory: (next: Memory) => void
   sample: Sample | null
-  /** The project's edge between two ends, which a door the assistant places must draw. */
-  edgeBetween: (a: string, b: string) => string | null
+  /** The project's connection between two ends, which a door the assistant places must draw. */
+  connectionBetween: (a: string, b: string) => string | null
   ready: boolean
   /** The sheet is kept for one Undo before the assistant touches it. */
   onBegin: () => void
@@ -43,8 +43,18 @@ type ChatProps = {
 }
 
 export function Chat(props: ChatProps) {
-  const { read, write, storey, memory, onMemory, sample, ready, onBegin, onEnd, edgeBetween } =
-    props
+  const {
+    read,
+    write,
+    storey,
+    memory,
+    onMemory,
+    sample,
+    ready,
+    onBegin,
+    onEnd,
+    connectionBetween,
+  } = props
   const [lines, setLines] = useState<Line[]>([])
   const [value, setValue] = useState('')
   const [busy, setBusy] = useState(false)
@@ -106,7 +116,7 @@ export function Chat(props: ChatProps) {
       note: (note, replaces) =>
         keep(withNote(held.current, note, new Date().toISOString(), replaces)),
       request: (asked) => keep(withRequest(held.current, asked, new Date().toISOString())),
-      edgeBetween,
+      connectionBetween,
     }
     const run = await runMessage({
       sample,

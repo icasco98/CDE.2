@@ -5,7 +5,7 @@
  * history it made, and undoing or redoing it takes the project's part back or brings it again.
  */
 
-import type { EdgeKind, Store } from '../../model'
+import type { ConnectionKind, Store } from '../../model'
 import { sendRoomsToStorey } from '../../app/sendToStorey'
 
 type Linking = Pick<Store, 'undo' | 'redo' | 'getState' | 'actions' | 'transaction'>
@@ -40,18 +40,21 @@ export function createLinks(store: Linking) {
     },
 
     /** A connection made with the door the sheet step placed. */
-    edge(depth: number, input: { edge: string; a: string; b: string; kind: EdgeKind }): void {
-      let edge = input.edge
-      const has = () => store.getState().edges.some((each) => each.id === edge)
+    connection(
+      depth: number,
+      input: { connection: string; a: string; b: string; kind: ConnectionKind },
+    ): void {
+      let connection = input.connection
+      const has = () => store.getState().connections.some((each) => each.id === connection)
       links.push({
         depth,
         stands: has,
         take: () => {
-          store.actions.disconnect(edge)
+          store.actions.disconnect(connection)
         },
         make: () => {
           const made = store.actions.connect({ a: input.a, b: input.b, kind: input.kind })
-          if (made.ok) edge = made.value
+          if (made.ok) connection = made.value
         },
       })
     },

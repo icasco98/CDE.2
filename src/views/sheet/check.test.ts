@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { sheetOf, type Door, type Room, type Sheet } from '../../sheet'
-import { checkRead, linesFrom, pairKey, type SheetEdge } from './check'
+import { checkRead, linesFrom, pairKey, type SheetConnection } from './check'
 
 /*
  * Reference cases worked on paper: rooms 4 × 3 m on the ground, standing side by side so the wall
@@ -24,10 +24,10 @@ const room = (id: string, over: Partial<Room> = {}): Room => ({
   ...over,
 })
 
-/** A door drawing edge `edge` into room `to`, halfway along the wall the two share. */
-const door = (id: string, edge: string, to: string): Door => ({
+/** A door drawing connection `connection` into room `to`, halfway along the wall the two share. */
+const door = (id: string, connection: string, to: string): Door => ({
   id,
-  edge,
+  connection,
   to,
   type: 'door',
   w: 0.9,
@@ -36,7 +36,7 @@ const door = (id: string, edge: string, to: string): Door => ({
   hinge: false,
 })
 
-const edge = (a: string, b: string): SheetEdge => ({ id: `${a}-${b}`, a, b, storey: 0 })
+const connection = (a: string, b: string): SheetConnection => ({ id: `${a}-${b}`, a, b, storey: 0 })
 
 const none = { apart: [], through: new Set<string>() }
 
@@ -52,7 +52,7 @@ describe('ready in the zoning step', () => {
     const read = checkRead(
       sheet([a, b, c, d]),
       0,
-      { edges: [edge('a', 'b'), edge('a', 'c'), edge('a', 'd')], ...none },
+      { connections: [connection('a', 'b'), connection('a', 'c'), connection('a', 'd')], ...none },
       'zoning',
     )
     expect(read.waiting.map((each) => each.b)).toEqual(['c', 'd'])
@@ -62,7 +62,7 @@ describe('ready in the zoning step', () => {
     const read = checkRead(
       sheet([room('a'), room('b', { x: 6, placed: false })]),
       0,
-      { edges: [edge('a', 'b')], ...none },
+      { connections: [connection('a', 'b')], ...none },
       'zoning',
     )
     expect(read.waiting).toHaveLength(1)
@@ -70,28 +70,28 @@ describe('ready in the zoning step', () => {
 })
 
 describe('met in the Openings step', () => {
-  it('is the door of that edge, drawn on the wall the two rooms share', () => {
+  it('is the door of that connection, drawn on the wall the two rooms share', () => {
     const met = checkRead(
       sheet([room('a', { doors: [door('d1', 'a-b', 'b')] }), room('b', { x: 6 })]),
       0,
-      { edges: [edge('a', 'b')], ...none },
+      { connections: [connection('a', 'b')], ...none },
       'openings',
     )
     expect(met.waiting).toEqual([])
   })
 
-  it('is not met by the door of another edge, nor by its own door once the rooms part', () => {
+  it('is not met by the door of another connection, nor by its own door once the rooms part', () => {
     const other = checkRead(
       sheet([room('a', { doors: [door('d1', 'elsewhere', 'b')] }), room('b', { x: 6 })]),
       0,
-      { edges: [edge('a', 'b')], ...none },
+      { connections: [connection('a', 'b')], ...none },
       'openings',
     )
     expect(other.waiting).toHaveLength(1)
     const parted = checkRead(
       sheet([room('a', { doors: [door('d1', 'a-b', 'b')] }), room('b', { x: 9 })]),
       0,
-      { edges: [edge('a', 'b')], ...none },
+      { connections: [connection('a', 'b')], ...none },
       'openings',
     )
     expect(parted.waiting).toHaveLength(1)
@@ -110,7 +110,7 @@ describe('keep apart on the sheet', () => {
       sheet(rooms),
       0,
       {
-        edges: [],
+        connections: [],
         apart: [
           { a: 'a', b: 'b' },
           { a: 'c', b: 'e' },
@@ -133,7 +133,12 @@ describe('the lines from a room', () => {
       room('t', { placed: false }),
       room('u', { storey: 1, x: 12 }),
     ]
-    const waiting = [edge('a', 'b'), edge('t', 'a'), edge('a', 'u'), edge('b', 't')]
+    const waiting = [
+      connection('a', 'b'),
+      connection('t', 'a'),
+      connection('a', 'u'),
+      connection('b', 't'),
+    ]
     expect(linesFrom('a', waiting, sheet(rooms), 0)).toEqual({ placed: ['b'], tray: ['t'] })
   })
 })
@@ -149,11 +154,11 @@ describe('the budget', () => {
       }),
     )
     const big = sheetOf(rooms, {}, 1, { ...sheetOf([]).plot, w: 40, h: 20 })
-    const edges = rooms.flatMap((_, i) => [
-      edge(`r${i}`, `r${(i + 1) % 40}`),
-      edge(`r${i}`, `r${(i + 8) % 40}`),
+    const connections = rooms.flatMap((_, i) => [
+      connection(`r${i}`, `r${(i + 1) % 40}`),
+      connection(`r${i}`, `r${(i + 8) % 40}`),
     ])
-    const input = { edges, apart: [{ a: 'r0', b: 'r1' }], through: new Set<string>() }
+    const input = { connections, apart: [{ a: 'r0', b: 'r1' }], through: new Set<string>() }
     const once = () => {
       const read = checkRead(big, 0, input, 'zoning')
       linesFrom('r12', read.waiting, big, 0)
@@ -166,7 +171,7 @@ describe('the budget', () => {
       once()
       best = Math.min(best, performance.now() - started)
     }
-    console.info(`check on the sheet, 40 rooms, 80 edges: ${best.toFixed(3)} ms`)
+    console.info(`check on the sheet, 40 rooms, 80 connections: ${best.toFixed(3)} ms`)
     expect(best).toBeLessThan(4)
   })
 })

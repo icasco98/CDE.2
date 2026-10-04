@@ -15,10 +15,10 @@ export function ExportMenu({ title }: { title: string }) {
   const sheet = () => {
     const project = session.getState()
     return followProject(
-      localSheet(project.edges) ?? sheetOf([]),
+      localSheet(project.connections) ?? sheetOf([]),
       programOf(project.rooms),
       plotOf(project.plot),
-      project.edges,
+      project.connections,
       createAside(),
     )
   }

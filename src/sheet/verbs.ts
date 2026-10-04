@@ -400,13 +400,13 @@ const VERBS: Record<string, Doing> = {
     const spot = doorSpot(r, wall, along === null ? 0.5 : along)
     if (!spot) return refused('door', `${r.name} shows no ${wall} wall`)
     const width = num(deed.width)
-    // A door draws an edge the project holds; the room across is read only to name that edge.
+    // A door draws a connection the project holds; the room across is read only to name that connection.
     const hit = doorAt(spot[0], spot[1], type === 'open' ? 0.6 : 0.9, sheet, storey, r)
     const across = hit ? (doorAcross(r, hit.pl, sheet, storey)?.id ?? OUTSIDE) : OUTSIDE
     if (type === 'open' && across === OUTSIDE)
       return refused('door', 'Only a wall shared with a neighbour can be opened.')
-    const edge = desk.edgeBetween(r.id, across)
-    if (!edge) {
+    const connection = desk.connectionBetween(r.id, across)
+    if (!connection) {
       const other = sheet.rooms.find((o) => o.id === across)?.name ?? 'the outside'
       return refused(
         'door',
@@ -421,7 +421,7 @@ const VERBS: Record<string, Doing> = {
           y: spot[1],
           type,
           storey,
-          edge,
+          connection,
           to: across,
           ...(width === null ? {} : { width }),
         }),

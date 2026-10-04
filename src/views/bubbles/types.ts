@@ -1,5 +1,5 @@
 import type { Check } from '../../graph/types'
-import type { Bubble, Commit, EdgeKind } from '../../model'
+import type { Bubble, Commit, ConnectionKind } from '../../model'
 import type { PairChoice } from './setPair'
 
 /** What a drag on a stair is answered with: its span is the program's to set, not the hand's. */
@@ -22,7 +22,7 @@ export type BubbleLink = {
   readonly id: string
   readonly a: string
   readonly b: string
-  readonly kind: EdgeKind
+  readonly kind: ConnectionKind
   readonly storey: number
   /** The rulebook row that wants this pair, in its own words; absent for a pair added by hand. */
   readonly source?: string
@@ -35,26 +35,26 @@ export type DragMakes = 'connect' | 'apart'
 
 export type BubblesViewProps = {
   readonly rooms: readonly BubbleRoom[]
-  readonly edges: readonly BubbleLink[]
+  readonly connections: readonly BubbleLink[]
   readonly apart: readonly BubbleApart[]
   /** The suggested connections the person took out, which Restore brings back. */
   readonly declined: readonly { readonly a: string; readonly b: string }[]
   readonly storeys: number
   /** The graph's warnings, read again on every edit. */
   readonly checks: readonly Check[]
-  /** A room id, an edge id, or nothing. */
+  /** A room id, a connection id, or nothing. */
   readonly selected: string | null
   /** The storeys that still want a hallway, each with the rule's sentence saying why. */
   readonly hallwayWanted: readonly { readonly storey: number; readonly sentence: string }[]
   readonly onNudge: (id: string, nudge: Bubble, commit: Commit) => void
   readonly onSetStorey: (id: string, storey: number) => void
   readonly onConnect: (a: string, b: string) => void
-  readonly onDisconnect: (edgeId: string) => void
+  readonly onDisconnect: (connectionId: string) => void
   readonly onKeepApart: (a: string, b: string) => void
   readonly onAllowTogether: (id: string) => void
   /** One cell of the matrix set, as one undo step. */
   readonly onSetPair: (a: string, b: string, choice: PairChoice) => void
-  readonly onSetEdgeKind: (edgeId: string, kind: EdgeKind) => void
+  readonly onSetConnectionKind: (connectionId: string, kind: ConnectionKind) => void
   readonly onRemoveRoom: (id: string) => void
   readonly onAddHallway: (storey: number) => void
   /** The declined suggestions made again: every one, or one room's. */

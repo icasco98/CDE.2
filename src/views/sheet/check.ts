@@ -1,8 +1,8 @@
 /**
- * What Check shows on the zoning sheet, read from the project's edges and keep-apart pairs and from
- * the doors drawn, each drawing the edge it names. An edge is ready in the zoning step when its two
+ * What Check shows on the zoning sheet, read from the project's connections and keep-apart pairs and from
+ * the doors drawn, each drawing the connection it names. A connection is ready in the zoning step when its two
  * rooms share a run of wall a door wide, and met in the Openings step when one of its doors is drawn: a
- * door whose rooms have moved apart is not drawn, and its edge is not met. Nothing here changes the
+ * door whose rooms have moved apart is not drawn, and its connection is not met. Nothing here changes the
  * sheet or the graph.
  */
 
@@ -19,7 +19,7 @@ import {
   type Sheet,
 } from '../../sheet'
 
-export type SheetEdge = {
+export type SheetConnection = {
   readonly id: string
   readonly a: string
   readonly b: string
@@ -33,8 +33,8 @@ type Step = 'zoning' | 'openings'
 export const pairKey = (a: string, b: string): string => (a < b ? `${a}|${b}` : `${b}|${a}`)
 
 type CheckRead = {
-  /** This storey's edges between two rooms that are not yet ready, or not yet met. */
-  readonly waiting: readonly SheetEdge[]
+  /** This storey's connections between two rooms that are not yet ready, or not yet met. */
+  readonly waiting: readonly SheetConnection[]
   /** The doors drawn that join a pair kept apart, and where each stands in plot metres. */
   readonly apartDoors: ReadonlyMap<string, Point>
   /** The rooms on this storey of a pair where one is reached only through the other. */
@@ -58,7 +58,7 @@ export function checkRead(
   sheet: Sheet,
   storey: number,
   input: {
-    readonly edges: readonly SheetEdge[]
+    readonly connections: readonly SheetConnection[]
     readonly apart: readonly SheetPair[]
     /** The keep-apart pairs, by `pairKey`, where one room is reached only through the other. */
     readonly through: ReadonlySet<string>
@@ -67,14 +67,14 @@ export function checkRead(
 ): CheckRead {
   const byId = new Map(sheet.rooms.map((room) => [room.id, room]))
   const doors = drawnDoors(sheet, storey)
-  const met = new Set(doors.map((each) => each.door.edge))
+  const met = new Set(doors.map((each) => each.door.connection))
   const drawn = new Set(doors.map((each) => pairKey(each.room.id, each.door.to)))
-  const waiting = input.edges.filter((edge) => {
-    if (edge.storey !== storey) return false
-    const one = byId.get(edge.a)
-    const other = byId.get(edge.b)
+  const waiting = input.connections.filter((connection) => {
+    if (connection.storey !== storey) return false
+    const one = byId.get(connection.a)
+    const other = byId.get(connection.b)
     if (!one || !other) return false
-    return step === 'openings' ? !met.has(edge.id) : !sharesADoorsWidth(one, other, sheet)
+    return step === 'openings' ? !met.has(connection.id) : !sharesADoorsWidth(one, other, sheet)
   })
   const apartKeys = new Set(input.apart.map((pair) => pairKey(pair.a, pair.b)))
   const here = placedRooms(sheet, storey)
@@ -101,7 +101,7 @@ export function checkRead(
  */
 export function linesFrom(
   focus: string,
-  waiting: readonly SheetEdge[],
+  waiting: readonly SheetConnection[],
   sheet: Sheet,
   storey: number,
 ): { readonly placed: readonly string[]; readonly tray: readonly string[] } {
@@ -109,9 +109,9 @@ export function linesFrom(
   const byId = new Map(sheet.rooms.map((room) => [room.id, room]))
   const placed: string[] = []
   const tray: string[] = []
-  for (const edge of waiting) {
-    if (edge.a !== focus && edge.b !== focus) continue
-    const other = edge.a === focus ? edge.b : edge.a
+  for (const connection of waiting) {
+    if (connection.a !== focus && connection.b !== focus) continue
+    const other = connection.a === focus ? connection.b : connection.a
     if (here.has(other)) placed.push(other)
     else if (byId.get(other) && !byId.get(other)!.placed) tray.push(other)
   }

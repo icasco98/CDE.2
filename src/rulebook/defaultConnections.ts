@@ -1,4 +1,4 @@
-import { EXTERIOR, type EdgeKind } from '../model'
+import { EXTERIOR, type ConnectionKind } from '../model'
 
 /** How a row picks rooms when a project holds several of a kind; the markdown's preamble states both. */
 export type Pairing = 'each' | 'one'
@@ -8,7 +8,7 @@ export type DefaultConnection = {
   /** A room-type id, or EXTERIOR. */
   readonly from: string
   readonly to: string
-  readonly kind: EdgeKind
+  readonly kind: ConnectionKind
   readonly pairing: Pairing
   /** Why the row is here, shown to the person as the proposal's own reason. */
   readonly source: string
@@ -281,8 +281,8 @@ export const defaultConnections: readonly DefaultConnection[] = [
 
 /**
  * The row of the table that wants a connection between two kinds of room, for the person looking
- * at the edge. An edge is a pair of rooms, never a row, so the row is found again from the two
- * kinds, whichever kind the edge has since been given; a pair the table says nothing of has none.
+ * at the connection. A connection is a pair of rooms, never a row, so the row is found again from the two
+ * kinds, whichever kind the connection has since been given; a pair the table says nothing of has none.
  */
 export function connectionSource(
   from: string,

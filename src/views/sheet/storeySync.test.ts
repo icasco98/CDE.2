@@ -26,9 +26,10 @@ const storeyIn = (name: string): number =>
 const linked = (a: string, b: string): boolean =>
   store
     .getState()
-    .edges.some(
-      (edge) =>
-        (edge.a === idOf(a) && edge.b === idOf(b)) || (edge.a === idOf(b) && edge.b === idOf(a)),
+    .connections.some(
+      (connection) =>
+        (connection.a === idOf(a) && connection.b === idOf(b)) ||
+        (connection.a === idOf(b) && connection.b === idOf(a)),
     )
 
 /** The project's sheet with the named rooms placed on the storeys the program gives them. */
@@ -37,7 +38,7 @@ function sheetWith(names: readonly string[]): Sheet {
     sheetOf([]),
     programOf(store.getState().rooms),
     plotOf(store.getState().plot),
-    store.getState().edges,
+    store.getState().connections,
     createAside(),
   )
   names.forEach((name, i) => {

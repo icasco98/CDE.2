@@ -1123,8 +1123,8 @@ export function makeCorridor(sheet: Sheet, input: { pocket: number; storey: numb
 // ---------- doors ----------
 
 /**
- * A door put on the wall under the hand, drawing the edge named: between its room and `to`, the
- * room across or the outside. An edge may have several doors, but two never overlap on one wall.
+ * A door put on the wall under the hand, drawing the connection named: between its room and `to`, the
+ * room across or the outside. A connection may have several doors, but two never overlap on one wall.
  */
 export function addDoor(
   sheet: Sheet,
@@ -1134,7 +1134,7 @@ export function addDoor(
     type: DoorType
     width?: number
     storey: number
-    edge: string
+    connection: string
     to: string
   },
 ): Change {
@@ -1149,7 +1149,7 @@ export function addDoor(
     if (inTheWay) return { ok: false, said: overlapSaid(inTheWay) }
     const d: Door = {
       id: freshId('d', doorIds(next)),
-      edge: input.edge,
+      connection: input.connection,
       to: input.to,
       type: input.type,
       w: r2(stands.w),
@@ -1264,7 +1264,7 @@ export function hingeDoor(sheet: Sheet, input: { room: string; door: string }): 
   })
 }
 
-/** A door taken off: the edge it drew stays, not met until a door draws it again. */
+/** A door taken off: the connection it drew stays, not met until a door draws it again. */
 export function removeDoor(sheet: Sheet, input: { room: string; door: string }): Change {
   return edit(sheet, (next) => {
     const { r, d } = findDoor(next, input.room, input.door)

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { area } from '../geometry'
 import { createIdGenerator, createStore, EXTERIOR, type Plot } from '../model'
-import { feasibility, linksHeld, type BriefEdge, type BriefRoom } from './feasibility'
+import { feasibility, linksHeld, type BriefConnection, type BriefRoom } from './feasibility'
 import { impliedConnections } from './impliedConnections'
 import { defaultProgram } from './program'
 
@@ -21,7 +21,7 @@ function room(id: string, type: string, targetArea: number, name = id): BriefRoo
   return { id, name, type, storey: 0, storeysSpanned: 1, targetArea }
 }
 
-function joined(pairs: readonly (readonly [string, string])[]): BriefEdge[] {
+function joined(pairs: readonly (readonly [string, string])[]): BriefConnection[] {
   return pairs.map(([a, b]) => ({ a, b, storey: 0 }))
 }
 
@@ -33,7 +33,7 @@ function defaultVilla(storeys: number) {
   const opened = store.getState()
   for (const each of defaultProgram(area(plot.polygon), opened.household, storeys))
     store.actions.addRoom(each)
-  for (const link of impliedConnections(store.getState().rooms, store.getState().edges))
+  for (const link of impliedConnections(store.getState().rooms, store.getState().connections))
     store.actions.connect({ a: link.a, b: link.b, kind: link.kind, storey: link.storey })
   return store.getState()
 }
@@ -42,7 +42,9 @@ describe('the brief checked before a bubble moves', () => {
   it('finds nothing wrong with the villa a rebuild gives, on one storey or two', () => {
     for (const storeys of [1, 2]) {
       const project = defaultVilla(storeys)
-      expect(feasibility(project.rooms, project.edges, project.plot, project.storeys)).toEqual([])
+      expect(
+        feasibility(project.rooms, project.connections, project.plot, project.storeys),
+      ).toEqual([])
     }
   })
 
@@ -107,15 +109,15 @@ describe('the brief checked before a bubble moves', () => {
 
   it('counts a door to the street among the links a wall has to hold', () => {
     const rooms = [room('wc', 'guest-wc', 3, 'Guest WC'), room('a', 'entry-foyer', 8)]
-    const edges: BriefEdge[] = [
+    const connections: BriefConnection[] = [
       { a: 'wc', b: 'a', storey: 0 },
       { a: EXTERIOR, b: 'wc', storey: 0 },
       { a: 'wc', b: 'nobody', storey: 0 },
     ]
     expect(linksHeld(rooms[0] as BriefRoom)).toBe(2)
-    expect(feasibility(rooms, edges, plot, 1).filter((each) => each.code === 'wall')).toHaveLength(
-      1,
-    )
+    expect(
+      feasibility(rooms, connections, plot, 1).filter((each) => each.code === 'wall'),
+    ).toHaveLength(1)
   })
 
   it('reads a corridor off both its long sides, because that is what a corridor is for', () => {

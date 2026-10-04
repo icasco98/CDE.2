@@ -18,7 +18,7 @@ function startingProject(storeys = 1): Project {
   return store.getState()
 }
 
-/** A connection read the way a person reads it: the two names and what kind of edge it would be. */
+/** A connection read the way a person reads it: the two names and what kind of connection it would be. */
 function named(project: Project, links: readonly ImpliedConnection[]): readonly string[] {
   const nameOf = (id: string): string =>
     id === EXTERIOR ? 'Outside' : (project.rooms.find((room) => room.id === id)?.name ?? id)
@@ -48,12 +48,14 @@ describe('the reference case: the starting household on the starting plot', () =
   it('implies exactly the defaults the program implies', () => {
     const project = startingProject()
     expect(project.rooms).toHaveLength(16)
-    expect(named(project, impliedConnections(project.rooms, project.edges))).toEqual(referenceCase)
+    expect(named(project, impliedConnections(project.rooms, project.connections))).toEqual(
+      referenceCase,
+    )
   })
 
   it('pairs each ensuite with the bedroom added immediately before it', () => {
     const project = startingProject()
-    const suites = impliedConnections(project.rooms, project.edges).filter(
+    const suites = impliedConnections(project.rooms, project.connections).filter(
       (link) => link.rowId === 'D19' || link.rowId === 'D21',
     )
     const at = (id: string): number => project.rooms.findIndex((room) => room.id === id)
@@ -63,7 +65,7 @@ describe('the reference case: the starting household on the starting plot', () =
 
   it('gives each ensuite of a two-storey rebuild the door to its own bedroom upstairs', () => {
     const project = startingProject(2)
-    const suites = impliedConnections(project.rooms, project.edges).filter(
+    const suites = impliedConnections(project.rooms, project.connections).filter(
       (link) => link.rowId === 'D19' || link.rowId === 'D21',
     )
     const nameOf = (id: string): string => project.rooms.find((room) => room.id === id)?.name ?? id
@@ -81,23 +83,25 @@ describe('the reference case: the starting household on the starting plot', () =
     for (const room of defaultProgram(area(first.plot.polygon), first.household, 1))
       store.actions.addRoom(room)
     const project = store.getState()
-    for (const link of impliedConnections(project.rooms, project.edges))
+    for (const link of impliedConnections(project.rooms, project.connections))
       expect(store.actions.connect(link).ok).toBe(true)
     const settled = store.getState()
-    expect(settled.edges).toHaveLength(referenceCase.length)
-    expect(impliedConnections(settled.rooms, settled.edges)).toEqual([])
+    expect(settled.connections).toHaveLength(referenceCase.length)
+    expect(impliedConnections(settled.rooms, settled.connections)).toEqual([])
   })
 
-  it('drops a link as soon as its edge exists', () => {
+  it('drops a link as soon as its connection exists', () => {
     const project = startingProject()
-    const before = impliedConnections(project.rooms, project.edges)
+    const before = impliedConnections(project.rooms, project.connections)
     const first = before[0]
     if (!first) throw new Error('the reference case implies nothing')
-    const withEdge = {
+    const withConnection = {
       ...project,
-      edges: [{ id: 'edge-1', a: first.a, b: first.b, kind: first.kind, storey: first.storey }],
+      connections: [
+        { id: 'connection-1', a: first.a, b: first.b, kind: first.kind, storey: first.storey },
+      ],
     }
-    const after = impliedConnections(withEdge.rooms, withEdge.edges)
+    const after = impliedConnections(withConnection.rooms, withConnection.connections)
     expect(after).toHaveLength(before.length - 1)
     expect(after).not.toContainEqual(first)
   })
@@ -113,15 +117,19 @@ describe('what the table will not imply', () => {
 
   it('offers no second front door once the project has one', () => {
     const rooms = [room('entry', 'entry-foyer')]
-    const edges = [{ id: 'e1', a: EXTERIOR, b: 'entry', kind: 'main-door' as const, storey: 0 }]
+    const connections = [
+      { id: 'e1', a: EXTERIOR, b: 'entry', kind: 'main-door' as const, storey: 0 },
+    ]
     expect(impliedConnections(rooms, [])).toHaveLength(1)
-    expect(impliedConnections(rooms, edges)).toEqual([])
+    expect(impliedConnections(rooms, connections)).toEqual([])
   })
 
   it('offers no front door when another room already holds it', () => {
     const rooms = [room('entry', 'entry-foyer'), room('diwaniya', 'diwaniya')]
-    const edges = [{ id: 'e1', a: EXTERIOR, b: 'other', kind: 'main-door' as const, storey: 0 }]
-    const links = impliedConnections(rooms, edges)
+    const connections = [
+      { id: 'e1', a: EXTERIOR, b: 'other', kind: 'main-door' as const, storey: 0 },
+    ]
+    const links = impliedConnections(rooms, connections)
     expect(links.map((link) => link.rowId)).toEqual(['D2'])
   })
 
@@ -186,8 +194,8 @@ describe('pairing', () => {
 
   it('is the same list every time it is asked', () => {
     const project = startingProject()
-    const once = impliedConnections(project.rooms, project.edges)
-    expect(impliedConnections(project.rooms, project.edges)).toEqual(once)
+    const once = impliedConnections(project.rooms, project.connections)
+    expect(impliedConnections(project.rooms, project.connections)).toEqual(once)
   })
 })
 
@@ -234,7 +242,7 @@ describe('the hallway as a hub', () => {
     expect(
       named(
         project,
-        impliedConnections(project.rooms, project.edges).filter(
+        impliedConnections(project.rooms, project.connections).filter(
           (link) => link.a === upstairs?.id || link.b === upstairs?.id,
         ),
       ),

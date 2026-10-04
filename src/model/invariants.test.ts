@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { checkProject } from './invariants'
 import { STARTING_HEIGHT_M, startingHousehold } from './project'
-import { EXTERIOR, PROJECT_VERSION, type Edge, type Project, type Room } from './types'
+import { EXTERIOR, PROJECT_VERSION, type Connection, type Project, type Room } from './types'
 
 const room = (id: string, extra: Partial<Room> = {}): Room => ({
   id,
@@ -14,7 +14,12 @@ const room = (id: string, extra: Partial<Room> = {}): Room => ({
   ...extra,
 })
 
-const edge = (id: string, a: string, b: string, extra: Partial<Edge> = {}): Edge => ({
+const connection = (
+  id: string,
+  a: string,
+  b: string,
+  extra: Partial<Connection> = {},
+): Connection => ({
   id,
   a,
   b,
@@ -23,7 +28,11 @@ const edge = (id: string, a: string, b: string, extra: Partial<Edge> = {}): Edge
   ...extra,
 })
 
-const project = (rooms: readonly Room[], edges: readonly Edge[] = [], storeys = 2): Project => ({
+const project = (
+  rooms: readonly Room[],
+  connections: readonly Connection[] = [],
+  storeys = 2,
+): Project => ({
   id: 'project',
   name: 'test',
   storeys,
@@ -31,7 +40,7 @@ const project = (rooms: readonly Room[], edges: readonly Edge[] = [], storeys = 
   plot: { on: false, polygon: [], north: 0, street: [] },
   household: startingHousehold,
   rooms,
-  edges,
+  connections,
   apart: [],
   declined: [],
   actors: [],
@@ -40,45 +49,49 @@ const project = (rooms: readonly Room[], edges: readonly Edge[] = [], storeys = 
 
 const codes = (subject: Project): readonly string[] => checkProject(subject).map((v) => v.code)
 
-describe('an edge joins rooms that share a storey', () => {
+describe('a connection joins rooms that share a storey', () => {
   it('passes for two rooms on the same storey', () => {
-    expect(codes(project([room('a'), room('b')], [edge('e', 'a', 'b')]))).toEqual([])
+    expect(codes(project([room('a'), room('b')], [connection('e', 'a', 'b')]))).toEqual([])
   })
 
   it('passes for a stair and a room on a storey it spans', () => {
     const stair = room('s', { storeysSpanned: 2 })
     const upstairs = room('u', { storey: 1 })
-    expect(codes(project([stair, upstairs], [edge('e', 's', 'u', { storey: 1 })]))).toEqual([])
+    expect(codes(project([stair, upstairs], [connection('e', 's', 'u', { storey: 1 })]))).toEqual(
+      [],
+    )
   })
 
   it('fails when the two rooms stand on different storeys', () => {
     const upstairs = room('b', { storey: 1 })
-    expect(codes(project([room('a'), upstairs], [edge('e', 'a', 'b')]))).toEqual(['edge-storey'])
+    expect(codes(project([room('a'), upstairs], [connection('e', 'a', 'b')]))).toEqual([
+      'connection-storey',
+    ])
   })
 })
 
-describe('one edge per unordered pair per storey', () => {
+describe('one connection per unordered pair per storey', () => {
   it('passes for the same pair on two storeys they both stand on', () => {
     const rooms = [room('a', { storeysSpanned: 2 }), room('b', { storeysSpanned: 2 })]
-    const edges = [edge('e1', 'a', 'b'), edge('e2', 'b', 'a', { storey: 1 })]
-    expect(codes(project(rooms, edges))).toEqual([])
+    const connections = [connection('e1', 'a', 'b'), connection('e2', 'b', 'a', { storey: 1 })]
+    expect(codes(project(rooms, connections))).toEqual([])
   })
 
   it('fails for the same pair twice on one storey, in either order', () => {
-    const edges = [edge('e1', 'a', 'b'), edge('e2', 'b', 'a')]
-    expect(codes(project([room('a'), room('b')], edges))).toEqual(['edge-duplicate'])
+    const connections = [connection('e1', 'a', 'b'), connection('e2', 'b', 'a')]
+    expect(codes(project([room('a'), room('b')], connections))).toEqual(['connection-duplicate'])
   })
 })
 
-describe('edge endpoints', () => {
+describe('connection endpoints', () => {
   it('passes when an endpoint is the outside', () => {
-    expect(codes(project([room('a')], [edge('e', EXTERIOR, 'a')]))).toEqual([])
+    expect(codes(project([room('a')], [connection('e', EXTERIOR, 'a')]))).toEqual([])
   })
 
   it('fails when an endpoint names no room', () => {
-    expect(codes(project([room('a')], [edge('e', 'a', 'ghost')]))).toEqual([
-      'edge-endpoint-missing',
-      'edge-storey',
+    expect(codes(project([room('a')], [connection('e', 'a', 'ghost')]))).toEqual([
+      'connection-endpoint-missing',
+      'connection-storey',
     ])
   })
 })
@@ -95,22 +108,22 @@ describe('the outside is never a room', () => {
 
 describe('the main door', () => {
   it('passes for one main door from the outside', () => {
-    expect(codes(project([room('a')], [edge('e', EXTERIOR, 'a', { kind: 'main-door' })]))).toEqual(
-      [],
-    )
+    expect(
+      codes(project([room('a')], [connection('e', EXTERIOR, 'a', { kind: 'main-door' })])),
+    ).toEqual([])
   })
 
   it('fails for a second main door', () => {
-    const edges = [
-      edge('e1', EXTERIOR, 'a', { kind: 'main-door' }),
-      edge('e2', EXTERIOR, 'b', { kind: 'main-door' }),
+    const connections = [
+      connection('e1', EXTERIOR, 'a', { kind: 'main-door' }),
+      connection('e2', EXTERIOR, 'b', { kind: 'main-door' }),
     ]
-    expect(codes(project([room('a'), room('b')], edges))).toEqual(['main-door-count'])
+    expect(codes(project([room('a'), room('b')], connections))).toEqual(['main-door-count'])
   })
 
   it('fails for a main door between two rooms', () => {
     expect(
-      codes(project([room('a'), room('b')], [edge('e', 'a', 'b', { kind: 'main-door' })])),
+      codes(project([room('a'), room('b')], [connection('e', 'a', 'b', { kind: 'main-door' })])),
     ).toEqual(['main-door-outside'])
   })
 })
@@ -170,7 +183,7 @@ describe('a height for every storey', () => {
 
 it('says what is wrong in a sentence', () => {
   const violations = checkProject(
-    project([room('a'), room('b', { storey: 1 })], [edge('e', 'a', 'b')]),
+    project([room('a'), room('b', { storey: 1 })], [connection('e', 'a', 'b')]),
   )
   expect(violations[0]?.message).toContain('storey 0')
 })

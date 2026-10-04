@@ -1,9 +1,9 @@
 /**
- * Doors. A door is the drawing of an edge. Between two rooms it stands on the stretch of wall the two
+ * Doors. A door is the drawing of a connection. Between two rooms it stands on the stretch of wall the two
  * share on its `side` of the room that holds it, `along` of the way along it, or on the longest
  * stretch when that side shares none now; to the outside it stands on the outside wall of its room it
  * was placed on. Where the two rooms share no wall a door wide, or that wall no longer faces outside, it
- * is simply not drawn, and it comes back where it was when the rooms do. Nothing here reads an edge
+ * is simply not drawn, and it comes back where it was when the rooms do. Nothing here reads a connection
  * off the walls: the room across a wall is looked up only to ask which pair a new door would draw.
  */
 
@@ -263,7 +263,7 @@ export const doorSpot = (sheet: Sheet, storey: number, r: Room, d: Door): Place 
 
 /**
  * Which stretch of the wall two rooms share a point of the first room's frame stands on, and how far
- * along it, for a door saved as a point before doors stood on their edge's wall; the middle of the
+ * along it, for a door saved as a point before doors stood on their connection's wall; the middle of the
  * longest when the two share no wall now.
  */
 export function standingAt(r: Room, o: Room, at: Point): { side?: WallName; along: number } {
@@ -452,7 +452,7 @@ export function doorStanding(
 
 /**
  * A door slid by the hand: kept on its own stretch or its own wall, at the point nearest the
- * pointer. Refused off them, since a door never changes the edge it draws.
+ * pointer. Refused off them, since a door never changes the connection it draws.
  */
 export function doorSlid(
   sheet: Sheet,
@@ -559,7 +559,7 @@ export type Walk = {
 
 /**
  * The walk test: from outside, through every door drawn on the storey, which rooms can be reached
- * and in how many doors. A door joins the two ends of its edge; the wall it stands on joins nothing.
+ * and in how many doors. A door joins the two ends of its connection; the wall it stands on joins nothing.
  */
 export function walkTest(sheet: Sheet, storey: number): Walk | null {
   const placed = placedRooms(sheet, storey).filter((r) => !isOpen(r) && !r.fixed)

@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { seedPlan } from './plan'
 
 /**
- * The Openings tab, on the test plan and the edges its doors draw. Every case is one thing an
+ * The Openings tab, on the test plan and the connections its doors draw. Every case is one thing an
  * architect does to a door, and each one puts the sheet back with Ctrl+Z.
  */
 

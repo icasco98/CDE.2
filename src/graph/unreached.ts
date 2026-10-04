@@ -1,19 +1,19 @@
 import { EXTERIOR } from '../model'
 import { listedNames } from '../rulebook/words'
 import { reachedFromOutside } from './reach'
-import type { Check, CheckEdge, CheckRoom } from './types'
+import type { Check, CheckConnection, CheckRoom } from './types'
 
 const rule =
-  'Every room is reached from outside through the edges of the house, by the front door or by a room’s own door to the outside.'
+  'Every room is reached from outside through the connections of the house, by the front door or by a room’s own door to the outside.'
 const source = 'MODEL.md, findings from the graph: reachability from the entrances.'
 
 /** The rooms no entrance leads to, and a house with no front door said once. */
 export function unreached(
   rooms: readonly CheckRoom[],
-  edges: readonly CheckEdge[],
+  connections: readonly CheckConnection[],
 ): readonly Check[] {
   if (rooms.length === 0) return []
-  if (!edges.some((edge) => edge.a === EXTERIOR || edge.b === EXTERIOR))
+  if (!connections.some((connection) => connection.a === EXTERIOR || connection.b === EXTERIOR))
     return [
       {
         code: 'unreached',
@@ -24,15 +24,15 @@ export function unreached(
       },
     ]
   const found: Check[] = []
-  if (!edges.some((edge) => edge.kind === 'main-door'))
+  if (!connections.some((connection) => connection.kind === 'main-door'))
     found.push({
       code: 'unreached',
       rooms: [],
       sentence: 'There is no front door.',
       rule: 'A house has one main door, from the outside.',
-      source: 'MODEL.md, Edge: main-door, exactly one per project, from EXTERIOR.',
+      source: 'MODEL.md, Connection: main-door, exactly one per project, from EXTERIOR.',
     })
-  const reached = reachedFromOutside(edges)
+  const reached = reachedFromOutside(connections)
   const left = rooms.filter((room) => !reached.has(room.id))
   if (left.length === 0) return found
   const names = left.map((room) => room.name)

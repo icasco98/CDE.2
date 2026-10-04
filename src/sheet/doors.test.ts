@@ -35,7 +35,7 @@ const room = (over: Partial<Room> = {}): Room => ({
 /** A door out of the room through its north wall, at its middle. */
 const door = (over: Partial<Door> = {}): Door => ({
   id: 'd1',
-  edge: 'e1',
+  connection: 'e1',
   to: 'EXTERIOR',
   type: 'door',
   w: 0.9,
@@ -48,7 +48,7 @@ const door = (over: Partial<Door> = {}): Door => ({
 /** A door from A into B, halfway along the wall the two share. */
 const between = (over: Partial<Door> = {}): Door => ({
   id: 'd2',
-  edge: 'e2',
+  connection: 'e2',
   to: 'b',
   type: 'door',
   w: 0.9,
@@ -111,7 +111,7 @@ describe('where a door sits', () => {
   })
 })
 
-describe('a door is the drawing of its edge', () => {
+describe('a door is the drawing of its connection', () => {
   /*
    * A is 3 × 3 at (6, 6) and B 3 × 3 at (9, 7): they share the wall x = 9 from y 7 to 9, 2 m, so a
    * door halfway along it stands at (9, 8).
@@ -233,7 +233,7 @@ describe('a door on one of two walls the rooms share', () => {
   })
 })
 
-describe('several doors on one edge', () => {
+describe('several doors on one connection', () => {
   /** A and B share the wall x = 9 from y 6 to 9. */
   const pair = (doors: Door[]) =>
     sheetOf(
@@ -244,7 +244,7 @@ describe('several doors on one edge', () => {
       { snapDist: 0, grid: 0 },
     )
 
-  it('draws both doors of an edge on the one wall', () => {
+  it('draws both doors of a connection on the one wall', () => {
     const sheet = pair([between({ id: 'd2', along: 0.2 }), between({ id: 'd3', along: 0.8 })])
     expect(drawnDoors(sheet, 0).map((each) => each.door.id)).toEqual(['d2', 'd3'])
   })

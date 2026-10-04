@@ -20,7 +20,7 @@ describe('the kinds', () => {
   it('knows a street door, a hinge and a swing', () => {
     const d = {
       id: 'd',
-      edge: 'e',
+      connection: 'e',
       to: 'EXTERIOR',
       type: 'street' as const,
       w: 1.2,

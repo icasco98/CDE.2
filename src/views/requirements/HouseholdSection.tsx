@@ -46,7 +46,7 @@ export function HouseholdSection({ project }: { project: Project }) {
         })
         if (!added.ok) return added
       }
-      // The rulebook's default connections come with the program, as edges: the designer removes
+      // The rulebook's default connections come with the program, made in the project: the designer removes
       // what this house does not want rather than accepting one offer at a time.
       return connectDefaults(session)
     })

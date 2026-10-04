@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { EXTERIOR } from '../model'
-import { arrange, type ArrangeEdge, type ArrangeRoom } from './arrange'
+import { arrange, type ArrangeConnection, type ArrangeRoom } from './arrange'
 import { cloudsOf } from './clouds'
 
 /*
@@ -30,20 +30,20 @@ const rooms: readonly ArrangeRoom[] = Array.from({ length: 40 }, (_, i) => ({
   targetArea: 8 + (i % 7) * 5,
 }))
 
-const edges: readonly ArrangeEdge[] = [
+const connections: readonly ArrangeConnection[] = [
   { a: EXTERIOR, b: 'room1', storey: 1 },
   ...rooms.slice(1).map((each, i) => ({ a: rooms[i]!.id, b: each.id, storey: each.storey })),
   ...rooms.slice(3).map((each, i) => ({ a: rooms[i]!.id, b: each.id, storey: each.storey })),
 ]
 
 it('arranges forty rooms on three storeys in under 16 ms', () => {
-  const took = milliseconds(() => arrange(rooms, edges, 3))
+  const took = milliseconds(() => arrange(rooms, connections, 3))
   console.info(`arrange, 40 rooms: ${took.toFixed(3)} ms`)
   expect(took).toBeLessThan(16)
 })
 
 it('draws the zone clouds round forty rooms in under 4 ms', () => {
-  const { spots } = arrange(rooms, edges, 3)
+  const { spots } = arrange(rooms, connections, 3)
   const categories = ['reception', 'shared', 'private', 'service', 'open']
   const categoryOf = (id: string) => categories[Number(id.slice(4)) % categories.length]
   const took = milliseconds(() => cloudsOf(spots, categoryOf))

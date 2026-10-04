@@ -24,7 +24,11 @@ export type BriefRoom = {
   readonly targetArea: number
 }
 
-export type BriefEdge = { readonly a: Endpoint; readonly b: Endpoint; readonly storey: number }
+export type BriefConnection = {
+  readonly a: Endpoint
+  readonly b: Endpoint
+  readonly storey: number
+}
 
 export type Finding = {
   readonly code: 'crossing' | 'wall' | 'kerb' | 'run'
@@ -88,16 +92,16 @@ function radiusOf(area: number): number {
 /** The rooms of a storey and the links between two of them, as the planarity test reads them. */
 function graphOn(
   rooms: readonly BriefRoom[],
-  edges: readonly BriefEdge[],
+  connections: readonly BriefConnection[],
   storey: number,
 ): { readonly nodes: string[]; readonly pairs: Pair[] } {
   const here = rooms.filter((room) => standsOn(room, storey))
   const known = new Set(here.map((room) => room.id))
   const pairs: Pair[] = []
-  for (const edge of edges) {
-    if (edge.storey !== storey) continue
-    if (!known.has(edge.a) || !known.has(edge.b)) continue
-    pairs.push([edge.a, edge.b])
+  for (const connection of connections) {
+    if (connection.storey !== storey) continue
+    if (!known.has(connection.a) || !known.has(connection.b)) continue
+    pairs.push([connection.a, connection.b])
   }
   return { nodes: here.map((room) => room.id), pairs }
 }
@@ -109,7 +113,7 @@ function graphOn(
  */
 export function feasibility(
   rooms: readonly BriefRoom[],
-  edges: readonly BriefEdge[],
+  connections: readonly BriefConnection[],
   plot: PlotShape,
   storeys: number,
 ): readonly Finding[] {
@@ -118,7 +122,7 @@ export function feasibility(
   const sides = sidesOf(plot)
 
   for (let storey = 0; storey < levels; storey++) {
-    const { nodes, pairs } = graphOn(rooms, edges, storey)
+    const { nodes, pairs } = graphOn(rooms, connections, storey)
     if (nodes.length > 0 && !isPlanar(nodes, pairs))
       found.push({
         code: 'crossing',
@@ -130,10 +134,10 @@ export function feasibility(
       if (!standsOn(room, storey) || room.storey !== storey) continue
       const held = linksHeld(room)
       if (held === undefined) continue
-      const links = edges.filter(
-        (edge) =>
-          (edge.a === room.id || edge.b === room.id) &&
-          (edge.a === EXTERIOR || edge.b === EXTERIOR || edge.storey === storey),
+      const links = connections.filter(
+        (connection) =>
+          (connection.a === room.id || connection.b === room.id) &&
+          (connection.a === EXTERIOR || connection.b === EXTERIOR || connection.storey === storey),
       ).length
       if (links <= held) continue
       found.push({

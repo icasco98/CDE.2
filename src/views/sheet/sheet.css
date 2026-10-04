@@ -1520,7 +1520,7 @@ body:has(main.stage-sheet) {
 }
 
 /* A door whose wall moved away: the ring says where it was left, to put back or remove. */
-/* Check: an edge not yet ready or met, dashed from the room under the hand, bold from the one selected. */
+/* Check: a connection not yet ready or met, dashed from the room under the hand, bold from the one selected. */
 .sheet-stage .check-line {
   stroke: var(--accent);
   stroke-width: 0.06;

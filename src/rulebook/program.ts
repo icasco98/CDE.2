@@ -128,8 +128,8 @@ export function defaultProgram(
 /** A room as the companion rule reads one: which room it is and what kind it is. */
 export type CompanionRoom = { readonly id: string; readonly type: string }
 
-/** An edge as the companion rule reads one: the pair it joins, whatever kind of opening it is. */
-export type CompanionEdge = { readonly a: string; readonly b: string }
+/** A connection as the companion rule reads one: the pair it joins, whatever kind of opening it is. */
+export type CompanionConnection = { readonly a: string; readonly b: string }
 
 /**
  * Which room each auxiliary room belongs to. A companion is recognised by the company it keeps
@@ -139,15 +139,15 @@ export type CompanionEdge = { readonly a: string; readonly b: string }
  */
 export function companionOwners(
   rooms: readonly CompanionRoom[],
-  edges: readonly CompanionEdge[],
+  connections: readonly CompanionConnection[],
 ): ReadonlyMap<string, string> {
   const known = new Set(rooms.map((room) => room.id))
   const joined = new Map<string, Set<string>>()
-  for (const edge of edges) {
-    if (!known.has(edge.a) || !known.has(edge.b)) continue
+  for (const connection of connections) {
+    if (!known.has(connection.a) || !known.has(connection.b)) continue
     for (const [one, other] of [
-      [edge.a, edge.b],
-      [edge.b, edge.a],
+      [connection.a, connection.b],
+      [connection.b, connection.a],
     ] as const) {
       const to = joined.get(one) ?? new Set<string>()
       to.add(other)
@@ -168,9 +168,9 @@ export function companionOwners(
 /** The auxiliary rooms one room owns: its ensuite, its dressing room, its own WC. */
 export function companionsOf(
   rooms: readonly CompanionRoom[],
-  edges: readonly CompanionEdge[],
+  connections: readonly CompanionConnection[],
   id: string,
 ): readonly string[] {
-  const owners = companionOwners(rooms, edges)
+  const owners = companionOwners(rooms, connections)
   return [...owners].filter(([, owner]) => owner === id).map(([companion]) => companion)
 }

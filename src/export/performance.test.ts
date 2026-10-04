@@ -14,7 +14,7 @@ function house(): Sheet {
       const last = index % 5 === 4
       const door: Door = {
         id: `d-${storey}-${index}`,
-        edge: `e-${storey}-${index}`,
+        connection: `e-${storey}-${index}`,
         to: last ? 'EXTERIOR' : `room-${storey}-${index + 1}`,
         type: 'door',
         w: 0.9,

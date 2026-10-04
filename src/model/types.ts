@@ -3,9 +3,9 @@ import type { Footprint, Point, Polygon } from '../geometry/types'
 export const EXTERIOR = 'EXTERIOR'
 
 /** The document format; a bump needs a migration in persistence.ts. */
-export const PROJECT_VERSION = 10
+export const PROJECT_VERSION = 11
 
-export type EdgeKind = 'door' | 'open' | 'main-door'
+export type ConnectionKind = 'door' | 'open' | 'main-door'
 
 /** A room id, or the singleton outside. */
 export type Endpoint = string
@@ -50,18 +50,18 @@ export type Room = {
   readonly pinned: boolean
 }
 
-export type Edge = {
+export type Connection = {
   readonly id: string
   readonly a: Endpoint
   readonly b: Endpoint
-  readonly kind: EdgeKind
+  readonly kind: ConnectionKind
   readonly storey: number
   readonly hint?: WallHint
 }
 
 /**
- * Two rooms the program wants apart: no edge between them, and neither reached only through the
- * other. It is not an edge and is never drawn as a door; it warns and refuses nothing.
+ * Two rooms the program wants apart: no connection between them, and neither reached only through the
+ * other. It is not a connection and is never drawn as a door; it warns and refuses nothing.
  */
 export type Apart = {
   readonly id: string
@@ -95,7 +95,7 @@ export type Project = {
   readonly plot: Plot
   readonly household: Household
   readonly rooms: readonly Room[]
-  readonly edges: readonly Edge[]
+  readonly connections: readonly Connection[]
   readonly apart: readonly Apart[]
   readonly declined: readonly Declined[]
   readonly actors: readonly Actor[]

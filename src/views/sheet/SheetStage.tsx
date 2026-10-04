@@ -95,7 +95,7 @@ import {
   type Sheet,
   type Side4,
 } from '../../sheet'
-import { EXTERIOR, type EdgeKind, type Result as ModelResult } from '../../model'
+import { EXTERIOR, type ConnectionKind, type Result as ModelResult } from '../../model'
 import { noStair } from '../../graph/stairs'
 import { onlyThrough } from '../../graph/apart'
 import { session } from '../../app/session'
@@ -202,7 +202,13 @@ const aside = createAside()
 /** The sheet as the project in the session asks for it, read afresh. */
 const followSession = (sheet: Sheet): Sheet => {
   const project = session.getState()
-  return followProject(sheet, programOf(project.rooms), plotOf(project.plot), project.edges, aside)
+  return followProject(
+    sheet,
+    programOf(project.rooms),
+    plotOf(project.plot),
+    project.connections,
+    aside,
+  )
 }
 
 type Menu =
@@ -249,7 +255,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
   const [doc, setDoc] = useState<Doc>(() => ({
     // Nothing saved yet: the plot opens empty with the project's program waiting, and a project
     // with no program opens on an empty plot with nothing to place.
-    sheet: followSession(localSheet(project.edges) ?? sheetOf([])),
+    sheet: followSession(localSheet(project.connections) ?? sheetOf([])),
     history: newHistory(),
   }))
   const [memory, setMemory] = useState<Memory>(() => localMemory())
@@ -280,7 +286,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
   const [lit, setLit] = useState<string | null>(null)
   const [drawMenuFor, setDrawMenuFor] = useState<string | null>(null)
   const [specState, setSpecState] = useState('')
-  // Show connections: the project's edges drawn on the sheet, off until asked for.
+  // Show connections: the project's connections drawn on the sheet, off until asked for.
   const [checking, setChecking] = useState(false)
   const [offer, setOffer] = useState<Offer | null>(null)
   const links = useRef(createLinks(session))
@@ -316,7 +322,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
     }
     let live = true
     void Promise.all([
-      storedSheet(store, () => session.getState().edges),
+      storedSheet(store, () => session.getState().connections),
       storedMemory(store),
       storedSettings(store),
       storedSpec(store),
@@ -347,11 +353,11 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
   // leaves the sheet, set aside for its undo.
   useEffect(() => {
     const held = docRef.current.sheet
-    const next = followProject(held, program, plot, project.edges, aside)
+    const next = followProject(held, program, plot, project.connections, aside)
     if (next === held) return
     docRef.current = { ...docRef.current, sheet: next }
     setDoc(docRef.current)
-  }, [program, plot, project.edges])
+  }, [program, plot, project.connections])
 
   useEffect(() => {
     if (!keeping) return
@@ -423,18 +429,21 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
   const selected = view.rooms.filter((r) => selection.includes(r.id))
 
   // Check reads the project's graph against the sheet: once per change, and the lines once per hover.
-  const roomEdges = useMemo(
-    () => project.edges.filter((edge) => edge.a !== EXTERIOR && edge.b !== EXTERIOR),
-    [project.edges],
+  const roomConnections = useMemo(
+    () =>
+      project.connections.filter(
+        (connection) => connection.a !== EXTERIOR && connection.b !== EXTERIOR,
+      ),
+    [project.connections],
   )
   const through = useMemo(
     () =>
       new Set(
         project.apart.flatMap((pair) =>
-          onlyThrough(pair, project.edges) ? [pairKey(pair.a, pair.b)] : [],
+          onlyThrough(pair, project.connections) ? [pairKey(pair.a, pair.b)] : [],
         ),
       ),
-    [project.apart, project.edges],
+    [project.apart, project.connections],
   )
   const checked = useMemo(
     () =>
@@ -442,11 +451,11 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
         ? checkRead(
             sheet,
             STOREY,
-            { edges: roomEdges, apart: project.apart, through },
+            { connections: roomConnections, apart: project.apart, through },
             openingsOn ? 'openings' : 'zoning',
           )
         : null,
-    [checking, sheet, STOREY, roomEdges, project.apart, through, openingsOn],
+    [checking, sheet, STOREY, roomConnections, project.apart, through, openingsOn],
   )
   const focusLines = useMemo(() => {
     if (!checked) return null
@@ -695,9 +704,9 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
       setFlash('Only a wall shared with a neighbour can be opened.')
       return
     }
-    const edge = edgeFor(pair[0], pair[1])
-    // A door is the drawing of an edge: between two rooms with none it asks before it is placed.
-    if (!edge) {
+    const connection = connectionFor(pair[0], pair[1])
+    // A door is the drawing of a connection: between two rooms with none it asks before it is placed.
+    if (!connection) {
       setOffer({
         x,
         y,
@@ -714,24 +723,27 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
       type: armed,
       width: doorWidth,
       storey: STOREY,
-      edge,
+      connection,
       to: pair[1],
     })
     if (apply(change)) setDoorSel(newDoors(before, change.sheet).at(-1) ?? null)
   }
 
-  /** The project's edge between two ends, the one on this storey first: the edge a door would draw. */
-  const edgeFor = (a: string, b: string): string | null => {
+  /** The project's connection between two ends, the one on this storey first: the connection a door would draw. */
+  const connectionFor = (a: string, b: string): string | null => {
     const between = session
       .getState()
-      .edges.filter((edge) => (edge.a === a && edge.b === b) || (edge.a === b && edge.b === a))
-    return (between.find((edge) => edge.storey === STOREY) ?? between[0])?.id ?? null
+      .connections.filter(
+        (connection) =>
+          (connection.a === a && connection.b === b) || (connection.a === b && connection.b === a),
+      )
+    return (between.find((connection) => connection.storey === STOREY) ?? between[0])?.id ?? null
   }
 
   /**
    * The pair a door put here would draw, read once as it is placed: the room whose wall it is on and
-   * the room across, or the outside. Reading the wall only asks which edge is meant; the door then
-   * draws that edge or asks for it. Nothing for a wall no door may take.
+   * the room across, or the outside. Reading the wall only asks which connection is meant; the door then
+   * draws that connection or asks for it. Nothing for a wall no door may take.
    */
   const pairAt = (sheet: Sheet, x: number, y: number, type: DoorType): [string, string] | null => {
     const hit = doorAt(x, y, type === 'open' ? 0.6 : doorWidth, sheet, STOREY)
@@ -742,12 +754,12 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
     return known(hit.room.id) && known(across) ? [hit.room.id, across] : null
   }
 
-  /** Yes to the door's question: the edge through the project's connect, and the door that draws it. */
+  /** Yes to the door's question: the connection through the project's connect, and the door that draws it. */
   const acceptOffer = () => {
     const held = offer
     setOffer(null)
     if (!held) return
-    const kind: EdgeKind = held.type === 'opening' || held.type === 'open' ? 'open' : 'door'
+    const kind: ConnectionKind = held.type === 'opening' || held.type === 'open' ? 'open' : 'door'
     const made = session.actions.connect({ a: held.pair[0], b: held.pair[1], kind })
     if (!made.ok) {
       refuse(made)
@@ -760,15 +772,15 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
       type: held.type,
       width: held.width,
       storey: STOREY,
-      edge: made.value,
+      connection: made.value,
       to: held.pair[1],
     })
     if (!apply(change)) {
       session.actions.disconnect(made.value)
       return
     }
-    links.current.edge(docRef.current.history.past.length, {
-      edge: made.value,
+    links.current.connection(docRef.current.history.past.length, {
+      connection: made.value,
       a: held.pair[0],
       b: held.pair[1],
       kind,
@@ -2170,7 +2182,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
           memory={memory}
           onMemory={setMemory}
           sample={runtime.sample}
-          edgeBetween={edgeFor}
+          connectionBetween={connectionFor}
           ready={runtime.ready}
           onBegin={agentBegin}
           onEnd={agentEnd}

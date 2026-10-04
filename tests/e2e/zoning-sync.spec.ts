@@ -95,7 +95,7 @@ function twoWalls() {
       targetArea: r.target,
       pinned: false,
     })),
-    edges: [{ id: 'e-k-dn', a: 'k', b: 'dn', kind: 'door', storey: 0 }],
+    connections: [{ id: 'e-k-dn', a: 'k', b: 'dn', kind: 'door', storey: 0 }],
     apart: [],
     declined: [],
     actors: [],

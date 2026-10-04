@@ -22,7 +22,7 @@ function standsOn(project: Project, endpoint: Endpoint): readonly number[] {
   return room ? occupiedStoreys(room) : []
 }
 
-/** Whether an edge could still be held: its two ends have a storey in common to be joined on. */
+/** Whether a connection could still be held: its two ends have a storey in common to be joined on. */
 function meet(project: Project, a: Endpoint, b: Endpoint): boolean {
   const onB = standsOn(project, b)
   return standsOn(project, a).some((storey) => onB.includes(storey))
@@ -61,15 +61,17 @@ export function sendRoomsToStorey(
     const storeyOfMoving = new Map<string, number>()
     for (const move of moves) {
       storeyOfMoving.set(move.id, move.storey)
-      for (const companion of companionsOf(project.rooms, project.edges, move.id))
+      for (const companion of companionsOf(project.rooms, project.connections, move.id))
         if (!storeyOfMoving.has(companion) && carries(companion))
           storeyOfMoving.set(companion, move.storey)
     }
     const carried = new Set(storeyOfMoving.keys())
     // Written down before they are cut: what can stand on the new storey is joined again after.
-    const held = project.edges.filter((edge) => carried.has(edge.a) || carried.has(edge.b))
-    for (const edge of held) {
-      const cut = store.actions.disconnect(edge.id)
+    const held = project.connections.filter(
+      (connection) => carried.has(connection.a) || carried.has(connection.b),
+    )
+    for (const connection of held) {
+      const cut = store.actions.disconnect(connection.id)
       if (!cut.ok) return cut
     }
     for (const [each, storey] of storeyOfMoving) {
@@ -81,18 +83,18 @@ export function sendRoomsToStorey(
       endpoint === EXTERIOR
         ? 'the street'
         : (after.rooms.find((each) => each.id === endpoint)?.name ?? 'a room')
-    for (const edge of held) {
-      if (!meet(after, edge.a, edge.b)) {
-        const near = carried.has(edge.a) ? edge.a : edge.b
-        const far = carried.has(edge.a) ? edge.b : edge.a
+    for (const connection of held) {
+      if (!meet(after, connection.a, connection.b)) {
+        const near = carried.has(connection.a) ? connection.a : connection.b
+        const far = carried.has(connection.a) ? connection.b : connection.a
         letGo.push(`${nameOf(near)}: its door to ${nameOf(far)} was let go.`)
         continue
       }
       const made = store.actions.connect({
-        a: edge.a,
-        b: edge.b,
-        kind: edge.kind,
-        ...(edge.hint === undefined ? {} : { hint: edge.hint }),
+        a: connection.a,
+        b: connection.b,
+        kind: connection.kind,
+        ...(connection.hint === undefined ? {} : { hint: connection.hint }),
       })
       if (!made.ok) return made
     }

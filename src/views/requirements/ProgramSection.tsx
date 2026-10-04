@@ -33,7 +33,7 @@ export function ProgramSection({ project }: { project: Project }) {
   const total = fits.reduce((sum, fit) => sum + fit.needed, 0)
   // What this program asks of geometry that geometry cannot give; a finding says what to change
   // and waits.
-  const findings = feasibility(project.rooms, project.edges, project.plot, project.storeys)
+  const findings = feasibility(project.rooms, project.connections, project.plot, project.storeys)
 
   return (
     <Section title="Program">

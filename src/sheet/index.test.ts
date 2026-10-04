@@ -158,7 +158,7 @@ const surface = [
   'report',
   'sideOver',
   'sideUsed',
-  // how two rooms stand, which Check reads for an edge ready to draw
+  // how two rooms stand, which Check reads for a connection ready to draw
   'meetingOf',
   // the kinds
   'DOOR',

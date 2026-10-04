@@ -1,5 +1,5 @@
 /**
- * What Check draws over the sheet: a dashed line from a room to each room it has an edge with that
+ * What Check draws over the sheet: a dashed line from a room to each room it has a connection with that
  * is not yet ready or met, bold from the selected room and faint from the one under the pointer, and
  * a red cross on every door that joins a pair kept apart.
  */

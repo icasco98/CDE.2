@@ -1,4 +1,4 @@
-import { EXTERIOR, type EdgeKind, type Endpoint } from '../model'
+import { EXTERIOR, type ConnectionKind, type Endpoint } from '../model'
 import { defaultConnections, type DefaultConnection } from './defaultConnections'
 
 /** A room as the table reads one: its kind and the storeys it stands on, never its bubble or footprint. */
@@ -9,11 +9,11 @@ export type ConnectionRoom = {
   readonly storeysSpanned: number
 }
 
-/** An edge as the table reads one: the pair it joins, on which storey, and whether it is the front door. */
-export type ConnectionEdge = {
+/** A connection as the table reads one: the pair it joins, on which storey, and whether it is the front door. */
+export type HeldConnection = {
   readonly a: Endpoint
   readonly b: Endpoint
-  readonly kind: EdgeKind
+  readonly kind: ConnectionKind
   readonly storey: number
 }
 
@@ -21,7 +21,7 @@ export type ConnectionEdge = {
 export type ImpliedConnection = {
   readonly a: Endpoint
   readonly b: Endpoint
-  readonly kind: EdgeKind
+  readonly kind: ConnectionKind
   readonly storey: number
   readonly rowId: string
 }
@@ -32,7 +32,7 @@ function occupiedStoreys(room: ConnectionRoom): readonly number[] {
 }
 
 /**
- * The storey the edge would land on, or nothing when the two never meet. `undefined` stands for the
+ * The storey the connection would land on, or nothing when the two never meet. `undefined` stands for the
  * outside, which is on every storey, so it meets a room on the lowest one that room stands on.
  */
 function sharedStorey(
@@ -56,10 +56,12 @@ function pairKey(a: Endpoint, b: Endpoint, storey: number): string {
  */
 export function impliedConnections(
   rooms: readonly ConnectionRoom[],
-  edges: readonly ConnectionEdge[],
+  connections: readonly HeldConnection[],
 ): readonly ImpliedConnection[] {
-  const held = new Set(edges.map((edge) => pairKey(edge.a, edge.b, edge.storey)))
-  let frontDoor = edges.some((edge) => edge.kind === 'main-door')
+  const held = new Set(
+    connections.map((connection) => pairKey(connection.a, connection.b, connection.storey)),
+  )
+  let frontDoor = connections.some((connection) => connection.kind === 'main-door')
   /** Rooms already taken as the served side of a one-to-one row; a room is served by one row only. */
   const served = new Set<string>()
   const implied: ImpliedConnection[] = []

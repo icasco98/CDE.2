@@ -49,7 +49,7 @@ const points = (p: Poly) => p.map((v) => `${p4(v[0])},${p4(v[1])}`).join(' ')
 
 const preview = (type: Door['type'], w: number): Door => ({
   id: 'preview',
-  edge: 'preview',
+  connection: 'preview',
   to: OUTSIDE,
   type,
   w,

@@ -1,5 +1,5 @@
 /**
- * Show connections' faint lines from a room on the sheet to the rooms it has an edge with that still wait in
+ * Show connections' faint lines from a room on the sheet to the rooms it has a connection with that still wait in
  * the program: the program is beside the sheet, not on it, so these are drawn over both in screen
  * pixels, measured after every render and again whenever anything under them scrolls or resizes.
  */

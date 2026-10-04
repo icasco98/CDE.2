@@ -3,7 +3,7 @@ import {
   centreOf,
   connect,
   drag,
-  edgeBetween,
+  connectionBetween,
   linkedPairs,
   openVilla,
   roomNamed,
@@ -101,8 +101,10 @@ test('at three times closer a drag from the ring connects, a drag nudges, and a 
   await drag(page, family, { x: family.x - 30, y: family.y })
   expect((before - (await across())) * (await pixels(page))).toBeCloseTo(30, 0)
 
-  const edge = await edgeBetween(page, 'Kitchen', 'Family Living')
-  const grip = (await page.locator(`[data-edge="${edge!.id}"] .link-grip`).boundingBox())!
+  const connection = await connectionBetween(page, 'Kitchen', 'Family Living')
+  const grip = (await page
+    .locator(`[data-connection="${connection!.id}"] .link-grip`)
+    .boundingBox())!
   await page.mouse.click(grip.x + grip.width / 2, grip.y + grip.height / 2)
   await expect(page.getByRole('region', { name: 'Connection' })).toContainText(
     'Kitchen ↔ Family Living',

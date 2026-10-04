@@ -51,6 +51,19 @@ function declinedNotWeighed(document: Document): Document {
   return kept
 }
 
+/** A field moved from its old name to its new one; a document already carrying the new name keeps it. */
+function renamed(document: Document, from: string, to: string): Document {
+  if (!(from in document)) return document
+  const kept: Document = { [to]: document[from], ...document }
+  delete kept[from]
+  return kept
+}
+
+/** Version 10 named the program's spaces and the access between them as the model then did. */
+function zonesAndConnections(document: Document): Document {
+  return renamed(document, 'edges', 'connections')
+}
+
 /** From the version keyed to the next one. */
 const migrations: ReadonlyMap<number, Migration> = new Map<number, Migration>([
   [1, (document) => ({ household: startingHousehold, ...document })],
@@ -64,6 +77,7 @@ const migrations: ReadonlyMap<number, Migration> = new Map<number, Migration>([
   [7, bubblesOffThePlot],
   [8, (document) => ({ apart: [], ...document })],
   [9, declinedNotWeighed],
+  [10, zonesAndConnections],
 ])
 
 export function serialize(project: Project): string {

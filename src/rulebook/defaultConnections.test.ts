@@ -94,7 +94,7 @@ describe('the source a person is shown', () => {
     expect(connectionSource('diwaniya', EXTERIOR)?.source).toContain('its own street door')
   })
 
-  it('stays the row when the edge has been made an opening', () => {
+  it('stays the row when the connection has been made an opening', () => {
     expect(connectionSource('dining-room', 'kitchen')?.id).toBe('D12')
   })
 

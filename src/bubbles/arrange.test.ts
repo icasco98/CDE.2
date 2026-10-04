@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EXTERIOR } from '../model'
-import { arrange, type ArrangeEdge, type ArrangeRoom } from './arrange'
+import { arrange, type ArrangeConnection, type ArrangeRoom } from './arrange'
 
 const room = (
   id: string,
@@ -24,7 +24,7 @@ const rooms: readonly ArrangeRoom[] = [
   room('bedroom', 'private', 1),
 ]
 
-const edges: readonly ArrangeEdge[] = [
+const connections: readonly ArrangeConnection[] = [
   { a: EXTERIOR, b: 'entry', storey: 0 },
   { a: 'diwaniya', b: 'wc', storey: 0 },
 ]
@@ -36,7 +36,7 @@ const at = (arranged: ReturnType<typeof arrange>, id: string, storey = 0) => {
 
 describe('the bubble diagram arranged by storey and by tier', () => {
   it('stands every room where the reference case puts it', () => {
-    const arranged = arrange(rooms, edges, 2)
+    const arranged = arrange(rooms, connections, 2)
     // The private and semi-public rows are 12 + 2 × 26 + 60 = 124 deep, the public row, round the
     // diwaniya's 52, 12 + 104 + 60 = 176; a row's circles stand 12 plus its largest radius down.
     // Ground: the public band at the bottom holds three, the WC behind the diwaniya it serves.
@@ -68,7 +68,7 @@ describe('the bubble diagram arranged by storey and by tier', () => {
   })
 
   it('draws a stair once in every column it spans and nowhere else', () => {
-    const arranged = arrange(rooms, edges, 2)
+    const arranged = arrange(rooms, connections, 2)
     expect(arranged.spots.filter((spot) => spot.id === 'stair').map((spot) => spot.storey)).toEqual(
       [0, 1],
     )
@@ -94,8 +94,8 @@ describe('the bubble diagram arranged by storey and by tier', () => {
     const nudged = rooms.map((each) =>
       each.id === 'diwaniya' ? { ...each, bubble: { x: 10, y: -5 } } : each,
     )
-    const plain = arrange(rooms, edges, 2)
-    const moved = arrange(nudged, edges, 2)
+    const plain = arrange(rooms, connections, 2)
+    const moved = arrange(nudged, connections, 2)
     expect(at(moved, 'diwaniya')).toEqual([250, 367])
     const others = (arranged: typeof plain) =>
       arranged.spots.filter((spot) => spot.id !== 'diwaniya')
@@ -103,7 +103,7 @@ describe('the bubble diagram arranged by storey and by tier', () => {
   })
 
   it('is the same diagram twice for the same program', () => {
-    expect(arrange(rooms, edges, 2)).toEqual(arrange(rooms, edges, 2))
+    expect(arrange(rooms, connections, 2)).toEqual(arrange(rooms, connections, 2))
   })
 
   it('wraps a busy band onto a second line and deepens it on every column', () => {

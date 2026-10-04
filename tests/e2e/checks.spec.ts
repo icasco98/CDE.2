@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { connect, edgeBetween, openVilla, saved } from './bubbles'
+import { connect, connectionBetween, openVilla, saved } from './bubbles'
 
 /*
  * The checks beside the diagram, read again on every edit: each warning says what is wrong, and
@@ -19,15 +19,17 @@ test('the diwaniya is reached by its own street door, and named once that door g
   const street = async () => {
     const project = await saved(page)
     const diwaniya = project.rooms.find((room) => room.name === 'Diwaniya')?.id
-    return project.edges.find(
-      (edge) =>
-        (edge.a === 'EXTERIOR' && edge.b === diwaniya) ||
-        (edge.b === 'EXTERIOR' && edge.a === diwaniya),
+    return project.connections.find(
+      (connection) =>
+        (connection.a === 'EXTERIOR' && connection.b === diwaniya) ||
+        (connection.b === 'EXTERIOR' && connection.a === diwaniya),
     )
   }
   await expect.poll(async () => (await street())?.id).toBeTruthy()
-  const edge = await street()
-  await page.locator(`[data-edge="${edge!.id}"] .link-grip`).dispatchEvent('pointerdown')
+  const connection = await street()
+  await page
+    .locator(`[data-connection="${connection!.id}"] .link-grip`)
+    .dispatchEvent('pointerdown')
   await page.locator('svg.bubbles-sheet').dispatchEvent('pointerup')
   await page.getByRole('button', { name: 'Delete connection' }).click()
   const unreached = checks(page).locator('[data-check="unreached"]')
@@ -48,7 +50,7 @@ test('two storeys and no stair: the checks say so', async ({ page }) => {
   )
 })
 
-test('a private room joined to a public one is a tier skip until the edge goes', async ({
+test('a private room joined to a public one is a tier skip until the connection goes', async ({
   page,
 }) => {
   await openVilla(page)
@@ -61,14 +63,16 @@ test('a private room joined to a public one is a tier skip until the edge goes',
   await expect(checks(page).locator('[data-check="tier-skip"]')).toHaveCount(0)
 })
 
-test('keeping a connected pair apart warns of the edge between them at once', async ({ page }) => {
+test('keeping a connected pair apart warns of the connection between them at once', async ({
+  page,
+}) => {
   await openVilla(page)
   await expect
-    .poll(async () => (await edgeBetween(page, 'Kitchen', 'Dining Room'))?.id)
+    .poll(async () => (await connectionBetween(page, 'Kitchen', 'Dining Room'))?.id)
     .toBeTruthy()
   await makes(page, 'Keep apart')
   await connect(page, 'Kitchen', 'Dining Room')
   await expect(checks(page).locator('[data-check="apart-joined"]')).toHaveText(
-    /Kitchen and Dining Room are kept apart, and an edge joins them\./,
+    /Kitchen and Dining Room are kept apart, and a connection joins them\./,
   )
 })

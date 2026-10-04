@@ -1,6 +1,6 @@
 /**
  * A door held by the hand: a press selects it and a drag slides it along the wall it stands on. It
- * never leaves that wall, since a door draws one edge. The gesture holds no door: it says where the
+ * never leaves that wall, since a door draws one connection. The gesture holds no door: it says where the
  * door would land, and the drop is one action.
  */
 

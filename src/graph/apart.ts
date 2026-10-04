@@ -1,5 +1,5 @@
 import { reachedFromOutside } from './reach'
-import type { Check, CheckEdge, CheckPair, CheckRoom } from './types'
+import type { Check, CheckConnection, CheckPair, CheckRoom } from './types'
 
 const source = 'The keep-apart pairs of this project (decision 26).'
 
@@ -10,44 +10,46 @@ const source = 'The keep-apart pairs of this project (decision 26).'
  */
 export function onlyThrough(
   pair: CheckPair,
-  edges: readonly CheckEdge[],
-  reached: ReadonlySet<string> = reachedFromOutside(edges),
+  connections: readonly CheckConnection[],
+  reached: ReadonlySet<string> = reachedFromOutside(connections),
 ): { readonly room: string; readonly through: string } | null {
   for (const [room, through] of [
     [pair.a, pair.b],
     [pair.b, pair.a],
   ] as const) {
     if (!reached.has(room) || !reached.has(through)) continue
-    if (!reachedFromOutside(edges, through).has(room)) return { room, through }
+    if (!reachedFromOutside(connections, through).has(room)) return { room, through }
   }
   return null
 }
 
-const joined = (pair: CheckPair, edges: readonly CheckEdge[]): boolean =>
-  edges.some(
-    (edge) => (edge.a === pair.a && edge.b === pair.b) || (edge.a === pair.b && edge.b === pair.a),
+const joined = (pair: CheckPair, connections: readonly CheckConnection[]): boolean =>
+  connections.some(
+    (connection) =>
+      (connection.a === pair.a && connection.b === pair.b) ||
+      (connection.a === pair.b && connection.b === pair.a),
   )
 
-/** Both ways a keep-apart pair is broken: an edge between the two, and one reached only through the other. */
+/** Both ways a keep-apart pair is broken: a connection between the two, and one reached only through the other. */
 export function apartBroken(
   rooms: readonly CheckRoom[],
-  edges: readonly CheckEdge[],
+  connections: readonly CheckConnection[],
   pairs: readonly CheckPair[],
 ): readonly Check[] {
   const name = new Map(rooms.map((room) => [room.id, room.name]))
-  const reached = reachedFromOutside(edges)
+  const reached = reachedFromOutside(connections)
   const found: Check[] = []
   for (const pair of pairs) {
     const [a, b] = [name.get(pair.a) ?? pair.a, name.get(pair.b) ?? pair.b]
-    if (joined(pair, edges))
+    if (joined(pair, connections))
       found.push({
         code: 'apart-joined',
         rooms: [pair.a, pair.b],
-        sentence: `${a} and ${b} are kept apart, and an edge joins them.`,
-        rule: 'Two rooms kept apart have no edge between them.',
+        sentence: `${a} and ${b} are kept apart, and a connection joins them.`,
+        rule: 'Two rooms kept apart have no connection between them.',
         source,
       })
-    const through = onlyThrough(pair, edges, reached)
+    const through = onlyThrough(pair, connections, reached)
     if (through)
       found.push({
         code: 'apart-through',

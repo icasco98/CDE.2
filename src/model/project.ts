@@ -4,7 +4,7 @@ import {
   type Actor,
   type Apart,
   type Declined,
-  type Edge,
+  type Connection,
   type Household,
   type Plot,
   type Project,
@@ -14,10 +14,10 @@ import {
 /** The floor-to-floor height a storey opens at, in metres. */
 export const STARTING_HEIGHT_M = 3.5
 
-/** What undo restores: rooms, edges, keep-apart pairs, declined suggestions, plot, storeys, heights and household. */
+/** What undo restores: rooms, connections, keep-apart pairs, declined suggestions, plot, storeys, heights and household. */
 export type Snapshot = {
   readonly rooms: readonly Room[]
-  readonly edges: readonly Edge[]
+  readonly connections: readonly Connection[]
   readonly apart: readonly Apart[]
   readonly declined: readonly Declined[]
   readonly plot: Plot
@@ -59,7 +59,7 @@ export function emptyProject(newId: IdGenerator, name = 'Untitled'): Project {
     plot: startingPlot,
     household: startingHousehold,
     rooms: [],
-    edges: [],
+    connections: [],
     apart: [],
     declined: [],
     actors: [],
@@ -68,8 +68,8 @@ export function emptyProject(newId: IdGenerator, name = 'Untitled'): Project {
 }
 
 export function snapshotOf(project: Project): Snapshot {
-  const { rooms, edges, apart, declined, plot, storeys, heights, household } = project
-  return { rooms, edges, apart, declined, plot, storeys, heights, household }
+  const { rooms, connections, apart, declined, plot, storeys, heights, household } = project
+  return { rooms, connections, apart, declined, plot, storeys, heights, household }
 }
 
 export function restore(project: Project, snapshot: Snapshot): Project {
@@ -99,14 +99,16 @@ export function patchActor(project: Project, id: string, patch: Partial<Actor>):
 }
 
 /**
- * Deleting a room deletes its edges, its keep-apart pairs and the suggestions declined for it, and
+ * Deleting a room deletes its connections, its keep-apart pairs and the suggestions declined for it, and
  * drops it from every actor's route.
  */
 export function dropRoom(project: Project, id: string): Project {
   return {
     ...project,
     rooms: project.rooms.filter((room) => room.id !== id),
-    edges: project.edges.filter((edge) => edge.a !== id && edge.b !== id),
+    connections: project.connections.filter(
+      (connection) => connection.a !== id && connection.b !== id,
+    ),
     apart: project.apart.filter((pair) => pair.a !== id && pair.b !== id),
     declined: project.declined.filter((pair) => pair.a !== id && pair.b !== id),
     actors: project.actors.map((actor) =>

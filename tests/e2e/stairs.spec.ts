@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { centreOf, drag, edgeBetween, openVilla, roomNamed, selectRoom } from './bubbles'
+import { centreOf, drag, connectionBetween, openVilla, roomNamed, selectRoom } from './bubbles'
 import { seedPlan } from './plan'
 
 /*
@@ -24,13 +24,15 @@ test('a stair stands in both columns as one room, selected and nudged as one', a
   expect(firstAfter.y).toBeGreaterThan(first.y + 10)
 })
 
-test('the stair joins each storey on that storey: its hallway upstairs is a first-floor edge', async ({
+test('the stair joins each storey on that storey: its hallway upstairs is a first-floor connection', async ({
   page,
 }) => {
   await openVilla(page)
-  await expect.poll(async () => (await edgeBetween(page, 'Stair', 'First Hallway'))?.storey).toBe(1)
   await expect
-    .poll(async () => (await edgeBetween(page, 'Stair', 'Ground Hallway'))?.storey)
+    .poll(async () => (await connectionBetween(page, 'Stair', 'First Hallway'))?.storey)
+    .toBe(1)
+  await expect
+    .poll(async () => (await connectionBetween(page, 'Stair', 'Ground Hallway'))?.storey)
     .toBe(0)
 })
 

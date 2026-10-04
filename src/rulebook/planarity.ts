@@ -51,9 +51,9 @@ function blocks(graph: Graph): Pair[][] {
         low.set(node, Math.min(low.get(node) ?? 0, back))
         if (back >= (depth.get(node) ?? 0)) {
           const block: Pair[] = []
-          for (let edge = stack.pop(); edge; edge = stack.pop()) {
-            block.push(edge)
-            if (edge[0] === node && edge[1] === other) break
+          for (let connection = stack.pop(); connection; connection = stack.pop()) {
+            block.push(connection)
+            if (connection[0] === node && connection[1] === other) break
           }
           found.push(block)
         }
@@ -205,9 +205,9 @@ function splitFace(face: readonly string[], path: readonly string[]): [string[],
 /** Whether one block of the graph can be drawn without a crossing. */
 function blockIsPlanar(graph: Graph): boolean {
   const nodes = [...graph.keys()]
-  const edges = edgesOf(graph)
-  if (nodes.length < 5 || edges.length < 9) return true
-  if (edges.length > 3 * nodes.length - 6) return false
+  const connections = edgesOf(graph)
+  if (nodes.length < 5 || connections.length < 9) return true
+  if (connections.length > 3 * nodes.length - 6) return false
   const cycle = someCycle(graph)
   if (!cycle) return true
   const drawn = new Set(cycle)
@@ -216,7 +216,7 @@ function blockIsPlanar(graph: Graph): boolean {
     done.add(keyOf(cycle[i] as string, cycle[(i + 1) % cycle.length] as string))
   let faces: string[][] = [[...cycle], [...cycle]]
 
-  for (let guard = 0; guard <= edges.length; guard++) {
+  for (let guard = 0; guard <= connections.length; guard++) {
     const fragments = fragmentsOf(graph, drawn, done)
     if (fragments.length === 0) return true
     let chosen: { readonly fragment: Fragment; readonly faces: number[] } | null = null

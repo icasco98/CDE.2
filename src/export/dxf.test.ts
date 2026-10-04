@@ -172,7 +172,7 @@ it('draws a door as a line across the opening on the storey’s door layer', () 
   const dining = room('Dining', { x: 5, y: 0, w: 5, h: 4 })
   const door: Door = {
     id: 'd1',
-    edge: 'e1',
+    connection: 'e1',
     to: dining.id,
     type: 'door',
     w: 0.9,

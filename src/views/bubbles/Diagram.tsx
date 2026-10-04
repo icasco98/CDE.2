@@ -18,7 +18,7 @@ import type { BubbleApart, BubbleLink, BubbleRoom, DragMakes } from './types'
 
 /** Said when a drag ends on a room of another storey; only a stair joins two storeys. */
 const ONE_STOREY =
-  'An edge joins two rooms on one storey; a stair is the way from one storey to the next.'
+  'A connection joins two rooms on one storey; a stair is the way from one storey to the next.'
 
 type Point = { readonly x: number; readonly y: number }
 
@@ -35,14 +35,14 @@ type Gesture =
 type DiagramProps = {
   readonly arrangement: Arrangement
   readonly rooms: ReadonlyMap<string, BubbleRoom>
-  readonly edges: readonly BubbleLink[]
+  readonly connections: readonly BubbleLink[]
   readonly apart: readonly BubbleApart[]
   /** What a drag from a room's ring makes when it lands on another room. */
   readonly makes: DragMakes
   readonly selected: string | null
   /** The storey brought forward; the others fade and stay. */
   readonly focus: number | null
-  readonly titleOf: (edge: BubbleLink) => string
+  readonly titleOf: (connection: BubbleLink) => string
   readonly onFocus: (storey: number) => void
   readonly onNudge: (id: string, nudge: Nudge, commit: Commit) => void
   readonly onConnect: (a: string, b: string) => void
@@ -64,7 +64,7 @@ function spotAt(arrangement: Arrangement, at: Point): Spot | undefined {
 }
 
 export function Diagram(props: DiagramProps) {
-  const { arrangement, rooms, edges, selected, focus } = props
+  const { arrangement, rooms, connections, selected, focus } = props
   const svgRef = useRef<SVGSVGElement>(null)
   const gestureRef = useRef<Gesture | null>(null)
   const [gesture, setGesture] = useState<Gesture | null>(null)
@@ -228,12 +228,13 @@ export function Diagram(props: DiagramProps) {
   const near = useMemo(() => {
     if (focused === null) return null
     const ids = new Set([focused])
-    for (const edge of edges)
-      if (edge.a === focused || edge.b === focused) ids.add(edge.a === focused ? edge.b : edge.a)
+    for (const connection of connections)
+      if (connection.a === focused || connection.b === focused)
+        ids.add(connection.a === focused ? connection.b : connection.a)
     for (const pair of props.apart)
       if (pair.a === focused || pair.b === focused) ids.add(pair.a === focused ? pair.b : pair.a)
     return ids
-  }, [focused, edges, props.apart])
+  }, [focused, connections, props.apart])
   const touches = (a: string, b: string): boolean => a === focused || b === focused
 
   const dimmed = (storey: number): boolean => focus !== null && storey !== focus
@@ -301,22 +302,22 @@ export function Diagram(props: DiagramProps) {
         </g>
       ))}
       <Clouds spots={arrangement.spots} rooms={rooms} dimmed={dimmed} />
-      {edges.map((edge) => {
-        const from = where({ id: edge.a, storey: edge.storey })
-        const to = where({ id: edge.b, storey: edge.storey })
+      {connections.map((connection) => {
+        const from = where({ id: connection.a, storey: connection.storey })
+        const to = where({ id: connection.b, storey: connection.storey })
         if (!from || !to) return null
         return (
           <Link
-            key={edge.id}
-            id={edge.id}
+            key={connection.id}
+            id={connection.id}
             from={from}
             to={to}
-            kind={edge.kind}
-            storey={edge.storey}
-            selected={edge.id === selected}
-            dimmed={dimmed(edge.storey)}
-            near={touches(edge.a, edge.b)}
-            title={props.titleOf(edge)}
+            kind={connection.kind}
+            storey={connection.storey}
+            selected={connection.id === selected}
+            dimmed={dimmed(connection.storey)}
+            near={touches(connection.a, connection.b)}
+            title={props.titleOf(connection)}
             onSelect={choose}
           />
         )

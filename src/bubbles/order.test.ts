@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { arrange, type ArrangeEdge, type ArrangeRoom } from './arrange'
+import { arrange, type ArrangeConnection, type ArrangeRoom } from './arrange'
 import { crossings } from './order'
 
 const room = (id: string, tier: string): ArrangeRoom => ({
@@ -10,24 +10,28 @@ const room = (id: string, tier: string): ArrangeRoom => ({
   storeysSpanned: 1,
 })
 
-const link = (a: string, b: string): ArrangeEdge => ({ a, b, storey: 0 })
+const link = (a: string, b: string): ArrangeConnection => ({ a, b, storey: 0 })
 
 /**
  * The crossings of straight lines between the circles' centres, as the diagram draws them, with the
- * rooms where an arrangement given `placedBy` edges puts them: none leaves the program's order.
+ * rooms where an arrangement given `placedBy` connections puts them: none leaves the program's order.
  */
 function crossed(
   rooms: readonly ArrangeRoom[],
-  edges: readonly ArrangeEdge[],
-  placedBy: readonly ArrangeEdge[] = edges,
+  connections: readonly ArrangeConnection[],
+  placedBy: readonly ArrangeConnection[] = connections,
 ): number {
   const { spots } = arrange(rooms, placedBy, 1)
   const at = (id: string) => spots.find((spot) => spot.id === id)!
-  return crossings(edges.map((edge) => [at(edge.a), at(edge.b)] as const))
+  return crossings(connections.map((connection) => [at(connection.a), at(connection.b)] as const))
 }
 
-const orderOf = (rooms: readonly ArrangeRoom[], edges: readonly ArrangeEdge[], tier: string) =>
-  arrange(rooms, edges, 1)
+const orderOf = (
+  rooms: readonly ArrangeRoom[],
+  connections: readonly ArrangeConnection[],
+  tier: string,
+) =>
+  arrange(rooms, connections, 1)
     .spots.filter((spot) => rooms.find((each) => each.id === spot.id)?.tier === tier)
     .sort((one, other) => one.x - other.x)
     .map((spot) => spot.id)
@@ -67,14 +71,14 @@ describe('the rows ordered so fewer lines cross', () => {
     room('liv-e', 'semi-public'),
     room('liv-f', 'semi-public'),
   ]
-  const edges = [link('bed-a', 'liv-f'), link('bed-b', 'liv-e'), link('bed-c', 'liv-d')]
+  const connections = [link('bed-a', 'liv-f'), link('bed-b', 'liv-e'), link('bed-c', 'liv-d')]
 
   it('takes the reference graph from three crossings to none', () => {
-    expect(crossed(rooms, edges, [])).toBe(3)
-    expect(crossed(rooms, edges)).toBe(0)
+    expect(crossed(rooms, connections, [])).toBe(3)
+    expect(crossed(rooms, connections)).toBe(0)
     // The first sweep reads the rows from the top, so the bedrooms turn round over the living rooms.
-    expect(orderOf(rooms, edges, 'private')).toEqual(['bed-c', 'bed-b', 'bed-a'])
-    expect(orderOf(rooms, edges, 'semi-public')).toEqual(['liv-d', 'liv-e', 'liv-f'])
+    expect(orderOf(rooms, connections, 'private')).toEqual(['bed-c', 'bed-b', 'bed-a'])
+    expect(orderOf(rooms, connections, 'semi-public')).toEqual(['liv-d', 'liv-e', 'liv-f'])
   })
 
   it('keeps the program order where no order crosses fewer', () => {
@@ -89,6 +93,6 @@ describe('the rows ordered so fewer lines cross', () => {
   })
 
   it('orders the same program the same way twice', () => {
-    expect(arrange(rooms, edges, 1)).toEqual(arrange(rooms, edges, 1))
+    expect(arrange(rooms, connections, 1)).toEqual(arrange(rooms, connections, 1))
   })
 })

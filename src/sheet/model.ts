@@ -14,7 +14,7 @@ export type DoorType = 'door' | 'double' | 'sliding' | 'opening' | 'open' | 'str
 export const OUTSIDE = 'EXTERIOR'
 
 /**
- * A door is the drawing of an edge: it is held by one room of the edge, `to` is the other end (a room
+ * A door is the drawing of a connection: it is held by one room of the connection, `to` is the other end (a room
  * or `OUTSIDE`), both set when it is placed. Between two rooms it stands on the wall they share on
  * `side` of its room (in the room's own frame), `along` of the way along it, or on the longest wall
  * they share when that side shares none; to the outside it stands at `at`, a point of its room's frame on the
@@ -22,7 +22,7 @@ export const OUTSIDE = 'EXTERIOR'
  */
 export type Door = {
   id: string
-  edge: string
+  connection: string
   to: string
   type: DoorType
   w: number

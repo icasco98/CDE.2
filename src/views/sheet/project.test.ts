@@ -35,7 +35,7 @@ const sheetOfProject = (from: Sheet = sheetOf([])): Sheet =>
     from,
     programOf(store.getState().rooms),
     plotOf(store.getState().plot),
-    store.getState().edges,
+    store.getState().connections,
     aside,
   )
 

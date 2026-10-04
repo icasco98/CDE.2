@@ -69,7 +69,7 @@ type Saved = {
     targetArea: number
     bubble?: { x: number; y: number }
   }[]
-  edges: { id: string; a: string; b: string; kind: string; storey: number }[]
+  connections: { id: string; a: string; b: string; kind: string; storey: number }[]
   apart?: { id: string; a: string; b: string }[]
 }
 
@@ -78,25 +78,28 @@ export async function saved(page: Page): Promise<Saved> {
   const project = await page.evaluate(() =>
     JSON.parse(window.localStorage.getItem('cde.project') ?? '{}'),
   )
-  return { rooms: [], edges: [], ...project }
+  return { rooms: [], connections: [], ...project }
 }
 
 const pairName = (a: string, b: string) => [a, b].sort((x, y) => (x < y ? -1 : 1)).join(' to ')
 
-/** Every edge as the two names it joins, sorted, so a test reads the graph as a person would. */
+/** Every connection as the two names it joins, sorted, so a test reads the graph as a person would. */
 export async function linkedPairs(page: Page): Promise<readonly string[]> {
   const project = await saved(page)
   const name = (id: string) => project.rooms?.find((room) => room.id === id)?.name ?? 'Outside'
-  return (project.edges ?? []).map((edge) => pairName(name(edge.a), name(edge.b))).sort()
+  return (project.connections ?? [])
+    .map((connection) => pairName(name(connection.a), name(connection.b)))
+    .sort()
 }
 
-/** The edge between two rooms by name, as the autosave has it. */
-export async function edgeBetween(page: Page, one: string, other: string) {
+/** The connection between two rooms by name, as the autosave has it. */
+export async function connectionBetween(page: Page, one: string, other: string) {
   const project = await saved(page)
   const id = (name: string) => project.rooms.find((room) => room.name === name)?.id
   const [a, b] = [id(one), id(other)]
-  return project.edges.find(
-    (edge) => (edge.a === a && edge.b === b) || (edge.a === b && edge.b === a),
+  return project.connections.find(
+    (connection) =>
+      (connection.a === a && connection.b === b) || (connection.a === b && connection.b === a),
   )
 }
 

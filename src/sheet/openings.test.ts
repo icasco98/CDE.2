@@ -23,7 +23,7 @@ const room = (over: Partial<Room> = {}): Room => ({
 
 const door = (over: Partial<Door>): Door => ({
   id: 'd1',
-  edge: 'e1',
+  connection: 'e1',
   to: 'EXTERIOR',
   type: 'door',
   w: 0.9,
@@ -43,7 +43,7 @@ function house(doors: Door[] = []): Sheet {
       room({
         doors: [
           door({ id: 'street', type: 'street2', w: 1.6, at: [2, 0] }),
-          door({ id: 'inner', edge: 'e2', to: 'g', along: 0.5 }),
+          door({ id: 'inner', connection: 'e2', to: 'g', along: 0.5 }),
           ...doors,
         ],
       }),
@@ -84,7 +84,7 @@ describe('what a placement added', () => {
       y: 9,
       type: 'door',
       storey: 0,
-      edge: 'e3',
+      connection: 'e3',
       to: 'EXTERIOR',
     })
     expect(change.result.ok).toBe(true)
@@ -111,8 +111,8 @@ describe('a door’s drawing', () => {
 
   it('gives a sliding door two panels and two jambs and no leaf, an opening jambs alone', () => {
     const sheet = house([
-      door({ id: 'slide', edge: 'e4', type: 'sliding', w: 1.8, at: [2, 3] }),
-      door({ id: 'gap', edge: 'e5', type: 'opening', w: 1.2, at: [0, 1.5] }),
+      door({ id: 'slide', connection: 'e4', type: 'sliding', w: 1.8, at: [2, 3] }),
+      door({ id: 'gap', connection: 'e5', type: 'opening', w: 1.2, at: [0, 1.5] }),
     ])
     const slid = drawingOf(sheet, 'slide')
     expect(slid.leaves).toEqual([])
@@ -126,7 +126,13 @@ describe('a door’s drawing', () => {
 
   it('marks an opened wall with its own line and nothing else', () => {
     const sheet = house()
-    kitchen(sheet).doors![1] = door({ id: 'inner', edge: 'e2', to: 'g', type: 'open', along: 0.5 })
+    kitchen(sheet).doors![1] = door({
+      id: 'inner',
+      connection: 'e2',
+      to: 'g',
+      type: 'open',
+      along: 0.5,
+    })
     const drawing = drawingOf(sheet, 'inner')
     expect(drawing.openMark).not.toBeNull()
     expect(drawing.leaves).toEqual([])
@@ -163,7 +169,9 @@ describe('what the sentence says about the door in hand', () => {
   })
 
   it('says an opening neither swings nor hinges', () => {
-    const sheet = house([door({ id: 'gap', edge: 'e5', type: 'opening', w: 1.2, at: [0, 1.5] })])
+    const sheet = house([
+      door({ id: 'gap', connection: 'e5', type: 'opening', w: 1.2, at: [0, 1.5] }),
+    ])
     const read = doorRead(sheet, 0, { room: 'k', id: 'gap' })
     expect(read?.swings).toBe(false)
     expect(read?.hinges).toBe(false)

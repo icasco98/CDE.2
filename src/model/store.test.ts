@@ -56,7 +56,7 @@ describe('rooms', () => {
     expect(store.getState().rooms[0]).not.toHaveProperty('footprint')
   })
 
-  it('deletes a room with its edges and its place in every route', () => {
+  it('deletes a room with its connections and its place in every route', () => {
     const kitchen = addRoom('kitchen')
     const hall = addRoom('hall')
     store.actions.connect({ a: kitchen, b: hall, kind: 'door' })
@@ -67,7 +67,7 @@ describe('rooms', () => {
     store.actions.removeRoom(kitchen)
 
     expect(store.getState().rooms.map((room) => room.id)).toEqual([hall])
-    expect(store.getState().edges).toEqual([])
+    expect(store.getState().connections).toEqual([])
     expect(store.getState().actors[0]?.waypoints).toEqual([hall])
   })
 })
@@ -120,19 +120,21 @@ describe('declined suggestions', () => {
 })
 
 describe('connect', () => {
-  it('refuses a second edge between the same pair on one storey', () => {
+  it('refuses a second connection between the same pair on one storey', () => {
     const a = addRoom('bedroom')
     const b = addRoom('bathroom')
     store.actions.connect({ a, b, kind: 'door' })
-    expect(codes(store.actions.connect({ a: b, b: a, kind: 'open' }))).toEqual(['edge-duplicate'])
+    expect(codes(store.actions.connect({ a: b, b: a, kind: 'open' }))).toEqual([
+      'connection-duplicate',
+    ])
   })
 
-  it('refuses a cross-storey edge unless a stair spans both', () => {
+  it('refuses a cross-storey connection unless a stair spans both', () => {
     store.actions.addStorey()
     const below = addRoom('kitchen')
     const above = addRoom('bedroom', { storey: 1 })
     expect(codes(store.actions.connect({ a: below, b: above, kind: 'door', storey: 1 }))).toEqual([
-      'edge-storey',
+      'connection-storey',
     ])
     const stair = addRoom('stair', { storeysSpanned: 2 })
     expect(store.actions.connect({ a: stair, b: below, kind: 'open', storey: 0 }).ok).toBe(true)
@@ -148,33 +150,38 @@ describe('connect', () => {
     ])
   })
 
-  it('changes an edge kind in place, keeping the same edge', () => {
+  it('changes a connection kind in place, keeping the same connection', () => {
     const a = addRoom('bedroom')
     const b = addRoom('bathroom')
-    const edge = id(store.actions.connect({ a, b, kind: 'door' }))
-    expect(store.actions.setEdgeKind(edge, 'open').ok).toBe(true)
-    expect(store.getState().edges).toEqual([{ id: edge, a, b, kind: 'open', storey: 0 }])
+    const connection = id(store.actions.connect({ a, b, kind: 'door' }))
+    expect(store.actions.setConnectionKind(connection, 'open').ok).toBe(true)
+    expect(store.getState().connections).toEqual([
+      { id: connection, a, b, kind: 'open', storey: 0 },
+    ])
     store.undo()
-    expect(store.getState().edges[0]?.kind).toBe('door')
+    expect(store.getState().connections[0]?.kind).toBe('door')
   })
 
-  it('refuses a kind for an edge that is not there, and refuses the main door either way', () => {
+  it('refuses a kind for a connection that is not there, and refuses the main door either way', () => {
     const hall = addRoom('hall')
     const diwaniya = addRoom('diwaniya')
-    expect(codes(store.actions.setEdgeKind('ghost', 'open'))).toEqual(['no-such-edge'])
+    expect(codes(store.actions.setConnectionKind('ghost', 'open'))).toEqual(['no-such-connection'])
     const main = id(store.actions.connect({ a: EXTERIOR, b: hall, kind: 'main-door' }))
     const inside = id(store.actions.connect({ a: hall, b: diwaniya, kind: 'door' }))
-    expect(codes(store.actions.setEdgeKind(main, 'door'))).toEqual(['main-door-kind'])
-    expect(codes(store.actions.setEdgeKind(inside, 'main-door'))).toEqual(['main-door-kind'])
-    expect(store.getState().edges.map((edge) => edge.kind)).toEqual(['main-door', 'door'])
+    expect(codes(store.actions.setConnectionKind(main, 'door'))).toEqual(['main-door-kind'])
+    expect(codes(store.actions.setConnectionKind(inside, 'main-door'))).toEqual(['main-door-kind'])
+    expect(store.getState().connections.map((connection) => connection.kind)).toEqual([
+      'main-door',
+      'door',
+    ])
   })
 
-  it('disconnects an edge and refuses one that is not there', () => {
+  it('disconnects a connection and refuses one that is not there', () => {
     const a = addRoom('bedroom')
     const b = addRoom('bathroom')
-    const edge = id(store.actions.connect({ a, b, kind: 'door' }))
-    expect(store.actions.disconnect(edge).ok).toBe(true)
-    expect(codes(store.actions.disconnect(edge))).toEqual(['no-such-edge'])
+    const connection = id(store.actions.connect({ a, b, kind: 'door' }))
+    expect(store.actions.disconnect(connection).ok).toBe(true)
+    expect(codes(store.actions.disconnect(connection))).toEqual(['no-such-connection'])
   })
 })
 
@@ -221,7 +228,7 @@ describe('storey heights', () => {
 })
 
 describe('undo', () => {
-  it('covers rooms, edges, declined suggestions, plot, storeys and household', () => {
+  it('covers rooms, connections, declined suggestions, plot, storeys and household', () => {
     const room = addRoom('bedroom')
     store.actions.addStorey()
     store.actions.setPlot({ on: true, polygon: [], north: 30, street: [0] })
@@ -230,7 +237,7 @@ describe('undo', () => {
     store.actions.connect({ a: EXTERIOR, b: room, kind: 'main-door' })
 
     store.undo()
-    expect(store.getState().edges).toEqual([])
+    expect(store.getState().connections).toEqual([])
     store.undo()
     expect(store.getState().household.bedrooms).toBe(startingHousehold.bedrooms)
     store.undo()
@@ -397,9 +404,11 @@ describe('a project opened from a file', () => {
     const opened = createStore(undefined, { newId: createIdGenerator(23) }).getState()
     const broken = {
       ...opened,
-      edges: [{ id: 'edge_1', a: 'ghost', b: EXTERIOR, kind: 'door' as const, storey: 0 }],
+      connections: [
+        { id: 'connection_1', a: 'ghost', b: EXTERIOR, kind: 'door' as const, storey: 0 },
+      ],
     }
-    expect(codes(store.actions.load(broken))).toContain('edge-endpoint-missing')
+    expect(codes(store.actions.load(broken))).toContain('connection-endpoint-missing')
     expect(store.getState().rooms).toHaveLength(0)
   })
 })

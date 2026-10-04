@@ -37,12 +37,16 @@ describe('adding a room from the program', () => {
     addRoomWithCompanion(store, 'kitchen', plotArea, 1)
     addRoomWithCompanion(store, 'dining-room', plotArea, 1)
     const [kitchen, dining] = store.getState().rooms
-    expect(store.getState().edges).toHaveLength(1)
-    expect(store.getState().edges[0]).toMatchObject({ a: kitchen?.id, b: dining?.id, kind: 'door' })
+    expect(store.getState().connections).toHaveLength(1)
+    expect(store.getState().connections[0]).toMatchObject({
+      a: kitchen?.id,
+      b: dining?.id,
+      kind: 'door',
+    })
     // One click, one undo: the dining room and the door to the kitchen go together.
     store.undo()
     expect(names()).toEqual(['Kitchen'])
-    expect(store.getState().edges).toEqual([])
+    expect(store.getState().connections).toEqual([])
   })
 
   it('stands a stair on the ground and reaches it up every storey the house has', () => {

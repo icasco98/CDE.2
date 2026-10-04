@@ -1,4 +1,4 @@
-import type { EdgeKind, Endpoint } from '../model'
+import type { ConnectionKind, Endpoint } from '../model'
 
 /** A room as the checks read one: who it is, which storeys it stands on, and its privacy tier. */
 export type CheckRoom = {
@@ -9,10 +9,10 @@ export type CheckRoom = {
   readonly tier?: string
 }
 
-export type CheckEdge = {
+export type CheckConnection = {
   readonly a: Endpoint
   readonly b: Endpoint
-  readonly kind: EdgeKind
+  readonly kind: ConnectionKind
   readonly storey: number
 }
 

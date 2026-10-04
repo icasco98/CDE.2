@@ -242,7 +242,7 @@ const samePlot = (one: PlotSpec, other: PlotSpec): boolean =>
 
 /**
  * What the sheet set down while following the project: the rooms the program stopped naming and the
- * doors whose edges went, with their drawing, so an undo in the project finds them where they stood.
+ * doors whose connections went, with their drawing, so an undo in the project finds them where they stood.
  * It lives as long as the page, which is as long as the project's undo does.
  */
 export function createAside() {
@@ -265,21 +265,21 @@ export type Aside = ReturnType<typeof createAside>
 
 /**
  * The sheet as the project asks for it: standing on the project's plot, drawing the project's
- * program and no other room, each door drawing an edge the project holds. Where the two disagree
+ * program and no other room, each door drawing a connection the project holds. Where the two disagree
  * the project wins; what it no longer names is set aside for an undo to bring back.
  */
 export function followProject(
   sheet: Sheet,
   program: readonly ProgramRoom[],
   plot: PlotSpec | null,
-  edges: readonly { readonly id: string }[],
+  connections: readonly { readonly id: string }[],
   aside: Aside,
 ): Sheet {
   const stood = !plot || samePlot(plot, sheet.plot) ? sheet : { ...sheet, plot }
   const followed = followProgram(
     stood,
     program,
-    new Set(edges.map((edge) => edge.id)),
+    new Set(connections.map((connection) => connection.id)),
     aside.held(),
   )
   aside.keep(followed.setDown, followed.sheet)

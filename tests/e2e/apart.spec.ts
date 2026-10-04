@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { centreOf, connect, drag, openVilla, reachOf, saved, selectRoom } from './bubbles'
 
 /*
- * Keep apart, the opposite of a connection: set in the diagram like one, drawn unlike any edge,
+ * Keep apart, the opposite of a connection: set in the diagram like one, drawn unlike any connection,
  * kept in the project and its undo, and a warning that never refuses.
  */
 
@@ -53,7 +53,7 @@ test('connecting a pair kept apart is allowed and warned about', async ({ page }
   await expect(page.locator('.messages')).toContainText(
     'Kitchen and Formal Living are to be kept apart; connected all the same.',
   )
-  await expect.poll(async () => (await saved(page)).edges.length).toBeGreaterThan(0)
+  await expect.poll(async () => (await saved(page)).connections.length).toBeGreaterThan(0)
   await expect(page.locator('[data-apart]')).toHaveCount(1)
 })
 

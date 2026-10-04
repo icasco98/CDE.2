@@ -15,7 +15,7 @@ import {
   ok,
   refused,
   type Bubble,
-  type EdgeKind,
+  type ConnectionKind,
   type Endpoint,
   type Household,
   type Plot,
@@ -186,56 +186,65 @@ export function createActions(context: Context) {
     connect(input: {
       a: Endpoint
       b: Endpoint
-      kind: EdgeKind
+      kind: ConnectionKind
       storey?: number
       hint?: WallHint
     }): Result<string> {
       const project = state()
-      const edge = {
-        id: newId('edge'),
+      const connection = {
+        id: newId('connection'),
         a: input.a,
         b: input.b,
         kind: input.kind,
         storey: input.storey ?? sharedStorey(project, input.a, input.b) ?? 0,
         ...(input.hint === undefined ? {} : { hint: input.hint }),
       }
-      const result = settle({ ...project, edges: [...project.edges, edge] })
-      return result.ok ? ok(edge.id) : result
+      const result = settle({ ...project, connections: [...project.connections, connection] })
+      return result.ok ? ok(connection.id) : result
     },
 
     /**
      * Where a door is drawn on the wall its two rooms share. It is a hint and nothing else: an
-     * edge that loses it draws its door in the middle of the wall instead, as it always did.
+     * connection that loses it draws its door in the middle of the wall instead, as it always did.
      */
-    setEdgeHint(edgeId: string, hint: WallHint): Result {
+    setConnectionHint(connectionId: string, hint: WallHint): Result {
       const project = state()
-      if (!project.edges.some((edge) => edge.id === edgeId)) return missing('edge', edgeId)
+      if (!project.connections.some((connection) => connection.id === connectionId))
+        return missing('connection', connectionId)
       return settle({
         ...project,
-        edges: project.edges.map((each) => (each.id === edgeId ? { ...each, hint } : each)),
+        connections: project.connections.map((each) =>
+          each.id === connectionId ? { ...each, hint } : each,
+        ),
       })
     },
 
-    /** An edge keeps its identity when its kind changes; the main door is made by connect alone. */
-    setEdgeKind(edgeId: string, kind: EdgeKind): Result {
+    /** A connection keeps its identity when its kind changes; the main door is made by connect alone. */
+    setConnectionKind(connectionId: string, kind: ConnectionKind): Result {
       const project = state()
-      const edge = project.edges.find((each) => each.id === edgeId)
-      if (!edge) return missing('edge', edgeId)
-      if (edge.kind === 'main-door' || kind === 'main-door')
+      const connection = project.connections.find((each) => each.id === connectionId)
+      if (!connection) return missing('connection', connectionId)
+      if (connection.kind === 'main-door' || kind === 'main-door')
         return refused({
           code: 'main-door-kind',
           message: 'the main door is made by connecting the outside, not by changing a kind',
         })
       return settle({
         ...project,
-        edges: project.edges.map((each) => (each.id === edgeId ? { ...each, kind } : each)),
+        connections: project.connections.map((each) =>
+          each.id === connectionId ? { ...each, kind } : each,
+        ),
       })
     },
 
-    disconnect(edgeId: string): Result {
+    disconnect(connectionId: string): Result {
       const project = state()
-      if (!project.edges.some((edge) => edge.id === edgeId)) return missing('edge', edgeId)
-      return settle({ ...project, edges: project.edges.filter((edge) => edge.id !== edgeId) })
+      if (!project.connections.some((connection) => connection.id === connectionId))
+        return missing('connection', connectionId)
+      return settle({
+        ...project,
+        connections: project.connections.filter((connection) => connection.id !== connectionId),
+      })
     },
 
     /** Two rooms the program wants apart; a warning to be read, never a wall. */
@@ -311,11 +320,11 @@ export function createActions(context: Context) {
         return refused({ code: 'last-storey', message: 'a project has one storey at least' })
       const inUse =
         project.rooms.some((room) => occupiedStoreys(room).includes(top)) ||
-        project.edges.some((edge) => edge.storey === top)
+        project.connections.some((connection) => connection.storey === top)
       if (inUse)
         return refused({
           code: 'storey-in-use',
-          message: `storey ${top} still holds rooms or edges`,
+          message: `storey ${top} still holds rooms or connections`,
         })
       return settle({ ...project, storeys: top, heights: project.heights.slice(0, top) })
     },

@@ -27,7 +27,7 @@ const pair = (): Sheet =>
         doors: [
           {
             id: 'd1',
-            edge: 'e1',
+            connection: 'e1',
             to: 'b',
             type: 'door',
             w: 0.9,
@@ -67,7 +67,7 @@ describe('a door held by the hand', () => {
     expect(doorsOf(change.sheet.rooms[0]!)[0]!.along).toBeCloseTo(0.7, 6)
   })
 
-  it('never comes free for another wall, since the door draws the edge between its two rooms', () => {
+  it('never comes free for another wall, since the door draws the connection between its two rooms', () => {
     const sheet = pair()
     const drag = doorDragTo(beginDoorDrag(sheet, 0, { room: 'a', id: 'd1' }, at)!, [8, 6], sheet, 0)
     const change = doorDrop(drag, sheet, 0)

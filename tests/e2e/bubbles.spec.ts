@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import {
   centreOf,
   drag,
-  edgeBetween,
+  connectionBetween,
   linkedPairs,
   openVilla,
   roomNamed,
@@ -16,14 +16,14 @@ import {
  * no physics, and a nudge that is kept and means nothing else.
  */
 
-test('the rebuild draws every storey side by side with the default connections as edges', async ({
+test('the rebuild draws every storey side by side with the default connections drawn', async ({
   page,
 }) => {
   await openVilla(page)
   await expect(page.getByRole('button', { name: 'Ground', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'First', exact: true })).toBeVisible()
   await expect(page.locator('.bubbles-sheet .plot, .buildable')).toHaveCount(0)
-  expect(await page.locator('[data-edge]').count()).toBeGreaterThan(10)
+  expect(await page.locator('[data-connection]').count()).toBeGreaterThan(10)
   await expect(page.locator('[data-kind="main-door"]')).toHaveCount(1)
   await expect.poll(() => linkedPairs(page)).toContain('Dining Room to Kitchen')
   // The ground's rooms stand left of the first floor's.
@@ -110,33 +110,35 @@ test('hovering a room makes its connections bold and fades the rest; selecting i
       .locator(selector)
       .first()
       .evaluate((node) => Number(getComputedStyle(node).opacity))
-  await expect.poll(async () => (await saved(page)).edges.length).toBeGreaterThan(5)
-  const pair = await edgeBetween(page, 'Kitchen', 'Dining Room')
+  await expect.poll(async () => (await saved(page)).connections.length).toBeGreaterThan(5)
+  const pair = await connectionBetween(page, 'Kitchen', 'Dining Room')
   const project = await saved(page)
   const kitchen = project.rooms.find((room) => room.name === 'Kitchen')!.id
-  const elsewhere = project.edges.find((edge) => edge.a !== kitchen && edge.b !== kitchen)!
+  const elsewhere = project.connections.find(
+    (connection) => connection.a !== kitchen && connection.b !== kitchen,
+  )!
 
   const at = await centreOf(page, 'Kitchen')
   await page.mouse.move(at.x, at.y)
   await expect(sheet).toHaveClass(/bubbles-focusing/)
-  await expect(page.locator(`[data-edge="${pair!.id}"]`)).toHaveClass(/link-near/)
+  await expect(page.locator(`[data-connection="${pair!.id}"]`)).toHaveClass(/link-near/)
   await expect(roomNamed(page, 'Dining Room')).toHaveClass(/bubble-near/)
-  await expect.poll(() => opacity(`[data-edge="${elsewhere.id}"]`)).toBeLessThan(0.3)
-  await expect.poll(() => opacity(`[data-edge="${pair!.id}"]`)).toBe(1)
+  await expect.poll(() => opacity(`[data-connection="${elsewhere.id}"]`)).toBeLessThan(0.3)
+  await expect.poll(() => opacity(`[data-connection="${pair!.id}"]`)).toBe(1)
   const bold = await page
-    .locator(`[data-edge="${pair!.id}"] .link`)
+    .locator(`[data-connection="${pair!.id}"] .link`)
     .first()
     .evaluate((line) => parseFloat(getComputedStyle(line).strokeWidth))
   expect(bold).toBeGreaterThan(3)
 
   await page.mouse.move(5, 5)
   await expect(sheet).not.toHaveClass(/bubbles-focusing/)
-  await expect.poll(() => opacity(`[data-edge="${elsewhere.id}"]`)).toBe(1)
+  await expect.poll(() => opacity(`[data-connection="${elsewhere.id}"]`)).toBe(1)
 
   await selectRoom(page, 'Kitchen')
   await page.mouse.move(5, 5)
   await expect(sheet).toHaveClass(/bubbles-focusing/)
-  await expect(page.locator(`[data-edge="${pair!.id}"]`)).toHaveClass(/link-near/)
+  await expect(page.locator(`[data-connection="${pair!.id}"]`)).toHaveClass(/link-near/)
 })
 
 test("clicking a storey's name brings it forward and fades the others", async ({ page }) => {
@@ -166,17 +168,17 @@ test('a room sent upstairs takes its suite with it and changes column', async ({
   expect(await storeyOf(page, 'Ensuite, Master Bedroom')).toBe('Ground')
 })
 
-test('Delete takes a room and its edges, and one undo brings both back', async ({ page }) => {
+test('Delete takes a room and its connections, and one undo brings both back', async ({ page }) => {
   await openVilla(page)
   const rooms = await page.locator('.bubbles-sheet [data-room]').count()
-  const links = await page.locator('[data-edge]').count()
+  const links = await page.locator('[data-connection]').count()
   await selectRoom(page, 'Kitchen')
   await page.locator('svg.bubbles-sheet').press('Delete')
   await expect(page.locator('.bubbles-sheet [data-room]')).toHaveCount(rooms - 1)
-  expect(await page.locator('[data-edge]').count()).toBeLessThan(links)
+  expect(await page.locator('[data-connection]').count()).toBeLessThan(links)
   await page.keyboard.press('Control+z')
   await expect(page.locator('.bubbles-sheet [data-room]')).toHaveCount(rooms)
-  await expect(page.locator('[data-edge]')).toHaveCount(links)
+  await expect(page.locator('[data-connection]')).toHaveCount(links)
 })
 
 test('deleting the hallway upstairs brings the nudge, and Add hallway answers it', async ({

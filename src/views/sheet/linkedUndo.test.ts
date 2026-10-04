@@ -14,32 +14,33 @@ function house() {
   return { store, kitchen, dining }
 }
 
-const edges = (store: ReturnType<typeof house>['store']) => store.getState().edges.length
+const connections = (store: ReturnType<typeof house>['store']) =>
+  store.getState().connections.length
 
 describe('a door placed with its connection, undone and redone as one step', () => {
-  it('takes the edge back when the sheet step goes, and brings it again when it returns', () => {
+  it('takes the connection back when the sheet step goes, and brings it again when it returns', () => {
     const { store, kitchen, dining } = house()
     const links = createLinks(store)
     const made = store.actions.connect({ a: kitchen, b: dining, kind: 'door' })
     if (!made.ok) throw new Error('refused')
-    links.edge(3, { edge: made.value, a: kitchen, b: dining, kind: 'door' })
+    links.connection(3, { connection: made.value, a: kitchen, b: dining, kind: 'door' })
     links.undone(3)
-    expect(edges(store)).toBe(0)
+    expect(connections(store)).toBe(0)
     // The project's own undo took it, so the rooms added before are untouched.
     expect(store.getState().rooms).toHaveLength(2)
     links.redone(3)
-    expect(edges(store)).toBe(1)
+    expect(connections(store)).toBe(1)
   })
 
-  it('takes out only its own edge when the project has moved on since', () => {
+  it('takes out only its own connection when the project has moved on since', () => {
     const { store, kitchen, dining } = house()
     const links = createLinks(store)
     const made = store.actions.connect({ a: kitchen, b: dining, kind: 'door' })
     if (!made.ok) throw new Error('refused')
-    links.edge(1, { edge: made.value, a: kitchen, b: dining, kind: 'door' })
+    links.connection(1, { connection: made.value, a: kitchen, b: dining, kind: 'door' })
     store.actions.rename(kitchen, 'Pantry')
     links.undone(1)
-    expect(edges(store)).toBe(0)
+    expect(connections(store)).toBe(0)
     expect(store.getState().rooms[0]?.name).toBe('Pantry')
   })
 
@@ -48,10 +49,10 @@ describe('a door placed with its connection, undone and redone as one step', () 
     const links = createLinks(store)
     const made = store.actions.connect({ a: kitchen, b: dining, kind: 'door' })
     if (!made.ok) throw new Error('refused')
-    links.edge(2, { edge: made.value, a: kitchen, b: dining, kind: 'door' })
+    links.connection(2, { connection: made.value, a: kitchen, b: dining, kind: 'door' })
     links.prune(2)
     links.undone(2)
-    expect(edges(store)).toBe(1)
+    expect(connections(store)).toBe(1)
   })
 })
 

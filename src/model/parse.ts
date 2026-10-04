@@ -5,8 +5,8 @@ import {
   type Actor,
   type Apart,
   type Declined,
-  type Edge,
-  type EdgeKind,
+  type Connection,
+  type ConnectionKind,
   type Household,
   type Plot,
   type Project,
@@ -22,7 +22,7 @@ export function isDocument(value: unknown): value is Document {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-const edgeKinds: readonly string[] = ['door', 'open', 'main-door']
+const connectionKinds: readonly string[] = ['door', 'open', 'main-door']
 
 /** Reads a stored document field by field, gathering every complaint before giving up. */
 export function parseProject(document: Document): Result<Project> {
@@ -114,15 +114,15 @@ export function parseProject(document: Document): Result<Project> {
     at: point(nested(value, at).at, `${at}.at`),
   })
 
-  const edge = (value: unknown, at: string): Edge => {
+  const connection = (value: unknown, at: string): Connection => {
     const raw = nested(value, at)
     const kind = text(raw.kind, `${at}.kind`)
-    if (!edgeKinds.includes(kind)) fail(`${at}.kind`, 'door, open or main-door')
+    if (!connectionKinds.includes(kind)) fail(`${at}.kind`, 'door, open or main-door')
     return {
       id: text(raw.id, `${at}.id`),
       a: text(raw.a, `${at}.a`),
       b: text(raw.b, `${at}.b`),
-      kind: kind as EdgeKind,
+      kind: kind as ConnectionKind,
       storey: count(raw.storey, `${at}.storey`),
       ...(raw.hint === undefined ? {} : { hint: hint(raw.hint, `${at}.hint`) }),
     }
@@ -181,7 +181,9 @@ export function parseProject(document: Document): Result<Project> {
     plot: plotOf(document.plot, 'plot'),
     household: householdOf(document.household, 'household'),
     rooms: list(document.rooms, 'rooms').map((raw, i) => room(raw, `rooms[${i}]`)),
-    edges: list(document.edges, 'edges').map((raw, i) => edge(raw, `edges[${i}]`)),
+    connections: list(document.connections, 'connections').map((raw, i) =>
+      connection(raw, `connections[${i}]`),
+    ),
     apart: list(document.apart, 'apart').map((raw, i) => apart(raw, `apart[${i}]`)),
     declined: list(document.declined, 'declined').map((raw, i) => declined(raw, `declined[${i}]`)),
     actors: list(document.actors, 'actors').map((raw, i) => actor(raw, `actors[${i}]`)),

@@ -213,7 +213,7 @@ describe('the rooms a room owns', () => {
     { id: 'shared', type: 'bathroom' },
     { id: 'kitchen', type: 'kitchen' },
   ]
-  const edges = [
+  const connections = [
     { a: 'master', b: 'ensuite' },
     { a: 'master', b: 'dressing' },
     { a: 'hallway', b: 'master' },
@@ -221,16 +221,18 @@ describe('the rooms a room owns', () => {
   ]
 
   it('takes the auxiliary rooms that open off it and nothing else', () => {
-    expect(companionsOf(rooms, edges, 'master')).toEqual(['ensuite', 'dressing'])
+    expect(companionsOf(rooms, connections, 'master')).toEqual(['ensuite', 'dressing'])
   })
 
   it('leaves a bathroom that serves the house where it is', () => {
     // The shared bathroom opens off the corridor, so it belongs to the floor and not to a room.
-    expect(companionsOf(rooms, edges, 'hallway')).toEqual(['shared'])
-    expect(companionsOf(rooms, [...edges, { a: 'kitchen', b: 'shared' }], 'hallway')).toEqual([])
+    expect(companionsOf(rooms, connections, 'hallway')).toEqual(['shared'])
+    expect(companionsOf(rooms, [...connections, { a: 'kitchen', b: 'shared' }], 'hallway')).toEqual(
+      [],
+    )
   })
 
   it('owns nothing where nothing auxiliary opens off it', () => {
-    expect(companionsOf(rooms, edges, 'kitchen')).toEqual([])
+    expect(companionsOf(rooms, connections, 'kitchen')).toEqual([])
   })
 })

@@ -141,7 +141,7 @@ describe('where the sheet and the memory are kept', () => {
     expect(placed(localSheet([])!)).toBe(0)
   })
 
-  it('opens a sheet of format 1, each door with a pair now the door of the matching edge', () => {
+  it('opens a sheet of format 1, each door with a pair now the door of the matching connection', () => {
     const sheet = fixtureSheet()
     const kitchen = sheet.rooms.find((room) => room.name === 'Kitchen')!
     const entry = sheet.rooms.find((room) => room.name === 'Entry')!
@@ -163,16 +163,16 @@ describe('where the sheet and the memory are kept', () => {
           ? { ...room, doors: [{ ...door, id: 'd4', at: [0, 1], pair: [entry.id, kitchen.id] }] }
           : room,
     )
-    const edges = [
+    const connections = [
       { id: 'e1', a: 'EXTERIOR', b: entry.id },
       { id: 'e2', a: kitchen.id, b: entry.id },
     ]
-    const back = sheetFrom(saved, edges)!
+    const back = sheetFrom(saved, connections)!
     const doorsOf = (id: string) => back.rooms.find((room) => room.id === id)!.doors
     expect(doorsOf(entry.id)).toEqual([
       {
         id: 'd1',
-        edge: 'e1',
+        connection: 'e1',
         to: 'EXTERIOR',
         type: 'door',
         w: 0.9,
@@ -181,16 +181,16 @@ describe('where the sheet and the memory are kept', () => {
         at: [0, 1],
       },
     ])
-    expect(doorsOf(kitchen.id)).toMatchObject([{ id: 'd4', edge: 'e2', to: entry.id }])
+    expect(doorsOf(kitchen.id)).toMatchObject([{ id: 'd4', connection: 'e2', to: entry.id }])
     expect(typeof doorsOf(kitchen.id)![0]!.along).toBe('number')
   })
 
-  it('writes the sheet as format 2 and reads its doors back untouched', () => {
+  it('writes the sheet as format 3 and reads its doors back untouched', () => {
     const sheet = fixtureSheet()
     sheet.rooms[0]!.doors = [
       {
         id: 'd1',
-        edge: 'e1',
+        connection: 'e1',
         to: 'b',
         type: 'door',
         w: 0.9,
@@ -200,7 +200,17 @@ describe('where the sheet and the memory are kept', () => {
       },
     ]
     const kept = sheetKept(sheet)
-    expect(kept.format).toBe(2)
+    expect(kept.format).toBe(3)
     expect(sheetFrom(kept, [])!.rooms[0]!.doors).toEqual(sheet.rooms[0]!.doors)
+  })
+
+  it('reads a format 2 sheet, its doors naming their connection by the old name', () => {
+    const sheet = fixtureSheet()
+    const door = { id: 'd1', to: 'b', type: 'door', w: 0.9, along: 0.3, flip: false, hinge: false }
+    const kept = sheetKept(sheet)
+    const rooms = JSON.parse(JSON.stringify(kept.rooms)) as Record<string, unknown>[]
+    rooms[0]!.doors = [{ ...door, edge: 'e1' }]
+    const back = sheetFrom({ ...kept, rooms, format: 2 }, [])!
+    expect(back.rooms[0]!.doors).toEqual([{ ...door, connection: 'e1' }])
   })
 })

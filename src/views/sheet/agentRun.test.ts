@@ -32,7 +32,7 @@ function desk(): {
       say: (line) => said.push(line),
       note: (text) => notes.push(text),
       request: (text) => asked.push(text),
-      edgeBetween: () => null,
+      connectionBetween: () => null,
     },
     sheet: () => sheet,
     said,

@@ -142,9 +142,9 @@ describe('the project file', () => {
 
   it('refuses a document that breaks an invariant', () => {
     const project = furnished()
-    const document = { ...project, edges: [...project.edges, project.edges[1]] }
+    const document = { ...project, connections: [...project.connections, project.connections[1]] }
     const back = deserialize(JSON.stringify(document))
-    expect(back.ok ? [] : back.problems.map((p) => p.code)).toEqual(['edge-duplicate'])
+    expect(back.ok ? [] : back.problems.map((p) => p.code)).toEqual(['connection-duplicate'])
   })
 
   it('gives a document written before households the household a project starts with', () => {
@@ -267,6 +267,13 @@ describe('the project file', () => {
     const back = deserialize(JSON.stringify(project))
     expect(back.ok && back.value.apart).toEqual([])
     expect(back.ok && back.value.version).toBe(PROJECT_VERSION)
+  })
+
+  it('opens a version 10 project, its connections under their old name, without loss', () => {
+    const project = furnished()
+    const { connections, ...rest } = project
+    const back = deserialize(JSON.stringify({ ...rest, edges: connections, version: 10 }))
+    expect(back.ok && back.value).toEqual({ ...project, version: PROJECT_VERSION })
   })
 
   it('refuses a version it cannot migrate and one from a newer tool', () => {

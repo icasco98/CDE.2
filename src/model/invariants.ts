@@ -1,7 +1,7 @@
 import { arcRun } from '../geometry'
 import {
   EXTERIOR,
-  type Edge,
+  type Connection,
   type Endpoint,
   type Project,
   type Room,
@@ -31,46 +31,52 @@ function roomIndex(project: Project): ReadonlyMap<string, Room> {
   return new Map(project.rooms.map((room) => [room.id, room]))
 }
 
-function pairKey(edge: Edge): string {
-  const [first, second] = edge.a <= edge.b ? [edge.a, edge.b] : [edge.b, edge.a]
-  return `${first}|${second}|${edge.storey}`
+function pairKey(connection: Connection): string {
+  const [first, second] =
+    connection.a <= connection.b ? [connection.a, connection.b] : [connection.b, connection.a]
+  return `${first}|${second}|${connection.storey}`
 }
 
-export function checkEdgeEndpoints(project: Project): readonly Violation[] {
+export function checkConnectionEndpoints(project: Project): readonly Violation[] {
   const rooms = roomIndex(project)
-  return project.edges.flatMap((edge) =>
-    [edge.a, edge.b]
+  return project.connections.flatMap((connection) =>
+    [connection.a, connection.b]
       .filter((endpoint) => endpoint !== EXTERIOR && !rooms.has(endpoint))
       .map((endpoint) =>
-        say('edge-endpoint-missing', `edge ${edge.id} names ${endpoint}, which is not a room`),
+        say(
+          'connection-endpoint-missing',
+          `connection ${connection.id} names ${endpoint}, which is not a room`,
+        ),
       ),
   )
 }
 
-export function checkEdgeStoreys(project: Project): readonly Violation[] {
+export function checkConnectionStoreys(project: Project): readonly Violation[] {
   const rooms = roomIndex(project)
-  return project.edges
+  return project.connections
     .filter(
-      (edge) => !standsOn(edge.a, edge.storey, rooms) || !standsOn(edge.b, edge.storey, rooms),
+      (connection) =>
+        !standsOn(connection.a, connection.storey, rooms) ||
+        !standsOn(connection.b, connection.storey, rooms),
     )
-    .map((edge) =>
+    .map((connection) =>
       say(
-        'edge-storey',
-        `edge ${edge.id} joins ${edge.a} and ${edge.b} on storey ${edge.storey}, which they do not both stand on`,
+        'connection-storey',
+        `connection ${connection.id} joins ${connection.a} and ${connection.b} on storey ${connection.storey}, which they do not both stand on`,
       ),
     )
 }
 
-export function checkEdgeUniqueness(project: Project): readonly Violation[] {
+export function checkConnectionUniqueness(project: Project): readonly Violation[] {
   const seen = new Set<string>()
   const violations: Violation[] = []
-  for (const edge of project.edges) {
-    const key = pairKey(edge)
+  for (const connection of project.connections) {
+    const key = pairKey(connection)
     if (seen.has(key))
       violations.push(
         say(
-          'edge-duplicate',
-          `${edge.a} and ${edge.b} are already joined on storey ${edge.storey}`,
+          'connection-duplicate',
+          `${connection.a} and ${connection.b} are already joined on storey ${connection.storey}`,
         ),
       )
     seen.add(key)
@@ -85,14 +91,14 @@ export function checkExteriorIsNotARoom(project: Project): readonly Violation[] 
 }
 
 export function checkMainDoor(project: Project): readonly Violation[] {
-  const mainDoors = project.edges.filter((edge) => edge.kind === 'main-door')
+  const mainDoors = project.connections.filter((connection) => connection.kind === 'main-door')
   const violations: Violation[] = []
   if (mainDoors.length > 1)
     violations.push(say('main-door-count', 'a project has at most one main door'))
-  for (const edge of mainDoors)
-    if (edge.a !== EXTERIOR && edge.b !== EXTERIOR)
+  for (const connection of mainDoors)
+    if (connection.a !== EXTERIOR && connection.b !== EXTERIOR)
       violations.push(
-        say('main-door-outside', `main door ${edge.id} does not come from ${EXTERIOR}`),
+        say('main-door-outside', `main door ${connection.id} does not come from ${EXTERIOR}`),
       )
   return violations
 }
@@ -223,9 +229,9 @@ export function checkDeclined(project: Project): readonly Violation[] {
 }
 
 const checks = [
-  checkEdgeEndpoints,
-  checkEdgeStoreys,
-  checkEdgeUniqueness,
+  checkConnectionEndpoints,
+  checkConnectionStoreys,
+  checkConnectionUniqueness,
   checkApart,
   checkDeclined,
   checkExteriorIsNotARoom,

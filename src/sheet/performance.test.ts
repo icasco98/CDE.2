@@ -29,7 +29,7 @@ it('reads the embedded sheet’s report inside 5 ms', () => {
   expect(taken).toBeLessThan(10)
 })
 
-it('finds where every door of the test plan stands, on its edge’s wall, inside 2 ms', () => {
+it('finds where every door of the test plan stands, on its connection’s wall, inside 2 ms', () => {
   // Read once per change of the sheet, never per frame of a drag: a drag re-renders from the memo.
   const taken = milliseconds(() => drawnDoors(sheet, 0))
   console.log(`drawnDoors on the test plan, 20 doors: ${taken.toFixed(2)} ms, budget 2 ms`)
@@ -109,7 +109,7 @@ it('applies a list of ten deeds inside 60 ms', () => {
       say: () => {},
       note: () => {},
       request: () => {},
-      edgeBetween: () => null,
+      connectionBetween: () => null,
     }
     for (const deed of deeds) doDeed(at, 0, deed)
   })

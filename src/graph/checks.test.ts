@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { EXTERIOR, type EdgeKind } from '../model'
+import { EXTERIOR, type ConnectionKind } from '../model'
 import { apartBroken, onlyThrough } from './apart'
 import { graphChecks } from './checks'
 import { crossings } from './crossings'
 import { reachedFromOutside } from './reach'
 import { noStair } from './stairs'
 import { tierSkips } from './tierSkips'
-import type { CheckEdge, CheckRoom } from './types'
+import type { CheckConnection, CheckRoom } from './types'
 import { unreached } from './unreached'
 
 /*
@@ -24,7 +24,12 @@ const room = (id: string, tier?: string, storey = 0, storeysSpanned = 1): CheckR
   ...(tier === undefined ? {} : { tier }),
 })
 
-const edge = (a: string, b: string, kind: EdgeKind = 'door', storey = 0): CheckEdge => ({
+const connection = (
+  a: string,
+  b: string,
+  kind: ConnectionKind = 'door',
+  storey = 0,
+): CheckConnection => ({
   a,
   b,
   kind,
@@ -40,17 +45,17 @@ const rooms = [
   room('Store'),
 ]
 
-const edges = [
-  edge(EXTERIOR, 'Entry', 'main-door'),
-  edge('Entry', 'Hallway', 'open'),
-  edge('Hallway', 'Family'),
-  edge('Family', 'Bedroom'),
-  edge(EXTERIOR, 'Diwaniya'),
+const connections = [
+  connection(EXTERIOR, 'Entry', 'main-door'),
+  connection('Entry', 'Hallway', 'open'),
+  connection('Hallway', 'Family'),
+  connection('Family', 'Bedroom'),
+  connection(EXTERIOR, 'Diwaniya'),
 ]
 
 describe('reached from outside', () => {
-  it('follows the edges in from every entrance, the diwaniya’s own street door as much as the main door', () => {
-    expect([...reachedFromOutside(edges)].sort()).toEqual([
+  it('follows the connections in from every entrance, the diwaniya’s own street door as much as the main door', () => {
+    expect([...reachedFromOutside(connections)].sort()).toEqual([
       'Bedroom',
       'Diwaniya',
       'Entry',
@@ -60,13 +65,13 @@ describe('reached from outside', () => {
   })
 
   it('names the store, which no door leads to', () => {
-    expect(unreached(rooms, edges).map((check) => check.sentence)).toEqual([
+    expect(unreached(rooms, connections).map((check) => check.sentence)).toEqual([
       'Store is not reached from any entrance.',
     ])
   })
 
   it('says there is no front door, and still reaches the rooms behind another entrance', () => {
-    const found = unreached(rooms, edges.slice(1))
+    const found = unreached(rooms, connections.slice(1))
     expect(found.map((check) => check.sentence)).toEqual([
       'There is no front door.',
       'Entry, Hallway, Family, Bedroom and Store are not reached from any entrance.',
@@ -74,7 +79,7 @@ describe('reached from outside', () => {
   })
 
   it('says once that no room has a door to the outside, rather than naming every room', () => {
-    const inside = edges.filter((each) => each.a !== EXTERIOR && each.b !== EXTERIOR)
+    const inside = connections.filter((each) => each.a !== EXTERIOR && each.b !== EXTERIOR)
     expect(unreached(rooms, inside).map((check) => check.sentence)).toEqual([
       'No room has a door to the outside, so no room is reached.',
     ])
@@ -82,9 +87,9 @@ describe('reached from outside', () => {
 
   it('reaches a room upstairs through the stair that spans both storeys', () => {
     const stairs = [
-      edge(EXTERIOR, 'Entry', 'main-door'),
-      edge('Entry', 'Stair', 'open'),
-      edge('Stair', 'Landing', 'open', 1),
+      connection(EXTERIOR, 'Entry', 'main-door'),
+      connection('Entry', 'Stair', 'open'),
+      connection('Stair', 'Landing', 'open', 1),
     ]
     const house = [
       room('Entry', 'public'),
@@ -98,10 +103,10 @@ describe('reached from outside', () => {
 describe('tier skips', () => {
   it('finds a private room joined to a public one or to the outside, and nothing else', () => {
     const skipping = [
-      ...edges,
-      edge('Bedroom', 'Diwaniya'),
-      edge('Kitchen', EXTERIOR),
-      edge('WC', EXTERIOR),
+      ...connections,
+      connection('Bedroom', 'Diwaniya'),
+      connection('Kitchen', EXTERIOR),
+      connection('WC', EXTERIOR),
     ]
     const house = [...rooms, room('Kitchen', 'private'), room('WC', 'exempt')]
     expect(tierSkips(house, skipping).map((check) => check.sentence)).toEqual([
@@ -111,14 +116,14 @@ describe('tier skips', () => {
   })
 
   it('finds none in the reference house, whose doors step one tier at a time', () => {
-    expect(tierSkips(rooms, edges)).toEqual([])
+    expect(tierSkips(rooms, connections)).toEqual([])
   })
 })
 
 describe('crossings', () => {
   const five = ['A', 'B', 'C', 'D', 'E']
   const all = (names: readonly string[]) =>
-    names.flatMap((one, i) => names.slice(i + 1).map((other) => edge(one, other)))
+    names.flatMap((one, i) => names.slice(i + 1).map((other) => connection(one, other)))
 
   it('finds five rooms each joined to every other, which no plan draws', () => {
     const found = crossings(
@@ -127,7 +132,7 @@ describe('crossings', () => {
       2,
     )
     expect(found.map((check) => check.sentence)).toEqual([
-      'Ground: its edges cannot all be drawn without one crossing another.',
+      'Ground: its connections cannot all be drawn without one crossing another.',
     ])
   })
 
@@ -143,7 +148,7 @@ describe('crossings', () => {
 
   it('counts the outside: four rooms all joined and all on the street is five nodes, joined each to each', () => {
     const four = five.slice(0, 4)
-    const onStreet = [...all(four), ...four.map((id) => edge(EXTERIOR, id))]
+    const onStreet = [...all(four), ...four.map((id) => connection(EXTERIOR, id))]
     expect(
       crossings(
         four.map((id) => room(id)),
@@ -155,31 +160,31 @@ describe('crossings', () => {
 })
 
 describe('keep apart', () => {
-  it('finds an edge between a pair kept apart', () => {
-    const found = apartBroken(rooms, edges, [{ a: 'Hallway', b: 'Entry' }])
+  it('finds a connection between a pair kept apart', () => {
+    const found = apartBroken(rooms, connections, [{ a: 'Hallway', b: 'Entry' }])
     expect(found.map((check) => check.code)).toContain('apart-joined')
   })
 
   it('finds the family living on every route from the front door to the bedroom', () => {
-    expect(onlyThrough({ a: 'Family', b: 'Bedroom' }, edges)).toEqual({
+    expect(onlyThrough({ a: 'Family', b: 'Bedroom' }, connections)).toEqual({
       room: 'Bedroom',
       through: 'Family',
     })
-    const found = apartBroken(rooms, edges, [{ a: 'Bedroom', b: 'Hallway' }])
+    const found = apartBroken(rooms, connections, [{ a: 'Bedroom', b: 'Hallway' }])
     expect(found.map((check) => check.sentence)).toEqual([
       'Bedroom is reached only through Hallway, and the two are kept apart.',
     ])
   })
 
   it('lets a pair stand when a second route goes round the room between', () => {
-    const round = [...edges, edge('Hallway', 'Bedroom')]
+    const round = [...connections, connection('Hallway', 'Bedroom')]
     expect(apartBroken(rooms, round, [{ a: 'Family', b: 'Bedroom' }]).map((c) => c.code)).toEqual([
       'apart-joined',
     ])
   })
 
-  it('says nothing of a pair whose rooms share a wall with no edge and no route through', () => {
-    expect(apartBroken(rooms, edges, [{ a: 'Diwaniya', b: 'Family' }])).toEqual([])
+  it('says nothing of a pair whose rooms share a wall with no connection and no route through', () => {
+    expect(apartBroken(rooms, connections, [{ a: 'Diwaniya', b: 'Family' }])).toEqual([])
   })
 })
 
@@ -198,7 +203,12 @@ describe('a stair between the storeys', () => {
 
 describe('every check together', () => {
   it('reads the reference house with one keep-apart pair as three warnings, each with its source', () => {
-    const found = graphChecks({ rooms, edges, apart: [{ a: 'Family', b: 'Bedroom' }], storeys: 1 })
+    const found = graphChecks({
+      rooms,
+      connections,
+      apart: [{ a: 'Family', b: 'Bedroom' }],
+      storeys: 1,
+    })
     expect(found.map((check) => check.code)).toEqual(['unreached', 'apart-joined', 'apart-through'])
     for (const check of found) {
       expect(check.rule).not.toBe('')

@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
 import { EXTERIOR } from '../model'
 import { graphChecks } from './checks'
-import type { CheckEdge, CheckRoom } from './types'
+import type { CheckConnection, CheckRoom } from './types'
 
 /*
  * The budget: the checks are read again on every edit, so forty rooms on three storeys with a
@@ -29,7 +29,7 @@ const rooms: readonly CheckRoom[] = Array.from({ length: 40 }, (_, i) => ({
   storeysSpanned: i === 0 ? 3 : 1,
 }))
 
-const edges: readonly CheckEdge[] = [
+const connections: readonly CheckConnection[] = [
   { a: EXTERIOR, b: 'room1', kind: 'main-door', storey: 1 },
   ...rooms.slice(1).map((each, i) => ({
     a: rooms[i]!.id,
@@ -42,7 +42,7 @@ const edges: readonly CheckEdge[] = [
 const apart = Array.from({ length: 12 }, (_, i) => ({ a: `room${i}`, b: `room${39 - i}` }))
 
 it('reads every check on forty rooms in under 16 ms', () => {
-  const took = milliseconds(() => graphChecks({ rooms, edges, apart, storeys: 3 }))
+  const took = milliseconds(() => graphChecks({ rooms, connections, apart, storeys: 3 }))
   console.info(`graph checks, 40 rooms: ${took.toFixed(3)} ms`)
   expect(took).toBeLessThan(16)
 })

@@ -31,7 +31,7 @@ const between = (a: string, b: string) => (pair: { a: string; b: string }) =>
  */
 export function Matrix(props: {
   readonly rooms: readonly BubbleRoom[]
-  readonly edges: readonly BubbleLink[]
+  readonly connections: readonly BubbleLink[]
   readonly apart: readonly BubbleApart[]
   readonly onSet: (a: string, b: string, choice: PairChoice) => void
   readonly onClose: () => void
@@ -49,9 +49,9 @@ export function Matrix(props: {
   }, [onClose])
 
   const stateOf = (a: string, b: string) => {
-    const edge = props.edges.find(between(a, b))
+    const connection = props.connections.find(between(a, b))
     const kept = props.apart.some(between(a, b))
-    return { kind: edge?.kind, kept }
+    return { kind: connection?.kind, kept }
   }
 
   const pickedState = picked && stateOf(picked.a.id, picked.b.id)

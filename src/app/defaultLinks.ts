@@ -2,7 +2,7 @@ import type { Project, Result, Store } from '../model'
 import { impliedConnections } from '../rulebook'
 
 /**
- * The default connections as real edges. The rulebook's table says what a villa is expected to
+ * The default connections as real connections. The rulebook's table says what a villa is expected to
  * have, so a rebuilt program and a room added arrive linked and the designer removes what this
  * house does not want, rather than accepting one offer at a time.
  */
@@ -12,13 +12,13 @@ const between = (a: string, b: string) => (pair: { a: string; b: string }) =>
   (pair.a === a && pair.b === b) || (pair.a === b && pair.b === a)
 
 /**
- * Every default connection this program implies and does not hold, made as an edge, but for the
+ * Every default connection this program implies and does not hold, made as a connection, but for the
  * pairs the project has declined; only the ones touching `room` when one is named. Run inside the
  * transaction that added the rooms, so one undo takes the rooms and their links together.
  */
 export function connectDefaults(store: Linking, room?: string): Result | void {
   const project: Project = store.getState()
-  for (const link of impliedConnections(project.rooms, project.edges)) {
+  for (const link of impliedConnections(project.rooms, project.connections)) {
     if (room !== undefined && link.a !== room && link.b !== room) continue
     if (project.declined.some(between(link.a, link.b))) continue
     const made = store.actions.connect({
@@ -35,14 +35,16 @@ export function connectDefaults(store: Linking, room?: string): Result | void {
  * A connection taken out by the person. When the rulebook suggests that pair, the project keeps
  * it as declined, so a reload or the next room added does not bring the suggestion back.
  */
-export function takeOut(store: Linking, edgeId: string): Result | void {
-  const edge = store.getState().edges.find((each) => each.id === edgeId)
-  const cut = store.actions.disconnect(edgeId)
-  if (!cut.ok || !edge) return cut
+export function takeOut(store: Linking, connectionId: string): Result | void {
+  const connection = store.getState().connections.find((each) => each.id === connectionId)
+  const cut = store.actions.disconnect(connectionId)
+  if (!cut.ok || !connection) return cut
   const after = store.getState()
-  const suggested = impliedConnections(after.rooms, after.edges).some(between(edge.a, edge.b))
+  const suggested = impliedConnections(after.rooms, after.connections).some(
+    between(connection.a, connection.b),
+  )
   if (!suggested) return
-  const kept = store.actions.decline(edge.a, edge.b)
+  const kept = store.actions.decline(connection.a, connection.b)
   return kept.ok ? undefined : kept
 }
 
