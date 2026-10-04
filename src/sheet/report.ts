@@ -115,7 +115,10 @@ export function report(sheet: Sheet, storey: number): Report {
   const p = onStorey.filter((r) => !r.fixed && !isOpen(r))
   const courts = onStorey.filter((r) => r.fixed)
   const placedArea = p.reduce((s, r) => s + areaOf(r), 0)
-  const askedArea = sheet.zones.filter((r) => !isOpen(r)).reduce((s, r) => s + r.target, 0)
+  // A stair that crosses storeys asks its target of every storey, as it is placed on every one.
+  const askedArea = sheet.zones
+    .filter((r) => !isOpen(r) && (storeyOf(r) === storey || acrossStoreys(r, settings)))
+    .reduce((s, r) => s + r.target, 0)
   const box = allowedBox(sheet, storey)
   const ov = overlapsOf(sheet, storey)
   const n = storeyCountOf(sheet)
