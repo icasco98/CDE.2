@@ -503,3 +503,15 @@ A reversal is a new entry, never an edit.
     the tool unpredictable when dragging one room's wall moved another
     room. A sheet or spec saved before this reads it off too, since
     every save wrote the setting out whole; one saved since keeps it.
+
+44. **Zone, connection, edge; walls come last.** The owner's words
+    replace the model's: a space of the program is a zone (was room);
+    direct access between two zones, or a zone and the outside, is a
+    connection (was edge); a zone's outline is its edge (was wall). A
+    wall exists only in a fifth stage, not built yet, where the zoning
+    becomes an architectural plan with walls of thickness. The hard
+    rules of the rulebook, called walls until now, become limits, so
+    the word wall keeps one meaning. `MODEL.md` and `CLAUDE.md` say so;
+    the code and the screens are renamed to match in their own change,
+    the project file migrated on reading. Entries above this one keep
+    the words of their day.

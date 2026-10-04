@@ -5,7 +5,7 @@ every session, every agent.
 
 ## What this is
 
-A conceptual design tool for a Kuwaiti architecture firm: from a room
+A conceptual design tool for a Kuwaiti architecture firm: from a zone
 program to a bubble diagram to a zoning plan to a massing, in one
 sitting, with every recommendation justified. `MODEL.md` is the data
 model and the only authority on what the tool is. `DECISIONS.md` is
@@ -20,8 +20,9 @@ An earlier tool existed. Its code, history and documents are not in
 this repository and must not be consulted or recreated. The following
 were removed deliberately and must not come back under any name:
 
-- Inferring adjacency, doors or connections from geometry (walls that
-  happen to coincide within a tolerance). Edges are explicit and stored.
+- Inferring adjacency, doors or connections from geometry (edges that
+  happen to coincide within a tolerance). Connections are explicit and
+  stored.
 - A layout generator based on random perturbation or annealing.
 - A "training loop", "student", "evaluator" or scenario suite that
   tunes a search.
@@ -29,8 +30,8 @@ were removed deliberately and must not come back under any name:
   corridor waste, circulation ratio).
 - A server for saving projects. Saving is browser storage plus a file.
 - Door "liveness", "frozen" positions, or any machinery for a door
-  that has lost its wall. A door is the drawing of an edge; it cannot
-  go stale.
+  that has lost its edge. A door is the drawing of a connection; it
+  cannot go stale.
 - A memo layer keyed on array identity.
 - A hand-tuned sample house that satisfies the checker by construction.
 - References to conversation plans in code: "Task 3", "Step 6",
@@ -80,5 +81,8 @@ CAD export, and only when `PLAN.md` says so.
 
 ## Names
 
-Rooms, edges, walls, forces, storeys, plot, project. Use these words in
-code and on screen. Do not invent synonyms.
+Zones, connections, edges, limits, forces, storeys, plot, project. A
+zone is a space of the program; a connection is direct access from one
+zone to another; an edge is a zone's outline. Walls exist only in the
+last stage, the architectural plan. Use these words in code and on
+screen, as `MODEL.md` defines them. Do not invent synonyms.

@@ -1,7 +1,7 @@
 # Climate and energy: Kuwait
 
 Three sources, three jobs. **MEW/R-6** (Kuwait's Energy Conservation
-Code of Practice) supplies the compliance walls once its edition is in
+Code of Practice) supplies the compliance limits once its edition is in
 hand. **ASHRAE 169** supplies the climate the physics reads. **ASHRAE
 55** supplies the comfort criteria a verdict cites. **ASHRAE 90.2** is
 a cross-check where R-6 is silent.
@@ -40,7 +40,7 @@ room from facade area, glazing ratio and orientation; a note that
 natural ventilation is not a summer strategy here and that night
 flushing is limited.
 
-## Compliance walls: MEW/R-6
+## Compliance limits: MEW/R-6
 
 Reported for villas in published summaries of the 2014 edition.
 Edition history reported as 1983, 2010, 2014, 2018; copies labelled
