@@ -515,3 +515,10 @@ A reversal is a new entry, never an edit.
     the code and the screens are renamed to match in their own change,
     the project file migrated on reading. Entries above this one keep
     the words of their day.
+
+45. **No allowance for walls.** The owner's ruling: there are no walls
+    before the architectural plan, so no percentage is assumed for
+    them. The storey proposal reads the ground's bare targets against
+    its buildable area, as the Requirements totals already do, so the
+    two spare figures agree. Walls are counted at their real area in
+    the architectural plan. Reverses 39's 15% for walls and slack.
