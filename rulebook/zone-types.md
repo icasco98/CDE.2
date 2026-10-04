@@ -41,15 +41,16 @@ house receives and serves on the ground and sleeps above it. The
 `upper` kinds go up with their companions, the master bedroom and its
 suite staying down when the household asks, and a stair spans the
 storeys. The ground is then read against the floor the Municipality
-setbacks leave, its target areas, hallway included, raised by **15%
-for walls and slack** (the architect's decision, provisional). While
-it is still over, a private-tier kind the table marks `any` (family
-living first, as the largest) follows the bedrooms up, one kind at a
-time; if it is still over, the last sentence says by how much. A
+setbacks leave: its bare target areas, hallway included, with no
+allowance for walls, which do not exist before the architectural plan
+(the owner's ruling, decision 45). While it is still over, a
+private-tier kind the table marks `any` (family living first, as the
+largest) follows the bedrooms up, one kind at a time; if it is still over, the last sentence says by how much. A
 project already on more storeys keeps them. Each step is said in a
 sentence beside the button, and every zone's storey stays the
 person's to change. The rule is provisional: it recommends and never
-refuses. The Requirements totals read the bare targets.
+refuses. The Requirements totals read the same bare targets, so the
+two agree.
 
 ## The default program
 
