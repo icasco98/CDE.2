@@ -9,7 +9,7 @@ let dining: string
 beforeEach(() => {
   store = createStore(undefined, { newId: createIdGenerator(3) })
   const add = (type: string) => {
-    const made = store.actions.addRoom({ type, targetArea: 20 })
+    const made = store.actions.addZone({ type, targetArea: 20 })
     if (!made.ok) throw new Error('refused')
     return made.value
   }
@@ -18,20 +18,20 @@ beforeEach(() => {
 })
 
 const state = () => ({
-  edges: store.getState().edges.map((edge) => edge.kind),
+  connections: store.getState().connections.map((connection) => connection.kind),
   apart: store.getState().apart.length,
 })
 
 describe('a pair set from the matrix', () => {
-  it('connects as a door, turns open, keeps apart beside the edge, and clears to nothing', () => {
+  it('connects as a door, turns open, keeps apart beside the connection, and clears to nothing', () => {
     expect(setPair(store, kitchen, dining, 'door').ok).toBe(true)
-    expect(state()).toEqual({ edges: ['door'], apart: 0 })
+    expect(state()).toEqual({ connections: ['door'], apart: 0 })
     setPair(store, dining, kitchen, 'open')
-    expect(state()).toEqual({ edges: ['open'], apart: 0 })
+    expect(state()).toEqual({ connections: ['open'], apart: 0 })
     setPair(store, kitchen, dining, 'apart')
-    expect(state()).toEqual({ edges: ['open'], apart: 1 })
+    expect(state()).toEqual({ connections: ['open'], apart: 1 })
     setPair(store, kitchen, dining, 'nothing')
-    expect(state()).toEqual({ edges: [], apart: 0 })
+    expect(state()).toEqual({ connections: [], apart: 0 })
     // The rulebook suggests a kitchen beside the dining room, so taking it out is kept as declined.
     expect(store.getState().declined).toEqual([{ a: kitchen, b: dining }])
   })
@@ -41,8 +41,8 @@ describe('a pair set from the matrix', () => {
     setPair(store, kitchen, dining, 'apart')
     setPair(store, kitchen, dining, 'nothing')
     store.undo()
-    expect(state()).toEqual({ edges: ['door'], apart: 1 })
+    expect(state()).toEqual({ connections: ['door'], apart: 1 })
     setPair(store, kitchen, dining, 'apart')
-    expect(state()).toEqual({ edges: ['door'], apart: 0 })
+    expect(state()).toEqual({ connections: ['door'], apart: 0 })
   })
 })

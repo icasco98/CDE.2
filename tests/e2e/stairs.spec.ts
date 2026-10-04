@@ -1,19 +1,19 @@
 import { expect, test, type Page } from '@playwright/test'
-import { centreOf, drag, edgeBetween, openVilla, roomNamed, selectRoom } from './bubbles'
+import { centreOf, drag, connectionBetween, openVilla, zoneNamed, selectZone } from './bubbles'
 import { seedPlan } from './plan'
 
 /*
- * A stair is one room on every storey it spans: in the bubble diagram it stands in each column,
+ * A stair is one zone on every storey it spans: in the bubble diagram it stands in each column,
  * and on the zoning sheet moving it on one storey moves it on all of them.
  */
 
-test('a stair stands in both columns as one room, selected and nudged as one', async ({ page }) => {
+test('a stair stands in both columns as one zone, selected and nudged as one', async ({ page }) => {
   await openVilla(page)
-  await expect(roomNamed(page, 'Stair', 0)).toHaveCount(1)
-  await expect(roomNamed(page, 'Stair', 1)).toHaveCount(1)
+  await expect(zoneNamed(page, 'Stair', 0)).toHaveCount(1)
+  await expect(zoneNamed(page, 'Stair', 1)).toHaveCount(1)
   await expect(page.locator('.bubbles-sheet [data-through]')).toHaveCount(1)
-  await selectRoom(page, 'Stair', 0)
-  await expect(roomNamed(page, 'Stair', 1)).toHaveClass(/bubble-selected/)
+  await selectZone(page, 'Stair', 0)
+  await expect(zoneNamed(page, 'Stair', 1)).toHaveClass(/bubble-selected/)
 
   const ground = await centreOf(page, 'Stair', 0)
   const first = await centreOf(page, 'Stair', 1)
@@ -24,22 +24,24 @@ test('a stair stands in both columns as one room, selected and nudged as one', a
   expect(firstAfter.y).toBeGreaterThan(first.y + 10)
 })
 
-test('the stair joins each storey on that storey: its hallway upstairs is a first-floor edge', async ({
+test('the stair joins each storey on that storey: its hallway upstairs is a first-floor connection', async ({
   page,
 }) => {
   await openVilla(page)
-  await expect.poll(async () => (await edgeBetween(page, 'Stair', 'First Hallway'))?.storey).toBe(1)
   await expect
-    .poll(async () => (await edgeBetween(page, 'Stair', 'Ground Hallway'))?.storey)
+    .poll(async () => (await connectionBetween(page, 'Stair', 'First Hallway'))?.storey)
+    .toBe(1)
+  await expect
+    .poll(async () => (await connectionBetween(page, 'Stair', 'Ground Hallway'))?.storey)
     .toBe(0)
 })
 
-/** Where a room stands on the zoning sheet, read off the transform its group carries. */
+/** Where a zone stands on the zoning sheet, read off the transform its group carries. */
 async function whereOnSheet(page: Page, id: string): Promise<[number, number]> {
-  return page.evaluate((room) => {
-    const g = document.querySelector(`svg.sheet g.room[data-room="${room}"]`)
+  return page.evaluate((zone) => {
+    const g = document.querySelector(`svg.sheet g.zone[data-zone="${zone}"]`)
     const found = /translate\(([-\d.]+) ([-\d.]+)\)/.exec(g?.getAttribute('transform') ?? '')
-    if (!found) throw new Error(`${room} is not on the sheet`)
+    if (!found) throw new Error(`${zone} is not on the sheet`)
     return [Number(found[1]), Number(found[2])] as [number, number]
   }, id)
 }

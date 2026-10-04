@@ -1,28 +1,28 @@
 /**
- * What Check draws over the sheet: a dashed line from a room to each room it has an edge with that
- * is not yet ready or met, bold from the selected room and faint from the one under the pointer, and
+ * What Check draws over the sheet: a dashed line from a zone to each zone it has a connection with that
+ * is not yet ready or met, bold from the selected zone and faint from the one under the pointer, and
  * a red cross on every door that joins a pair kept apart.
  */
 
-import { centreOfFootprint, toWorld, type Point, type Room } from '../../sheet'
+import { centreOfFootprint, toWorld, type Point, type Zone } from '../../sheet'
 import { p4 } from './shape'
 
 export type SheetCheck = {
   readonly lines: readonly { readonly from: string; readonly to: string; readonly bold: boolean }[]
   readonly apartDoors: ReadonlyMap<string, Point>
-  readonly apartRooms: ReadonlySet<string>
+  readonly apartZones: ReadonlySet<string>
 }
 
 /** Half the reach of the cross on a door, in metres. */
 const CROSS = 0.3
 
-const middle = (room: Room) => {
-  const [x, y] = centreOfFootprint(room)
-  return toWorld(room, x, y)
+const middle = (zone: Zone) => {
+  const [x, y] = centreOfFootprint(zone)
+  return toWorld(zone, x, y)
 }
 
-export function CheckMarks(props: { readonly rooms: readonly Room[]; readonly check: SheetCheck }) {
-  const byId = new Map(props.rooms.map((room) => [room.id, room]))
+export function CheckMarks(props: { readonly zones: readonly Zone[]; readonly check: SheetCheck }) {
+  const byId = new Map(props.zones.map((zone) => [zone.id, zone]))
   return (
     <g className="check-marks">
       {props.check.lines.map((line) => {

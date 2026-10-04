@@ -119,7 +119,7 @@ store 3.50 × 5.30, machine room 3.50 × 2.00, lobby, lift and stair.
   4.60 × 1.40 beside them.
 - Bedrooms are 16 to 29 m², living rooms 35 to 45 m², dining 26 to 49
   m², kitchen 25 m², maid 7 m², driver 6 m², WCs 3 to 4 m². These sit
-  inside the ranges of `room-types.md` except the basement dining and
+  inside the ranges of `zone-types.md` except the basement dining and
   buffet, which together are larger than the table's top.
 - Every bedroom has its bath; the master suites have a dressing room
   as well. The tool's companion rule (ensuite per bedroom) matches;

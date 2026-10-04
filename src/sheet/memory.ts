@@ -11,10 +11,10 @@ import { startingLessons, startingRequests, type Request, type RequestState } fr
 
 type Line = { at: string; text: string }
 
-/** A kept plan is room names with their frames: enough for the assistant to lay it out again. */
-type PlanRoom = { name: string; x: number; y: number; w: number; h: number; angle: number }
+/** A kept plan is zone names with their frames: enough for the assistant to lay it out again. */
+type PlanZone = { name: string; x: number; y: number; w: number; h: number; angle: number }
 
-type Plan = { at: string; name: string; rooms: PlanRoom[] }
+type Plan = { at: string; name: string; zones: PlanZone[] }
 
 /** A command the architect asked for, and where the cofounder has left it. */
 type Asked = { at: string; text: string; state: RequestState }
@@ -98,7 +98,7 @@ export function withRequest(memory: Memory, text: string, at: string): Memory {
   }
 }
 
-export const planRooms = (sheet: Sheet, storey: number): PlanRoom[] =>
+export const planZones = (sheet: Sheet, storey: number): PlanZone[] =>
   allPlaced(sheet)
     .filter((r) => storeyOf(r) === storey)
     .map((r) => ({
@@ -118,7 +118,7 @@ export const withPlan = (memory: Memory, sheet: Sheet, storey: number, at: strin
     {
       at,
       name: `${storeyNameOf(storey)} kept ${at.slice(11, 16)}`,
-      rooms: planRooms(sheet, storey),
+      zones: planZones(sheet, storey),
     },
   ].slice(-PLANS_KEPT),
 })
@@ -130,16 +130,20 @@ const lineOf = (value: unknown): Line | null => {
   return text ? { at: String(line.at ?? ''), text } : null
 }
 
+/** Where a plan kept before decision 44 listed its zones, under the model's old word for them. */
+const ZONES_BEFORE_44 = 'rooms'
+
 const planOf = (value: unknown): Plan | null => {
   if (!value || typeof value !== 'object') return null
   const plan = value as Record<string, unknown>
-  const rooms = Array.isArray(plan.rooms) ? plan.rooms : []
+  const listed = plan.zones ?? plan[ZONES_BEFORE_44]
+  const zones = Array.isArray(listed) ? listed : []
   return {
     at: String(plan.at ?? ''),
     name: String(plan.name ?? 'a kept plan'),
-    rooms: rooms.flatMap((room) => {
-      if (!room || typeof room !== 'object') return []
-      const r = room as Record<string, unknown>
+    zones: zones.flatMap((zone) => {
+      if (!zone || typeof zone !== 'object') return []
+      const r = zone as Record<string, unknown>
       const numbers = (['x', 'y', 'w', 'h'] as const).map((k) => Number(r[k]))
       if (numbers.some((n) => !Number.isFinite(n))) return []
       return [

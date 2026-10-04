@@ -18,7 +18,7 @@ describe('the line the log adds when nothing ran', () => {
       false,
     )
     expect(claimsChange('Where should the driver room go?')).toBe(false)
-    expect(claimsChange('Two rooms overlap and one stands past the line.')).toBe(false)
+    expect(claimsChange('Two zones overlap and one stands past the line.')).toBe(false)
     expect(claimsChange('   ')).toBe(false)
   })
 

@@ -1,10 +1,10 @@
 /**
  * The desk the architect works at: the sheet in hand, one action at a time, a line in the log and
- * its own memory — and how it names a room or a storey, so a command works where it says it does.
+ * its own memory — and how it names a zone or a storey, so a command works where it says it does.
  */
 
 import type { Change, Result } from './actions'
-import type { Room, Sheet } from './model'
+import type { Zone, Sheet } from './model'
 import { MAX_STOREYS, STOREY_NAME } from './plot'
 
 /**
@@ -19,21 +19,21 @@ export type Desk = {
   note: (text: string, replaces?: string) => void
   /** A command it lacked. */
   request: (text: string) => void
-  /** The project's edge between two rooms, or a room and the outside, which a door would draw. */
-  edgeBetween: (a: string, b: string) => string | null
+  /** The project's connection between two zones, or a zone and the outside, which a door would draw. */
+  connectionBetween: (a: string, b: string) => string | null
 }
 
-/** A room by the name the architect used: the program's name, the start of it, or its kind. */
-export function roomNamed(sheet: Sheet, name: unknown): Room | null {
+/** A zone by the name the architect used: the program's name, the start of it, or its kind. */
+export function zoneNamed(sheet: Sheet, name: unknown): Zone | null {
   const want = String(name ?? '')
     .trim()
     .toLowerCase()
   if (!want) return null
-  const rooms = sheet.rooms
+  const zones = sheet.zones
   return (
-    rooms.find((r) => r.name.toLowerCase() === want) ??
-    rooms.find((r) => r.name.toLowerCase().startsWith(want)) ??
-    rooms.find((r) => r.kind === want) ??
+    zones.find((r) => r.name.toLowerCase() === want) ??
+    zones.find((r) => r.name.toLowerCase().startsWith(want)) ??
+    zones.find((r) => r.kind === want) ??
     null
   )
 }

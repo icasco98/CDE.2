@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { storeyLabel } from '../../rulebook'
 import type { PairChoice } from './setPair'
-import type { BubbleApart, BubbleLink, BubbleRoom } from './types'
+import type { BubbleApart, BubbleLink, BubbleZone } from './types'
 
-type Cell = { readonly a: BubbleRoom; readonly b: BubbleRoom }
+type Cell = { readonly a: BubbleZone; readonly b: BubbleZone }
 
 const choices: readonly { readonly choice: PairChoice; readonly label: string }[] = [
   { choice: 'door', label: 'Door' },
@@ -12,32 +12,32 @@ const choices: readonly { readonly choice: PairChoice; readonly label: string }[
   { choice: 'nothing', label: 'Nothing' },
 ]
 
-function storeysOf(room: BubbleRoom): readonly number[] {
+function storeysOf(zone: BubbleZone): readonly number[] {
   return Array.from(
-    { length: Math.max(1, Math.trunc(room.storeysSpanned)) },
-    (_, i) => room.storey + i,
+    { length: Math.max(1, Math.trunc(zone.storeysSpanned)) },
+    (_, i) => zone.storey + i,
   )
 }
 
-const meet = (a: BubbleRoom, b: BubbleRoom): boolean =>
+const meet = (a: BubbleZone, b: BubbleZone): boolean =>
   storeysOf(a).some((storey) => storeysOf(b).includes(storey))
 
 const between = (a: string, b: string) => (pair: { a: string; b: string }) =>
   (pair.a === a && pair.b === b) || (pair.a === b && pair.b === a)
 
 /**
- * Every pair of rooms once, as the lower half of a grid: a room down the side meets every room
+ * Every pair of zones once, as the lower half of a grid: a zone down the side meets every zone
  * above it in the list. The same store and undo as the diagram, so the two are never out of step.
  */
 export function Matrix(props: {
-  readonly rooms: readonly BubbleRoom[]
-  readonly edges: readonly BubbleLink[]
+  readonly zones: readonly BubbleZone[]
+  readonly connections: readonly BubbleLink[]
   readonly apart: readonly BubbleApart[]
   readonly onSet: (a: string, b: string, choice: PairChoice) => void
   readonly onClose: () => void
 }) {
   const [picked, setPicked] = useState<Cell | null>(null)
-  const rooms = [...props.rooms].sort((one, other) => one.storey - other.storey)
+  const zones = [...props.zones].sort((one, other) => one.storey - other.storey)
   const { onClose } = props
 
   useEffect(() => {
@@ -49,9 +49,9 @@ export function Matrix(props: {
   }, [onClose])
 
   const stateOf = (a: string, b: string) => {
-    const edge = props.edges.find(between(a, b))
+    const connection = props.connections.find(between(a, b))
     const kept = props.apart.some(between(a, b))
-    return { kind: edge?.kind, kept }
+    return { kind: connection?.kind, kept }
   }
 
   const pickedState = picked && stateOf(picked.a.id, picked.b.id)
@@ -66,7 +66,7 @@ export function Matrix(props: {
       >
         <header>
           <h2>Matrix</h2>
-          <p>Every pair of rooms once. Click a cell to change it.</p>
+          <p>Every pair of zones once. Click a cell to change it.</p>
           <button type="button" onClick={onClose}>
             Close
           </button>
@@ -111,20 +111,20 @@ export function Matrix(props: {
             <thead>
               <tr>
                 <th />
-                {rooms.slice(0, -1).map((room) => (
-                  <th key={room.id} scope="col" className="matrix-col">
-                    <span>{room.name}</span>
+                {zones.slice(0, -1).map((zone) => (
+                  <th key={zone.id} scope="col" className="matrix-col">
+                    <span>{zone.name}</span>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {rooms.slice(1).map((row, index) => (
+              {zones.slice(1).map((row, index) => (
                 <tr key={row.id}>
                   <th scope="row">
                     {row.name} <small>{storeyLabel(row.storey)}</small>
                   </th>
-                  {rooms.slice(0, index + 1).map((column) => {
+                  {zones.slice(0, index + 1).map((column) => {
                     const { kind, kept } = stateOf(row.id, column.id)
                     const mark = `${kind === 'open' ? 'O' : kind ? 'D' : ''}${kept ? '✕' : ''}`
                     const chosen = picked?.a.id === row.id && picked.b.id === column.id

@@ -28,25 +28,25 @@ export function HouseholdSection({ project }: { project: Project }) {
       project.storeys,
     )
     const refusal = session.transaction(() => {
-      for (const room of project.rooms) {
-        const removed = session.actions.removeRoom(room.id)
+      for (const zone of project.zones) {
+        const removed = session.actions.removeZone(zone.id)
         if (!removed.ok) return removed
       }
       while (session.getState().storeys < proposal.storeys) {
         const grown = session.actions.addStorey()
         if (!grown.ok) return grown
       }
-      for (const room of proposal.rooms) {
-        const added = session.actions.addRoom({
-          type: room.type,
-          name: room.name,
-          targetArea: room.targetArea,
-          storey: room.storey,
-          storeysSpanned: room.storeysSpanned,
+      for (const zone of proposal.zones) {
+        const added = session.actions.addZone({
+          type: zone.type,
+          name: zone.name,
+          targetArea: zone.targetArea,
+          storey: zone.storey,
+          storeysSpanned: zone.storeysSpanned,
         })
         if (!added.ok) return added
       }
-      // The rulebook's default connections come with the program, as edges: the designer removes
+      // The rulebook's default connections come with the program, made in the project: the designer removes
       // what this house does not want rather than accepting one offer at a time.
       return connectDefaults(session)
     })

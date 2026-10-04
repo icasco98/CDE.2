@@ -1,7 +1,7 @@
 /**
- * The piece geometry of the sheet. A room's footprint is a set of convex pieces in its own frame; a
- * plain room has none and is simply its rectangle. Carving replaces the rectangle with the pieces
- * that survive, so a cut by a turned room keeps its true slanted edge instead of a staircase of
+ * The piece geometry of the sheet. A zone's footprint is a set of convex pieces in its own frame; a
+ * plain zone has none and is simply its rectangle. Carving replaces the rectangle with the pieces
+ * that survive, so a cut by a turned zone keeps its true slanted edge instead of a staircase of
  * little boxes. Areas, centroids and bounding boxes come from `src/geometry`; the convex clipping,
  * the outline with its seams dropped and the welding are this sheet's own.
  */
@@ -9,7 +9,7 @@
 import { area, boundingBox, centroid, edgesOf, signedArea } from '../geometry/polygon'
 export type { Point, Poly } from './model'
 import { DEFAULT_PLOT, type Box, type PlotSpec } from './plot'
-import { centreOf, piecesOf, square, type Frame, type Point, type Poly, type Room } from './model'
+import { centreOf, piecesOf, square, type Frame, type Point, type Poly, type Zone } from './model'
 
 export const r2 = (v: number) => Math.round(v * 100) / 100
 /** Piece corners, fine enough that touching pieces match exactly. */
@@ -19,7 +19,7 @@ export const snapTo = (v: number, g: number) => (g > 0 ? Math.round(v / g) * g :
 export const rad = (d: number) => (d * Math.PI) / 180
 export const norm = (d: number) => ((d % 360) + 360) % 360
 
-/** A wall of a footprint: from `a` to `b` the way the room is walked, with the way out of it. */
+/** An edge of a footprint: from `a` to `b` the way the zone is walked, with the way out of it. */
 export type Seg = { a: Point; b: Point; n: Point }
 
 export const polySigned = (p: Poly) => signedArea(p)
@@ -29,7 +29,7 @@ export const polyCentroid = (p: Poly): Point => {
   return [c[0], c[1]]
 }
 
-// ---------- frames: every room is a rectangle in its own frame, turned about its centre ----------
+// ---------- frames: every zone is a rectangle in its own frame, turned about its centre ----------
 
 export function toWorld(r: Frame, lx: number, ly: number): Point {
   const [cx, cy] = centreOf(r)
@@ -60,12 +60,12 @@ export const cornersOf = (r: Frame): Point[] =>
     ] as Point[]
   ).map(([x, y]) => toWorld(r, x, y))
 
-export const worldPieces = (r: Room): Poly[] =>
+export const worldPieces = (r: Zone): Poly[] =>
   piecesOf(r).map((p) => p.map(([x, y]) => toWorld(r, x, y)))
 
-export const areaOf = (r: Room) => piecesOf(r).reduce((s, p) => s + polyArea(p), 0)
+export const areaOf = (r: Zone) => piecesOf(r).reduce((s, p) => s + polyArea(p), 0)
 
-export function centreOfFootprint(r: Room): Point {
+export function centreOfFootprint(r: Zone): Point {
   let A = 0
   let X = 0
   let Y = 0
@@ -80,10 +80,10 @@ export function centreOfFootprint(r: Room): Point {
 }
 
 /**
- * The upright box round the room's real walls, not round its frame: a drawn or carved shape is held
+ * The upright box round the zone's real edges, not round its frame: a drawn or carved shape is held
  * on the plot, and tested against the lines, by the corners it actually has.
  */
-export function bboxOf(r: Room): Box {
+export function bboxOf(r: Zone): Box {
   if (square(r)) return { x: r.x, y: r.y, w: r.w, h: r.h }
   const c = r.pieces && r.pieces.length ? worldCorners(r) : cornersOf(r)
   const b = boundingBox(c)
@@ -98,13 +98,13 @@ export function overlapRect(a: Box, b: Box): Box | null {
   return x2 - x > 1e-6 && y2 - y > 1e-6 ? { x, y, w: x2 - x, h: y2 - y } : null
 }
 
-/** A world polygon seen from a room's own frame, as the smallest rectangle round it. */
-export function localBox(r: Room, poly: Poly): Box {
+/** A world polygon seen from a zone's own frame, as the smallest rectangle round it. */
+export function localBox(r: Zone, poly: Poly): Box {
   const b = boundingBox(poly.map(([x, y]) => toLocal(r, x, y)))
   return { x: b.left, y: b.top, w: b.width, h: b.depth }
 }
 
-export const unionBox = (rs: Room[]): Box => {
+export const unionBox = (rs: Zone[]): Box => {
   const bs = rs.map(bboxOf)
   const x = Math.min(...bs.map((b) => b.x))
   const y = Math.min(...bs.map((b) => b.y))
@@ -224,11 +224,11 @@ export const insideConvex = (p: Poly, x: number, y: number) => {
   return true
 }
 
-export const insideRoomLocal = (r: Room, pt: Point) =>
+export const insideZoneLocal = (r: Zone, pt: Point) =>
   piecesOf(r).some((p) => insideConvex(p, pt[0], pt[1]))
 
 /** Every piece two footprints share, as world polygons. */
-export function overlapCells(a: Room, b: Room): Poly[] {
+export function overlapCells(a: Zone, b: Zone): Poly[] {
   const out: Poly[] = []
   const pas = worldPieces(a)
   const pbs = worldPieces(b)
@@ -240,11 +240,11 @@ export function overlapCells(a: Room, b: Room): Poly[] {
   return out
 }
 
-// ---------- the walls a room shows ----------
+// ---------- the edges a zone shows ----------
 
 /**
- * Every piece edge no neighbouring piece sits against, in the room's own frame, with the way out of
- * the room noted so a wall can be dragged, and which pieces lie against which.
+ * Every piece edge no neighbouring piece sits against, in the zone's own frame, with the way out of
+ * the zone noted so an edge can be dragged, and which pieces lie against which.
  */
 export function outlineFrom(pieces: Poly[]): { segs: Seg[]; against: [number, number][] } {
   type Line = {
@@ -280,7 +280,7 @@ export function outlineFrom(pieces: Poly[]): { segs: Seg[]; against: [number, nu
   })
   const segs: Seg[] = []
   const against: [number, number][] = []
-  // Each wall runs the way the room is walked, so one wall can find the two it meets.
+  // Each edge runs the way the zone is walked, so one edge can find the two it meets.
   const walk = (a: Point, b: Point, n: Point): Seg =>
     (b[0] - a[0]) * -n[1] + (b[1] - a[1]) * n[0] < 0 ? { a: b, b: a, n } : { a, b, n }
   for (const ln of lines.values()) {
@@ -297,16 +297,16 @@ export function outlineFrom(pieces: Poly[]): { segs: Seg[]; against: [number, nu
     for (let i = 0; i + 1 < marks.length; i++) {
       const m = (marks[i]! + marks[i + 1]!) / 2
       const on = ln.spans.filter((s) => m > s[0] + 1e-9 && m < s[1] - 1e-9)
-      const wall = on.length === 1
+      const edge = on.length === 1
       if (on.length === 2 && on[0]![4] !== on[1]![4]) against.push([on[0]![4], on[1]![4]])
-      if (wall && run === null) {
+      if (edge && run === null) {
         run = marks[i]!
         out = [on[0]![2], on[0]![3]]
       }
-      if (wall && i + 2 === marks.length) {
+      if (edge && i + 2 === marks.length) {
         if (marks[i + 1]! - run! > 5e-3) segs.push(walk(pt(run!), pt(marks[i + 1]!), out!))
         run = null
-      } else if (!wall && run !== null) {
+      } else if (!edge && run !== null) {
         if (marks[i]! - run > 5e-3) segs.push(walk(pt(run), pt(marks[i]!), out!))
         run = null
       }
@@ -315,9 +315,9 @@ export function outlineFrom(pieces: Poly[]): { segs: Seg[]; against: [number, nu
   return { segs, against }
 }
 
-export const outlineOf = (r: Room): Seg[] => outlineFrom(piecesOf(r)).segs
+export const outlineOf = (r: Zone): Seg[] => outlineFrom(piecesOf(r)).segs
 
-/** The pieces sorted into the parts of the room that actually hang together. */
+/** The pieces sorted into the parts of the zone that actually hang together. */
 export function partsOf(pieces: Poly[]): Poly[][] {
   const up = pieces.map((_unused, i) => i)
   const find = (i: number): number => (up[i] === i ? i : (up[i] = find(up[i]!)))
@@ -340,8 +340,8 @@ export const partArea = (part: Poly[]) => part.reduce((s, p) => s + polyArea(p),
 export const same = (p: Point, q: Point) =>
   Math.abs(p[0] - q[0]) < 1e-6 && Math.abs(p[1] - q[1]) < 1e-6
 
-/** The walls chained into closed loops, so a wall knows the two it meets. */
-export function chainWalls(segs: Seg[]): Seg[][] | null {
+/** The edges chained into closed loops, so an edge knows the two it meets. */
+export function chainEdges(segs: Seg[]): Seg[][] | null {
   if (!segs.length) return null
   const key = (p: Point) => `${Math.round(p[0] * 1e3)}|${Math.round(p[1] * 1e3)}`
   const leaving = new Map<string, Seg[]>()
@@ -365,7 +365,7 @@ export function chainWalls(segs: Seg[]): Seg[][] | null {
       if (!opts.length) break
       if (opts.length === 1) cur = opts[0]
       else {
-        // where more than two walls meet, keep to the room: take the sharpest turn back
+        // where more than two edges meet, keep to the zone: take the sharpest turn back
         const back = dirOf(cur) + Math.PI
         let best: { t: number; o: Seg } | null = null
         for (const o of opts) {
@@ -381,9 +381,9 @@ export function chainWalls(segs: Seg[]): Seg[][] | null {
   return loops.length ? loops : null
 }
 
-export const loopsOf = (r: Room) => chainWalls(outlineOf(r))
+export const loopsOf = (r: Zone) => chainEdges(outlineOf(r))
 
-/** A corner that is not really a corner, and a wall too short to be a wall, both go. */
+/** A corner that is not really a corner, and an edge too short to be an edge, both go. */
 export function simplifyLoop(pts: Poly): Poly {
   let out = pts.slice()
   for (let pass = 0; pass < 4 && out.length > 3; pass++) {
@@ -393,12 +393,12 @@ export function simplifyLoop(pts: Poly): Poly {
       const b = out[i]!
       const c = out[(i + 1) % out.length]!
       const d2 = Math.hypot(c[0] - b[0], c[1] - b[1])
-      const room = keep.length + (out.length - i - 1) > 3
-      if (d2 < 0.02 && room) continue
+      const zone = keep.length + (out.length - i - 1) > 3
+      if (d2 < 0.02 && zone) continue
       const span = Math.hypot(c[0] - a[0], c[1] - a[1])
       // how far the corner stands off the line from one neighbour to the other
       const turn = Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]))
-      if (span > 1e-9 && turn / span < 0.02 && room) continue
+      if (span > 1e-9 && turn / span < 0.02 && zone) continue
       keep.push(b)
     }
     if (keep.length === out.length || keep.length < 3) break
@@ -445,7 +445,7 @@ function inTriangle(q: Point, a: Point, b: Point, c: Point): boolean {
   return !((d1 < -1e-12 || d2 < -1e-12 || d3 < -1e-12) && (d1 > 1e-12 || d2 > 1e-12 || d3 > 1e-12))
 }
 
-/** Any outline cut into convex pieces, so a room of any shape is still drawn and cut the same way. */
+/** Any outline cut into convex pieces, so a zone of any shape is still drawn and cut the same way. */
 export function triangulate(poly: Poly): Poly[] {
   const p = facing(poly).slice()
   const out: Poly[] = []
@@ -472,13 +472,13 @@ export function triangulate(poly: Poly): Poly[] {
 
 // ---------- the frame and the shape in it ----------
 
-export function loseSize(r: Room, dw: number, dh: number): void {
+export function loseSize(r: Zone, dw: number, dh: number): void {
   const l = r.lost ?? { w: 0, h: 0 }
   r.lost = { w: r6(Math.max(0, l.w + dw)), h: r6(Math.max(0, l.h + dh)) }
 }
 
 /** The frame moved or resized on its own, the shape left where it stands in the world. */
-export function setFrameOnly(r: Room, lx: number, ly: number, lw: number, lh: number): void {
+export function setFrameOnly(r: Zone, lx: number, ly: number, lw: number, lh: number): void {
   if (r.doors && (lx || ly))
     r.doors = r.doors.map((d) =>
       d.at ? { ...d, at: [r6(d.at[0] - lx), r6(d.at[1] - ly)] as Point } : d,
@@ -499,9 +499,9 @@ export function setFrameOnly(r: Room, lx: number, ly: number, lw: number, lh: nu
 
 /**
  * Tiny pieces dropped, the frame pulled in to what is left, and a shape that is whole again goes
- * back to being a plain rectangle. Nothing left at all: the room belongs in the tray, so null.
+ * back to being a plain rectangle. Nothing left at all: the zone belongs in the tray, so null.
  */
-export function normalise(r: Room): Room | null {
+export function normalise(r: Zone): Zone | null {
   const ps = piecesOf(r)
     .map(facing)
     .filter((p) => polyArea(p) > 0.02)
@@ -521,11 +521,11 @@ export function normalise(r: Room): Room | null {
 }
 
 /**
- * One room is one place. Whatever a cut or a drag leaves, the room keeps the largest part of it and
+ * One zone is one place. Whatever a cut or a drag leaves, the zone keeps the largest part of it and
  * is rebuilt from its own outline, so it never gathers slivers and never stands in two places.
  */
-export function canonicalise(room: Room): Room | null {
-  const r = room
+export function canonicalise(zone: Zone): Zone | null {
+  const r = zone
   let ps = weld(piecesOf(r), 0.02)
     .map(facing)
     .filter((p) => p.length >= 3 && polyArea(p) > 1e-4)
@@ -533,11 +533,11 @@ export function canonicalise(room: Room): Room | null {
   const parts = partsOf(ps)
   if (parts.length > 1)
     ps = parts.reduce((best, part) => (partArea(part) > partArea(best) ? part : best))
-  const loops = chainWalls(outlineFrom(ps).segs)
+  const loops = chainEdges(outlineFrom(ps).segs)
   if (loops) {
     const rings = loops.map((l) => l.map((e) => e.a))
     const outer = rings.reduce((best, p) => (polyArea(p) > polyArea(best) ? p : best))
-    // a room with a courtyard in it keeps its pieces; anything else is rebuilt from its outline
+    // a zone with a courtyard in it keeps its pieces; anything else is rebuilt from its outline
     const holes = rings.some((p) => p !== outer && polyArea(p) > 0.5)
     if (!holes) {
       const poly = simplifyLoop(outer)
@@ -552,7 +552,7 @@ export function canonicalise(room: Room): Room | null {
 }
 
 /** The frame set to a part of itself: whatever falls outside is trimmed away. */
-export function setFrame(r: Room, lx: number, ly: number, lw: number, lh: number): Room | null {
+export function setFrame(r: Zone, lx: number, ly: number, lw: number, lh: number): Zone | null {
   if (!(r.pieces && r.pieces.length)) {
     setFrameOnly(r, lx, ly, lw, lh)
     return r
@@ -572,7 +572,7 @@ export function setFrame(r: Room, lx: number, ly: number, lw: number, lh: number
 }
 
 /** A shape stretched to a new size, which is what a typed dimension means. */
-export function scaleTo(r: Room, lw: number, lh: number): void {
+export function scaleTo(r: Zone, lw: number, lh: number): void {
   const sx = lw / r.w
   const sy = lh / r.h
   if (r.pieces) r.pieces = r.pieces.map((p) => tidy(p.map(([x, y]) => [x * sx, y * sy] as Point)))
@@ -584,8 +584,8 @@ export function scaleTo(r: Room, lw: number, lh: number): void {
   setFrameOnly(r, 0, 0, lw, lh)
 }
 
-/** One room's footprint cut out of another's, exactly, slanted edges and all. */
-export function cutBy(target: Room, cutter: Room): Room | null {
+/** One zone's footprint cut out of another's, exactly, slanted edges and all. */
+export function cutBy(target: Zone, cutter: Zone): Zone | null {
   const r = target
   const before = areaOf(r)
   let ps = piecesOf(r)
@@ -601,12 +601,12 @@ export function cutBy(target: Room, cutter: Room): Room | null {
   return canonicalise(r)
 }
 
-/** The room less everything past the setback line, where it stands. */
+/** The zone less everything past the setback line, where it stands. */
 export function cutToSetback(
-  room: Room,
+  zone: Zone,
   plot: PlotSpec = DEFAULT_PLOT,
-): { room: Room | null; cut: boolean } {
-  const r = room
+): { zone: Zone | null; cut: boolean } {
+  const r = zone
   const B = plot.build
   const M = 5
   const strips: Poly[] = [
@@ -643,19 +643,19 @@ export function cutToSetback(
       st.map(([x, y]) => toLocal(r, x, y)),
     )
   const after = ps.reduce((sum, p) => sum + polyArea(p), 0)
-  if (before - after < 1e-6) return { room: r, cut: false }
-  if (after < 1) return { room: null, cut: true }
+  if (before - after < 1e-6) return { zone: r, cut: false }
+  if (after < 1) return { zone: null, cut: true }
   r.pieces = ps
-  return { room: canonicalise(r), cut: true }
+  return { zone: canonicalise(r), cut: true }
 }
 
 /**
- * A wall moved along its own normal. The two walls it meets follow it, so the room keeps one clean
- * outline instead of growing a stub; where the shape will not take it, the wall simply stops and
+ * An edge moved along its own normal. The two edges it meets follow it, so the zone keeps one clean
+ * outline instead of growing a stub; where the shape will not take it, the edge simply stops and
  * this returns null.
  */
-export function pullWall(room: Room, seg: Seg, s: number): Room | null {
-  const r = room
+export function pullEdge(zone: Zone, seg: Seg, s: number): Zone | null {
+  const r = zone
   if (Math.abs(s) < 1e-6) return null
   const loops = loopsOf(r)
   const loop = loops && loops.length === 1 ? loops[0]! : null
@@ -675,7 +675,7 @@ export function pullWall(room: Room, seg: Seg, s: number): Room | null {
     r.pieces = triangulate(poly)
     return r
   }
-  // A room with a hole in it has no single outline to follow: that wall moves as a strip.
+  // A zone with a hole in it has no single outline to follow: that edge moves as a strip.
   const [a, b] = [seg.a, seg.b]
   const quad = tidy([a, b, [b[0] + s * n[0], b[1] + s * n[1]], [a[0] + s * n[0], a[1] + s * n[1]]])
   let ps = piecesOf(r)
@@ -688,10 +688,10 @@ export function pullWall(room: Room, seg: Seg, s: number): Room | null {
   return r
 }
 
-// ---------- the walls as they stand on the plot ----------
+// ---------- the edges as they stand on the plot ----------
 
-/** Every wall of a room as it stands in the world, with the way out of the room. */
-export function worldWalls(r: Room): Seg[] {
+/** Every edge of a zone as it stands in the world, with the way out of the zone. */
+export function worldEdges(r: Zone): Seg[] {
   const a = rad(r.angle || 0)
   const c = Math.cos(a)
   const sn = Math.sin(a)
@@ -702,18 +702,18 @@ export function worldWalls(r: Room): Seg[] {
   }))
 }
 
-/** The corners of a room as it stands in the world: every end of every wall it shows. */
-export const worldCorners = (r: Room): Point[] => worldWalls(r).map((w) => w.a)
+/** The corners of a zone as it stands in the world: every end of every edge it shows. */
+export const worldCorners = (r: Zone): Point[] => worldEdges(r).map((w) => w.a)
 
-export const worldN = (r: Room, n: Point): Point => {
+export const worldN = (r: Zone, n: Point): Point => {
   const a = rad(r.angle || 0)
   const c = Math.cos(a)
   const sn = Math.sin(a)
   return [n[0] * c - n[1] * sn, n[0] * sn + n[1] * c]
 }
 
-/** The wall's side of a plain room, when it is a whole side: those still drag a shared wall. */
-export function sideOf(r: Room, seg: Seg): 'left' | 'right' | 'top' | 'bottom' | null {
+/** The edge's side of a plain zone, when it is a whole side: those still drag a shared edge. */
+export function sideOf(r: Zone, seg: Seg): 'left' | 'right' | 'top' | 'bottom' | null {
   if (r.pieces && r.pieces.length) return null
   const t = 1e-6
   const [a, b] = [seg.a, seg.b]
@@ -726,8 +726,8 @@ export function sideOf(r: Room, seg: Seg): 'left' | 'right' | 'top' | 'bottom' |
   return null
 }
 
-/** A room's angle set outright; a whole quarter turn is folded into its rectangle so it is square again. */
-export function setAngle(r: Room, deg: number): void {
+/** A zone's angle set outright; a whole quarter turn is folded into its rectangle so it is square again. */
+export function setAngle(r: Zone, deg: number): void {
   let a = norm(deg)
   if (Math.abs(a - 360) < 1e-6) a = 0
   const quarter = Math.round(a / 90) * 90
@@ -754,8 +754,8 @@ export function setAngle(r: Room, deg: number): void {
   r.angle = r2(a)
 }
 
-/** A room flipped about its own middle: its pieces, doors and angle all turn over. */
-export function mirrorRoom(r: Room, axis: 'x' | 'y'): void {
+/** A zone flipped about its own middle: its pieces, doors and angle all turn over. */
+export function mirrorZone(r: Zone, axis: 'x' | 'y'): void {
   if (r.pieces && r.pieces.length)
     r.pieces = r.pieces.map((p) =>
       facing(p.map(([x, y]) => (axis === 'x' ? [r6(r.w - x), y] : [x, r6(r.h - y)]) as Point)),
@@ -778,8 +778,8 @@ export function mirrorRoom(r: Room, axis: 'x' | 'y'): void {
   if (r.angle) r.angle = r2(norm(-r.angle))
 }
 
-/** A set of rooms turned as one about a point they share. */
-export function rotateGroup(rs: Room[], deg: number, pivot: Point): void {
+/** A set of zones turned as one about a point they share. */
+export function rotateGroup(rs: Zone[], deg: number, pivot: Point): void {
   const a = rad(deg)
   for (const r of rs) {
     const [cx, cy] = centreOf(r)

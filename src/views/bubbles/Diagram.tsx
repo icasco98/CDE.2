@@ -14,11 +14,11 @@ import { pointerAt, viewBoxOf, type Camera } from '../camera'
 import { DRAG_PX, usePanZoom } from './panZoom'
 import { Clouds } from './Clouds'
 import { Apart, Bubble, Link, Outside } from './parts'
-import type { BubbleApart, BubbleLink, BubbleRoom, DragMakes } from './types'
+import type { BubbleApart, BubbleLink, BubbleZone, DragMakes } from './types'
 
-/** Said when a drag ends on a room of another storey; only a stair joins two storeys. */
+/** Said when a drag ends on a zone of another storey; only a stair joins two storeys. */
 const ONE_STOREY =
-  'An edge joins two rooms on one storey; a stair is the way from one storey to the next.'
+  'A connection joins two zones on one storey; a stair is the way from one storey to the next.'
 
 type Point = { readonly x: number; readonly y: number }
 
@@ -34,23 +34,23 @@ type Gesture =
 
 type DiagramProps = {
   readonly arrangement: Arrangement
-  readonly rooms: ReadonlyMap<string, BubbleRoom>
-  readonly edges: readonly BubbleLink[]
+  readonly zones: ReadonlyMap<string, BubbleZone>
+  readonly connections: readonly BubbleLink[]
   readonly apart: readonly BubbleApart[]
-  /** What a drag from a room's ring makes when it lands on another room. */
+  /** What a drag from a zone's ring makes when it lands on another zone. */
   readonly makes: DragMakes
   readonly selected: string | null
   /** The storey brought forward; the others fade and stay. */
   readonly focus: number | null
-  readonly titleOf: (edge: BubbleLink) => string
+  readonly titleOf: (connection: BubbleLink) => string
   readonly onFocus: (storey: number) => void
   readonly onNudge: (id: string, nudge: Nudge, commit: Commit) => void
   readonly onConnect: (a: string, b: string) => void
   readonly onKeepApart: (a: string, b: string) => void
   readonly onSelect: (id: string | null) => void
   readonly onRefuse: (message: string) => void
-  /** A right-click on a room, at the pointer's place on the page. */
-  readonly onRoomMenu: (id: string, at: { readonly x: number; readonly y: number }) => void
+  /** A right-click on a zone, at the pointer's place on the page. */
+  readonly onZoneMenu: (id: string, at: { readonly x: number; readonly y: number }) => void
   /** Screen pixels per unit of the diagram, told whenever the drawing's size on screen changes. */
   readonly onPixels: (pixels: number) => void
   readonly camera: Camera
@@ -64,7 +64,7 @@ function spotAt(arrangement: Arrangement, at: Point): Spot | undefined {
 }
 
 export function Diagram(props: DiagramProps) {
-  const { arrangement, rooms, edges, selected, focus } = props
+  const { arrangement, zones, connections, selected, focus } = props
   const svgRef = useRef<SVGSVGElement>(null)
   const gestureRef = useRef<Gesture | null>(null)
   const [gesture, setGesture] = useState<Gesture | null>(null)
@@ -97,12 +97,12 @@ export function Diagram(props: DiagramProps) {
   function grab(event: ReactPointerEvent, spot: Spot): void {
     if (event.button !== 0) return
     event.stopPropagation()
-    const room = rooms.get(spot.id)
+    const zone = zones.get(spot.id)
     begin({
       kind: 'nudge',
       id: spot.id,
       from: unitsAt(event.clientX, event.clientY),
-      start: room?.bubble ?? { x: 0, y: 0 },
+      start: zone?.bubble ?? { x: 0, y: 0 },
       moved: false,
     })
   }
@@ -117,7 +117,7 @@ export function Diagram(props: DiagramProps) {
     event.preventDefault()
     event.stopPropagation()
     props.onSelect(spot.id)
-    props.onRoomMenu(spot.id, { x: event.clientX, y: event.clientY })
+    props.onZoneMenu(spot.id, { x: event.clientX, y: event.clientY })
   }
 
   function move(event: PointerEvent): void {
@@ -154,7 +154,7 @@ export function Diagram(props: DiagramProps) {
     }
     const target = spotAt(arrangement, at)
     if (!target || target.id === held.from.id) return
-    // Keep apart is about two rooms, not a wall between them, so storeys do not matter to it.
+    // Keep apart is about two zones, not an edge between them, so storeys do not matter to it.
     if (props.makes === 'apart') {
       if (target.id !== EXTERIOR && held.from.id !== EXTERIOR)
         props.onKeepApart(held.from.id, target.id)
@@ -196,7 +196,7 @@ export function Diagram(props: DiagramProps) {
     return () => observer.disconnect()
   }, [onPixels, arrangement.width, arrangement.height, props.camera])
 
-  /** A room drawn in two columns is one room, so its two circles are tied by a line of their own. */
+  /** A zone drawn in two columns is one zone, so its two circles are tied by a line of their own. */
   const through = useMemo(() => {
     const pairs: [Spot, Spot][] = []
     const seen = new Map<string, Spot>()
@@ -220,20 +220,21 @@ export function Diagram(props: DiagramProps) {
     return ones[0] && others[0] ? [ones[0], others[0]] : null
   }
 
-  /** The room whose connections stand out and the rest fade: the one drawn from, under the hand, or selected. */
+  /** The zone whose connections stand out and the rest fade: the one drawn from, under the hand, or selected. */
   const focused =
     gesture?.kind === 'link'
       ? gesture.from.id
-      : (hovered ?? (selected !== null && rooms.has(selected) ? selected : null))
+      : (hovered ?? (selected !== null && zones.has(selected) ? selected : null))
   const near = useMemo(() => {
     if (focused === null) return null
     const ids = new Set([focused])
-    for (const edge of edges)
-      if (edge.a === focused || edge.b === focused) ids.add(edge.a === focused ? edge.b : edge.a)
+    for (const connection of connections)
+      if (connection.a === focused || connection.b === focused)
+        ids.add(connection.a === focused ? connection.b : connection.a)
     for (const pair of props.apart)
       if (pair.a === focused || pair.b === focused) ids.add(pair.a === focused ? pair.b : pair.a)
     return ids
-  }, [focused, edges, props.apart])
+  }, [focused, connections, props.apart])
   const touches = (a: string, b: string): boolean => a === focused || b === focused
 
   const dimmed = (storey: number): boolean => focus !== null && storey !== focus
@@ -300,23 +301,23 @@ export function Diagram(props: DiagramProps) {
           </text>
         </g>
       ))}
-      <Clouds spots={arrangement.spots} rooms={rooms} dimmed={dimmed} />
-      {edges.map((edge) => {
-        const from = where({ id: edge.a, storey: edge.storey })
-        const to = where({ id: edge.b, storey: edge.storey })
+      <Clouds spots={arrangement.spots} zones={zones} dimmed={dimmed} />
+      {connections.map((connection) => {
+        const from = where({ id: connection.a, storey: connection.storey })
+        const to = where({ id: connection.b, storey: connection.storey })
         if (!from || !to) return null
         return (
           <Link
-            key={edge.id}
-            id={edge.id}
+            key={connection.id}
+            id={connection.id}
             from={from}
             to={to}
-            kind={edge.kind}
-            storey={edge.storey}
-            selected={edge.id === selected}
-            dimmed={dimmed(edge.storey)}
-            near={touches(edge.a, edge.b)}
-            title={props.titleOf(edge)}
+            kind={connection.kind}
+            storey={connection.storey}
+            selected={connection.id === selected}
+            dimmed={dimmed(connection.storey)}
+            near={touches(connection.a, connection.b)}
+            title={props.titleOf(connection)}
             onSelect={choose}
           />
         )
@@ -333,7 +334,7 @@ export function Diagram(props: DiagramProps) {
             selected={pair.id === selected}
             dimmed={dimmed(both[0].storey) && dimmed(both[1].storey)}
             near={touches(pair.a, pair.b)}
-            title={`Keep apart: ${rooms.get(pair.a)?.name ?? ''} and ${rooms.get(pair.b)?.name ?? ''}`}
+            title={`Keep apart: ${zones.get(pair.a)?.name ?? ''} and ${zones.get(pair.b)?.name ?? ''}`}
             onSelect={choose}
           />
         )
@@ -348,7 +349,7 @@ export function Diagram(props: DiagramProps) {
           y2={to.y}
           className={from.id === focused ? 'through through-near' : 'through'}
         >
-          <title>{`${rooms.get(from.id)?.name ?? ''}: one room on both storeys`}</title>
+          <title>{`${zones.get(from.id)?.name ?? ''}: one zone on both storeys`}</title>
         </line>
       ))}
       {arrangement.outside.map((spot) => (
@@ -360,18 +361,18 @@ export function Diagram(props: DiagramProps) {
         />
       ))}
       {arrangement.spots.map((spot) => {
-        const room = rooms.get(spot.id)
-        if (!room) return null
-        const span = Math.max(1, Math.trunc(room.storeysSpanned))
+        const zone = zones.get(spot.id)
+        if (!zone) return null
+        const span = Math.max(1, Math.trunc(zone.storeysSpanned))
         return (
           <Bubble
             key={`${spot.id}@${spot.storey}`}
             spot={spot}
-            name={room.name}
-            area={`${Math.round(room.targetArea)} m²`}
-            {...(room.category === undefined ? {} : { category: room.category })}
+            name={zone.name}
+            area={`${Math.round(zone.targetArea)} m²`}
+            {...(zone.category === undefined ? {} : { category: zone.category })}
             {...(span > 1
-              ? { span: `${storeyLabel(room.storey)} to ${storeyLabel(room.storey + span - 1)}` }
+              ? { span: `${storeyLabel(zone.storey)} to ${storeyLabel(zone.storey + span - 1)}` }
               : {})}
             selected={spot.id === selected}
             dimmed={dimmed(spot.storey)}

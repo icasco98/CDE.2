@@ -1,9 +1,9 @@
-import { area, outwardWalls, pointInPolygon, type Point, type Polygon } from '../geometry'
+import { area, outwardEdges, pointInPolygon, type Point, type Polygon } from '../geometry'
 import { buildableArea, setbackDepth, type PlotShape } from './setbacks'
 
 /**
  * One side of the plot as the brief check reads it: not the boundary itself but the line the
- * setback leaves inside it, which is where a room at that boundary really stands.
+ * setback leaves inside it, which is where a zone at that boundary really stands.
  */
 export type PlotSide = {
   /** The plot polygon's own side number, which is what `Plot.street` names. */
@@ -80,18 +80,18 @@ function insideRun(from: Point, to: Point, inward: Point, polygon: Polygon): [Po
  * the side street the service entrance goes on.
  */
 export function sidesOf(plot: PlotShape): PlotSides {
-  const walls = outwardWalls(plot.polygon)
+  const edges = outwardEdges(plot.polygon)
   const inside = buildableArea(plot)
-  if (walls.length < 3 || inside.length < 3) return { every: [], street: [] }
+  if (edges.length < 3 || inside.length < 3) return { every: [], street: [] }
   const plotArea = area(plot.polygon)
   const every: PlotSide[] = []
-  for (const [index, wall] of walls.entries()) {
+  for (const [index, edge] of edges.entries()) {
     const street = plot.street.includes(index)
-    const inward: Point = [-wall.normal[0], -wall.normal[1]]
+    const inward: Point = [-edge.normal[0], -edge.normal[1]]
     const depth = setbackDepth(plotArea, street)
     const run = insideRun(
-      [wall.from[0] + inward[0] * depth, wall.from[1] + inward[1] * depth],
-      [wall.to[0] + inward[0] * depth, wall.to[1] + inward[1] * depth],
+      [edge.from[0] + inward[0] * depth, edge.from[1] + inward[1] * depth],
+      [edge.to[0] + inward[0] * depth, edge.to[1] + inward[1] * depth],
       inward,
       inside,
     )

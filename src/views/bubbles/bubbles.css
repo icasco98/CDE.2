@@ -327,22 +327,22 @@
   stroke-width: 1px;
 }
 
-.edge-panel p {
+.connection-panel p {
   margin: 0;
   font-size: 0.85rem;
   color: #4a453d;
 }
 
-.edge-panel .edge-kind {
+.connection-panel .connection-kind {
   display: flex;
   gap: 0.4rem;
 }
 
-.edge-panel > button {
+.connection-panel > button {
   align-self: flex-start;
 }
 
-/* A category's zone: a wash of its colour behind its rooms, never in the hand's way. */
+/* A category's cloud: a wash of its colour behind its zones, never in the hand's way. */
 .bubbles-sheet .clouds {
   pointer-events: none;
 }
@@ -364,7 +364,7 @@
   opacity: 0.4;
 }
 
-/* A room in focus, under the hand or selected: its connections bold, everything else faint. */
+/* A zone in focus, under the hand or selected: its connections bold, everything else faint. */
 .bubbles-sheet .bubble,
 .bubbles-sheet .outside,
 .bubbles-sheet .link-group,
@@ -390,7 +390,7 @@
   stroke-width: 3.5px;
 }
 
-/* A stair's circles on two storeys are one room; the tie between them is not an edge. */
+/* A stair's circles on two storeys are one zone; the tie between them is not a connection. */
 .bubbles-sheet .through {
   stroke: #9a958c;
   stroke-width: 1.5px;
@@ -398,7 +398,7 @@
   stroke-linecap: round;
 }
 
-/* Keep apart is not an edge, so it is drawn in the warning red, dashed and crossed. */
+/* Keep apart is not a connection, so it is drawn in the warning red, dashed and crossed. */
 .bubbles-sheet .apart,
 .bubbles .legend .apart {
   stroke: #b3261e;

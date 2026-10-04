@@ -32,7 +32,7 @@ function desk(): {
       say: (line) => said.push(line),
       note: (text) => notes.push(text),
       request: (text) => asked.push(text),
-      edgeBetween: () => null,
+      connectionBetween: () => null,
     },
     sheet: () => sheet,
     said,
@@ -49,7 +49,7 @@ describe('one message to the assistant', () => {
       expect(input[0]!.content).toContain('The owner says: lay out the ground floor')
       expect(options?.modelTier).toBe('default')
       expect(options?.cache).toBe(false)
-      const place = options?.tools?.find((tool) => tool.name === 'place_rooms')
+      const place = options?.tools?.find((tool) => tool.name === 'place_zones')
       place?.execute({ moves: [{ name: 'Bedroom', x: 11.2, y: 1.5 }] })
       options?.onText?.({ text: 'Bedroom is in.', delta: 'Bedroom is in.' })
       return { text: 'Bedroom is in.', truncated: false }
@@ -64,7 +64,7 @@ describe('one message to the assistant', () => {
     })
     expect(run).toEqual({ text: 'Bedroom is in.' })
     expect(streamed).toEqual(['Bedroom is in.'])
-    expect(table.sheet().rooms.find((r) => r.name === 'Bedroom')!.placed).toBe(true)
+    expect(table.sheet().zones.find((r) => r.name === 'Bedroom')!.placed).toBe(true)
   })
 
   it('refuses where the view cannot run the tools', async () => {
@@ -108,7 +108,7 @@ describe('one message to the assistant', () => {
       const tools = options?.tools ?? []
       if (input.length === 1) {
         tools
-          .find((tool) => tool.name === 'place_rooms')
+          .find((tool) => tool.name === 'place_zones')
           ?.execute({ moves: [{ name: 'Bedroom', x: 11.2, y: 1.5 }] })
         return { text: 'Bedroom is in.', truncated: false }
       }
@@ -140,7 +140,7 @@ describe('one message to the assistant', () => {
         calls.push(1)
         const tools = options?.tools ?? []
         tools
-          .find((tool) => tool.name === 'place_rooms')
+          .find((tool) => tool.name === 'place_zones')
           ?.execute({ moves: [{ name: 'Bedroom', x: 11.2, y: 1.5 }] })
         if (work === 'note')
           tools.find((tool) => tool.name === 'remember')?.execute({ note: 'a rule' })
@@ -184,7 +184,7 @@ describe('one message to the assistant', () => {
     const working = (async (_input, options) => {
       options?.tools
         ?.find((tool) => tool.name === 'do')
-        ?.execute({ deeds: [{ verb: 'turn', room: 'Store', quarter: true }] })
+        ?.execute({ deeds: [{ verb: 'turn', zone: 'Store', quarter: true }] })
       return { text: 'I turned the store.', truncated: false }
     }) as Sample
     const did = await runMessage({

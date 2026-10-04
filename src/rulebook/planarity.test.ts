@@ -50,12 +50,12 @@ describe('whether a storey’s links can be drawn without a crossing', () => {
     ).toBe(true)
   })
 
-  it('draws the complete graph on four rooms and refuses the one on five', () => {
+  it('draws the complete graph on four zones and refuses the one on five', () => {
     expect(isPlanar(['a', 'b', 'c', 'd'], complete(['a', 'b', 'c', 'd']))).toBe(true)
     expect(isPlanar(['a', 'b', 'c', 'd', 'e'], complete(['a', 'b', 'c', 'd', 'e']))).toBe(false)
   })
 
-  it('refuses three rooms each linked to the same three others', () => {
+  it('refuses three zones each linked to the same three others', () => {
     const nodes = ['a', 'b', 'c', 'x', 'y', 'z']
     expect(isPlanar(nodes, both(['a', 'b', 'c'], ['x', 'y', 'z']))).toBe(false)
   })
@@ -99,7 +99,7 @@ describe('whether a storey’s links can be drawn without a crossing', () => {
     expect(isPlanar(nodes, pairs)).toBe(true)
   })
 
-  it('leaves a room with no links alone, and a pair joined twice', () => {
+  it('leaves a zone with no links alone, and a pair joined twice', () => {
     expect(
       isPlanar(
         ['a', 'b', 'lonely'],

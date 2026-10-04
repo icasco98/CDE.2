@@ -1,6 +1,6 @@
-export type RoomCategory = 'reception' | 'shared' | 'private' | 'service' | 'open'
+export type ZoneCategory = 'reception' | 'shared' | 'private' | 'service' | 'open'
 
-export type RoomTier = 'public' | 'semi-public' | 'private' | 'exempt'
+export type ZoneTier = 'public' | 'semi-public' | 'private' | 'exempt'
 
 export type Band = { readonly min: number; readonly max: number }
 
@@ -13,7 +13,7 @@ export type Typical = number | Band | typeof byPlotBand
 
 export type SizeRange = Band | typeof byPlotBand | typeof lengthAsNeeded
 
-/** What the Municipality will not let a room go below, and the section it comes from. */
+/** What the Municipality will not let a zone go below, and the section it comes from. */
 export type LegalFloor = {
   readonly area?: number
   readonly width?: number
@@ -27,14 +27,14 @@ export type LegalFloor = {
  */
 export type DefaultStorey = 'ground' | 'upper' | 'any' | 'all' | 'top'
 
-export type RoomTypeFlags = {
+export type ZoneTypeFlags = {
   readonly circulation?: true
   readonly auxiliary?: true
   readonly optional?: true
   readonly notInRatio?: true
 }
 
-export type RoomType = {
+export type ZoneType = {
   readonly id: string
   readonly label: string
   readonly arabic: string
@@ -42,15 +42,15 @@ export type RoomType = {
   readonly typical: Typical
   readonly range: SizeRange
   readonly proportion: Band | typeof freeProportion
-  readonly category: RoomCategory
-  readonly tier: RoomTier
+  readonly category: ZoneCategory
+  readonly tier: ZoneTier
   readonly defaultStorey: DefaultStorey
-  /** The kind this one brings with it, such as a bedroom's ensuite; it takes the room's storey. */
+  /** The kind this one brings with it, such as a bedroom's ensuite; it takes the zone's storey. */
   readonly companion?: string
-  readonly flags: RoomTypeFlags
+  readonly flags: ZoneTypeFlags
   readonly basis: string
   /** Everything the table says about the kind that is not one of the flags. */
   readonly note?: string
-  /** The garage's numbers are per car, not per room. */
+  /** The garage's numbers are per car, not per zone. */
   readonly perCar?: true
 }

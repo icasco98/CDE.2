@@ -2,19 +2,19 @@ import { useMemo } from 'react'
 import type { Spot } from '../../bubbles/arrange'
 import { cloudsOf } from '../../bubbles/clouds'
 import { categoryLabels } from '../../rulebook'
-import type { BubbleRoom } from './types'
+import type { BubbleZone } from './types'
 
 const labelOf = (category: string): string =>
   (categoryLabels as Readonly<Record<string, string>>)[category] ?? category
 
-/** Each category's zone on each storey, drawn under the lines and bubbles and out of the hand's way. */
+/** Each category's cloud on each storey, drawn under the lines and bubbles and out of the hand's way. */
 export function Clouds(props: {
   readonly spots: readonly Spot[]
-  readonly rooms: ReadonlyMap<string, BubbleRoom>
+  readonly zones: ReadonlyMap<string, BubbleZone>
   readonly dimmed: (storey: number) => boolean
 }) {
-  const { spots, rooms } = props
-  const clouds = useMemo(() => cloudsOf(spots, (id) => rooms.get(id)?.category), [spots, rooms])
+  const { spots, zones } = props
+  const clouds = useMemo(() => cloudsOf(spots, (id) => zones.get(id)?.category), [spots, zones])
   return (
     <g className="clouds" aria-hidden="true">
       {clouds.map((cloud) => (

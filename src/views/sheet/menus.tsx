@@ -1,5 +1,5 @@
 /**
- * The right-click menus: a room's, an enclosed space's, and the note where a right-click finds
+ * The right-click menus: a zone's, an enclosed space's, and the note where a right-click finds
  * neither. Each row names one choice; the stage turns the choice into one action.
  */
 
@@ -11,7 +11,7 @@ import {
   storeyNameOf,
   type Point,
   type Pocket,
-  type Room,
+  type Zone,
   type DoorRead,
   type Settings,
   type Sheet,
@@ -21,7 +21,7 @@ import { useOnScreen } from '../onScreen'
 /** Where a menu stands, in pixels inside the sheet's box. */
 type MenuAt = { x: number; y: number }
 
-export type RoomChoice =
+export type ZoneChoice =
   | { kind: 'pivot'; at: Point | null }
   | { kind: 'quarter' }
   | { kind: 'north' }
@@ -38,27 +38,27 @@ export type RoomChoice =
   | { kind: 'labelReset' }
   | { kind: 'restore' }
   | { kind: 'copy' }
-  /** One storey up or down, the room's place kept; a copy leaves the original where it stands. */
+  /** One storey up or down, the zone's place kept; a copy leaves the original where it stands. */
   | { kind: 'setStorey'; to: number }
   | { kind: 'copyStorey'; to: number }
   | { kind: 'back' }
 
-type RoomMenuProps = {
+type ZoneMenuProps = {
   at: MenuAt
   /** The corner the right-click landed near, which the selection can turn about. */
   corner: Point | null
   pivotSet: boolean
-  room: Room
-  selection: Room[]
-  /** The rooms the selection lies over, with whether any of them can give way. */
+  zone: Zone
+  selection: Zone[]
+  /** The zones the selection lies over, with whether any of them can give way. */
   under: { names: string[]; can: boolean }
   canRestore: boolean
   pastSetback: boolean
   settings: Settings
-  /** The storey in hand and how many the plan has, for the rows that send a room up or down. */
+  /** The storey in hand and how many the plan has, for the rows that send a zone up or down. */
   storey: number
   storeys: number
-  onChoose: (choice: RoomChoice) => void
+  onChoose: (choice: ZoneChoice) => void
 }
 
 const style = (at: MenuAt) => ({
@@ -66,12 +66,12 @@ const style = (at: MenuAt) => ({
   top: `${Math.max(4, at.y + 2)}px`,
 })
 
-export function RoomMenu(props: RoomMenuProps) {
+export function ZoneMenu(props: ZoneMenuProps) {
   const box = useOnScreen<HTMLDivElement>()
   const sel = props.selection
   const many = sel.length > 1
   const allLocked = sel.every((o) => o.locked)
-  const head = many ? `${sel.length} rooms` : props.room.name
+  const head = many ? `${sel.length} zones` : props.zone.name
   const oneGroup = sel.every((o) => o.group) && new Set(sel.map((o) => o.group)).size === 1
   const these = many ? 'these zones' : 'this zone'
   if (allLocked)
@@ -185,7 +185,7 @@ export function RoomMenu(props: RoomMenuProps) {
         </button>
       )}
       <button type="button" onClick={() => props.onChoose({ kind: 'colour' })}>
-        Colour…<span className="m">this room&rsquo;s own</span>
+        Colour…<span className="m">this zone&rsquo;s own</span>
       </button>
       {sel.some((o) => o.color) && (
         <button type="button" onClick={() => props.onChoose({ kind: 'colourReset' })}>
@@ -244,9 +244,9 @@ export function RoomMenu(props: RoomMenuProps) {
   )
 }
 
-export type PocketChoice = { kind: 'give'; room: string } | { kind: 'court' } | { kind: 'corridor' }
+export type PocketChoice = { kind: 'give'; zone: string } | { kind: 'court' } | { kind: 'corridor' }
 
-/** Every room that walls the space in, then a court and a corridor. */
+/** Every zone that encloses the space, then a court and a corridor. */
 export function PocketMenu(props: {
   at: MenuAt
   pocket: Pocket
@@ -257,10 +257,10 @@ export function PocketMenu(props: {
   const why = courtWhy(props.pocket, props.sheet.settings)
   const rows = [...props.pocket.touch.entries()]
     .map(([id, length]) => ({
-      room: props.sheet.rooms.find((o) => o.id === id && o.placed && !o.fixed),
+      zone: props.sheet.zones.find((o) => o.id === id && o.placed && !o.fixed),
       length,
     }))
-    .filter((row): row is { room: Room; length: number } => !!row.room)
+    .filter((row): row is { zone: Zone; length: number } => !!row.zone)
     .sort((p, q) => q.length - p.length)
   return (
     <div
@@ -273,12 +273,12 @@ export function PocketMenu(props: {
       <div className="head">Give this {fmt(props.pocket.area)} m² to</div>
       {rows.map((row) => (
         <button
-          key={row.room.id}
+          key={row.zone.id}
           type="button"
-          onClick={() => props.onChoose({ kind: 'give', room: row.room.id })}
+          onClick={() => props.onChoose({ kind: 'give', zone: row.zone.id })}
         >
-          {row.room.name}
-          <span className="m">{fmt(row.length)} m of wall</span>
+          {row.zone.name}
+          <span className="m">{fmt(row.length)} m of edge</span>
         </button>
       ))}
       <div className="head">Or make it</div>
@@ -293,7 +293,7 @@ export function PocketMenu(props: {
   )
 }
 
-/** A right-click on empty space that no room walls in says only why there is nothing to do. */
+/** A right-click on empty space that no zone encloses says only why there is nothing to do. */
 export function EmptyNote(props: { at: MenuAt; note: string }) {
   const box = useOnScreen<HTMLDivElement>()
   return (
@@ -328,13 +328,13 @@ export function DoorMenu(props: {
       onPointerDown={(e) => e.stopPropagation()}
     >
       <div className="head">
-        {door.label} · {door.room}
+        {door.label} · {door.zone}
       </div>
       {door.swings && (
         <button type="button" onClick={() => props.onChoose({ kind: 'flip' })}>
           Swing the other way
           <span className="m">
-            {door.swingsInto === door.room ? `out of ${door.room}` : `into ${door.room}`}
+            {door.swingsInto === door.zone ? `out of ${door.zone}` : `into ${door.zone}`}
           </span>
         </button>
       )}
@@ -355,7 +355,7 @@ export function PocketBar(props: {
   at: MenuAt
   pocket: Pocket
   settings: Settings
-  to: Room | null
+  to: Zone | null
   onChoose: (choice: PocketChoice) => void
 }) {
   const why = courtWhy(props.pocket, props.settings)
@@ -368,9 +368,9 @@ export function PocketBar(props: {
       <button
         type="button"
         disabled={!props.to}
-        onClick={() => props.to && props.onChoose({ kind: 'give', room: props.to.id })}
+        onClick={() => props.to && props.onChoose({ kind: 'give', zone: props.to.id })}
       >
-        Give to {props.to ? props.to.name : 'a room'}
+        Give to {props.to ? props.to.name : 'a zone'}
       </button>
       <button type="button" disabled={!!why} onClick={() => props.onChoose({ kind: 'court' })}>
         Court
@@ -379,7 +379,7 @@ export function PocketBar(props: {
         Corridor
       </button>
       <span className="why">
-        {why ? why : `${fmt(props.pocket.area)} m². Or click any room to give it there.`}
+        {why ? why : `${fmt(props.pocket.area)} m². Or click any zone to give it there.`}
       </span>
     </div>
   )

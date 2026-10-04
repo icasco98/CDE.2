@@ -89,7 +89,7 @@ export async function runMessage(input: RunInput): Promise<Run> {
       input.desk.request(text)
     },
   }
-  const before = JSON.stringify(input.desk.read().rooms)
+  const before = JSON.stringify(input.desk.read().zones)
   try {
     let limits: { tools?: { maxCount: number } } | null = null
     try {
@@ -107,7 +107,7 @@ export async function runMessage(input: RunInput): Promise<Run> {
       ...(input.signal ? { signal: input.signal } : {}),
     })
     const text = answer.text || 'Done.'
-    if (!wrote && JSON.stringify(input.desk.read().rooms) !== before)
+    if (!wrote && JSON.stringify(input.desk.read().zones) !== before)
       await askForLessons(input, desk, prompt, text)
     return { text, ...(!ran && claimsChange(text) ? { note: NOTHING_PLACED } : {}) }
   } catch (thrown) {

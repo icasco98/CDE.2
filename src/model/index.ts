@@ -4,16 +4,16 @@ export type {
   Apart,
   Bubble,
   Declined,
-  Edge,
-  EdgeKind,
+  Connection,
+  ConnectionKind,
   Endpoint,
   Household,
   Plot,
   Project,
   Result,
-  Room,
+  Zone,
   Violation,
-  WallHint,
+  EdgeHint,
 } from './types'
 export type { Commit } from './actions'
 export { createIdGenerator } from './ids'

@@ -1,11 +1,11 @@
 import { expect, test, type Page } from '@playwright/test'
 import { PROJECT_VERSION, type Project } from '../../src/model'
-import { SETTINGS_V, sheetOf, type Room } from '../../src/sheet/model'
+import { SETTINGS_V, sheetOf, type Zone } from '../../src/sheet/model'
 import { tab } from './tabs'
 
 /*
- * The zoning sheet and the program agreeing: a door stands on the shared wall it was placed on, and
- * a room moved to another storey on the sheet moves in the program and the bubbles, one undo for both.
+ * The zoning sheet and the program agreeing: a door stands on the shared edge it was placed on, and
+ * a zone moved to another storey on the sheet moves in the program and the bubbles, one undo for both.
  */
 
 test.use({ viewport: { width: 1500, height: 1100 } })
@@ -14,10 +14,10 @@ type At = { x: number; y: number }
 
 /**
  * A Kitchen 3 × 3 at (6, 6) and a Dining Room drawn as an L round it: a block east of it and a strip
- * under it, so the two share 3 m of the Kitchen's east wall and 2 m of its south wall.
+ * under it, so the two share 3 m of the Kitchen's east edge and 2 m of its south edge.
  */
-function twoWalls() {
-  const room = (over: Partial<Room>): Room => ({
+function twoEdges() {
+  const zone = (over: Partial<Zone>): Zone => ({
     id: 'k',
     name: 'Kitchen',
     kind: 'kitchen',
@@ -34,9 +34,9 @@ function twoWalls() {
     placedAt: 1,
     ...over,
   })
-  const rooms = [
-    room({}),
-    room({
+  const zones = [
+    zone({}),
+    zone({
       id: 'dn',
       name: 'Dining Room',
       kind: 'dining-room',
@@ -60,10 +60,10 @@ function twoWalls() {
       ],
     }),
   ]
-  const sheet = sheetOf(rooms, { closeGap: 0, snapDist: 0, grid: 0.25 })
+  const sheet = sheetOf(zones, { closeGap: 0, snapDist: 0, grid: 0.25 })
   const project: Project = {
-    id: 'project-walls',
-    name: 'Two walls',
+    id: 'project-edges',
+    name: 'Two edges',
     storeys: 1,
     heights: [3.5],
     plot: {
@@ -86,7 +86,7 @@ function twoWalls() {
       womensReception: false,
       masterOnGround: false,
     },
-    rooms: rooms.map((r) => ({
+    zones: zones.map((r) => ({
       id: r.id,
       name: r.name,
       type: r.kind,
@@ -95,7 +95,7 @@ function twoWalls() {
       targetArea: r.target,
       pinned: false,
     })),
-    edges: [{ id: 'e-k-dn', a: 'k', b: 'dn', kind: 'door', storey: 0 }],
+    connections: [{ id: 'e-k-dn', a: 'k', b: 'dn', kind: 'door', storey: 0 }],
     apart: [],
     declined: [],
     actors: [],
@@ -104,10 +104,10 @@ function twoWalls() {
   return {
     project: JSON.stringify(project),
     sheet: JSON.stringify({
-      rooms: sheet.rooms,
+      zones: sheet.zones,
       storeyCount: 1,
       settings: { ...sheet.settings, v: SETTINGS_V },
-      format: 2,
+      format: 3,
     }),
   }
 }
@@ -144,10 +144,10 @@ async function doorMiddles(page: Page): Promise<[number, number][]> {
   })
 }
 
-test('a door stands on the shorter of two shared walls when that is the one clicked, and on the other when it goes', async ({
+test('a door stands on the shorter of two shared edges when that is the one clicked, and on the other when it goes', async ({
   page,
 }) => {
-  const seeded = twoWalls()
+  const seeded = twoEdges()
   await page.addInitScript((held) => {
     if (window.localStorage.getItem('cde.test.seeded')) return
     window.localStorage.setItem('cde.test.seeded', '1')
@@ -164,7 +164,7 @@ test('a door stands on the shorter of two shared walls when that is the one clic
   await expect(page.locator('svg.sheet .door:not(.preview)')).toHaveCount(1)
   expect(await doorMiddles(page)).toEqual([[8, 9]])
 
-  // The Kitchen a metre north: its south wall leaves the strip, and the door takes the east wall.
+  // The Kitchen a metre north: its south edge leaves the strip, and the door takes the east edge.
   await tab(page, 'Zoning and 3D').click()
   const kitchen = await onSheet(page, 7, 7)
   await page.mouse.click(kitchen.x, kitchen.y)
@@ -174,7 +174,7 @@ test('a door stands on the shorter of two shared walls when that is the one clic
   await expect.poll(() => doorMiddles(page)).toEqual([[8, 9]])
 })
 
-test('a room moved up on the sheet is on the First in the program and the bubbles, and one undo brings both back', async ({
+test('a zone moved up on the sheet is on the First in the program and the bubbles, and one undo brings both back', async ({
   page,
 }) => {
   await page.goto('/')
@@ -189,7 +189,7 @@ test('a room moved up on the sheet is on the First in the program and the bubble
   await page.mouse.down()
   await page.mouse.move(to.x, to.y, { steps: 8 })
   await page.mouse.up()
-  const kitchen = page.locator('svg.sheet g.room', { hasText: 'Kitchen' })
+  const kitchen = page.locator('svg.sheet g.zone', { hasText: 'Kitchen' })
   await expect(kitchen).toHaveCount(1)
 
   await page.mouse.click(to.x, to.y, { button: 'right' })
@@ -223,10 +223,10 @@ test('a room moved up on the sheet is on the First in the program and the bubble
 async function storeyInProgram(page: Page): Promise<string> {
   await tab(page, 'Requirements').click()
   const row = page.locator('table.program tbody tr').filter({
-    has: page.getByLabel('Room name').and(page.locator('[value="Kitchen"]')),
+    has: page.getByLabel('Zone name').and(page.locator('[value="Kitchen"]')),
   })
   return row.getByLabel('Storey').inputValue()
 }
 
 const bubble = (page: Page, storey: number) =>
-  page.locator(`.bubbles-sheet [data-room][data-name="Kitchen"][data-storey="${storey}"]`)
+  page.locator(`.bubbles-sheet [data-zone][data-name="Kitchen"][data-storey="${storey}"]`)

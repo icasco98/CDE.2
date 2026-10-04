@@ -1,16 +1,16 @@
 /**
  * The pointer gestures of the sheet, as state machines over the actions. Each `begin` opens a drag,
  * `dragTo` gives the next state with the shapes the sheet should draw while the hand holds it, and
- * `dropOf` names the one action that makes the change. No gesture touches a room: the preview is a
+ * `dropOf` names the one action that makes the change. No gesture touches a zone: the preview is a
  * copy, and the sheet only ever changes through an action.
  */
 
 import {
-  alignWall,
+  alignEdge,
   bboxOf,
   canonicalise,
   centreOf,
-  cloneRoom,
+  cloneZone,
   draw,
   drawnPoint,
   hold,
@@ -19,10 +19,10 @@ import {
   norm,
   outlineOf,
   place,
-  placedRooms,
+  placedZones,
   polyArea,
-  pullWall,
-  pullWallShape,
+  pullEdge,
+  pullEdgeShape,
   r2,
   r6,
   reshape,
@@ -34,19 +34,19 @@ import {
   snapAngle,
   snapMove,
   snapPoint,
-  snapRooms,
+  snapZones,
   snapTo,
   toLocal,
   triangulate,
   turn,
   unionBox,
-  wallCandidates,
+  edgeCandidates,
   type Change,
   type Guide,
   type Point,
   type PointSnap,
   type Poly,
-  type Room,
+  type Zone,
   type Seg,
   type PlotSpec,
   type Settings,
@@ -57,18 +57,18 @@ import {
 
 type Mods = { shift: boolean }
 
-/** The angle a turn agreed with, the lines to draw it through, and the room that already stood there. */
-type Lock = { angle: number; through: Point[]; mate: Room | null }
+/** The angle a turn agreed with, the lines to draw it through, and the zone that already stood there. */
+type Lock = { angle: number; through: Point[]; mate: Zone | null }
 
-/** What the sheet draws in place of the rooms the hand holds. */
-type Preview = Map<string, Room>
+/** What the sheet draws in place of the zones the hand holds. */
+type Preview = Map<string, Zone>
 
 type Marks = { guides: Guide[]; corner: Point | null }
 
 const noMarks: Marks = { guides: [], corner: null }
 
 export type Drag =
-  | ({ kind: 'new'; id: string; room: Room; started: boolean } & Marks)
+  | ({ kind: 'new'; id: string; zone: Zone; started: boolean } & Marks)
   | ({
       kind: 'move'
       ids: string[]
@@ -82,9 +82,9 @@ export type Drag =
     } & Marks)
   | { kind: 'mark'; start: Point; now: Point; keep: string[]; moved: boolean }
   | ({
-      kind: 'wall'
+      kind: 'edge'
       id: string
-      wall: number
+      edge: number
       seg: Seg
       start: Point
       distance: number
@@ -126,17 +126,17 @@ export type Drag =
 
 const empty: Preview = new Map()
 
-const previewOf = (rooms: Room[]): Preview => new Map(rooms.map((r) => [r.id, r]))
+const previewOf = (zones: Zone[]): Preview => new Map(zones.map((r) => [r.id, r]))
 
-const roomById = (sheet: Sheet, id: string): Room | null =>
-  sheet.rooms.find((r) => r.id === id) ?? null
+const zoneById = (sheet: Sheet, id: string): Zone | null =>
+  sheet.zones.find((r) => r.id === id) ?? null
 
-const takeRooms = (sheet: Sheet, storey: number, ids: string[]): Room[] =>
-  placedRooms(sheet, storey).filter((r) => ids.includes(r.id))
+const takeZones = (sheet: Sheet, storey: number, ids: string[]): Zone[] =>
+  placedZones(sheet, storey).filter((r) => ids.includes(r.id))
 
 const candidatesFor = (sheet: Sheet, storey: number, except: string[]): Seg[] =>
-  wallCandidates(
-    snapRooms(sheet, storey, null).filter((o) => !except.includes(o.id)),
+  edgeCandidates(
+    snapZones(sheet, storey, null).filter((o) => !except.includes(o.id)),
     sheet.settings,
     sheet.plot,
   )
@@ -144,9 +144,9 @@ const candidatesFor = (sheet: Sheet, storey: number, except: string[]): Seg[] =>
 // ---------- dropped from the program ----------
 
 export function beginNew(sheet: Sheet, id: string): Drag | null {
-  const r = roomById(sheet, id)
+  const r = zoneById(sheet, id)
   if (!r || r.placed) return null
-  return { kind: 'new', id, room: cloneRoom(r), started: false, ...noMarks }
+  return { kind: 'new', id, zone: cloneZone(r), started: false, ...noMarks }
 }
 
 // ---------- moving, and the box that selects ----------
@@ -177,7 +177,7 @@ const overlaps = (
   b: { x: number; y: number; w: number; h: number },
 ) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
 
-/** Every room the box touches, so the drop can take them in hand. */
+/** Every zone the box touches, so the drop can take them in hand. */
 export function marked(drag: Drag, sheet: Sheet, storey: number): string[] {
   if (drag.kind !== 'mark') return []
   const box = {
@@ -187,23 +187,23 @@ export function marked(drag: Drag, sheet: Sheet, storey: number): string[] {
     h: Math.abs(drag.now[1] - drag.start[1]),
   }
   if (!(box.w > 0.2 && box.h > 0.2)) return [...drag.keep]
-  const caught = placedRooms(sheet, storey)
+  const caught = placedZones(sheet, storey)
     .filter((o) => overlaps(bboxOf(o), box))
     .map((o) => o.id)
   return [...new Set([...drag.keep, ...caught])]
 }
 
-// ---------- one wall, one corner, one side ----------
+// ---------- one edge, one corner, one side ----------
 
-export function beginWall(sheet: Sheet, id: string, wall: number, at: Point): Drag | null {
-  const r = roomById(sheet, id)
+export function beginEdge(sheet: Sheet, id: string, edge: number, at: Point): Drag | null {
+  const r = zoneById(sheet, id)
   if (!r) return null
-  const seg = outlineOf(r)[wall]
+  const seg = outlineOf(r)[edge]
   if (!seg) return null
   return {
-    kind: 'wall',
+    kind: 'edge',
     id,
-    wall,
+    edge,
     seg,
     start: at,
     distance: 0,
@@ -213,7 +213,7 @@ export function beginWall(sheet: Sheet, id: string, wall: number, at: Point): Dr
   }
 }
 
-const sideSeg = (r: Room, side: Side4): Seg =>
+const sideSeg = (r: Zone, side: Side4): Seg =>
   side === 'right'
     ? { a: [r.w, 0], b: [r.w, r.h], n: [1, 0] }
     : side === 'left'
@@ -229,7 +229,7 @@ export function beginResize(
   shared: string | null,
   at: Point,
 ): Drag | null {
-  const r = roomById(sheet, id)
+  const r = zoneById(sheet, id)
   if (!r) return null
   return {
     kind: 'resize',
@@ -259,7 +259,7 @@ export const beginCorner = (id: string, index: number, loop: Poly, at: Point): D
 // ---------- turning ----------
 
 export function beginTurn(sheet: Sheet, id: string): Drag | null {
-  const r = roomById(sheet, id)
+  const r = zoneById(sheet, id)
   if (!r) return null
   return { kind: 'turn', id, angle: r.angle || 0, preview: empty, lock: null, moved: false }
 }
@@ -277,7 +277,7 @@ export const beginGroupTurn = (ids: string[], pivot: Point, at: Point): Drag => 
 
 /** The point a selection turns about: the middle of what is in hand. */
 export function middleOf(sheet: Sheet, storey: number, ids: string[]): Point {
-  const sel = takeRooms(sheet, storey, ids)
+  const sel = takeZones(sheet, storey, ids)
   if (!sel.length) return [0, 0]
   const b = sel.length === 1 ? bboxOf(sel[0]!) : unionBox(sel)
   return [b.x + b.w / 2, b.y + b.h / 2]
@@ -293,12 +293,12 @@ export function dragTo(drag: Drag, at: Point, mods: Mods, sheet: Sheet, storey: 
   const { settings } = sheet
   switch (drag.kind) {
     case 'new': {
-      const base = { ...drag.room, x: at[0] - drag.room.w / 2, y: at[1] - drag.room.h / 2 }
+      const base = { ...drag.zone, x: at[0] - drag.zone.w / 2, y: at[1] - drag.zone.h / 2 }
       const snap = snapMove(base, candidatesFor(sheet, storey, []), settings, sheet.plot)
       return {
         ...drag,
         started: true,
-        room: snap.rect,
+        zone: snap.rect,
         guides: snap.guides,
         corner: snap.corner ?? null,
       }
@@ -306,13 +306,13 @@ export function dragTo(drag: Drag, at: Point, mods: Mods, sheet: Sheet, storey: 
     case 'mark':
       return { ...drag, now: at, moved: true }
     case 'label': {
-      const r = roomById(sheet, drag.id)
+      const r = zoneById(sheet, drag.id)
       if (!r) return drag
       const local = toLocal(r, at[0], at[1])
       return { ...drag, at: [r6(local[0]), r6(local[1])], moved: true }
     }
     case 'move': {
-      const lead = roomById(sheet, drag.lead)
+      const lead = zoneById(sheet, drag.lead)
       if (!lead) return drag
       const rawX = at[0] - drag.start[0]
       const rawY = at[1] - drag.start[1]
@@ -328,9 +328,9 @@ export function dragTo(drag: Drag, at: Point, mods: Mods, sheet: Sheet, storey: 
       const held = hold(snap.rect, sheet, storey)
       const mx = held.x - lead.x
       const my = held.y - lead.y
-      const carried = takeRooms(sheet, storey, drag.ids)
+      const carried = takeZones(sheet, storey, drag.ids)
         .filter((o) => !o.fixed && !o.locked)
-        .map((o) => hold({ ...cloneRoom(o), x: r6(o.x + mx), y: r6(o.y + my) }, sheet, storey))
+        .map((o) => hold({ ...cloneZone(o), x: r6(o.x + mx), y: r6(o.y + my) }, sheet, storey))
       return {
         ...drag,
         dx: rawX,
@@ -342,15 +342,15 @@ export function dragTo(drag: Drag, at: Point, mods: Mods, sheet: Sheet, storey: 
         corner: snap.corner ?? null,
       }
     }
-    case 'wall': {
-      const r = roomById(sheet, drag.id)
+    case 'edge': {
+      const r = zoneById(sheet, drag.id)
       if (!r) return drag
       const distance = alongNormal(r, drag.seg, at, drag.start)
-      const pulled = pulledWall(
+      const pulled = pulledEdge(
         r,
         drag.seg,
         distance,
-        snapRooms(sheet, storey, r),
+        snapZones(sheet, storey, r),
         settings,
         sheet.plot,
       )
@@ -358,28 +358,28 @@ export function dragTo(drag: Drag, at: Point, mods: Mods, sheet: Sheet, storey: 
         ...drag,
         distance,
         moved: true,
-        preview: pulled.room ? previewOf([pulled.room]) : drag.preview,
+        preview: pulled.zone ? previewOf([pulled.zone]) : drag.preview,
         guides: pulled.guide ? [pulled.guide] : [],
         corner: pulled.corner,
       }
     }
     case 'resize': {
-      const r = roomById(sheet, drag.id)
+      const r = zoneById(sheet, drag.id)
       if (!r) return drag
       const distance = alongNormal(r, drag.seg, at, drag.start)
-      const shared = drag.shared ? roomById(sheet, drag.shared) : null
+      const shared = drag.shared ? zoneById(sheet, drag.shared) : null
       const sized = resized(r, drag.side, distance, shared, sheet, storey)
       return {
         ...drag,
         distance,
         moved: true,
-        preview: sized.rooms.length ? previewOf(sized.rooms) : drag.preview,
+        preview: sized.zones.length ? previewOf(sized.zones) : drag.preview,
         guides: sized.guide ? [sized.guide] : [],
         corner: sized.corner,
       }
     }
     case 'corner': {
-      const r = roomById(sheet, drag.id)
+      const r = zoneById(sheet, drag.id)
       if (!r) return drag
       const snap = snapPoint(
         at,
@@ -387,9 +387,9 @@ export function dragTo(drag: Drag, at: Point, mods: Mods, sheet: Sheet, storey: 
         null,
         mods.shift,
         settings,
-        placedRooms(sheet, storey),
+        placedZones(sheet, storey),
       )
-      const clone = cloneRoom(r)
+      const clone = cloneZone(r)
       const local = toLocal(clone, snap.at[0], snap.at[1])
       const poly = drag.loop.map((pt, j) =>
         j === drag.index ? ([r6(local[0]), r6(local[1])] as Point) : pt,
@@ -407,12 +407,12 @@ export function dragTo(drag: Drag, at: Point, mods: Mods, sheet: Sheet, storey: 
       }
     }
     case 'turn': {
-      const r = roomById(sheet, drag.id)
+      const r = zoneById(sheet, drag.id)
       if (!r) return drag
       const [cx, cy] = centreOf(r)
       const want = norm((Math.atan2(at[1] - cy, at[0] - cx) * 180) / Math.PI + 90)
-      const snap = snapAngle(want, [r], placedRooms(sheet, storey), settings, sheet.plot.north)
-      const clone = cloneRoom(r)
+      const snap = snapAngle(want, [r], placedZones(sheet, storey), settings, sheet.plot.north)
+      const clone = cloneZone(r)
       clone.angle = snap.angle
       return {
         ...drag,
@@ -429,9 +429,9 @@ export function dragTo(drag: Drag, at: Point, mods: Mods, sheet: Sheet, storey: 
       }
     }
     case 'groupTurn': {
-      const sel = takeRooms(sheet, storey, drag.ids)
+      const sel = takeZones(sheet, storey, drag.ids)
         .filter((o) => !o.fixed && !o.locked)
-        .map(cloneRoom)
+        .map(cloneZone)
       if (!sel.length) return drag
       const was = sel[0]!.angle || 0
       const turned =
@@ -439,7 +439,7 @@ export function dragTo(drag: Drag, at: Point, mods: Mods, sheet: Sheet, storey: 
       const snap = snapAngle(
         was + turned,
         sel,
-        placedRooms(sheet, storey),
+        placedZones(sheet, storey),
         settings,
         sheet.plot.north,
       )
@@ -461,8 +461,8 @@ export function dragTo(drag: Drag, at: Point, mods: Mods, sheet: Sheet, storey: 
   }
 }
 
-/** How far the hand has pulled a wall along its own normal, read in the room's own frame. */
-function alongNormal(r: Room, seg: Seg, at: Point, start: Point): number {
+/** How far the hand has pulled an edge along its own normal, read in the zone's own frame. */
+function alongNormal(r: Zone, seg: Seg, at: Point, start: Point): number {
   const a = ((r.angle || 0) * Math.PI) / 180
   const dx = at[0] - start[0]
   const dy = at[1] - start[1]
@@ -472,18 +472,18 @@ function alongNormal(r: Room, seg: Seg, at: Point, start: Point): number {
 }
 
 /**
- * One wall pulled as far as the shape will take it: the hand may ask for more than a clean room can
- * give, so the wall stops at the furthest grid step that still leaves one.
+ * One edge pulled as far as the shape will take it: the hand may ask for more than a clean zone can
+ * give, so the edge stops at the furthest grid step that still leaves one.
  */
-function pulledWall(
-  r: Room,
+function pulledEdge(
+  r: Zone,
   seg: Seg,
   distance: number,
-  others: Room[],
+  others: Zone[],
   settings: Settings,
   plot: PlotSpec,
-): { room: Room | null; guide?: Guide; corner: Point | null } {
-  const aligned = alignWall(
+): { zone: Zone | null; guide?: Guide; corner: Point | null } {
+  const aligned = alignEdge(
     { x: r.x, y: r.y, w: r.w, h: r.h, angle: r.angle || 0 },
     seg,
     distance,
@@ -496,35 +496,35 @@ function pulledWall(
   const step = s >= 0 ? grid : -grid
   for (let guard = 0; guard < 400; guard++) {
     if (Math.abs(s) < 1e-6) break
-    const clone = cloneRoom(r)
-    if (pullWallShape(clone, seg, s) && canonicalise(clone))
-      return { room: clone, guide: aligned.guide, corner: aligned.mark?.corner ?? null }
+    const clone = cloneZone(r)
+    if (pullEdgeShape(clone, seg, s) && canonicalise(clone))
+      return { zone: clone, guide: aligned.guide, corner: aligned.mark?.corner ?? null }
     s = r2(s - step)
   }
-  return { room: null, guide: aligned.guide, corner: aligned.mark?.corner ?? null }
+  return { zone: null, guide: aligned.guide, corner: aligned.mark?.corner ?? null }
 }
 
-/** A plain room's side, with the neighbour that shares that wall following it. */
+/** A plain zone's side, with the neighbour that shares that edge following it. */
 function resized(
-  r: Room,
+  r: Zone,
   side: Side4,
   distance: number,
-  shared: Room | null,
+  shared: Zone | null,
   sheet: Sheet,
   storey: number,
-): { rooms: Room[]; guide?: Guide; corner: Point | null } {
+): { zones: Zone[]; guide?: Guide; corner: Point | null } {
   const frame = { x: r.x, y: r.y, w: r.w, h: r.h, angle: r.angle || 0 }
-  const aligned = alignWall(
+  const aligned = alignEdge(
     frame,
     sideSeg(r, side),
     distance,
-    placedRooms(sheet, storey).filter((o) => o.id !== r.id && o.id !== shared?.id),
+    placedZones(sheet, storey).filter((o) => o.id !== r.id && o.id !== shared?.id),
     sheet.settings,
     sheet.plot,
   )
   const grid = sheet.settings.grid || 0.05
   const out = aligned.guide ? aligned.s : r2(snapTo(distance, grid))
-  const clone = cloneRoom(r)
+  const clone = cloneZone(r)
   let lx = 0
   let ly = 0
   let lw = frame.w
@@ -539,9 +539,9 @@ function resized(
     ly = Math.min(r2(-out), frame.h - 1)
     lh = r2(frame.h - ly)
   }
-  const rooms: Room[] = setFrame(clone, lx, ly, lw, lh) ? [clone] : []
-  if (rooms.length && shared) {
-    const follower = cloneRoom(shared)
+  const zones: Zone[] = setFrame(clone, lx, ly, lw, lh) ? [clone] : []
+  if (zones.length && shared) {
+    const follower = cloneZone(shared)
     if (side === 'right') {
       follower.x = clone.x + clone.w
       follower.w = Math.max(1, r2(shared.x + shared.w - follower.x))
@@ -552,9 +552,9 @@ function resized(
       follower.h = Math.max(1, r2(shared.y + shared.h - follower.y))
     }
     if (side === 'top') follower.h = Math.max(1, r2(clone.y - shared.y))
-    rooms.push(follower)
+    zones.push(follower)
   }
-  return { rooms, guide: aligned.guide, corner: aligned.mark?.corner ?? null }
+  return { zones, guide: aligned.guide, corner: aligned.mark?.corner ?? null }
 }
 
 // ---------- the hand lets go: one action ----------
@@ -564,7 +564,7 @@ export function dropOf(drag: Drag, sheet: Sheet, storey: number): Change | null 
   if (drag.kind === 'mark') return null
   if (drag.kind === 'new')
     return drag.started
-      ? place(sheet, { id: drag.id, x: drag.room.x, y: drag.room.y, storey })
+      ? place(sheet, { id: drag.id, x: drag.zone.x, y: drag.zone.y, storey })
       : null
   if (!drag.moved) return null
   switch (drag.kind) {
@@ -576,8 +576,8 @@ export function dropOf(drag: Drag, sheet: Sheet, storey: number): Change | null 
         storey,
         axisLock: drag.axisLock,
       })
-    case 'wall':
-      return pullWall(sheet, { id: drag.id, wall: drag.wall, distance: drag.distance, storey })
+    case 'edge':
+      return pullEdge(sheet, { id: drag.id, edge: drag.edge, distance: drag.distance, storey })
     case 'resize':
       return resize(sheet, {
         id: drag.id,
@@ -609,15 +609,15 @@ export const angleShown = (drag: Drag | null, fallback: number): number =>
     ? Math.round(norm(drag.angle))
     : Math.round(norm(fallback))
 
-/** What the sheet draws instead of a room, while a drag holds it. */
-export const shownRoom = (r: Room, drag: Drag | null): Room =>
+/** What the sheet draws instead of a zone, while a drag holds it. */
+export const shownZone = (r: Zone, drag: Drag | null): Zone =>
   drag && 'preview' in drag ? (drag.preview.get(r.id) ?? r) : r
 
 // ---------- drawing a shape, and measuring ----------
 
 export type Shape = 'rect' | 'circle' | 'poly'
 
-/** A shape being drawn for a room: the corners taken so far, and what the next point caught. */
+/** A shape being drawn for a zone: the corners taken so far, and what the next point caught. */
 export type Drawing = {
   id: string
   shape: Shape
@@ -656,7 +656,7 @@ export function drawnAt(
     lastCorner(d),
     mods.shift,
     sheet.settings,
-    placedRooms(sheet, storey),
+    placedZones(sheet, storey),
   )
   return { ...snap, at: drawnPoint(sheet, storey, snap.at) }
 }
@@ -696,7 +696,7 @@ export const closesPolygon = (d: Drawing, at: Point): boolean =>
   !!d.pts[0] &&
   Math.hypot(at[0] - d.pts[0]![0], at[1] - d.pts[0]![1]) < 0.35
 
-/** A drawn shape becomes the room's footprint, or redraws its boundary while reshaping. */
+/** A drawn shape becomes the zone's footprint, or redraws its boundary while reshaping. */
 export function drawnShape(d: Drawing, polygon: Poly, sheet: Sheet, storey: number): Change {
   return d.reshaping
     ? reshape(sheet, { id: d.id, polygon, storey })
@@ -732,7 +732,7 @@ export function measurePoint(at: Point, mods: Mods, sheet: Sheet, storey: number
     null,
     mods.shift,
     sheet.settings,
-    placedRooms(sheet, storey),
+    placedZones(sheet, storey),
   )
   return { ...snap, at: drawnPoint(sheet, storey, snap.at) }
 }

@@ -1,6 +1,6 @@
 /**
- * The order of the rooms inside each row of one storey's column, chosen so fewer lines cross: a few
- * sweeps of the barycentre rule (each room placed at the mean place of the rooms it is joined to),
+ * The order of the zones inside each row of one storey's column, chosen so fewer lines cross: a few
+ * sweeps of the barycentre rule (each zone placed at the mean place of the zones it is joined to),
  * ties broken by program order, and the order with the fewest crossings kept, then the shortest
  * lines, the program's own when nothing beats it. Nothing here is random, so the same program orders
  * the same way twice.
@@ -11,7 +11,7 @@ type Point = { readonly x: number; readonly y: number }
 /** Two sweeps down the rows and two back up: enough for a house, and a fixed amount of work. */
 const SWEEPS = 4
 
-/** Where the room at `index` of a row of `count` stands, the column's own frame. */
+/** Where the zone at `index` of a row of `count` stands, the column's own frame. */
 type Place<K> = (row: K, index: number, count: number) => Point
 
 type Rows<K, R> = ReadonlyMap<K, readonly R[]>
@@ -22,7 +22,7 @@ function positions<K, R extends { readonly id: string }>(
 ): Map<string, Point> {
   const at = new Map<string, Point>()
   for (const [key, row] of rows)
-    for (const [index, room] of row.entries()) at.set(room.id, place(key, index, row.length))
+    for (const [index, zone] of row.entries()) at.set(zone.id, place(key, index, row.length))
   return at
 }
 
@@ -52,7 +52,7 @@ export function crossings(segments: readonly (readonly [Point, Point])[]): numbe
 
 /**
  * Rows reordered to uncross the `links` between them. A link to an id not in any row ends at
- * `fixed`'s point for it (the outside), and `side` keeps a room at the left (-1) or right (1) end of
+ * `fixed`'s point for it (the outside), and `side` keeps a zone at the left (-1) or right (1) end of
  * its row whatever its neighbours say.
  */
 export function uncross<K, R extends { readonly id: string }>(
@@ -60,10 +60,10 @@ export function uncross<K, R extends { readonly id: string }>(
   links: readonly (readonly [string, string])[],
   place: Place<K>,
   fixed: ReadonlyMap<string, Point>,
-  side: (room: R) => number,
+  side: (zone: R) => number,
 ): Rows<K, R> {
   const program = new Map<string, number>()
-  for (const row of rows.values()) for (const room of row) program.set(room.id, program.size)
+  for (const row of rows.values()) for (const zone of row) program.set(zone.id, program.size)
   const neighbours = new Map<string, string[]>()
   for (const [a, b] of links) {
     if (a === b) continue
@@ -94,15 +94,15 @@ export function uncross<K, R extends { readonly id: string }>(
       const at = positions(current, place)
       const row = current.get(key)!
       const centre = new Map<string, number>()
-      for (const room of row) {
-        const xs = (neighbours.get(room.id) ?? []).flatMap((id) => {
+      for (const zone of row) {
+        const xs = (neighbours.get(zone.id) ?? []).flatMap((id) => {
           const point = at.get(id) ?? fixed.get(id)
           return point ? [point.x] : []
         })
-        // A room joined to nothing in view keeps the place it has.
+        // A zone joined to nothing in view keeps the place it has.
         centre.set(
-          room.id,
-          xs.length ? xs.reduce((sum, x) => sum + x, 0) / xs.length : at.get(room.id)!.x,
+          zone.id,
+          xs.length ? xs.reduce((sum, x) => sum + x, 0) / xs.length : at.get(zone.id)!.x,
         )
       }
       const sorted = [...row].sort(

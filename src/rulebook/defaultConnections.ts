@@ -1,14 +1,14 @@
-import { EXTERIOR, type EdgeKind } from '../model'
+import { EXTERIOR, type ConnectionKind } from '../model'
 
-/** How a row picks rooms when a project holds several of a kind; the markdown's preamble states both. */
+/** How a row picks zones when a project holds several of a kind; the markdown's preamble states both. */
 export type Pairing = 'each' | 'one'
 
 export type DefaultConnection = {
   readonly id: string
-  /** A room-type id, or EXTERIOR. */
+  /** A zone-type id, or EXTERIOR. */
   readonly from: string
   readonly to: string
-  readonly kind: EdgeKind
+  readonly kind: ConnectionKind
   readonly pairing: Pairing
   /** Why the row is here, shown to the person as the proposal's own reason. */
   readonly source: string
@@ -18,7 +18,7 @@ export type DefaultConnection = {
 const provisional = 'provisional'
 
 const suiteBathroom =
-  'U6 suite integrity: the ensuite shares a wall with its own bedroom, door between.'
+  'U6 suite integrity: the ensuite shares an edge with its own bedroom, door between.'
 const suiteDressing = 'U6 suite integrity: the dressing room belongs to its own bedroom.'
 const bedroomOffCorridor =
   'U2 and U5: a bedroom is reached from the corridor, never through another bedroom.'
@@ -80,7 +80,7 @@ export const defaultConnections: readonly DefaultConnection[] = [
     kind: 'door',
     pairing: 'each',
     source:
-      "U4: family living is the hub, reached off the corridor the front door opens into. An entry's wall cannot carry six doors, so the corridor takes the rooms the entry receives into.",
+      "U4: family living is the hub, reached off the corridor the front door opens into. An entry's edges cannot carry six doors, so the corridor takes the zones the entry receives into.",
     confidence: provisional,
   },
   {
@@ -89,7 +89,7 @@ export const defaultConnections: readonly DefaultConnection[] = [
     to: 'guest-wc',
     kind: 'door',
     pairing: 'one',
-    source: 'U9: guests find the WC from the entry, never through a private room.',
+    source: 'U9: guests find the WC from the entry, never through a private zone.',
     confidence: provisional,
   },
   {
@@ -126,7 +126,7 @@ export const defaultConnections: readonly DefaultConnection[] = [
     to: 'dining-room',
     kind: 'door',
     pairing: 'each',
-    source: 'U3: the kitchen serves the dining room, sharing a wall with a door.',
+    source: 'U3: the kitchen serves the dining room, sharing an edge with a door.',
     confidence: provisional,
   },
   {
@@ -145,7 +145,7 @@ export const defaultConnections: readonly DefaultConnection[] = [
     kind: 'door',
     pairing: 'each',
     source:
-      "U7 and S6: goods reach the kitchen through the service entrance, not through the family's rooms. Semi-public to private, allowed because the service entrance is the threshold the service run crosses at.",
+      "U7 and S6: goods reach the kitchen through the service entrance, not through the family's zones. Semi-public to private, allowed because the service entrance is the threshold the service run crosses at.",
     confidence: provisional,
   },
   {
@@ -246,7 +246,7 @@ export const defaultConnections: readonly DefaultConnection[] = [
     to: 'bathroom',
     kind: 'door',
     pairing: 'each',
-    source: 'A shared bathroom is reached from the corridor, so no one room owns it.',
+    source: 'A shared bathroom is reached from the corridor, so no one zone owns it.',
     confidence: provisional,
   },
   {
@@ -256,7 +256,7 @@ export const defaultConnections: readonly DefaultConnection[] = [
     kind: 'open',
     pairing: 'each',
     source:
-      "U11: the stair stands on the corridor it serves, open to it. An entry's wall cannot carry six doors, so this is the whole of how the stair is reached from the front door.",
+      "U11: the stair stands on the corridor it serves, open to it. An entry's edges cannot carry six doors, so this is the whole of how the stair is reached from the front door.",
     confidence: provisional,
   },
   {
@@ -280,9 +280,9 @@ export const defaultConnections: readonly DefaultConnection[] = [
 ]
 
 /**
- * The row of the table that wants a connection between two kinds of room, for the person looking
- * at the edge. An edge is a pair of rooms, never a row, so the row is found again from the two
- * kinds, whichever kind the edge has since been given; a pair the table says nothing of has none.
+ * The row of the table that wants a connection between two kinds of zone, for the person looking
+ * at the connection. A connection is a pair of zones, never a row, so the row is found again from the two
+ * kinds, whichever kind the connection has since been given; a pair the table says nothing of has none.
  */
 export function connectionSource(
   from: string,

@@ -1,28 +1,28 @@
 import { describe, expect, it } from 'vitest'
 import {
-  alignWall,
+  alignEdge,
   closeGaps,
   gridRest,
-  nearWalls,
+  nearEdges,
   onPlot,
   snapAngle,
   snapHeight,
   snapMove,
   snapPoint,
-  wallCandidates,
+  edgeCandidates,
 } from './snap'
 import { DEFAULT_PLOT } from './plot'
 
 const BUILD = DEFAULT_PLOT.build
 const NORTH = DEFAULT_PLOT.north
 const PLOT_BOX = DEFAULT_PLOT.box
-import { DEFAULTS, heightCap, heightOf, sheetOf, type Room, type Sheet } from './model'
+import { DEFAULTS, heightCap, heightOf, sheetOf, type Zone, type Sheet } from './model'
 import { outlineOf, r2 } from './geometry'
 
-const room = (over: Partial<Room> = {}): Room => ({
+const zone = (over: Partial<Zone> = {}): Zone => ({
   id: 'a',
   name: 'A',
-  kind: 'room',
+  kind: 'zone',
   cat: 'shared',
   target: 12,
   x: 0,
@@ -36,59 +36,59 @@ const room = (over: Partial<Room> = {}): Room => ({
   ...over,
 })
 
-const onGround = (rooms: Room[], settings = {}): Sheet => sheetOf(rooms, settings)
+const onGround = (zones: Zone[], settings = {}): Sheet => sheetOf(zones, settings)
 
-describe('a room dropped', () => {
-  const neighbour = room({ id: 'n', name: 'N', x: 0, y: 0, w: 4, h: 3 })
-  const cands = wallCandidates([neighbour], { ...DEFAULTS, snapBuild: 0 })
+describe('a zone dropped', () => {
+  const neighbour = zone({ id: 'n', name: 'N', x: 0, y: 0, w: 4, h: 3 })
+  const cands = edgeCandidates([neighbour], { ...DEFAULTS, snapBuild: 0 })
 
-  it('dropped 0.3 m from a neighbour lands on that wall; 0.53 m away it rests on the 0.25 m grid', () => {
-    const near = snapMove(room({ id: 'm', x: 4.3, y: 0 }), cands, DEFAULTS)
+  it('dropped 0.3 m from a neighbour lands on that edge; 0.53 m away it rests on the 0.25 m grid', () => {
+    const near = snapMove(zone({ id: 'm', x: 4.3, y: 0 }), cands, DEFAULTS)
     expect([near.rect.x, near.rect.y]).toEqual([4, 0])
-    const far = snapMove(room({ id: 'm', x: 4.53, y: 0 }), cands, DEFAULTS)
+    const far = snapMove(zone({ id: 'm', x: 4.53, y: 0 }), cands, DEFAULTS)
     expect([far.rect.x, far.rect.y]).toEqual([4.5, 0])
   })
 
-  it('rests a turned room on the grid by its middle', () => {
-    const r = gridRest(room({ x: 0.13, y: 0.13, angle: 25 }), DEFAULTS)
+  it('rests a turned zone on the grid by its middle', () => {
+    const r = gridRest(zone({ x: 0.13, y: 0.13, angle: 25 }), DEFAULTS)
     expect([r2(r.x + r.w / 2), r2(r.y + r.h / 2)]).toEqual([2.25, 1.75])
   })
 
   it('does not snap at all with the distance at nought', () => {
-    const out = snapMove(room({ id: 'm', x: 4.3, y: 0 }), cands, { ...DEFAULTS, snapDist: 0 })
+    const out = snapMove(zone({ id: 'm', x: 4.3, y: 0 }), cands, { ...DEFAULTS, snapDist: 0 })
     expect(out.rect.x).toBe(4.25)
   })
 
   it('lands a corner on the setback line', () => {
-    const out = snapMove(room({ id: 'm', x: 1.65, y: 1.7 }), wallCandidates([], DEFAULTS), DEFAULTS)
+    const out = snapMove(zone({ id: 'm', x: 1.65, y: 1.7 }), edgeCandidates([], DEFAULTS), DEFAULTS)
     expect([out.rect.x, out.rect.y]).toEqual([BUILD.x, BUILD.y])
   })
 
-  it('draws the guide of the wall it agreed with', () => {
-    const out = snapMove(room({ id: 'm', x: 4.3, y: 0 }), cands, DEFAULTS)
+  it('draws the guide of the edge it agreed with', () => {
+    const out = snapMove(zone({ id: 'm', x: 4.3, y: 0 }), cands, DEFAULTS)
     expect(out.corner).toEqual([4, 0])
   })
 })
 
-describe('a wall dragged', () => {
-  it('lines up with a neighbour’s wall within the snap distance', () => {
-    const r = room({ x: 0, y: 0, w: 4, h: 3 })
+describe('an edge dragged', () => {
+  it('lines up with a neighbour’s edge within the snap distance', () => {
+    const r = zone({ x: 0, y: 0, w: 4, h: 3 })
     const seg = outlineOf(r).find((s) => s.n[0] === 1)!
-    const other = room({ id: 'b', x: 4.7, y: 0, w: 2, h: 3 })
-    const out = alignWall(r, seg, 0.5, [other], { ...DEFAULTS, snapBuild: 0 })
+    const other = zone({ id: 'b', x: 4.7, y: 0, w: 2, h: 3 })
+    const out = alignEdge(r, seg, 0.5, [other], { ...DEFAULTS, snapBuild: 0 })
     expect(out.s).toBe(0.7)
     expect(out.guide).toBeDefined()
   })
 
   it('leaves the pull alone when nothing is in reach', () => {
-    const r = room()
+    const r = zone()
     const seg = outlineOf(r)[0]!
-    expect(alignWall(r, seg, 0.5, [], { ...DEFAULTS, snapBuild: 0 }).s).toBe(0.5)
+    expect(alignEdge(r, seg, 0.5, [], { ...DEFAULTS, snapBuild: 0 }).s).toBe(0.5)
   })
 })
 
 describe('a point drawn', () => {
-  const cands = wallCandidates([room({ x: 2, y: 2, w: 4, h: 3 })], { ...DEFAULTS, snapBuild: 0 })
+  const cands = edgeCandidates([zone({ x: 2, y: 2, w: 4, h: 3 })], { ...DEFAULTS, snapBuild: 0 })
 
   it('catches a corner first', () => {
     const out = snapPoint([2.1, 2.1], cands, null, false, DEFAULTS, [])
@@ -96,9 +96,9 @@ describe('a point drawn', () => {
     expect(out.at).toEqual([2, 2])
   })
 
-  it('lands on a wall, and says so', () => {
+  it('lands on an edge, and says so', () => {
     const out = snapPoint([4, 2.2], cands, null, false, DEFAULTS, [])
-    expect(out.kind).toBe('wall')
+    expect(out.kind).toBe('edge')
     expect(out.at[1]).toBe(2)
   })
 
@@ -118,7 +118,7 @@ describe('a point drawn', () => {
 
 describe('turning', () => {
   it('locks onto an angle a neighbour already stands at', () => {
-    const mate = room({ id: 'b', angle: 25 })
+    const mate = zone({ id: 'b', angle: 25 })
     const out = snapAngle(27, [], [mate], DEFAULTS, NORTH)
     expect([out.angle, out.locked, out.mate?.id]).toEqual([25, true, 'b'])
   })
@@ -131,15 +131,15 @@ describe('turning', () => {
 })
 
 describe('a height pulled', () => {
-  it('a ground room with storeys of 3.5 pulled to 3.6 reads 3.5, the floor above', () => {
-    const sheet = onGround([room()])
-    const out = snapHeight(3.6, sheet.rooms[0]!, sheet)
+  it('a ground zone with storeys of 3.5 pulled to 3.6 reads 3.5, the floor above', () => {
+    const sheet = onGround([zone()])
+    const out = snapHeight(3.6, sheet.zones[0]!, sheet)
     expect(out).toEqual({ h: 3.5, why: 'the floor above' })
-    expect(snapHeight(7.05, sheet.rooms[0]!, sheet)).toEqual({ h: 7, why: 'two storeys' })
+    expect(snapHeight(7.05, sheet.zones[0]!, sheet)).toEqual({ h: 7, why: 'two storeys' })
   })
 
   it('the stair unset reads 7 and stops at 18', () => {
-    const stair = room({ id: 's', name: 'Stair', kind: 'stair', cat: 'circulation' })
+    const stair = zone({ id: 's', name: 'Stair', kind: 'stair', cat: 'circulation' })
     const sheet = onGround([stair])
     expect(heightOf(stair, sheet)).toBe(7)
     expect(heightCap(stair, sheet.settings)).toBe(18)
@@ -147,34 +147,34 @@ describe('a height pulled', () => {
   })
 
   it('snaps to another zone’s height, and else to the tenth of a metre', () => {
-    const tall = room({ id: 'b', name: 'B', x: 9, y: 9, height: 5 })
-    const sheet = onGround([room(), tall])
-    expect(snapHeight(4.95, sheet.rooms[0]!, sheet)).toEqual({ h: 5, why: 'same as B' })
-    expect(snapHeight(4.44, sheet.rooms[0]!, sheet)).toEqual({ h: 4.4, why: '' })
+    const tall = zone({ id: 'b', name: 'B', x: 9, y: 9, height: 5 })
+    const sheet = onGround([zone(), tall])
+    expect(snapHeight(4.95, sheet.zones[0]!, sheet)).toEqual({ h: 5, why: 'same as B' })
+    expect(snapHeight(4.44, sheet.zones[0]!, sheet)).toEqual({ h: 4.4, why: '' })
   })
 })
 
 describe('gaps', () => {
-  it('finds the facing walls of two rooms a few centimetres apart', () => {
-    const a = room({ x: 4.08, y: 0, w: 4, h: 3, placedAt: 2 })
-    const b = room({ id: 'b', x: 0, y: 0, w: 4, h: 3, placedAt: 1 })
-    const near = nearWalls(a, b, 0.1)
+  it('finds the facing edges of two zones a few centimetres apart', () => {
+    const a = zone({ x: 4.08, y: 0, w: 4, h: 3, placedAt: 2 })
+    const b = zone({ id: 'b', x: 0, y: 0, w: 4, h: 3, placedAt: 1 })
+    const near = nearEdges(a, b, 0.1)
     expect(near.length).toBe(1)
     expect(r2(near[0]!.d)).toBe(0.08)
   })
 
-  it('closes the gap, the newer room’s wall moving', () => {
-    const a = room({ x: 4.08, y: 0, w: 4, h: 3, placedAt: 2 })
-    const b = room({ id: 'b', x: 0, y: 0, w: 4, h: 3, placedAt: 1 })
+  it('closes the gap, the newer zone’s edge moving', () => {
+    const a = zone({ x: 4.08, y: 0, w: 4, h: 3, placedAt: 2 })
+    const b = zone({ id: 'b', x: 0, y: 0, w: 4, h: 3, placedAt: 1 })
     const moved = closeGaps([a, b], null, DEFAULTS)
     expect([...moved]).toEqual(['a'])
     expect(r2(a.x)).toBe(4)
     expect(b.x).toBe(0)
   })
 
-  it('leaves the rooms alone with gap closing off', () => {
-    const a = room({ x: 4.08, y: 0, placedAt: 2 })
-    const b = room({ id: 'b', x: 0, y: 0, placedAt: 1 })
+  it('leaves the zones alone with gap closing off', () => {
+    const a = zone({ x: 4.08, y: 0, placedAt: 2 })
+    const b = zone({ id: 'b', x: 0, y: 0, placedAt: 1 })
     expect(closeGaps([a, b], null, { ...DEFAULTS, closeGap: 0 }).size).toBe(0)
     expect(a.x).toBe(4.08)
   })

@@ -1,5 +1,5 @@
 /**
- * The mass beside the sheet: the storeys stacked at their heights, drawn back to front by the wall
+ * The mass beside the sheet: the storeys stacked at their heights, drawn back to front by the edge
  * lines, with the sheet's own gestures when editing in 3D is on. It draws and listens; every number
  * comes from `src/sheet` and every change goes through an action.
  */
@@ -21,7 +21,7 @@ import {
   acrossStoreys,
   allPlaced,
   allowedBox,
-  blindWall,
+  blindEdge,
   boxCorners,
   breaches,
   clearHeight,
@@ -36,7 +36,7 @@ import {
   outlineOf,
   prismsOf,
   recentred,
-  seenWalls,
+  seenEdges,
   setHeight,
   setSetting,
   stH,
@@ -56,11 +56,11 @@ import {
   type Point,
   type Poly,
   type Result,
-  type Room,
+  type Zone,
   type Seg,
   type Sheet,
 } from '../../sheet'
-import { beginMove, beginTurn, beginWall, dragTo, dropOf, type Drag } from './gestures'
+import { beginMove, beginTurn, beginEdge, dragTo, dropOf, type Drag } from './gestures'
 import './mass.css'
 
 declare global {
@@ -70,7 +70,7 @@ declare global {
     /** The drawing as plain numbers, so the ray-cast check can compare it with what it hits. */
     massRead?: {
       proj: { ox: number; oy: number; s: number; th: number; ph: number }
-      prisms: { room: string; poly: Poly; z0: number; h: number }[]
+      prisms: { zone: string; poly: Poly; z0: number; h: number }[]
     }
   }
 }
@@ -90,12 +90,12 @@ type MassViewProps = {
   onWrite: (change: Change) => Result
   onEnd: (changed: boolean) => void
   apply: (change: Change | null) => boolean
-  roomMenu: (room: Room, at: { x: number; y: number }) => ReactNode
+  zoneMenu: (zone: Zone, at: { x: number; y: number }) => ReactNode
 }
 
 /** What the hand holds in the mass, kept only for the shadow, the guide and the height reading. */
 type MassDrag =
-  | { kind: 'move' | 'wall' | 'turn'; from: Sheet; drag: Drag; moved: boolean }
+  | { kind: 'move' | 'edge' | 'turn'; from: Sheet; drag: Drag; moved: boolean }
   | { kind: 'height'; from: Sheet; startY: number; startH: number; moved: boolean }
   | { kind: 'orbit' }
 
@@ -104,7 +104,7 @@ const p2 = (v: number) => Number(v.toFixed(2))
 const pointsOf = (P: MassProjection, pts: Poly, z: number) =>
   pts.map(([x, y]) => `${p2(P.to(x, y, z)[0])},${p2(P.to(x, y, z)[1])}`).join(' ')
 
-/** A colour toned down, as the mock shades a wall by how far it turns from the eye. */
+/** A colour toned down, as the mock shades an edge by how far it turns from the eye. */
 function shade(hex: string, k: number): string {
   const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex)
   if (!m) return hex
@@ -121,7 +121,7 @@ export function MassView(props: MassViewProps) {
   const [size, setSize] = useState({ W: 600, H: 420 })
   const [held, setHeld] = useState<MassDrag | null>(null)
   const [note, setNote] = useState('')
-  const [menu, setMenu] = useState<{ room: Room; at: { x: number; y: number } } | null>(null)
+  const [menu, setMenu] = useState<{ zone: Zone; at: { x: number; y: number } } | null>(null)
   const box = useRef<HTMLDivElement | null>(null)
   const canvas = useRef<HTMLDivElement | null>(null)
   const svg = useRef<SVGSVGElement | null>(null)
@@ -184,7 +184,7 @@ export function MassView(props: MassViewProps) {
     if (frames.length > 400) frames.splice(0, frames.length - 400)
     window.massRead = {
       proj: { ox: P.ox, oy: P.oy, s: P.s, th: P.th, ph: P.ph },
-      prisms: drawn.order.map((b) => ({ room: b.room.id, poly: b.poly, z0: b.z0, h: b.h })),
+      prisms: drawn.order.map((b) => ({ zone: b.zone.id, poly: b.poly, z0: b.z0, h: b.h })),
     }
   })
 
@@ -212,15 +212,15 @@ export function MassView(props: MassViewProps) {
     setHeld(next)
   }
 
-  const roomAt = (event: ReactPointerEvent | ReactMouseEvent): Room | null => {
+  const zoneAt = (event: ReactPointerEvent | ReactMouseEvent): Zone | null => {
     const target = event.target
-    const face = target instanceof Element ? target.closest('[data-room]') : null
-    const id = face?.getAttribute('data-room')
+    const face = target instanceof Element ? target.closest('[data-zone]') : null
+    const id = face?.getAttribute('data-zone')
     return id ? (allPlaced(sheet).find((r) => r.id === id) ?? null) : null
   }
 
-  /** Every gesture of the mass writes live, so the room moves on the sheet as the hand drags it. */
-  const runDrag = (kind: 'move' | 'wall' | 'turn', drag: Drag, event: ReactPointerEvent) => {
+  /** Every gesture of the mass writes live, so the zone moves on the sheet as the hand drags it. */
+  const runDrag = (kind: 'move' | 'edge' | 'turn', drag: Drag, event: ReactPointerEvent) => {
     const from = sheetRef.current
     props.onBegin()
     hold({ kind, from, drag, moved: false })
@@ -247,18 +247,18 @@ export function MassView(props: MassViewProps) {
     event.preventDefault()
   }
 
-  const runHeight = (room: Room, event: ReactPointerEvent) => {
+  const runHeight = (zone: Zone, event: ReactPointerEvent) => {
     const from = sheetRef.current
     const startY = at(event)[1]
-    const startH = heightOf(room, from)
+    const startH = heightOf(zone, from)
     props.onBegin()
     hold({ kind: 'height', from, startY, startH, moved: false })
     const onMove = (moving: PointerEvent) => {
       const state = heldRef.current
       if (!state || state.kind !== 'height') return
-      const want = heightFromDrag(room, from, state.startH, at(moving)[1] - state.startY, P.rise)
+      const want = heightFromDrag(zone, from, state.startH, at(moving)[1] - state.startY, P.rise)
       setNote(want.why)
-      const change = setHeight(from, { id: room.id, metres: want.h })
+      const change = setHeight(from, { id: zone.id, metres: want.h })
       props.onWrite(change)
       hold({ ...state, moved: state.moved || change.result.ok })
     }
@@ -310,23 +310,23 @@ export function MassView(props: MassViewProps) {
     event.preventDefault()
   }
 
-  const bringStorey = (room: Room) => {
-    if (room.placed && storeyOf(room) !== storey && !acrossStoreys(room, sheet.settings))
-      props.onStorey(storeyOf(room))
+  const bringStorey = (zone: Zone) => {
+    if (zone.placed && storeyOf(zone) !== storey && !acrossStoreys(zone, sheet.settings))
+      props.onStorey(storeyOf(zone))
   }
 
   const onDown = (event: ReactPointerEvent) => {
     if (event.button !== 0 && event.button !== 1) return
     setMenu(null)
-    const room = event.button === 0 && !spaceHeld.current ? roomAt(event) : null
-    if (!room) {
+    const zone = event.button === 0 && !spaceHeld.current ? zoneAt(event) : null
+    if (!zone) {
       orbit(event)
       return
     }
-    bringStorey(room)
-    props.onSelect([room.id])
-    if (!edit || room.fixed || room.locked || isOpen(room)) return
-    const drag = beginMove([room.id], room.id, groundAt(event))
+    bringStorey(zone)
+    props.onSelect([zone.id])
+    if (!edit || zone.fixed || zone.locked || isOpen(zone)) return
+    const drag = beginMove([zone.id], zone.id, groundAt(event))
     runDrag('move', drag, event)
   }
 
@@ -362,7 +362,7 @@ export function MassView(props: MassViewProps) {
         <button
           type="button"
           className={edit ? 'on' : ''}
-          title="On: drag a volume by any face to move the room, its edge handles to stretch it, the knob to turn it, the post to set its height. Off: volumes only select."
+          title="On: drag a volume by any face to move the zone, its edge handles to stretch it, the knob to turn it, the post to set its height. Off: volumes only select."
           onClick={() => setEdit(!edit)}
         >
           Edit in 3D: {edit ? 'on' : 'off'}
@@ -400,12 +400,12 @@ export function MassView(props: MassViewProps) {
           onPointerDown={onDown}
           onPointerOver={(event) => {
             if (held) return
-            const room = roomAt(event)
-            props.onHover(room ? room.id : null)
+            const zone = zoneAt(event)
+            props.onHover(zone ? zone.id : null)
           }}
           onPointerLeave={() => !held && props.onHover(null)}
           onDoubleClick={(event) => {
-            if (roomAt(event)) return
+            if (zoneAt(event)) return
             setCam(recentred(camRef.current))
           }}
           onWheel={(event: ReactWheelEvent) => {
@@ -414,11 +414,11 @@ export function MassView(props: MassViewProps) {
           }}
           onContextMenu={(event) => {
             event.preventDefault()
-            const room = roomAt(event)
-            if (!room || room.fixed || isOpen(room)) return
-            bringStorey(room)
-            props.onSelect([room.id])
-            setMenu({ room, at: inBox(event) })
+            const zone = zoneAt(event)
+            if (!zone || zone.fixed || isOpen(zone)) return
+            bringStorey(zone)
+            props.onSelect([zone.id])
+            setMenu({ zone, at: inBox(event) })
           }}
         >
           <polygon className="m-ground" points={pointsOf(P, boxCorners(plot.box), 0)} />
@@ -459,20 +459,20 @@ export function MassView(props: MassViewProps) {
               <polygon
                 key={`flat-${r.id}`}
                 className={`m-flat${selection.includes(r.id) ? ' selected' : ''}`}
-                data-room={r.id}
+                data-zone={r.id}
                 points={pointsOf(P, worldLoop(r), 0.03)}
                 fill={r.color ?? sheet.settings.colors.open}
               />
             ))}
           {drawn.order.map((block, i) => {
-            const r = block.room
+            const r = block.zone
             const state = `${selection.includes(r.id) ? ' selected' : ''}${
               hover === r.id ? ' hover' : ''
             }${over.has(r.id) ? ' over' : ''}`
             const fill = r.color ?? sheet.settings.colors[r.cat] ?? '#ddd'
             const lines: [string, string, string][] = []
-            const walls = seenWalls(block, P).map((e, j) => {
-              const blind = blindWall(e.a, e.b, plot)
+            const edges = seenEdges(block, P).map((e, j) => {
+              const blind = blindEdge(e.a, e.b, plot)
               const cls = blind ? (breaches(block.h) ? ' blind breach' : ' blind') : ''
               const a0 = P.to(e.a[0], e.a[1], block.z0)
               const b0 = P.to(e.b[0], e.b[1], block.z0)
@@ -484,7 +484,7 @@ export function MassView(props: MassViewProps) {
                 <polygon
                   key={`w-${j}`}
                   className={`m-face${cls}${state}`}
-                  data-room={r.id}
+                  data-zone={r.id}
                   shapeRendering="crispEdges"
                   points={[pt(a0), pt(b0), pt(b1), pt(a1)].join(' ')}
                   fill={
@@ -502,7 +502,7 @@ export function MassView(props: MassViewProps) {
                 lines.push([
                   `${p2(a[0])},${p2(a[1])}`,
                   `${p2(b[0])},${p2(b[1])}`,
-                  blindWall(e.a, e.b, plot) && e.facing > 0
+                  blindEdge(e.a, e.b, plot) && e.facing > 0
                     ? breaches(block.h)
                       ? ' blind breach'
                       : ' blind'
@@ -511,10 +511,10 @@ export function MassView(props: MassViewProps) {
               }
             return (
               <g key={`b-${i}`}>
-                {walls}
+                {edges}
                 <polygon
                   className={`m-face top${state}`}
-                  data-room={r.id}
+                  data-zone={r.id}
                   shapeRendering="crispEdges"
                   points={pointsOf(P, block.poly, block.h)}
                   fill={fill}
@@ -563,7 +563,7 @@ export function MassView(props: MassViewProps) {
                   <rect
                     key={`h-${i}`}
                     className="m-hnd"
-                    data-wall={i}
+                    data-edge={i}
                     x={p2(m[0] - 5)}
                     y={p2(m[1] - 5)}
                     width={10}
@@ -572,8 +572,8 @@ export function MassView(props: MassViewProps) {
                     onPointerDown={(event) => {
                       if (event.button !== 0) return
                       event.stopPropagation()
-                      const drag = beginWall(sheet, handles.id, i, groundAt(event))
-                      if (drag) runDrag('wall', drag, event)
+                      const drag = beginEdge(sheet, handles.id, i, groundAt(event))
+                      if (drag) runDrag('edge', drag, event)
                     }}
                   />
                 )
@@ -625,14 +625,14 @@ export function MassView(props: MassViewProps) {
           props.apply(clearHeight(sheet, { id: one!.id })),
         )}
       </div>
-      {menu && props.roomMenu(menu.room, menu.at)}
+      {menu && props.zoneMenu(menu.zone, menu.at)}
     </div>
   )
 }
 
 /** The reading under the view: what is selected, its storey, its height and what the height snapped to. */
 function foot(
-  one: Room | null,
+  one: Zone | null,
   sheet: Sheet,
   edit: boolean,
   note: string,
@@ -643,7 +643,7 @@ function foot(
       <span>
         {edit
           ? 'Drag a volume to move it; selected, its edge handles stretch it, the post sets its height, the far knob turns it. Right-click it for the menu. Drag the ground, the middle button or Space to turn the view; wheel to zoom.'
-          : 'Drag the ground to turn the view, wheel to zoom. Edit in 3D on to move rooms here.'}
+          : 'Drag the ground to turn the view, wheel to zoom. Edit in 3D on to move zones here.'}
       </span>
     )
   const h = heightOf(one, sheet)

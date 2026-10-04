@@ -13,7 +13,7 @@ export type Extent = {
   readonly height: number
 }
 
-/** The whole sheet at one, and eight times that at the closest, which reads a 6 m² room comfortably. */
+/** The whole sheet at one, and eight times that at the closest, which reads a 6 m² zone comfortably. */
 export const MAX_ZOOM = 8
 
 /** One wheel notch, multiplicative so a notch in and a notch out land back where they started. */
@@ -113,7 +113,7 @@ export function pointerAt(svg: SVGSVGElement, clientX: number, clientY: number):
 
 /**
  * The metres one CSS pixel covers. The sheet meets its box, so the drawing is scaled by whichever
- * side has less room; a mark divided by this keeps its size on screen at any zoom.
+ * side has less space; a mark divided by this keeps its size on screen at any zoom.
  */
 export function metresPerPixel(
   extent: Extent,

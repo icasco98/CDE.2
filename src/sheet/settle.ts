@@ -1,6 +1,6 @@
 /**
- * Landing: where a room is held, and how an overlap is settled. The order of importance is the
- * program order, and the lower room gives way — pushed aside or carved. Nothing moves a room on its
+ * Landing: where a zone is held, and how an overlap is settled. The order of importance is the
+ * program order, and the lower zone gives way — pushed aside or carved. Nothing moves a zone on its
  * own except the landing rule the architect chose.
  */
 
@@ -10,10 +10,10 @@ import {
   isGhost,
   isOpen,
   kin,
-  placedRooms,
+  placedZones,
   rank,
   square,
-  type Room,
+  type Zone,
   type Settings,
   type Sheet,
 } from './model'
@@ -41,27 +41,27 @@ export function allowedBox(sheet: Sheet, storey: number): Box {
   return plot.build
 }
 
-export function holdIn(r: Room, box: Box): Room {
+export function holdIn(r: Zone, box: Box): Zone {
   const b = bboxOf(r)
   const dx = b.w <= box.w ? Math.min(Math.max(b.x, box.x), box.x + box.w - b.w) - b.x : box.x - b.x
   const dy = b.h <= box.h ? Math.min(Math.max(b.y, box.y), box.y + box.h - b.h) - b.y : box.y - b.y
   return { ...r, x: r6(r.x + dx), y: r6(r.y + dy) }
 }
 
-export const holdOnPlot = (r: Room, sheet: Sheet) => holdIn(r, sheet.plot.box)
+export const holdOnPlot = (r: Zone, sheet: Sheet) => holdIn(r, sheet.plot.box)
 
 /**
- * Where a room is kept: on the plot when rooms may leave the buildable line, else inside the line it
+ * Where a zone is kept: on the plot when zones may leave the buildable line, else inside the line it
  * may reach; upstairs the setback holds hard, spill or no spill.
  */
-export function hold(r: Room, sheet: Sheet, storey: number): Room {
+export function hold(r: Zone, sheet: Sheet, storey: number): Zone {
   if (storey > 0 && sheet.settings.hardSetback && !isOpen(r)) return holdIn(r, sheet.plot.build)
   if (sheet.settings.allowSpill || isOpen(r)) return holdOnPlot(r, sheet)
   return holdIn(r, allowedBox(sheet, storey))
 }
 
 /** Past the line the ground floor may reach. */
-export function outsideBuildable(r: Room, box: Box): boolean {
+export function outsideBuildable(r: Zone, box: Box): boolean {
   const b = bboxOf(r)
   return (
     b.x < box.x - 1e-6 ||
@@ -75,7 +75,7 @@ export function outsideBuildable(r: Room, box: Box): boolean {
  * The least move that parts two rectangles, turned or not: the shortest overlap along any of their
  * four edge directions, pointed from the first's centre to the second's.
  */
-export function partingMove(a: Room, b: Room): [number, number] | null {
+export function partingMove(a: Zone, b: Zone): [number, number] | null {
   const pa = cornersOf(a)
   const pb = cornersOf(b)
   const axes: [number, number][] = []
@@ -103,23 +103,23 @@ export function partingMove(a: Room, b: Room): [number, number] | null {
   return [m.nx * m.over * m.dir, m.ny * m.over * m.dir]
 }
 
-const retire = (r: Room) => {
+const retire = (r: Zone) => {
   r.placed = false
 }
 
 /**
- * Push: the dropped room stays; every neighbour it overlaps is moved out, square neighbours of a
- * square room along the axis of least penetration, anything turned by the least parting move, and
+ * Push: the dropped zone stays; every neighbour it overlaps is moved out, square neighbours of a
+ * square zone along the axis of least penetration, anything turned by the least parting move, and
  * that neighbour then pushes its own, up to a fixed number of rounds so a chain slides as one.
  */
 export function pushFrom(
-  mover: Room,
-  all: Room[],
+  mover: Zone,
+  all: Zone[],
   sheet: Sheet,
   storey: number,
 ): Map<string, true> {
   const moved = new Map<string, true>()
-  const queue: Room[] = [mover]
+  const queue: Zone[] = [mover]
   let rounds = 0
   while (queue.length && rounds++ < 60) {
     const a = queue.shift()!
@@ -146,7 +146,7 @@ export function pushFrom(
         continue
       }
       if (a.fixed || a.locked) continue
-      let next: Room
+      let next: Zone
       if (square(a) && square(b)) {
         const o = overlapRect(bboxOf(a), bboxOf(b)) ?? { x: 0, y: 0, w: 0, h: 1 }
         const ax = a.x + a.w / 2
@@ -168,7 +168,7 @@ export function pushFrom(
         : holdIn(next, allowedBox(sheet, storey))
       const mx = next.x - b.x
       const my = next.y - b.y
-      // a grouped room takes its group along
+      // a grouped zone takes its group along
       for (const o of kin(b, all)) {
         const h = o === b ? next : hold({ ...o, x: r6(o.x + mx), y: r6(o.y + my) }, sheet, storey)
         o.x = h.x
@@ -182,13 +182,13 @@ export function pushFrom(
 }
 
 /**
- * Yield: the dropped room is cut back in its own frame on the side that loses least, once per
+ * Yield: the dropped zone is cut back in its own frame on the side that loses least, once per
  * overlapping piece, until it overlaps nothing; or, when it keeps the rest, it loses only the pieces
  * themselves and stands as an L.
  */
-export function yieldTo(mover: Room, all: Room[], settings: Settings): Room | null {
+export function yieldTo(mover: Zone, all: Zone[], settings: Settings): Zone | null {
   if (settings.yieldKeeps === 'rest') {
-    let cur: Room | null = mover
+    let cur: Zone | null = mover
     for (const b of all)
       if (b !== mover) {
         cur = cutBy(mover, b)
@@ -236,10 +236,10 @@ export function yieldTo(mover: Room, all: Room[], settings: Settings): Room | nu
 
 export type Give = 'push' | 'yield' | 'carve'
 
-/** One room gives way to another: pushed aside, trimmed to the free space, or carved by its shape. */
+/** One zone gives way to another: pushed aside, trimmed to the free space, or carved by its shape. */
 export function giveWay(
-  loser: Room,
-  winner: Room,
+  loser: Zone,
+  winner: Zone,
   how: Give,
   moved: Map<string, true>,
   sheet: Sheet,
@@ -260,9 +260,9 @@ export function giveWay(
 }
 
 /** Every overlap on the storey, pair by pair. */
-export function overlapsOf(sheet: Sheet, storey: number): { a: Room; b: Room; polys: Poly[] }[] {
-  const out: { a: Room; b: Room; polys: Poly[] }[] = []
-  const p = placedRooms(sheet, storey).concat(ghostsOf(sheet, storey))
+export function overlapsOf(sheet: Sheet, storey: number): { a: Zone; b: Zone; polys: Poly[] }[] {
+  const out: { a: Zone; b: Zone; polys: Poly[] }[] = []
+  const p = placedZones(sheet, storey).concat(ghostsOf(sheet, storey))
   for (let i = 0; i < p.length; i++)
     for (let j = i + 1; j < p.length; j++) {
       const polys = overlapCells(p[i]!, p[j]!)
@@ -272,18 +272,18 @@ export function overlapsOf(sheet: Sheet, storey: number): { a: Room; b: Room; po
 }
 
 /**
- * After a room moves, every overlap it is in is settled, the lower room giving way each time; a room
- * pushed into another is settled in turn. Locked and fixed rooms never give way. Wait leaves the
+ * After a zone moves, every overlap it is in is settled, the lower zone giving way each time; a zone
+ * pushed into another is settled in turn. Locked and fixed zones never give way. Wait leaves the
  * overlap tinted until it is settled by hand, so nothing moves at all.
  */
-export function settle(r: Room, how: string, sheet: Sheet, storey: number): Map<string, true> {
+export function settle(r: Zone, how: string, sheet: Sheet, storey: number): Map<string, true> {
   const moved = new Map<string, true>()
   const seen = new Map<string, number>()
   let guard = 0
   if (how !== 'push') return moved
-  const keyOf = (o: { a: Room; b: Room }) => [o.a.id, o.b.id].sort().join('|')
+  const keyOf = (o: { a: Zone; b: Zone }) => [o.a.id, o.b.id].sort().join('|')
   while (guard++ < 40) {
-    // every overlap the moved rooms are in, each pair tried at most twice
+    // every overlap the moved zones are in, each pair tried at most twice
     const pairs = overlapsOf(sheet, storey).filter(
       (o) =>
         (o.a === r || o.b === r || moved.has(o.a.id) || moved.has(o.b.id)) &&
@@ -294,17 +294,17 @@ export function settle(r: Room, how: string, sheet: Sheet, storey: number): Map<
     const key = keyOf(o)
     seen.set(key, (seen.get(key) ?? 0) + 1)
     let [win, lose] = rank(o.a, sheet) <= rank(o.b, sheet) ? [o.a, o.b] : [o.b, o.a]
-    const stuck = (x: Room) => x.fixed || x.locked || isGhost(x, storey, sheet)
-    // a locked room never gives way, even to a higher one
+    const stuck = (x: Zone) => x.fixed || x.locked || isGhost(x, storey, sheet)
+    // a locked zone never gives way, even to a higher one
     if (stuck(lose!) && !stuck(win!)) [win, lose] = [lose, win]
     giveWay(lose!, win!, 'push', moved, sheet, storey)
   }
   return moved
 }
 
-/** The overlap settled by hand: the other rooms pushed aside, trimmed, or carved by this one. */
-export function resolve(mover: Room, how: Give, sheet: Sheet, storey: number): Map<string, true> {
-  const all = placedRooms(sheet, storey)
+/** The overlap settled by hand: the other zones pushed aside, trimmed, or carved by this one. */
+export function resolve(mover: Zone, how: Give, sheet: Sheet, storey: number): Map<string, true> {
+  const all = placedZones(sheet, storey)
   if (how === 'push') return pushFrom(mover, all, sheet, storey)
   if (how === 'yield') {
     yieldTo(mover, all, sheet.settings)

@@ -3,7 +3,7 @@ import { buildingOutline, ringsToPath } from './outline'
 import { area, rectangleToPolygon } from './polygon'
 
 describe('the building outline', () => {
-  it('is one ring around two rooms that share a wall, of area 8', () => {
+  it('is one ring around two zones that share an edge, of area 8', () => {
     const rings = buildingOutline([
       rectangleToPolygon({ left: 0, top: 0, width: 2, depth: 2 }),
       rectangleToPolygon({ left: 2, top: 0, width: 2, depth: 2 }),
@@ -12,7 +12,7 @@ describe('the building outline', () => {
     expect(area(rings[0] ?? [])).toBeCloseTo(8, 9)
   })
 
-  it('counts the shared part of two overlapping rooms once', () => {
+  it('counts the shared part of two overlapping zones once', () => {
     const rings = buildingOutline([
       rectangleToPolygon({ left: 0, top: 0, width: 4, depth: 4 }),
       rectangleToPolygon({ left: 3, top: 0, width: 4, depth: 4 }),
@@ -21,7 +21,7 @@ describe('the building outline', () => {
     expect(area(rings[0] ?? [])).toBeCloseTo(28, 9)
   })
 
-  it('gives two rings for two rooms standing apart', () => {
+  it('gives two rings for two zones standing apart', () => {
     const rings = buildingOutline([
       rectangleToPolygon({ left: 0, top: 0, width: 2, depth: 2 }),
       rectangleToPolygon({ left: 10, top: 0, width: 2, depth: 2 }),

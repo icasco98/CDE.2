@@ -8,7 +8,7 @@ export type Kept = {
   feedback: { text: string }[]
   notes: { text: string }[]
   requests: { text: string }[]
-  plans: { name: string; rooms: unknown[] }[]
+  plans: { name: string; zones: unknown[] }[]
 }
 
 /** The memory read after the save has had its moment, so a test never reads a stale store. */

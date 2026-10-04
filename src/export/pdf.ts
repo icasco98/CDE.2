@@ -24,7 +24,7 @@ export type Draw =
       readonly points: readonly Point[]
       readonly closed: boolean
       readonly stroke?: Stroke
-      /** Filled with this grey before it is stroked; a white fill is how a gap is cut in a wall. */
+      /** Filled with this grey before it is stroked; a white fill is how a gap is cut in an edge. */
       readonly fillGrey?: number
     }
   | {
@@ -71,7 +71,7 @@ const widthOfCode = new Map<number, number>([
   ...beyondAscii.map(([, code, width]): [number, number] => [code, width]),
 ])
 
-/** WinAnsi is a byte encoding, so a mark it has no room for is printed as a question mark. */
+/** WinAnsi is a byte encoding, so a mark it has no code for is printed as a question mark. */
 function codesOf(text: string): readonly number[] {
   return [...text].map((mark) => {
     const code = mark.codePointAt(0) ?? 63

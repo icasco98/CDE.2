@@ -1,6 +1,6 @@
 /**
- * How big the bubble diagram draws a room: a circle's area is in proportion to the room's target
- * area, the largest room in the program setting the scale so its circle fills its cell.
+ * How big the bubble diagram draws a zone: a circle's area is in proportion to the zone's target
+ * area, the largest zone in the program setting the scale so its circle fills its cell.
  */
 
 /** The largest circle's radius, in the diagram's units: its cell is 120 wide, less a gap and the ring. */
@@ -23,7 +23,7 @@ export function radiusFor(targetArea: number, scale: number): number {
 }
 
 /**
- * The legend's reference circle: the largest round area no bigger than half the largest room whose
+ * The legend's reference circle: the largest round area no bigger than half the largest zone whose
  * radius stays within `limit`, so a key drawn zoomed in still fits the legend.
  */
 export function keyFor(

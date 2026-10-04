@@ -1,8 +1,8 @@
 /** The zoning sheet: its model, its geometry, its actions and its report. */
 
 export type { Box, PlotSpec, Side } from './plot'
-export type { HeldDoor, ProgramRoom, SetDown } from './program'
-export { followProgram, roomFromProgram } from './program'
+export type { HeldDoor, ProgramZone, SetDown } from './program'
+export { followProgram, zoneFromProgram } from './program'
 export {
   DEFAULT_PLOT,
   FRESH_PLOT,
@@ -23,7 +23,7 @@ export type {
   LandingRule,
   Point,
   Poly,
-  Room,
+  Zone,
   Settings,
   Sheet,
 } from './model'
@@ -34,7 +34,7 @@ export {
   SETTINGS_V,
   acrossStoreys,
   allPlaced,
-  cloneRoom,
+  cloneZone,
   cloneSheet,
   centreOf,
   doorsOf,
@@ -48,17 +48,17 @@ export {
   kin,
   migrate,
   piecesOf,
-  placedRooms,
+  placedZones,
   rank,
   ruleOf,
   sheetOf,
-  snapRooms,
+  snapZones,
   square,
   stH,
   storeyCountOf,
   storeyNameOf,
   storeyOf,
-  tallRoom,
+  tallZone,
   zBase,
   zTop,
 } from './model'
@@ -68,7 +68,7 @@ export {
   BLIND_BREACH,
   MASS_START,
   MASS_VIEWS,
-  blindWall,
+  blindEdge,
   breaches,
   heightFromDrag,
   lookFrom,
@@ -77,7 +77,7 @@ export {
   orderPrisms,
   prismsOf,
   recentred,
-  seenWalls,
+  seenEdges,
   turnedBy,
   worldLoop,
   zoomedBy,
@@ -89,7 +89,7 @@ export {
   bboxOf,
   canonicalise,
   centreOfFootprint,
-  chainWalls,
+  chainEdges,
   cutBy,
   cutToSetback as cutShapeToSetback,
   diffConvex,
@@ -106,7 +106,7 @@ export {
   overlapRect,
   partsOf,
   polyArea,
-  pullWall as pullWallShape,
+  pullEdge as pullEdgeShape,
   r2,
   r6,
   rotateGroup,
@@ -124,20 +124,20 @@ export {
   unionBox,
   worldCorners,
   worldPieces,
-  worldWalls,
+  worldEdges,
 } from './geometry'
 
 export type { Guide, PointSnap, SnapKind } from './snap'
 export {
-  alignWall,
+  alignEdge,
   closeGaps,
   gridRest,
-  nearWalls,
+  nearEdges,
   snapAngle,
   snapHeight,
   snapMove,
   snapPoint,
-  wallCandidates,
+  edgeCandidates,
 } from './snap'
 
 export type { Give } from './settle'
@@ -161,7 +161,7 @@ export {
   givePieces,
   holdsSquare,
   pocketsOf,
-  roomFromPocket,
+  zoneFromPocket,
 } from './pockets'
 
 export type { Hit, Place, Walk } from './doors'
@@ -182,7 +182,7 @@ export type { LabelPlan } from './labels'
 export { initialsOf, labelPlan, obstaclesOf, spanThrough } from './labels'
 
 export type { BoundaryRead, Report } from './report'
-export { boundaryWalls, report, sideOver, sideUsed } from './report'
+export { boundaryEdges, report, sideOver, sideUsed } from './report'
 
 export { meetingOf } from './meetings'
 
@@ -216,7 +216,7 @@ export {
   moveDoor,
   newHistory,
   place,
-  pullWall,
+  pullEdge,
   pushOthers,
   redo,
   remember,
@@ -226,7 +226,7 @@ export {
   restOnGrid,
   restore,
   sendBack,
-  sendBackRoom,
+  sendBackZone,
   setArea,
   setColor,
   setDoorWidth,

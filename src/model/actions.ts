@@ -2,11 +2,11 @@ import { checkProject, occupiedStoreys } from './invariants'
 import type { IdGenerator } from './ids'
 import {
   STARTING_HEIGHT_M,
-  dropRoom,
+  dropZone,
   findActor,
-  findRoom,
+  findZone,
   patchActor,
-  patchRoom,
+  patchZone,
   withoutFootprint,
   emptyProject,
 } from './project'
@@ -15,13 +15,13 @@ import {
   ok,
   refused,
   type Bubble,
-  type EdgeKind,
+  type ConnectionKind,
   type Endpoint,
   type Household,
   type Plot,
   type Project,
   type Result,
-  type WallHint,
+  type EdgeHint,
 } from './types'
 import type { Footprint } from '../geometry/types'
 
@@ -49,8 +49,8 @@ function positive(area: number): boolean {
 
 function storeysOf(project: Project, endpoint: Endpoint): readonly number[] {
   if (endpoint === EXTERIOR) return Array.from({ length: project.storeys }, (_, i) => i)
-  const room = findRoom(project, endpoint)
-  return room ? occupiedStoreys(room) : []
+  const zone = findZone(project, endpoint)
+  return zone ? occupiedStoreys(zone) : []
 }
 
 const between = (a: Endpoint, b: Endpoint) => (pair: { a: Endpoint; b: Endpoint }) =>
@@ -65,9 +65,9 @@ export function createActions(context: Context) {
   const { settle, newId } = context
   const state = context.project
 
-  function onRoom(id: string, mode: Mode, change: (project: Project) => Project): Result {
+  function onZone(id: string, mode: Mode, change: (project: Project) => Project): Result {
     const project = state()
-    if (!findRoom(project, id)) return missing('room', id)
+    if (!findZone(project, id)) return missing('zone', id)
     return settle(change(project), mode)
   }
 
@@ -83,16 +83,16 @@ export function createActions(context: Context) {
     /** The name is the person's label for the document, not part of the design, so undo passes it by. */
     setName: (name: string): Result => settle({ ...state(), name }, 'aside'),
 
-    addRoom(input: {
+    addZone(input: {
       type: string
       targetArea: number
       name?: string
       storey?: number
       storeysSpanned?: number
-      /** The room this one stands behind in the program; on the end when it names no room. */
+      /** The zone this one stands behind in the program; on the end when it names no zone. */
       after?: string
       /**
-       * The id to keep, for a room that already has one elsewhere — a zone drawn on the sheet whose
+       * The id to keep, for a zone that already has one elsewhere — a zone drawn on the sheet whose
        * program the project is taking up. An id the project already holds is not taken twice.
        */
       id?: string
@@ -103,9 +103,9 @@ export function createActions(context: Context) {
         input.id !== undefined &&
         input.id !== EXTERIOR &&
         input.id.length > 0 &&
-        !project.rooms.some((each) => each.id === input.id)
-      const room = {
-        id: given ? input.id! : newId('room'),
+        !project.zones.some((each) => each.id === input.id)
+      const zone = {
+        id: given ? input.id! : newId('zone'),
         name: input.name ?? input.type,
         type: input.type,
         storey: input.storey ?? 0,
@@ -114,131 +114,140 @@ export function createActions(context: Context) {
         pinned: false,
       }
       const behind =
-        input.after === undefined ? -1 : project.rooms.findIndex((each) => each.id === input.after)
-      const rooms =
+        input.after === undefined ? -1 : project.zones.findIndex((each) => each.id === input.after)
+      const zones =
         behind < 0
-          ? [...project.rooms, room]
-          : [...project.rooms.slice(0, behind + 1), room, ...project.rooms.slice(behind + 1)]
-      const result = settle({ ...project, rooms })
-      return result.ok ? ok(room.id) : result
+          ? [...project.zones, zone]
+          : [...project.zones.slice(0, behind + 1), zone, ...project.zones.slice(behind + 1)]
+      const result = settle({ ...project, zones })
+      return result.ok ? ok(zone.id) : result
     },
 
-    removeRoom: (id: string): Result => onRoom(id, 'record', (project) => dropRoom(project, id)),
+    removeZone: (id: string): Result => onZone(id, 'record', (project) => dropZone(project, id)),
 
     /**
-     * The order of the rooms is the order of importance, so moving a room in the list is a change to
-     * the design: the room stands before the one named, or last when none is.
+     * The order of the zones is the order of importance, so moving a zone in the list is a change to
+     * the design: the zone stands before the one named, or last when none is.
      */
-    moveRoom(id: string, before: string | null): Result {
+    moveZone(id: string, before: string | null): Result {
       const project = state()
-      const room = findRoom(project, id)
-      if (!room) return missing('room', id)
+      const zone = findZone(project, id)
+      if (!zone) return missing('zone', id)
       if (before === id)
-        return refused({ code: 'move-before-itself', message: 'a room cannot stand before itself' })
-      const rest = project.rooms.filter((each) => each.id !== id)
+        return refused({ code: 'move-before-itself', message: 'a zone cannot stand before itself' })
+      const rest = project.zones.filter((each) => each.id !== id)
       const at = before === null ? -1 : rest.findIndex((each) => each.id === before)
-      if (before !== null && at < 0) return missing('room', before)
-      const rooms = at < 0 ? [...rest, room] : [...rest.slice(0, at), room, ...rest.slice(at)]
-      return settle({ ...project, rooms })
+      if (before !== null && at < 0) return missing('zone', before)
+      const zones = at < 0 ? [...rest, zone] : [...rest.slice(0, at), zone, ...rest.slice(at)]
+      return settle({ ...project, zones })
     },
 
     rename: (id: string, name: string): Result =>
-      onRoom(id, 'record', (project) => patchRoom(project, id, { name })),
+      onZone(id, 'record', (project) => patchZone(project, id, { name })),
 
     setType: (id: string, type: string): Result =>
-      onRoom(id, 'record', (project) => patchRoom(project, id, { type })),
+      onZone(id, 'record', (project) => patchZone(project, id, { type })),
 
     setTargetArea: (id: string, targetArea: number): Result =>
       positive(targetArea)
-        ? onRoom(id, 'record', (project) => patchRoom(project, id, { targetArea }))
+        ? onZone(id, 'record', (project) => patchZone(project, id, { targetArea }))
         : badArea,
 
     setStorey: (id: string, storey: number, storeysSpanned?: number): Result =>
-      onRoom(id, 'record', (project) =>
-        patchRoom(project, id, {
+      onZone(id, 'record', (project) =>
+        patchZone(project, id, {
           storey,
           ...(storeysSpanned === undefined ? {} : { storeysSpanned }),
         }),
       ),
 
     setBubble: (id: string, bubble: Bubble, commit: Commit = 'commit'): Result =>
-      onRoom(id, commit === 'commit' ? 'record' : 'preview', (project) =>
-        patchRoom(project, id, { bubble }),
+      onZone(id, commit === 'commit' ? 'record' : 'preview', (project) =>
+        patchZone(project, id, { bubble }),
       ),
 
     place: (id: string, footprint: Footprint, commit: Commit = 'commit'): Result =>
-      onRoom(id, commit === 'commit' ? 'record' : 'preview', (project) =>
-        patchRoom(project, id, { footprint }),
+      onZone(id, commit === 'commit' ? 'record' : 'preview', (project) =>
+        patchZone(project, id, { footprint }),
       ),
 
     unplace: (id: string): Result =>
-      onRoom(id, 'record', (project) => ({
+      onZone(id, 'record', (project) => ({
         ...project,
-        rooms: project.rooms.map((room) => (room.id === id ? withoutFootprint(room) : room)),
+        zones: project.zones.map((zone) => (zone.id === id ? withoutFootprint(zone) : zone)),
       })),
 
     pin: (id: string): Result =>
-      onRoom(id, 'record', (project) => patchRoom(project, id, { pinned: true })),
+      onZone(id, 'record', (project) => patchZone(project, id, { pinned: true })),
 
     unpin: (id: string): Result =>
-      onRoom(id, 'record', (project) => patchRoom(project, id, { pinned: false })),
+      onZone(id, 'record', (project) => patchZone(project, id, { pinned: false })),
 
     connect(input: {
       a: Endpoint
       b: Endpoint
-      kind: EdgeKind
+      kind: ConnectionKind
       storey?: number
-      hint?: WallHint
+      hint?: EdgeHint
     }): Result<string> {
       const project = state()
-      const edge = {
-        id: newId('edge'),
+      const connection = {
+        id: newId('connection'),
         a: input.a,
         b: input.b,
         kind: input.kind,
         storey: input.storey ?? sharedStorey(project, input.a, input.b) ?? 0,
         ...(input.hint === undefined ? {} : { hint: input.hint }),
       }
-      const result = settle({ ...project, edges: [...project.edges, edge] })
-      return result.ok ? ok(edge.id) : result
+      const result = settle({ ...project, connections: [...project.connections, connection] })
+      return result.ok ? ok(connection.id) : result
     },
 
     /**
-     * Where a door is drawn on the wall its two rooms share. It is a hint and nothing else: an
-     * edge that loses it draws its door in the middle of the wall instead, as it always did.
+     * Where a door is drawn on the edge its two zones share. It is a hint and nothing else: an
+     * connection that loses it draws its door in the middle of the edge instead, as it always did.
      */
-    setEdgeHint(edgeId: string, hint: WallHint): Result {
+    setConnectionHint(connectionId: string, hint: EdgeHint): Result {
       const project = state()
-      if (!project.edges.some((edge) => edge.id === edgeId)) return missing('edge', edgeId)
+      if (!project.connections.some((connection) => connection.id === connectionId))
+        return missing('connection', connectionId)
       return settle({
         ...project,
-        edges: project.edges.map((each) => (each.id === edgeId ? { ...each, hint } : each)),
+        connections: project.connections.map((each) =>
+          each.id === connectionId ? { ...each, hint } : each,
+        ),
       })
     },
 
-    /** An edge keeps its identity when its kind changes; the main door is made by connect alone. */
-    setEdgeKind(edgeId: string, kind: EdgeKind): Result {
+    /** A connection keeps its identity when its kind changes; the main door is made by connect alone. */
+    setConnectionKind(connectionId: string, kind: ConnectionKind): Result {
       const project = state()
-      const edge = project.edges.find((each) => each.id === edgeId)
-      if (!edge) return missing('edge', edgeId)
-      if (edge.kind === 'main-door' || kind === 'main-door')
+      const connection = project.connections.find((each) => each.id === connectionId)
+      if (!connection) return missing('connection', connectionId)
+      if (connection.kind === 'main-door' || kind === 'main-door')
         return refused({
           code: 'main-door-kind',
           message: 'the main door is made by connecting the outside, not by changing a kind',
         })
       return settle({
         ...project,
-        edges: project.edges.map((each) => (each.id === edgeId ? { ...each, kind } : each)),
+        connections: project.connections.map((each) =>
+          each.id === connectionId ? { ...each, kind } : each,
+        ),
       })
     },
 
-    disconnect(edgeId: string): Result {
+    disconnect(connectionId: string): Result {
       const project = state()
-      if (!project.edges.some((edge) => edge.id === edgeId)) return missing('edge', edgeId)
-      return settle({ ...project, edges: project.edges.filter((edge) => edge.id !== edgeId) })
+      if (!project.connections.some((connection) => connection.id === connectionId))
+        return missing('connection', connectionId)
+      return settle({
+        ...project,
+        connections: project.connections.filter((connection) => connection.id !== connectionId),
+      })
     },
 
-    /** Two rooms the program wants apart; a warning to be read, never a wall. */
+    /** Two zones the program wants apart; a warning to be read, never a limit. */
     keepApart(input: { a: string; b: string }): Result<string> {
       const project = state()
       const pair = { id: newId('apart'), a: input.a, b: input.b }
@@ -259,11 +268,11 @@ export function createActions(context: Context) {
       return settle({ ...project, declined: [...project.declined, { a, b }] })
     },
 
-    /** The declined suggestions forgotten: every one, or those of one room when it is named. */
-    forgetDeclined(room?: string): Result {
+    /** The declined suggestions forgotten: every one, or those of one zone when it is named. */
+    forgetDeclined(zone?: string): Result {
       const project = state()
       const kept = project.declined.filter(
-        (pair) => room !== undefined && pair.a !== room && pair.b !== room,
+        (pair) => zone !== undefined && pair.a !== zone && pair.b !== zone,
       )
       if (kept.length === project.declined.length) return ok(undefined)
       return settle({ ...project, declined: kept })
@@ -278,7 +287,7 @@ export function createActions(context: Context) {
 
     setHousehold: (household: Household): Result => settle({ ...state(), household }),
 
-    /** A new storey opens at the height of the one below it, so a house of tall rooms stays tall. */
+    /** A new storey opens at the height of the one below it, so a house of tall zones stays tall. */
     addStorey(): Result {
       const project = state()
       const top = project.heights[project.heights.length - 1] ?? STARTING_HEIGHT_M
@@ -310,12 +319,12 @@ export function createActions(context: Context) {
       if (top < 1)
         return refused({ code: 'last-storey', message: 'a project has one storey at least' })
       const inUse =
-        project.rooms.some((room) => occupiedStoreys(room).includes(top)) ||
-        project.edges.some((edge) => edge.storey === top)
+        project.zones.some((zone) => occupiedStoreys(zone).includes(top)) ||
+        project.connections.some((connection) => connection.storey === top)
       if (inUse)
         return refused({
           code: 'storey-in-use',
-          message: `storey ${top} still holds rooms or edges`,
+          message: `storey ${top} still holds zones or connections`,
         })
       return settle({ ...project, storeys: top, heights: project.heights.slice(0, top) })
     },
@@ -342,13 +351,13 @@ export function createActions(context: Context) {
       )
     },
 
-    addWaypoint(actorId: string, roomId: string): Result {
+    addWaypoint(actorId: string, zoneId: string): Result {
       const project = state()
       const actor = findActor(project, actorId)
       if (!actor) return missing('actor', actorId)
-      if (!findRoom(project, roomId)) return missing('room', roomId)
+      if (!findZone(project, zoneId)) return missing('zone', zoneId)
       return settle(
-        patchActor(project, actorId, { waypoints: [...actor.waypoints, roomId] }),
+        patchActor(project, actorId, { waypoints: [...actor.waypoints, zoneId] }),
         'aside',
       )
     },

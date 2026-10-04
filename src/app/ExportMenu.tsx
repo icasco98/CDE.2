@@ -9,16 +9,16 @@ import { session } from './session'
 /**
  * Both exports draw the sheet as the browser has it kept, which is the sheet on screen; the stage
  * writes a change through within half a second of the hand coming off it. It is read as the project
- * asks for it, the project's rooms and no other. Nothing is written back.
+ * asks for it, the project's zones and no other. Nothing is written back.
  */
 export function ExportMenu({ title }: { title: string }) {
   const sheet = () => {
     const project = session.getState()
     return followProject(
-      localSheet(project.edges) ?? sheetOf([]),
-      programOf(project.rooms),
+      localSheet(project.connections) ?? sheetOf([]),
+      programOf(project.zones),
       plotOf(project.plot),
-      project.edges,
+      project.connections,
       createAside(),
     )
   }

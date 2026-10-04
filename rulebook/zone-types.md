@@ -1,26 +1,26 @@
-# Room types
+# Zone types
 
-The kinds of room the tool knows, and the numbers each carries. This
+The kinds of zone the tool knows, and the numbers each carries. This
 is the table the program screen fills sizes from and the checker
-measures rooms against. One copy; the code loads it, never restates it.
+measures zones against. One copy; the code loads it, never restates it.
 
 **Basis.** The legal floor for each kind comes from
 `municipality-private-housing.md` (minimum room 10 m² and 3 m wide,
 kitchen 7.5 m² and 2 m, bathroom 4 m² and 1.75 m, WC 1.5 m² and
 1.2 m, corridor 1.2 m clear, light well 9 m² with a 1.5 m side). The
-tool never lets a room go below its legal floor. Typical sizes and
+tool never lets a zone go below its legal floor. Typical sizes and
 ranges are the cofounder's judgement for a villa on a 400 to 750 m²
 plot, checked against published residential ranges and Gulf practice,
 and are marked `judgement`; the owner adjusts them as projects show.
 
-**Columns.** *Typical* is what a new room gets. *Range* is what the
+**Columns.** *Typical* is what a new zone gets. *Range* is what the
 tool treats as normal; outside it, a finding says so. *Proportion* is
 the range of short side to long side the tool suggests. *Category* is
 private, shared, service or reception; it colours the drawing.
 *Tier* drives the privacy-gradient check (public, semi-public,
 private; exempt kinds are never checked). *Circulation* kinds are the
 ones a stair or a front door may open onto. *Auxiliary* kinds are
-entered through one owning room.
+entered through one owning zone.
 
 *Default storey* is where a kind opens when the program is rebuilt:
 `ground`, `upper`, `any` (either floor suits it, and the tool opens it
@@ -30,9 +30,9 @@ the ground — reception, family living, dining, kitchen, service, staff
 and garage — and sleeps above it, so bedrooms and their suites are
 `upper`, with the master bedroom coming down to the ground when the
 household asks for it; family living is `any` because many villas keep
-a second one on the bedroom floor. *Companion* is the kind a room
+a second one on the bedroom floor. *Companion* is the kind a zone
 brings with it — a bedroom's ensuite, the diwaniya's WC, a staff
-room's bathroom — and a companion always takes the storey of the room
+zone's bathroom — and a companion always takes the storey of the zone
 it serves. Both columns are the cofounder's judgement and provisional.
 
 **How many storeys a rebuilt program proposes.** Two at least, a
@@ -47,7 +47,7 @@ it is still over, a private-tier kind the table marks `any` (family
 living first, as the largest) follows the bedrooms up, one kind at a
 time; if it is still over, the last sentence says by how much. A
 project already on more storeys keeps them. Each step is said in a
-sentence beside the button, and every room's storey stays the
+sentence beside the button, and every zone's storey stays the
 person's to change. The rule is provisional: it recommends and never
 refuses. The Requirements totals read the bare targets.
 
@@ -111,41 +111,41 @@ nothing and the bottom of the range is the floor.
 | Driver Room | غرفة سائق | 10 m², 3 m | 12 | 10 to 14 | 1:1 to 1:1.4 | service | private | ground | driver-bathroom | own door, by the garage | legal floor |
 | Driver Bathroom | حمام السائق | 4 m², 1.75 m | 4.5 | 4 to 5 | 1:1 to 1:1.6 | service | exempt | ground | – | auxiliary | legal |
 | Garage, per car | كراج | – | 18 per car | 16 to 21 per car | 1:1.7 to 1:2 per bay | service | exempt | ground | – |  | judgement; 3 × 6 m bay |
-| Courtyard | حوش / فناء | 9 m², 1.5 m side if it lights rooms | 25 | 16 to 50 | 1:1 to 1:1.6 | open | exempt | ground | – | not in the ratio | legal light well |
+| Courtyard | حوش / فناء | 9 m², 1.5 m side if it lights zones | 25 | 16 to 50 | 1:1 to 1:1.6 | open | exempt | ground | – | not in the ratio | legal light well |
 | Roof Annex | ملحق السطح | at most 100 m², counted | 40 | 25 to 100 | free | shared | private | top | – |  | legal cap |
-| Room (other) | غرفة | 10 m², 3 m | 12 | 10 to 20 | 1:1 to 1:1.6 | shared | exempt | any | – |  | legal floor |
+| Zone (other) | غرفة | 10 m², 3 m | 12 | 10 to 20 | 1:1 to 1:1.6 | shared | exempt | any | – |  | legal floor |
 
 ## Circulation
 
-A hallway is not sized like other rooms. It has a legal width and no
+A hallway is not sized like other zones. It has a legal width and no
 legal area, and what it must be is long enough to reach every door it
-serves, so the tool reads its area off the rooms it serves rather than
+serves, so the tool reads its area off the zones it serves rather than
 out of the *Typical* column. **On one storey, a hallway's target area
-is a share of the area of the rooms it serves on that storey, held
+is a share of the area of the zones it serves on that storey, held
 between a floor and a ceiling, and it is never narrower than the
 Municipality's 1.20 m clear.**
 
-**The rooms it serves** are the rooms standing on that storey that are
+**The zones it serves** are the zones standing on that storey that are
 not circulation themselves — the stair, the lift, the entry and the
 service entrance are the circulation a corridor joins, not
 destinations off it — and not the kinds the plot ratio leaves out, the
-courtyard and the lift. A room with its own street door still counts,
+courtyard and the lift. A zone with its own street door still counts,
 because the share is read off the storey's floor area, which is how
 published plans measure circulation.
 
 **Which storeys get one.** A storey needs a hallway when it holds two
-or more rooms of the private tier, or a stair and any other room that
-is not a companion. Two private rooms on one floor are two rooms a
+or more zones of the private tier, or a stair and any other zone that
+is not a companion. Two private zones on one floor are two zones a
 person has to reach without walking through the other, and that is a
 corridor. A stair landing with anything at all off it is the same
 corridor at its shortest. A companion is not counted: it is entered
-through the room it serves and asks for no corridor of its own. So a
+through the zone it serves and asks for no corridor of its own. So a
 floor holding one bedroom and no stair needs none, the bedroom floor
 of a villa needs one, and so does a ground floor with a stair on it.
 
 | Quantity | Value | Basis |
 | --- | --- | --- |
-| Share of the rooms served | 10% | Published residential plans put circulation at roughly 8 to 12 per cent of floor area. Ten is the middle, and the middle is the honest single number here: a villa's bedroom floor is a corridor with rooms down both sides and sits at the top of that band, while its ground floor's reception rooms open into one another and sit at the bottom. |
+| Share of the zones served | 10% | Published residential plans put circulation at roughly 8 to 12 per cent of floor area. Ten is the middle, and the middle is the honest single number here: a villa's bedroom floor is a corridor with zones down both sides and sits at the top of that band, while its ground floor's reception zones open into one another and sit at the bottom. |
 | Floor | 6 m² | The 1.20 m clear width over a 5 m run. Shorter than that is a landing, not a corridor, and the legal width still has to fit. |
 | Ceiling | 30 m² | 1.8 m wide over about 17 m, which is longer than a villa plan is deep. Past it a floor wants a second hallway or a stair hall, not one longer corridor. |
 | Minimum clear width | 1.20 m | `municipality-private-housing.md`, minimum room sizes: corridor inside the unit, 1.20 m clear. The table above carries it as the hallway's legal floor. |

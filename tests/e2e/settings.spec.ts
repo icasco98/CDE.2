@@ -27,19 +27,19 @@ async function openTab(page: Page, title: string): Promise<void> {
   await page.locator('.dialog .tabs').getByRole('tab', { name: title }).click()
 }
 
-/** How far a room stands from the sheet's left, in metres of plan. */
+/** How far a zone stands from the sheet's left, in metres of plan. */
 async function metresAcross(page: Page, id: string): Promise<number> {
-  return page.evaluate((room) => {
+  return page.evaluate((zone) => {
     const sheet = document.querySelector('svg.sheet')
-    const drawn = document.querySelector(`svg.sheet [data-room="${room}"]`)
+    const drawn = document.querySelector(`svg.sheet [data-zone="${zone}"]`)
     const screen = sheet instanceof SVGSVGElement ? sheet.getScreenCTM() : null
-    if (!screen || !drawn) throw new Error(`${room} is not drawn`)
+    if (!screen || !drawn) throw new Error(`${zone} is not drawn`)
     return (drawn.getBoundingClientRect().x - screen.e) / screen.a
   }, id)
 }
 
 async function nudged(page: Page, id: string): Promise<number> {
-  await page.locator(`svg.sheet [data-room="${id}"]`).click()
+  await page.locator(`svg.sheet [data-zone="${id}"]`).click()
   const before = await metresAcross(page, id)
   await page.keyboard.press('ArrowRight')
   await expect.poll(() => metresAcross(page, id), { timeout: 2000 }).not.toBeCloseTo(before, 3)
@@ -71,7 +71,7 @@ test('nothing on the Sheet tab is below the fold on a 1280 by 720 window', async
   )
 })
 
-/** Snapping off, so what a nudge moves by is the grid's step and not a neighbour's wall. */
+/** Snapping off, so what a nudge moves by is the grid's step and not a neighbour's edge. */
 async function noSnapping(page: Page): Promise<void> {
   await openTab(page, 'Snapping')
   await page.locator('[data-setting="snapDist"] input[type=range]').fill('0')
@@ -86,12 +86,12 @@ test('the grid changed in the window is the step a nudge moves by', async ({ pag
   await openTab(page, 'Snapping')
   await page.locator('[data-setting="grid"]').getByRole('button', { name: '1 m' }).click()
   await page.getByRole('button', { name: 'Close' }).click()
-  // A metre step, and the room comes to rest on the metre grid it was given.
+  // A metre step, and the zone comes to rest on the metre grid it was given.
   expect(await nudged(page, KITCHEN)).toBeGreaterThanOrEqual(1)
   expect((await metresAcross(page, KITCHEN)) % 1).toBeCloseTo(0, 2)
 })
 
-test('a category colour changed in the window is taken by the rooms and the program', async ({
+test('a category colour changed in the window is taken by the zones and the program', async ({
   page,
 }) => {
   await openSheet(page)
@@ -99,14 +99,14 @@ test('a category colour changed in the window is taken by the rooms and the prog
   await page.locator('.swatches input').first().fill('#ff0000')
   await page.getByRole('button', { name: 'Close' }).click()
   const red = 'rgb(255, 0, 0)'
-  await expect(page.locator('svg.sheet .room.reception path.body').first()).toHaveCSS('fill', red)
+  await expect(page.locator('svg.sheet .zone.reception path.body').first()).toHaveCSS('fill', red)
   await expect(page.locator('.tray .item.reception .swatch').first()).toHaveCSS(
     'background-color',
     red,
   )
   await openTab(page, 'Colours')
   await page.getByRole('button', { name: 'Back to the standard colours' }).click()
-  await expect(page.locator('svg.sheet .room.reception path.body').first()).not.toHaveCSS(
+  await expect(page.locator('svg.sheet .zone.reception path.body').first()).not.toHaveCSS(
     'fill',
     red,
   )
@@ -115,11 +115,11 @@ test('a category colour changed in the window is taken by the rooms and the prog
 test('Clear the plan survives a reload', async ({ page }) => {
   await openSheet(page)
   await page.getByRole('button', { name: 'Clear the plan' }).click()
-  await expect(page.locator('svg.sheet [data-room]')).toHaveCount(0)
+  await expect(page.locator('svg.sheet [data-zone]')).toHaveCount(0)
   await page.waitForTimeout(600)
   await page.reload()
   await toSheetTab(page)
-  await expect(page.locator('svg.sheet [data-room]')).toHaveCount(0)
+  await expect(page.locator('svg.sheet [data-zone]')).toHaveCount(0)
   await expect(page.locator('.tray .item.hollow').first()).toBeVisible()
 })
 

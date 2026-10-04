@@ -6,19 +6,19 @@
 
 import {
   doorsOf,
-  placedRooms,
+  placedZones,
   type Door,
   type Point,
   type Poly,
-  type Room,
+  type Zone,
   type Sheet,
 } from './model'
 import { toWorld } from './geometry'
 import { DOOR, hasHinge, hasSwing, isStreetDoor } from './kinds'
 import { doorBlocked, doorInto, doorSpot, drawnDoors, type Place } from './doors'
 
-/** Which door a click means: the room it belongs to and its id. */
-export type DoorRef = { room: string; id: string }
+/** Which door a click means: the zone it belongs to and its id. */
+export type DoorRef = { zone: string; id: string }
 
 /** The drawn door nearest a point, if the point is within reach of its opening. */
 export function doorNear(
@@ -29,7 +29,7 @@ export function doorNear(
   reach: number,
 ): (DoorRef & { dist: number }) | null {
   let best: (DoorRef & { dist: number }) | null = null
-  for (const { room: r, door: d, pl, w } of drawnDoors(sheet, storey)) {
+  for (const { zone: r, door: d, pl, w } of drawnDoors(sheet, storey)) {
     const a = toWorld(r, pl.p[0] - pl.u[0] * (w / 2), pl.p[1] - pl.u[1] * (w / 2))
     const b = toWorld(r, pl.p[0] + pl.u[0] * (w / 2), pl.p[1] + pl.u[1] * (w / 2))
     const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1
@@ -37,25 +37,25 @@ export function doorNear(
     const t = Math.min(Math.max((x - a[0]) * u[0]! + (y - a[1]) * u[1]!, 0), L)
     const q = [a[0] + u[0]! * t, a[1] + u[1]! * t]
     const dist = Math.hypot(x - q[0]!, y - q[1]!)
-    if (dist <= reach && (!best || dist < best.dist)) best = { room: r.id, id: d.id, dist }
+    if (dist <= reach && (!best || dist < best.dist)) best = { zone: r.id, id: d.id, dist }
   }
   return best
 }
 
 /** The doors on the second sheet that the first has not got: what a placement just added. */
 export function newDoors(before: Sheet, after: Sheet): DoorRef[] {
-  const had = new Set(before.rooms.flatMap((r) => doorsOf(r).map((d) => d.id)))
-  return after.rooms.flatMap((r) =>
+  const had = new Set(before.zones.flatMap((r) => doorsOf(r).map((d) => d.id)))
+  return after.zones.flatMap((r) =>
     doorsOf(r)
       .filter((d) => !had.has(d.id))
-      .map((d) => ({ room: r.id, id: d.id })),
+      .map((d) => ({ zone: r.id, id: d.id })),
   )
 }
 
 /** The leaf of a swinging door: the panel from its hinge and the arc it sweeps. */
 export type Leaf = { from: Point; to: Point; arc: { to: Point; radius: number; sweep: 0 | 1 } }
 
-/** Everything a door is drawn from, in its room's frame. */
+/** Everything a door is drawn from, in its zone's frame. */
 export type DoorDrawing = {
   gap: [Point, Point]
   leaves: Leaf[]
@@ -72,11 +72,11 @@ const sweepOf = (h: Point, e: Point, f: Point): 0 | 1 =>
   (e[0] - h[0]) * (f[1] - h[1]) - (e[1] - h[1]) * (f[0] - h[0]) > 0 ? 1 : 0
 
 /**
- * A door on its wall: the wall opened, the leaf and its swing, the panels of a sliding door, the
- * jambs of an opening and the mark of a street door. The room it leads into is the one a leaf that
+ * A door on its edge: the edge opened, the leaf and its swing, the panels of a sliding door, the
+ * jambs of an opening and the mark of a street door. The zone it leads into is the one a leaf that
  * swings that way can be in the way of; a door not yet placed leads nowhere.
  */
-export function doorDrawing(r: Room, d: Door, pl: Place, sheet: Sheet): DoorDrawing {
+export function doorDrawing(r: Zone, d: Door, pl: Place, sheet: Sheet): DoorDrawing {
   const across = d.flip && hasSwing(d) ? doorInto(sheet, d) : null
   const [px, py] = pl.p
   const [ux, uy] = pl.u
@@ -141,10 +141,10 @@ export function doorDrawing(r: Room, d: Door, pl: Place, sheet: Sheet): DoorDraw
   }
 }
 
-/** What the sentence says about the door in hand: its wall, its neighbour, and which way it opens. */
+/** What the sentence says about the door in hand: its edge, its neighbour, and which way it opens. */
 export type DoorRead = {
   label: string
-  room: string
+  zone: string
   width: number
   across: string | null
   swingsInto: string | null
@@ -152,15 +152,15 @@ export type DoorRead = {
   hinges: boolean
 }
 
-/** The door in hand, while it is drawn; a door whose rooms have moved apart is in no hand. */
+/** The door in hand, while it is drawn; a door whose zones have moved apart is in no hand. */
 export function doorRead(sheet: Sheet, storey: number, sel: DoorRef): DoorRead | null {
-  const r = placedRooms(sheet, storey).find((o) => o.id === sel.room)
+  const r = placedZones(sheet, storey).find((o) => o.id === sel.zone)
   const d = r ? doorsOf(r).find((o) => o.id === sel.id) : undefined
   if (!r || !d || !doorSpot(sheet, storey, r, d)) return null
   const across = doorInto(sheet, d)
   return {
     label: DOOR[d.type].label,
-    room: r.name,
+    zone: r.name,
     width: d.w,
     across: across ? across.name : null,
     swingsInto: hasSwing(d) ? (d.flip ? (across ? across.name : 'the outside') : r.name) : null,

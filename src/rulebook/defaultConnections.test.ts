@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { connectionSource, defaultConnections } from './defaultConnections'
-import { roomTypes } from './roomTypes'
+import { zoneTypes } from './zoneTypes'
 import { EXTERIOR } from '../model'
 
 const markdown = readFileSync(
@@ -52,9 +52,9 @@ describe('the default-connection table in code matches the one a person reads', 
 })
 
 describe('the table stays inside the model', () => {
-  const kinds = new Set(roomTypes.map((type) => type.id))
+  const kinds = new Set(zoneTypes.map((type) => type.id))
 
-  it('names only kinds the room-type table knows, or the outside', () => {
+  it('names only kinds the zone-type table knows, or the outside', () => {
     const named = defaultConnections.flatMap((row) => [row.from, row.to])
     expect(named.filter((kind) => kind !== EXTERIOR && !kinds.has(kind))).toEqual([])
   })
@@ -66,7 +66,7 @@ describe('the table stays inside the model', () => {
     expect(defaultConnections.every((row) => /^D\d+$/.test(row.id))).toBe(true)
     expect(new Set(numbers).size).toBe(numbers.length)
     expect([...numbers].sort((one, other) => one - other)).toEqual(numbers)
-    // D8 opened the stair off the entry; it is withdrawn, because an entry's wall cannot carry
+    // D8 opened the stair off the entry; it is withdrawn, because an entry's edges cannot carry
     // six doors and D26 already reaches the stair from the corridor.
     expect(numbers).not.toContain(8)
   })
@@ -77,7 +77,7 @@ describe('the table stays inside the model', () => {
     expect(frontDoors[0]?.from).toBe(EXTERIOR)
   })
 
-  it('pairs one to one only between two rooms, never with the outside', () => {
+  it('pairs one to one only between two zones, never with the outside', () => {
     const oneToOne = defaultConnections.filter((row) => row.pairing === 'one')
     expect(oneToOne.filter((row) => row.from === EXTERIOR || row.to === EXTERIOR)).toEqual([])
   })
@@ -94,7 +94,7 @@ describe('the source a person is shown', () => {
     expect(connectionSource('diwaniya', EXTERIOR)?.source).toContain('its own street door')
   })
 
-  it('stays the row when the edge has been made an opening', () => {
+  it('stays the row when the connection has been made an opening', () => {
     expect(connectionSource('dining-room', 'kitchen')?.id).toBe('D12')
   })
 

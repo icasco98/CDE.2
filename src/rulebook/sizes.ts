@@ -1,7 +1,7 @@
-import { roomTypes } from './roomTypes'
-import { byPlotBand, type Band, type RoomCategory, type RoomType } from './types'
+import { zoneTypes } from './zoneTypes'
+import { byPlotBand, type Band, type ZoneCategory, type ZoneType } from './types'
 
-/** The bands rulebook/room-types.md gives for the diwaniya and the two living rooms. */
+/** The bands rulebook/zone-types.md gives for the diwaniya and the two living rooms. */
 const plotBands: readonly {
   readonly upTo: number
   readonly bands: Readonly<Record<string, Band>>
@@ -35,13 +35,13 @@ const plotBands: readonly {
 /** A hallway has a width, not an area, so a new one opens as its narrowest typical width over 8 m. */
 const hallwayRun = 8
 
-const fallback = 'room-other'
+const fallback = 'zone-other'
 
-const byId: ReadonlyMap<string, RoomType> = new Map(roomTypes.map((type) => [type.id, type]))
+const byId: ReadonlyMap<string, ZoneType> = new Map(zoneTypes.map((type) => [type.id, type]))
 
-const categoryOrder: readonly RoomCategory[] = ['reception', 'shared', 'private', 'service', 'open']
+const categoryOrder: readonly ZoneCategory[] = ['reception', 'shared', 'private', 'service', 'open']
 
-export const categoryLabels: Readonly<Record<RoomCategory, string>> = {
+export const categoryLabels: Readonly<Record<ZoneCategory, string>> = {
   reception: 'Reception',
   shared: 'Shared',
   private: 'Private',
@@ -49,7 +49,7 @@ export const categoryLabels: Readonly<Record<RoomCategory, string>> = {
   open: 'Open',
 }
 
-export function roomTypeById(id: string): RoomType | undefined {
+export function zoneTypeById(id: string): ZoneType | undefined {
   return byId.get(id)
 }
 
@@ -66,7 +66,7 @@ export function plotBandFor(kindId: string, plotAreaM2: number): Band | undefine
 /**
  * What the table treats as a normal size for the kind, with the plot band resolved where the kind
  * reads its size off the plot. A kind whose length is as needed — the hallway — has no range at
- * all, and nothing that measures a room against one may invent it one.
+ * all, and nothing that measures a zone against one may invent it one.
  */
 export function rangeFor(kindId: string, plotAreaM2: number): Band | undefined {
   const range = byId.get(kindId)?.range
@@ -74,7 +74,7 @@ export function rangeFor(kindId: string, plotAreaM2: number): Band | undefined {
   return typeof range === 'object' ? range : undefined
 }
 
-/** What a new room of this kind gets: the table's typical, or the middle of its plot band. */
+/** What a new zone of this kind gets: the table's typical, or the middle of its plot band. */
 export function typicalArea(kindId: string, plotAreaM2: number): number {
   const type = byId.get(kindId) ?? byId.get(fallback)
   if (!type) return 0
@@ -87,9 +87,9 @@ export function typicalArea(kindId: string, plotAreaM2: number): number {
   return typical.min * hallwayRun
 }
 
-export function typesByCategory(): readonly (readonly [RoomCategory, readonly RoomType[]])[] {
+export function typesByCategory(): readonly (readonly [ZoneCategory, readonly ZoneType[]])[] {
   return categoryOrder.map((category) => [
     category,
-    roomTypes.filter((type) => type.category === category),
+    zoneTypes.filter((type) => type.category === category),
   ])
 }

@@ -1,7 +1,7 @@
-/** The zoning sheet's model: a room, a door, the settings, and the sheet they make. */
+/** The zoning sheet's model: a zone, a door, the settings, and the sheet they make. */
 
 import { DEFAULT_PLOT, MAX_STOREYS, STOREY_NAME, type PlotSpec } from './plot'
-import type { WallName } from './against'
+import type { EdgeName } from './against'
 
 export type Point = [number, number]
 export type Poly = Point[]
@@ -14,33 +14,33 @@ export type DoorType = 'door' | 'double' | 'sliding' | 'opening' | 'open' | 'str
 export const OUTSIDE = 'EXTERIOR'
 
 /**
- * A door is the drawing of an edge: it is held by one room of the edge, `to` is the other end (a room
- * or `OUTSIDE`), both set when it is placed. Between two rooms it stands on the wall they share on
- * `side` of its room (in the room's own frame), `along` of the way along it, or on the longest wall
- * they share when that side shares none; to the outside it stands at `at`, a point of its room's frame on the
- * outside wall it was placed on. Where that wall is not there it is not drawn, and nothing else.
+ * A door is the drawing of a connection: it is held by one zone of the connection, `to` is the other end (a zone
+ * or `OUTSIDE`), both set when it is placed. Between two zones it stands on the edge they share on
+ * `side` of its zone (in the zone's own frame), `along` of the way along it, or on the longest edge
+ * they share when that side shares none; to the outside it stands at `at`, a point of its zone's frame on the
+ * outside edge it was placed on. Where that edge is not there it is not drawn, and nothing else.
  */
 export type Door = {
   id: string
-  edge: string
+  connection: string
   to: string
   type: DoorType
   w: number
   flip: boolean
   hinge: boolean
-  side?: WallName
+  side?: EdgeName
   along?: number
   at?: Point
 }
 
 /**
- * A room: a rectangle `w` by `h` at `x`, `y` in plot metres, turned `angle` degrees clockwise about
+ * A zone: a rectangle `w` by `h` at `x`, `y` in plot metres, turned `angle` degrees clockwise about
  * the frame's centre, with `pieces` — convex polygons in that frame — when carving or drawing has
  * left it something other than the whole rectangle. `lost` is how much of the frame a cut took, so
- * Restore shape can give it back. `placedAt` is a clock tick, so the newest room gives way in gap
+ * Restore shape can give it back. `placedAt` is a clock tick, so the newest zone gives way in gap
  * closing. `fixed` marks one that never moves: a court.
  */
-export type Room = {
+export type Zone = {
   id: string
   name: string
   kind: string
@@ -82,7 +82,7 @@ export type Settings = {
   guides: number
   dims: 'all' | 'size' | 'none'
   dimSize: number
-  sharedWalls: number
+  sharedEdges: number
   dur: number
   ease: string
   allowSpill: number
@@ -132,7 +132,7 @@ export const DEFAULTS: Settings = {
   guides: 1,
   dims: 'all',
   dimSize: 0.4,
-  sharedWalls: 0,
+  sharedEdges: 0,
   dur: 220,
   ease: 'cubic-bezier(.2,.7,.2,1)',
   allowSpill: 1,
@@ -160,11 +160,11 @@ export const DEFAULTS: Settings = {
   streetLabels: 1,
 }
 
-export const SETTINGS_V = 49
+export const SETTINGS_V = 50
 
-/** The rooms in program order, which is the order of importance, with the storeys they stand on. */
+/** The zones in program order, which is the order of importance, with the storeys they stand on. */
 export type Sheet = {
-  rooms: Room[]
+  zones: Zone[]
   storeyCount: number
   settings: Settings
   /** The plot under the drawing: the project's where it has one, the fresh brief's otherwise. */
@@ -172,40 +172,48 @@ export type Sheet = {
 }
 
 export const RULE_HINT: Record<LandingRule, string> = {
-  wait: 'overlaps are tinted and wait · right-click a room to settle each one',
-  push: 'the room lower in the program slides aside, never shrinks',
+  wait: 'overlaps are tinted and wait · right-click a zone to settle each one',
+  push: 'the zone lower in the program slides aside, never shrinks',
 }
 
 export const ruleOf = (v: unknown): LandingRule => (v === 'push' ? 'push' : 'wait')
 
+/** The shared-edge drag's key before decision 44 named a zone's outline its edges. */
+const SHARED_EDGES_BEFORE_50 = 'sharedWalls'
+
 /**
- * Settings saved by an older page: the boundary switch was never used, so its old default goes; and
- * every save wrote the shared-wall drag out whole, so the old default goes too (decision 43).
+ * Settings saved by an older page: the boundary switch was never used, so its old default goes;
+ * every save wrote the shared-edge drag out whole, so the old default goes too (decision 43); and
+ * the drag saved since is read under its new name.
  */
 export function migrate(saved: Record<string, unknown> | null): Record<string, unknown> | null {
   if (!saved || typeof saved !== 'object') return saved
   const v = typeof saved.v === 'number' ? saved.v : 0
   if (v < 48 && saved.boundary === 'off') saved.boundary = 'all'
-  if (v < 49) delete saved.sharedWalls
+  if (v < 49) delete saved[SHARED_EDGES_BEFORE_50]
+  if (v < 50 && SHARED_EDGES_BEFORE_50 in saved) {
+    saved.sharedEdges ??= saved[SHARED_EDGES_BEFORE_50]
+    delete saved[SHARED_EDGES_BEFORE_50]
+  }
   return saved
 }
 
-export const cloneRoom = (r: Room): Room => JSON.parse(JSON.stringify(r)) as Room
+export const cloneZone = (r: Zone): Zone => JSON.parse(JSON.stringify(r)) as Zone
 
 export const cloneSheet = (sheet: Sheet): Sheet => ({
-  rooms: sheet.rooms.map(cloneRoom),
+  zones: sheet.zones.map(cloneZone),
   storeyCount: sheet.storeyCount,
   settings: { ...sheet.settings, colors: { ...sheet.settings.colors } },
   plot: sheet.plot,
 })
 
 export const sheetOf = (
-  rooms: Room[],
+  zones: Zone[],
   settings: Partial<Settings> = {},
   storeyCount = 2,
   plot: PlotSpec = DEFAULT_PLOT,
 ): Sheet => ({
-  rooms,
+  zones,
   storeyCount,
   plot,
   settings: {
@@ -215,36 +223,36 @@ export const sheetOf = (
   },
 })
 
-// ---------- what a room is ----------
+// ---------- what a zone is ----------
 
-export const isOpen = (r: Room) => r.cat === 'open'
-export const isStair = (r: Room) => r.kind === 'stair'
-export const isCourt = (r: Room) => r.placed && !!r.fixed && r.kind === 'court'
-export const doorsOf = (r: Room): Door[] => r.doors ?? []
+export const isOpen = (r: Zone) => r.cat === 'open'
+export const isStair = (r: Zone) => r.kind === 'stair'
+export const isCourt = (r: Zone) => r.placed && !!r.fixed && r.kind === 'court'
+export const doorsOf = (r: Zone): Door[] => r.doors ?? []
 export const RECT = (w: number, h: number): Poly => [
   [0, 0],
   [w, 0],
   [w, h],
   [0, h],
 ]
-export const piecesOf = (r: Room): Poly[] =>
+export const piecesOf = (r: Zone): Poly[] =>
   r.pieces && r.pieces.length ? r.pieces : [RECT(r.w, r.h)]
-/** What the frame maths needs of a room: where it stands, how big it is, and its turn. */
+/** What the frame maths needs of a zone: where it stands, how big it is, and its turn. */
 export type Frame = { x: number; y: number; w: number; h: number; angle: number }
 
 export const square = (r: Frame) => !r.angle
-export const right = (r: Room) => r.x + r.w
-export const bottom = (r: Room) => r.y + r.h
+export const right = (r: Zone) => r.x + r.w
+export const bottom = (r: Zone) => r.y + r.h
 export const centreOf = (r: Frame): Point => [r.x + r.w / 2, r.y + r.h / 2]
 
-export const acrossStoreys = (r: Room, settings: Settings) => isStair(r) && !!settings.stairAcross
+export const acrossStoreys = (r: Zone, settings: Settings) => isStair(r) && !!settings.stairAcross
 
-export const storeyOf = (r: Room) =>
+export const storeyOf = (r: Zone) =>
   Math.max(0, Math.min(MAX_STOREYS - 1, Math.floor(Number(r.storey) || 0)))
 
-export const allPlaced = (sheet: Sheet) => sheet.rooms.filter((r) => r.placed)
+export const allPlaced = (sheet: Sheet) => sheet.zones.filter((r) => r.placed)
 
-/** How many storeys the plan has: what was added, and never fewer than the rooms need. */
+/** How many storeys the plan has: what was added, and never fewer than the zones need. */
 export const storeyCountOf = (sheet: Sheet) =>
   Math.max(sheet.storeyCount, ...allPlaced(sheet).map((r) => storeyOf(r) + 1), 1)
 
@@ -258,25 +266,25 @@ export const floorZ = (settings: Settings, k: number) => {
   return z
 }
 
-export const zBase = (r: Room, settings: Settings) => floorZ(settings, storeyOf(r))
+export const zBase = (r: Zone, settings: Settings) => floorZ(settings, storeyOf(r))
 
 /** The stair may add its 3 m stair house; every other zone stops at the building height. */
-export const heightCap = (r: Room, settings: Settings) =>
+export const heightCap = (r: Zone, settings: Settings) =>
   acrossStoreys(r, settings) ? settings.stairTop || 18 : settings.maxHeight || 15
 
 /** A zone's height: its own, else the stair reaches the top storey's roof, else the storey's. */
-export function heightOf(r: Room, sheet: Sheet): number {
+export function heightOf(r: Zone, sheet: Sheet): number {
   const { settings } = sheet
   if (r.height && r.height > 0) return r.height
   if (acrossStoreys(r, settings)) return floorZ(settings, storeyCountOf(sheet)) - zBase(r, settings)
   return stH(settings, storeyOf(r))
 }
 
-export const zTop = (r: Room, sheet: Sheet) =>
+export const zTop = (r: Zone, sheet: Sheet) =>
   zBase(r, sheet.settings) + Math.min(heightCap(r, sheet.settings), heightOf(r, sheet))
 
 /** Taller than the storey it stands on: open to below on the floor above. */
-export const tallRoom = (r: Room, sheet: Sheet) =>
+export const tallZone = (r: Zone, sheet: Sheet) =>
   r.placed &&
   !isOpen(r) &&
   !r.fixed &&
@@ -284,31 +292,31 @@ export const tallRoom = (r: Room, sheet: Sheet) =>
   heightOf(r, sheet) > stH(sheet.settings, storeyOf(r)) + 0.05
 
 /** Open to the sky, or rising through this floor. */
-export const voidOn = (r: Room, k: number, sheet: Sheet) =>
+export const voidOn = (r: Zone, k: number, sheet: Sheet) =>
   r.placed &&
   storeyOf(r) < k &&
-  (isCourt(r) || (tallRoom(r, sheet) && zTop(r, sheet) > floorZ(sheet.settings, k) + 0.05))
+  (isCourt(r) || (tallZone(r, sheet) && zTop(r, sheet) > floorZ(sheet.settings, k) + 0.05))
 
-/** The rooms the sheet shows on one storey: that storey's, and the stair when it is one across. */
-export const placedRooms = (sheet: Sheet, storey: number) =>
-  sheet.rooms.filter(
+/** The zones the sheet shows on one storey: that storey's, and the stair when it is one across. */
+export const placedZones = (sheet: Sheet, storey: number) =>
+  sheet.zones.filter(
     (r) => r.placed && (storeyOf(r) === storey || acrossStoreys(r, sheet.settings)),
   )
 
 /** The footprints of the storey below that stand open on this one. */
 export const ghostsOf = (sheet: Sheet, storey: number) =>
-  storey > 0 && sheet.settings.openBelow ? sheet.rooms.filter((r) => voidOn(r, storey, sheet)) : []
+  storey > 0 && sheet.settings.openBelow ? sheet.zones.filter((r) => voidOn(r, storey, sheet)) : []
 
-export const isGhost = (r: Room, storey: number, sheet: Sheet) =>
+export const isGhost = (r: Zone, storey: number, sheet: Sheet) =>
   storey > 0 && !!sheet.settings.openBelow && voidOn(r, storey, sheet)
 
 /** What a move may snap to: this storey, the spaces open to below, and the storeys either side. */
-export const snapRooms = (sheet: Sheet, storey: number, except: Room | null) =>
-  placedRooms(sheet, storey)
+export const snapZones = (sheet: Sheet, storey: number, except: Zone | null) =>
+  placedZones(sheet, storey)
     .concat(
       ghostsOf(sheet, storey),
       sheet.settings.snapStoreys
-        ? sheet.rooms.filter(
+        ? sheet.zones.filter(
             (o) =>
               o.placed && !acrossStoreys(o, sheet.settings) && Math.abs(storeyOf(o) - storey) === 1,
           )
@@ -316,11 +324,11 @@ export const snapRooms = (sheet: Sheet, storey: number, except: Room | null) =>
     )
     .filter((o) => o !== except)
 
-/** A room with the rooms grouped to it, or just itself. */
-export const kin = (r: Room, onStorey: Room[]) =>
+/** A zone with the zones grouped to it, or just itself. */
+export const kin = (r: Zone, onStorey: Zone[]) =>
   r.group ? onStorey.filter((o) => o.group === r.group) : [r]
 
-/** The order of importance is the program order: the lower room gives way. */
-export const rank = (r: Room, sheet: Sheet) => sheet.rooms.indexOf(r)
+/** The order of importance is the program order: the lower zone gives way. */
+export const rank = (r: Zone, sheet: Sheet) => sheet.zones.indexOf(r)
 
 export const storeyNameOf = (k: number) => STOREY_NAME[Math.max(0, Math.min(3, k))]!

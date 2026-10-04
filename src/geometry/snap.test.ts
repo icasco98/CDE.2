@@ -5,7 +5,7 @@ import {
   snapPointToGrid,
   snapRectangleToNeighbours,
   snapToGrid,
-  wallSnapOffset,
+  edgeSnapOffset,
 } from './snap'
 import type { Polygon } from './types'
 
@@ -67,7 +67,7 @@ describe('snapping a moved rectangle to a neighbour', () => {
   })
 })
 
-describe('snapping a corner or a wall to a neighbour', () => {
+describe('snapping a corner or an edge to a neighbour', () => {
   const neighbour: Polygon = [
     [5, 0],
     [8, 0],
@@ -79,7 +79,7 @@ describe('snapping a corner or a wall to a neighbour', () => {
     expect(nearestNeighbourPoint([5.1, 0.1], [neighbour], 0.25)).toEqual([5, 0])
   })
 
-  it('lands it on the wall, not the corner, mid-wall', () => {
+  it('lands it on the edge, not the corner, mid-edge', () => {
     const snapped = nearestNeighbourPoint([5.1, 1.5], [neighbour], 0.25)
     expect(snapped?.[0]).toBeCloseTo(5, 9)
     expect(snapped?.[1]).toBeCloseTo(1.5, 9)
@@ -89,15 +89,15 @@ describe('snapping a corner or a wall to a neighbour', () => {
     expect(nearestNeighbourPoint([5.5, 1.5], [neighbour], 0.25)).toBeNull()
   })
 
-  it('pulls a wall the last 0.1 m flush against a parallel neighbour wall', () => {
-    expect(wallSnapOffset([4.9, 0], [4.9, 3], [1, 0], [neighbour], 0.25)).toBeCloseTo(0.1, 9)
+  it('pulls an edge the last 0.1 m flush against a parallel neighbour edge', () => {
+    expect(edgeSnapOffset([4.9, 0], [4.9, 3], [1, 0], [neighbour], 0.25)).toBeCloseTo(0.1, 9)
   })
 
-  it('ignores a neighbour wall that is not parallel to it', () => {
-    expect(wallSnapOffset([4, 0], [4.3, 0.4], [0.8, -0.6], [neighbour], 0.25)).toBe(0)
+  it('ignores a neighbour edge that is not parallel to it', () => {
+    expect(edgeSnapOffset([4, 0], [4.3, 0.4], [0.8, -0.6], [neighbour], 0.25)).toBe(0)
   })
 
-  it('ignores a parallel wall beyond the reach', () => {
-    expect(wallSnapOffset([4.5, 0], [4.5, 3], [1, 0], [neighbour], 0.25)).toBe(0)
+  it('ignores a parallel edge beyond the reach', () => {
+    expect(edgeSnapOffset([4.5, 0], [4.5, 3], [1, 0], [neighbour], 0.25)).toBe(0)
   })
 })

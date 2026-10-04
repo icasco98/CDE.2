@@ -1,8 +1,8 @@
 import type { Household } from '../model'
 import { hallwayArea, hallwayFollows, hallwayName, needsHallway } from './circulation'
-import { roomTypeById, typicalArea } from './sizes'
+import { zoneTypeById, typicalArea } from './sizes'
 
-export type ProgramRoom = {
+export type ProgramZone = {
   readonly type: string
   readonly name: string
   readonly targetArea: number
@@ -10,18 +10,18 @@ export type ProgramRoom = {
   readonly storeysSpanned: number
 }
 
-/** Where a room of a kind stands the moment it is made: its storey and the storeys it reaches. */
+/** Where a zone of a kind stands the moment it is made: its storey and the storeys it reaches. */
 export type Standing = { readonly storey: number; readonly storeysSpanned: number }
 
 /**
  * The table's default storey read into a house of this many storeys. `any` opens on the ground
  * beside `ground`, and above two storeys every `upper` kind still opens on the first; the person
- * moves rooms up from there. A kind the table puts on every storey stands on the ground and
+ * moves zones up from there. A kind the table puts on every storey stands on the ground and
  * reaches the top, which is what a stair and a lift do.
  */
 export function standingOf(kindId: string, storeys: number): Standing {
   const levels = Math.max(1, Math.trunc(storeys))
-  const where = roomTypeById(kindId)?.defaultStorey ?? 'ground'
+  const where = zoneTypeById(kindId)?.defaultStorey ?? 'ground'
   if (where === 'all') return { storey: 0, storeysSpanned: levels }
   if (where === 'top') return { storey: levels - 1, storeysSpanned: 1 }
   if (where === 'upper') return { storey: levels > 1 ? 1 : 0, storeysSpanned: 1 }
@@ -30,15 +30,15 @@ export function standingOf(kindId: string, storeys: number): Standing {
 
 /**
  * What a companion is called. An ensuite is one of several in a house, so it carries the name of
- * the room it serves; every other companion is one to a house and its own label says enough.
+ * the zone it serves; every other companion is one to a house and its own label says enough.
  */
-export function companionName(companionId: string, roomName: string): string {
-  const label = roomTypeById(companionId)?.label ?? companionId
-  return companionId === 'ensuite-bathroom' ? `Ensuite, ${roomName}` : label
+export function companionName(companionId: string, zoneName: string): string {
+  const label = zoneTypeById(companionId)?.label ?? companionId
+  return companionId === 'ensuite-bathroom' ? `Ensuite, ${zoneName}` : label
 }
 
 /**
- * The standard trio plus the rooms this household implies, each at its typical target area. A kind
+ * The standard trio plus the zones this household implies, each at its typical target area. A kind
  * named in `raised` whose table storey is `any` stands on the first storey rather than the ground.
  */
 export function defaultProgram(
@@ -46,12 +46,12 @@ export function defaultProgram(
   household: Household,
   storeys: number,
   raised: ReadonlySet<string> = new Set(),
-): readonly ProgramRoom[] {
+): readonly ProgramZone[] {
   const levels = Math.max(1, Math.trunc(storeys))
-  const rooms: ProgramRoom[] = []
+  const zones: ProgramZone[] = []
 
   const put = (type: string, name: string, storey: number): void => {
-    rooms.push({
+    zones.push({
       type,
       name,
       targetArea: typicalArea(type, plotAreaM2),
@@ -61,7 +61,7 @@ export function defaultProgram(
   }
 
   const lifted = (type: string): boolean =>
-    levels > 1 && raised.has(type) && roomTypeById(type)?.defaultStorey === 'any'
+    levels > 1 && raised.has(type) && zoneTypeById(type)?.defaultStorey === 'any'
 
   const add = (
     type: string,
@@ -69,9 +69,9 @@ export function defaultProgram(
     on = lifted(type) ? 1 : standingOf(type, levels).storey,
   ): void => {
     put(type, name, on)
-    // A companion stands with the room it serves, so it takes that room's storey, not its own
+    // A companion stands with the zone it serves, so it takes that zone's storey, not its own
     // default, and brings nothing further of its own.
-    const companion = roomTypeById(type)?.companion
+    const companion = zoneTypeById(type)?.companion
     if (companion) put(companion, companionName(companion, name), on)
   }
 
@@ -100,54 +100,54 @@ export function defaultProgram(
   const cars = Math.max(0, Math.trunc(household.cars))
   for (let i = 0; i < cars; i++) add('garage', `Garage bay ${i + 1}`)
 
-  // A hallway is sized from the rooms it serves, so the storey has to be whole before one can be
+  // A hallway is sized from the zones it serves, so the storey has to be whole before one can be
   // laid out; every place is read off that whole storey and they go in together afterwards.
-  const hallways: { readonly at: number; readonly room: ProgramRoom }[] = []
+  const hallways: { readonly at: number; readonly zone: ProgramZone }[] = []
   for (let storey = 0; storey < levels; storey++) {
-    if (!needsHallway(rooms, storey)) continue
+    if (!needsHallway(zones, storey)) continue
     hallways.push({
-      at: hallwayFollows(rooms, storey),
-      room: {
+      at: hallwayFollows(zones, storey),
+      zone: {
         type: 'hallway',
         name: hallwayName(storey, levels),
-        targetArea: hallwayArea(rooms, storey),
+        targetArea: hallwayArea(zones, storey),
         storey,
         storeysSpanned: 1,
       },
     })
   }
-  const laid: ProgramRoom[] = []
-  for (let at = 0; at <= rooms.length; at++) {
-    for (const hallway of hallways) if (hallway.at === at) laid.push(hallway.room)
-    const room = rooms[at]
-    if (room) laid.push(room)
+  const laid: ProgramZone[] = []
+  for (let at = 0; at <= zones.length; at++) {
+    for (const hallway of hallways) if (hallway.at === at) laid.push(hallway.zone)
+    const zone = zones[at]
+    if (zone) laid.push(zone)
   }
   return laid
 }
 
-/** A room as the companion rule reads one: which room it is and what kind it is. */
-export type CompanionRoom = { readonly id: string; readonly type: string }
+/** A zone as the companion rule reads one: which zone it is and what kind it is. */
+export type CompanionZone = { readonly id: string; readonly type: string }
 
-/** An edge as the companion rule reads one: the pair it joins, whatever kind of opening it is. */
-export type CompanionEdge = { readonly a: string; readonly b: string }
+/** A connection as the companion rule reads one: the pair it joins, whatever kind of opening it is. */
+export type CompanionConnection = { readonly a: string; readonly b: string }
 
 /**
- * Which room each auxiliary room belongs to. A companion is recognised by the company it keeps
- * rather than by its name: it is an auxiliary kind, and it is joined to exactly one room of the
+ * Which zone each auxiliary zone belongs to. A companion is recognised by the company it keeps
+ * rather than by its name: it is an auxiliary kind, and it is joined to exactly one zone of the
  * house. A bathroom off the corridor serves the house and stays where it is; a bedroom's own is
  * part of the bedroom and goes wherever the bedroom goes.
  */
 export function companionOwners(
-  rooms: readonly CompanionRoom[],
-  edges: readonly CompanionEdge[],
+  zones: readonly CompanionZone[],
+  connections: readonly CompanionConnection[],
 ): ReadonlyMap<string, string> {
-  const known = new Set(rooms.map((room) => room.id))
+  const known = new Set(zones.map((zone) => zone.id))
   const joined = new Map<string, Set<string>>()
-  for (const edge of edges) {
-    if (!known.has(edge.a) || !known.has(edge.b)) continue
+  for (const connection of connections) {
+    if (!known.has(connection.a) || !known.has(connection.b)) continue
     for (const [one, other] of [
-      [edge.a, edge.b],
-      [edge.b, edge.a],
+      [connection.a, connection.b],
+      [connection.b, connection.a],
     ] as const) {
       const to = joined.get(one) ?? new Set<string>()
       to.add(other)
@@ -155,22 +155,22 @@ export function companionOwners(
     }
   }
   const owners = new Map<string, string>()
-  for (const room of rooms) {
-    if (!roomTypeById(room.type)?.flags.auxiliary) continue
-    const to = joined.get(room.id)
+  for (const zone of zones) {
+    if (!zoneTypeById(zone.type)?.flags.auxiliary) continue
+    const to = joined.get(zone.id)
     if (!to || to.size !== 1) continue
     const [owner] = [...to]
-    if (owner !== undefined) owners.set(room.id, owner)
+    if (owner !== undefined) owners.set(zone.id, owner)
   }
   return owners
 }
 
-/** The auxiliary rooms one room owns: its ensuite, its dressing room, its own WC. */
+/** The auxiliary zones one zone owns: its ensuite, its dressing room, its own WC. */
 export function companionsOf(
-  rooms: readonly CompanionRoom[],
-  edges: readonly CompanionEdge[],
+  zones: readonly CompanionZone[],
+  connections: readonly CompanionConnection[],
   id: string,
 ): readonly string[] {
-  const owners = companionOwners(rooms, edges)
+  const owners = companionOwners(zones, connections)
   return [...owners].filter(([, owner]) => owner === id).map(([companion]) => companion)
 }

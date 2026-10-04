@@ -1,6 +1,6 @@
 /**
  * The mass beside the sheet, as numbers: where the camera puts a point of the world, the volumes the
- * storeys stand as, and the order of wall lines that draws them back to front, exact from any angle.
+ * storeys stand as, and the order of edge lines that draws them back to front, exact from any angle.
  * Nothing here draws; the view reads these and makes an element of each face.
  */
 
@@ -14,7 +14,7 @@ import {
   zTop,
   type Point,
   type Poly,
-  type Room,
+  type Zone,
   type Sheet,
 } from './model'
 import {
@@ -24,7 +24,7 @@ import {
   rad,
   toWorld,
   triangulate,
-  worldWalls,
+  worldEdges,
   type Seg,
 } from './geometry'
 import { snapHeight } from './snap'
@@ -68,7 +68,7 @@ export const zoomedBy = (cam: MassCamera, deltaY: number): MassCamera => ({
 
 export const recentred = (cam: MassCamera): MassCamera => ({ ...cam, px: 0, py: 0, zoom: 1 })
 
-/** The blind wall on the boundary is dark, and red where it stands higher than the rulebook's 5 m. */
+/** The blind edge on the boundary is dark, and red where it stands higher than the rulebook's 5 m. */
 export const BLIND_BREACH = 5
 
 export type MassProjection = {
@@ -132,8 +132,8 @@ export function massProjection(
   }
 }
 
-/** The largest loop of a room's outline, in plot metres: what its shadow and its handles are drawn on. */
-export function worldLoop(r: Room): Poly {
+/** The largest loop of a zone's outline, in plot metres: what its shadow and its handles are drawn on. */
+export function worldLoop(r: Zone): Poly {
   const loops = loopsOf(r)
   const pts: Poly =
     loops && loops.length
@@ -170,20 +170,20 @@ export function massPivot(sheet: Sheet, ids: string[]): [number, number, number]
   return [(x0 + x1) / 2, (y0 + y1) / 2, z]
 }
 
-/** A wall of one block: where it runs, which way it faces, and whether it is a wall of the room. */
+/** An edge of one block: where it runs, which way it faces, and whether it is an edge of the zone. */
 export type MassEdge = {
   a: Point
   b: Point
   n: Point
-  /** True where this edge is a wall of the room, not a cut through the middle of its footprint. */
+  /** True where this edge is an edge of the zone, not a cut through the middle of its footprint. */
   outline: boolean
-  /** How much the wall turns toward the eye: positive is seen, negative is away. */
+  /** How much the edge turns toward the eye: positive is seen, negative is away. */
   facing: number
 }
 
-/** One convex block of a room, standing between two levels. */
+/** One convex block of a zone, standing between two levels. */
 export type Prism = {
-  room: Room
+  zone: Zone
   z0: number
   h: number
   poly: Poly
@@ -198,14 +198,14 @@ const onPlotEdge = (p: Point, plot: PlotSpec) =>
   Math.abs(p[1]) < 0.03 ||
   Math.abs(p[1] - plot.h) < 0.03
 
-/** A wall along the plot boundary: blind, and over 5 m a breach of the rulebook. */
-export const blindWall = (a: Point, b: Point, plot: PlotSpec = DEFAULT_PLOT) =>
+/** An edge along the plot boundary: blind, and over 5 m a breach of the rulebook. */
+export const blindEdge = (a: Point, b: Point, plot: PlotSpec = DEFAULT_PLOT) =>
   onPlotEdge(a, plot) && onPlotEdge(b, plot)
 
 export const breaches = (top: number) => top > BLIND_BREACH + 0.001
 
 function prismOf(
-  room: Room,
+  zone: Zone,
   poly: Poly,
   z0: number,
   h: number,
@@ -222,15 +222,15 @@ function prismOf(
     if ((cx - p[0]) * n[0] + (cy - p[1]) * n[1] > 0) n = [-n[0], -n[1]]
     return { a: p, b: q, n, outline: onOutline(p, q), facing: n[0] * vd[0] + n[1] * vd[1] }
   })
-  return { room, z0, h, poly, edges, depth: P.to(cx, cy, 0)[2], onOutline }
+  return { zone, z0, h, poly, edges, depth: P.to(cx, cy, 0)[2], onOutline }
 }
 
-/** Whether the point lies on one of the room's own walls, so a seam through a carve is not drawn. */
-function outlineTest(r: Room): (p: Point, q: Point) => boolean {
-  const walls = worldWalls(r)
+/** Whether the point lies on one of the zone's own edges, so a seam through a carve is not drawn. */
+function outlineTest(r: Zone): (p: Point, q: Point) => boolean {
+  const edges = worldEdges(r)
   return (p, q) => {
     const m: Point = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]
-    return walls.some((w) => {
+    return edges.some((w) => {
       const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1
       const u: Point = [(w.b[0] - w.a[0]) / L, (w.b[1] - w.a[1]) / L]
       const t = (m[0] - w.a[0]) * u[0] + (m[1] - w.a[1]) * u[1]
@@ -251,7 +251,7 @@ const convex = (poly: Poly) => {
 }
 
 /**
- * Every placed room as a set of convex blocks, each standing from its storey's floor to its top. An
+ * Every placed zone as a set of convex blocks, each standing from its storey's floor to its top. An
  * open-plan area lies flat on the ground and is left to the view to draw under everything.
  */
 export function prismsOf(sheet: Sheet, P: MassProjection): Prism[] {
@@ -340,18 +340,18 @@ function build(items: Prism[], left: number, P: MassProjection): Tree {
       const pf = clipSide(o.poly, line, 1)
       const pb = clipSide(o.poly, line, -1)
       if (pf.length >= 3 && polyArea(pf) > 1e-4)
-        F.push(prismOf(o.room, facing(pf), o.z0, o.h, o.onOutline, P))
+        F.push(prismOf(o.zone, facing(pf), o.z0, o.h, o.onOutline, P))
       if (pb.length >= 3 && polyArea(pb) > 1e-4)
-        Bk.push(prismOf(o.room, facing(pb), o.z0, o.h, o.onOutline, P))
+        Bk.push(prismOf(o.zone, facing(pb), o.z0, o.h, o.onOutline, P))
     }
   }
   return { line, front: build(F, left - 1, P), back: build(Bk, left - 1, P) }
 }
 
 /**
- * The blocks in drawing order, far to near. Every wall line parts the blocks into two sides, cutting
+ * The blocks in drawing order, far to near. Every edge line parts the blocks into two sides, cutting
  * any block it crosses, until no line parts what is left; read back to front for this view, the tree
- * is exact for any angle, turned rooms and all. Blocks left together stand over one another, and
+ * is exact for any angle, turned zones and all. Blocks left together stand over one another, and
  * there the higher one is in front of an eye that looks down. `undecided` names those groups.
  */
 export function orderPrisms(
@@ -368,7 +368,7 @@ export function orderPrisms(
   const walk = (node: Tree): void => {
     if ('leaf' in node) {
       const l = node.leaf.slice().sort((x, y) => x.z0 - y.z0 || x.depth - y.depth)
-      if (l.length > 1) undecided.push(l.map((o) => o.room.name))
+      if (l.length > 1) undecided.push(l.map((o) => o.zone.name))
       order.push(...l)
       return
     }
@@ -385,18 +385,18 @@ export function orderPrisms(
   return { order, undecided }
 }
 
-/** The walls of one block the eye can see, the nearest drawn last. */
-export function seenWalls(prism: Prism, P: MassProjection): MassEdge[] {
+/** The edges of one block the eye can see, the nearest drawn last. */
+export function seenEdges(prism: Prism, P: MassProjection): MassEdge[] {
   const depth = (e: MassEdge) => P.to((e.a[0] + e.b[0]) / 2, (e.a[1] + e.b[1]) / 2, 0)[2]
   return prism.edges.filter((e) => e.outline && e.facing > 0).sort((x, y) => depth(x) - depth(y))
 }
 
 /**
  * The height a pull on the post asks for: the drag in pixels read as metres, held between 2.5 m and
- * the room's cap, then snapped to the storeys and to the heights already standing.
+ * the zone's cap, then snapped to the storeys and to the heights already standing.
  */
 export function heightFromDrag(
-  r: Room,
+  r: Zone,
   sheet: Sheet,
   from: number,
   dY: number,

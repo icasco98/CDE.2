@@ -50,7 +50,7 @@ describe('shifting a footprint inside the plot', () => {
     const [slid] = clampGroupInside([turned], plot)
     expect(slid?.rotation).toBe(45)
     expect(slid && isOutsideBoundary(slid, plot)).toBe(false)
-    // A 4 x 4 room turned 45 degrees reaches 2.83 m from its centre, so it slides 0.83 m east.
+    // A 4 x 4 zone turned 45 degrees reaches 2.83 m from its centre, so it slides 0.83 m east.
     expect(boundingBox(outlineOf(slid ?? upright)).left).toBeCloseTo(0, 6)
   })
 
@@ -66,7 +66,7 @@ describe('shifting a footprint inside the plot', () => {
     expect(dy).toBeCloseTo(3, 9)
   })
 
-  it('holds a room inside a plot that is not a rectangle', () => {
+  it('holds a zone inside a plot that is not a rectangle', () => {
     // A right-angled plot: the hypotenuse runs from (12, 0) to (0, 12), so x + y = 12.
     const triangle: Polygon = [
       [0, 0],
@@ -124,7 +124,7 @@ describe('limiting a resize', () => {
     expect(limitResize(from, to, plot)).toBe(to)
   })
 
-  it('stops one at the wall without moving the anchored corner', () => {
+  it('stops one at the edge without moving the anchored corner', () => {
     const from = rectangle(16, 2, 3, 3)
     const anchor = anchorPointOf(from, -1, -1)
     const to = resizeFromAnchor(from, anchor, -1, -1, 9, 3)

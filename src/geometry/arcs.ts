@@ -60,7 +60,7 @@ export function arcPoints(
 
 /**
  * The circle through three points, and which way round it runs from the first to the last through
- * the middle one. Three points on a line name no circle, and the caller draws a straight wall.
+ * the middle one. Three points on a line name no circle, and the caller draws a straight edge.
  */
 export function arcThrough(from: Point, through: Point, to: Point): Circle | null {
   const twiceArea =
@@ -120,7 +120,7 @@ function bulgeArea(polygon: Polygon, arc: Arc): number {
 }
 
 /**
- * The area the room really covers: the polygon's area with every arc's segments put back, so a
+ * The area the zone really covers: the polygon's area with every arc's segments put back, so a
  * circle measures πr² rather than the area of the many-sided figure standing for it.
  */
 export function exactArea(footprint: Footprint): number {

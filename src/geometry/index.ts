@@ -43,15 +43,15 @@ export {
   snapPointToGrid,
   snapRectangleToNeighbours,
   snapToGrid,
-  wallSnapOffset,
+  edgeSnapOffset,
 } from './snap'
 export { buildingOutline, ringsToPath } from './outline'
-export type { OutwardWall, SharedWall } from './walls'
+export type { OutwardEdge, SharedEdge } from './edges'
 export {
-  outwardWalls,
-  sharedWalls,
-  wallDirection,
-  wallLength,
-  wallMidpoint,
-  WALL_TOLERANCE,
-} from './walls'
+  outwardEdges,
+  sharedEdges,
+  edgeDirection,
+  edgeLength,
+  edgeMidpoint,
+  EDGE_TOLERANCE,
+} from './edges'

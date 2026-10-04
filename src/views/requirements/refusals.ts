@@ -2,7 +2,7 @@ import type { Result, Violation } from '../../model'
 
 /** The store's own words, put plainly where they name parts of the model. */
 const plainly: Readonly<Record<string, string>> = {
-  'storey-in-use': 'The top storey still holds rooms. Move them down first.',
+  'storey-in-use': 'The top storey still holds zones. Move them down first.',
   'last-storey': 'A project has one storey at least.',
   'bad-area': 'A target area is a number of square metres above zero.',
 }

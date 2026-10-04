@@ -1,6 +1,6 @@
 /**
- * The question a door asks when it is put on a wall between two rooms with no edge: a door is the
- * drawing of an edge, so it is placed only with the connection it draws, or not at all.
+ * The question a door asks when it is put on an edge between two zones with no connection: a door is the
+ * drawing of a connection, so it is placed only with the connection it draws, or not at all.
  */
 export function DoorOffer(props: {
   readonly at: { readonly x: number; readonly y: number }

@@ -19,7 +19,7 @@ describe('the lessons the architect ships with', () => {
     expect(requests.length).toBeGreaterThan(4)
     // every command it had asked for is built, so it can read that it now has them
     expect(requests.every((asked) => asked.state === 'built')).toBe(true)
-    expect(requests[0]!.text).toBe('Place a room against a named wall of another room, touching.')
+    expect(requests[0]!.text).toBe('Place a zone against a named edge of another zone, touching.')
   })
 
   it('reads a page of its own, with a request the cofounder has marked', () => {

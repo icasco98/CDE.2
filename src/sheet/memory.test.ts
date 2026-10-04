@@ -8,7 +8,7 @@ import {
   TEXT_CAP,
   memorySent,
   newMemory,
-  planRooms,
+  planZones,
   readMemory,
   withFeedback,
   withNote,
@@ -38,12 +38,12 @@ describe('the assistant memory', () => {
     expect(memory.plans[0]!.at).toBe(at(3))
   })
 
-  it('keeps a plan as room names with their frames', () => {
-    const rooms = planRooms(fixtureSheet(), 0)
-    const diwaniya = rooms.find((r) => r.name === 'Diwaniya')
+  it('keeps a plan as zone names with their frames', () => {
+    const zones = planZones(fixtureSheet(), 0)
+    const diwaniya = zones.find((r) => r.name === 'Diwaniya')
     expect(diwaniya).toBeDefined()
     expect(diwaniya!.w * diwaniya!.h).toBeGreaterThan(35)
-    expect(rooms.every((r) => Number.isFinite(r.x) && Number.isFinite(r.y))).toBe(true)
+    expect(zones.every((r) => Number.isFinite(r.x) && Number.isFinite(r.y))).toBe(true)
   })
 
   it('sends the last thirty owner lines, and the lessons it starts with before its own', () => {
@@ -107,5 +107,11 @@ describe('the assistant memory', () => {
     expect(
       readMemory({ feedback: [{ text: '' }, 42], notes: null, plans: [7], requests: 'no' }),
     ).toEqual(newMemory())
+  })
+
+  it('reads a plan kept before its zones were called zones', () => {
+    const memory = withPlan(newMemory(), fixtureSheet(), 0, at(0))
+    const [{ zones, ...plan }] = memory.plans as [(typeof memory.plans)[number]]
+    expect(readMemory({ ...memory, plans: [{ ...plan, rooms: zones }] })).toEqual(memory)
   })
 })

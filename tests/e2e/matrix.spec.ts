@@ -1,8 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
-import { edgeBetween, openVilla } from './bubbles'
+import { connectionBetween, openVilla } from './bubbles'
 
 /*
- * The matrix window: every pair of rooms once, each cell editable through the same actions and
+ * The matrix window: every pair of zones once, each cell editable through the same actions and
  * the same undo as the diagram behind it.
  */
 
@@ -29,16 +29,19 @@ test('a cell shows the pair, and a door turned open there is open in the diagram
 }) => {
   await openVilla(page)
   await expect
-    .poll(async () => (await edgeBetween(page, 'Kitchen', 'Dining Room'))?.id)
+    .poll(async () => (await connectionBetween(page, 'Kitchen', 'Dining Room'))?.id)
     .toBeTruthy()
-  const edge = await edgeBetween(page, 'Kitchen', 'Dining Room')
+  const connection = await connectionBetween(page, 'Kitchen', 'Dining Room')
   await page.getByRole('button', { name: 'Matrix' }).click()
   await expect(matrix(page)).toBeVisible()
   await expect(await cell(page, 'Kitchen', 'Dining Room')).toHaveText('D')
   await setPair(page, 'Kitchen', 'Dining Room', 'Open')
   await expect(await cell(page, 'Kitchen', 'Dining Room')).toHaveText('O')
   await matrix(page).getByRole('button', { name: 'Close' }).click()
-  await expect(page.locator(`[data-edge="${edge!.id}"]`)).toHaveAttribute('data-kind', 'open')
+  await expect(page.locator(`[data-connection="${connection!.id}"]`)).toHaveAttribute(
+    'data-kind',
+    'open',
+  )
 })
 
 test('keep apart set in the matrix is drawn in the diagram, and Nothing clears it in one undo step', async ({
@@ -58,7 +61,7 @@ test('keep apart set in the matrix is drawn in the diagram, and Nothing clears i
   await expect(matrix(page)).toHaveCount(0)
 })
 
-test('two rooms on storeys no stair joins may be kept apart but not connected', async ({
+test('two zones on storeys no stair joins may be kept apart but not connected', async ({
   page,
 }) => {
   await openVilla(page)

@@ -3,9 +3,9 @@ import { linkedPairs, saved } from './bubbles'
 import { tab } from './tabs'
 
 /*
- * Show connections on the zoning sheet: the project's edges drawn from the room under the hand and the room
- * selected, gone once the two rooms share a door's width of wall, and in the Openings tab once a
- * door drawing the edge is placed; and the question a door asks between two rooms with no edge.
+ * Show connections on the zoning sheet: the project's connections drawn from the zone under the hand and the zone
+ * selected, gone once the two zones share a door's width of edge, and in the Openings tab once a
+ * door drawing the connection is placed; and the question a door asks between two zones with no connection.
  */
 
 type At = { x: number; y: number }
@@ -38,35 +38,35 @@ async function drag(page: Page, from: At, to: At, steps = 8) {
 }
 
 async function idOf(page: Page, name: string): Promise<string> {
-  await expect.poll(async () => (await saved(page)).rooms.length).toBeGreaterThan(5)
-  const room = (await saved(page)).rooms.find((each) => each.name === name)
-  if (!room) throw new Error(`${name} is not in the program`)
-  return room.id
+  await expect.poll(async () => (await saved(page)).zones.length).toBeGreaterThan(5)
+  const zone = (await saved(page)).zones.find((each) => each.name === name)
+  if (!zone) throw new Error(`${name} is not in the program`)
+  return zone.id
 }
 
-/** A room's box on the sheet in metres, read off its frame and its drawn body. */
+/** A zone's box on the sheet in metres, read off its frame and its drawn body. */
 async function boxOf(page: Page, id: string): Promise<Box> {
-  return page.evaluate((room) => {
-    const g = document.querySelector(`svg.sheet g.room[data-room="${room}"]`)
+  return page.evaluate((zone) => {
+    const g = document.querySelector(`svg.sheet g.zone[data-zone="${zone}"]`)
     const body = g?.querySelector('path.body')
     const found = /translate\(([-\d.]+) ([-\d.]+)\)/.exec(g?.getAttribute('transform') ?? '')
-    if (!found || !(body instanceof SVGGraphicsElement)) throw new Error(`${room} is not placed`)
+    if (!found || !(body instanceof SVGGraphicsElement)) throw new Error(`${zone} is not placed`)
     const b = body.getBBox()
     return { x: Number(found[1]) + b.x, y: Number(found[2]) + b.y, w: b.width, h: b.height }
   }, id)
 }
 
-/** A room dropped from the program with its middle at a point in metres. */
+/** A zone dropped from the program with its middle at a point in metres. */
 async function place(page: Page, id: string, x: number, y: number) {
-  const block = page.locator(`.tray .item[data-room="${id}"] .n`)
+  const block = page.locator(`.tray .item[data-zone="${id}"] .n`)
   await block.scrollIntoViewIfNeeded()
   const at = await block.boundingBox()
   if (!at) throw new Error(`${id} is not in the program`)
   await drag(page, { x: at.x + at.width / 2, y: at.y + at.height / 2 }, await onSheet(page, x, y))
-  await expect(page.locator(`svg.sheet g.room[data-room="${id}"]`)).toHaveCount(1)
+  await expect(page.locator(`svg.sheet g.zone[data-zone="${id}"]`)).toHaveCount(1)
 }
 
-/** A placed room moved so its left wall stands on another's right wall, tops aligned. */
+/** A placed zone moved so its left edge stands on another's right edge, tops aligned. */
 async function besideOf(page: Page, id: string, of: string) {
   const other = await boxOf(page, of)
   const mine = await boxOf(page, id)
@@ -96,7 +96,7 @@ async function hover(page: Page, id: string) {
   await page.mouse.move(at.x, at.y)
 }
 
-test('Show connections is off by default; on, a hovered room draws faint lines to its rooms, placed or in the program', async ({
+test('Show connections is off by default; on, a hovered zone draws faint lines to its zones, placed or in the program', async ({
   page,
 }) => {
   await openSheet(page)
@@ -123,7 +123,7 @@ test('Show connections is off by default; on, a hovered room draws faint lines t
   await expect(page.locator('[data-tray-line]')).toHaveCount(0)
 })
 
-test('a selected room draws bold lines to its placed rooms, and a line goes once the two share a wall', async ({
+test('a selected zone draws bold lines to its placed zones, and a line goes once the two share an edge', async ({
   page,
 }) => {
   await openSheet(page)
@@ -132,16 +132,16 @@ test('a selected room draws bold lines to its placed rooms, and a line goes once
   await place(page, dining, 9, 7)
   await place(page, kitchen, 6, 18)
   await check(page).click()
-  await page.locator(`.tray .item[data-room="${dining}"]`).click()
+  await page.locator(`.tray .item[data-zone="${dining}"]`).click()
   await page.mouse.move(5, 5)
   await expect(line(page, dining, kitchen).and(page.locator('.bold'))).toHaveCount(1)
 
   await besideOf(page, kitchen, dining)
-  await page.locator(`.tray .item[data-room="${dining}"]`).click()
+  await page.locator(`.tray .item[data-zone="${dining}"]`).click()
   await expect(line(page, dining, kitchen)).toHaveCount(0)
 })
 
-/** Two rooms side by side, and the Openings tab with a door armed. */
+/** Two zones side by side, and the Openings tab with a door armed. */
 async function sideBySide(page: Page, left: string, right: string, opened = false) {
   if (!opened) await openSheet(page)
   const a = await idOf(page, left)
@@ -153,18 +153,20 @@ async function sideBySide(page: Page, left: string, right: string, opened = fals
   await page.locator('.grp.place').getByRole('button', { name: 'Door', exact: true }).click()
   const box = await boxOf(page, a)
   const other = await boxOf(page, b)
-  const wall = { x: box.x + box.w, y: Math.max(box.y, other.y) + Math.min(box.h, other.h) / 2 }
-  return { a, b, wall }
+  const edge = { x: box.x + box.w, y: Math.max(box.y, other.y) + Math.min(box.h, other.h) / 2 }
+  return { a, b, edge }
 }
 
 const doors = (page: Page) => page.locator('svg.sheet .door:not(.preview)')
 
-test('in Openings a door on the wall of an edge meets it, and the line goes', async ({ page }) => {
-  const { a: dining, b: kitchen, wall } = await sideBySide(page, 'Dining Room', 'Kitchen')
+test('in Openings a door on the edge of a connection meets it, and the line goes', async ({
+  page,
+}) => {
+  const { a: dining, b: kitchen, edge } = await sideBySide(page, 'Dining Room', 'Kitchen')
   await check(page).click()
   const before = await doors(page).count()
   await page.mouse.click(
-    ...(Object.values(await onSheet(page, wall.x, wall.y)) as [number, number]),
+    ...(Object.values(await onSheet(page, edge.x, edge.y)) as [number, number]),
   )
   await expect(page.getByRole('dialog', { name: 'Add connection' })).toHaveCount(0)
   await expect(doors(page)).toHaveCount(before + 1)
@@ -172,14 +174,14 @@ test('in Openings a door on the wall of an edge meets it, and the line goes', as
   await expect(line(page, dining, kitchen)).toHaveCount(0)
 })
 
-test('a door between two rooms with no edge asks, and yes adds both as one undo step', async ({
+test('a door between two zones with no connection asks, and yes adds both as one undo step', async ({
   page,
 }) => {
-  const { wall } = await sideBySide(page, 'Kitchen', 'Formal Living')
+  const { edge } = await sideBySide(page, 'Kitchen', 'Formal Living')
   await expect.poll(() => linkedPairs(page)).not.toContain('Formal Living to Kitchen')
   const before = await doors(page).count()
   await page.mouse.click(
-    ...(Object.values(await onSheet(page, wall.x, wall.y)) as [number, number]),
+    ...(Object.values(await onSheet(page, edge.x, edge.y)) as [number, number]),
   )
   const offer = page.getByRole('dialog', { name: 'Add connection' })
   await expect(offer).toContainText(
@@ -194,11 +196,13 @@ test('a door between two rooms with no edge asks, and yes adds both as one undo 
   await expect.poll(() => linkedPairs(page)).not.toContain('Formal Living to Kitchen')
 })
 
-test('a door between two rooms with no edge asks, and no places nothing', async ({ page }) => {
-  const { wall } = await sideBySide(page, 'Kitchen', 'Formal Living')
+test('a door between two zones with no connection asks, and no places nothing', async ({
+  page,
+}) => {
+  const { edge } = await sideBySide(page, 'Kitchen', 'Formal Living')
   const before = await doors(page).count()
   await page.mouse.click(
-    ...(Object.values(await onSheet(page, wall.x, wall.y)) as [number, number]),
+    ...(Object.values(await onSheet(page, edge.x, edge.y)) as [number, number]),
   )
   const offer = page.getByRole('dialog', { name: 'Add connection' })
   await offer.getByRole('button', { name: 'Cancel' }).click()
@@ -207,7 +211,7 @@ test('a door between two rooms with no edge asks, and no places nothing', async 
   await expect.poll(() => linkedPairs(page)).not.toContain('Formal Living to Kitchen')
 })
 
-test('a door joining a pair kept apart is crossed, and both rooms outlined where one is reached only through the other', async ({
+test('a door joining a pair kept apart is crossed, and both zones outlined where one is reached only through the other', async ({
   page,
 }) => {
   await page.goto('/')
@@ -227,17 +231,17 @@ test('a door joining a pair kept apart is crossed, and both rooms outlined where
   await tab(page, 'Zoning and 3D').click()
   await page.locator('svg.sheet').waitFor()
 
-  const { a: dining, b: kitchen, wall } = await sideBySide(page, 'Dining Room', 'Kitchen', true)
+  const { a: dining, b: kitchen, edge } = await sideBySide(page, 'Dining Room', 'Kitchen', true)
   await page.mouse.click(
-    ...(Object.values(await onSheet(page, wall.x, wall.y)) as [number, number]),
+    ...(Object.values(await onSheet(page, edge.x, edge.y)) as [number, number]),
   )
   await expect(page.locator('svg.sheet [data-apart-door]')).toHaveCount(0)
   await check(page).click()
   await expect(page.locator('svg.sheet [data-apart-door]')).toHaveCount(1)
-  await expect(page.locator(`svg.sheet g.room[data-room="${kitchen}"]`)).toHaveClass(
+  await expect(page.locator(`svg.sheet g.zone[data-zone="${kitchen}"]`)).toHaveClass(
     /apart-through/,
   )
-  await expect(page.locator(`svg.sheet g.room[data-room="${dining}"]`)).toHaveClass(/apart-through/)
+  await expect(page.locator(`svg.sheet g.zone[data-zone="${dining}"]`)).toHaveClass(/apart-through/)
   await expect(sentence(page)).toContainText('1 keep-apart broken')
 })
 
@@ -262,7 +266,7 @@ test.describe('on a short screen, where the program scrolls', () => {
     return Math.abs(end.x - box.x - box.width) + Math.abs(end.y - box.y - box.height / 2)
   }
 
-  test('a line to a room in the program follows the list as it scrolls, and a tag brings it back', async ({
+  test('a line to a zone in the program follows the list as it scrolls, and a tag brings it back', async ({
     page,
   }) => {
     await openSheet(page)
@@ -270,21 +274,21 @@ test.describe('on a short screen, where the program scrolls', () => {
     const family = await idOf(page, 'Family Living')
     await place(page, dining, 9, 7)
     await check(page).click()
-    await page.locator(`.tray .item[data-room="${dining}"]`).click()
+    await page.locator(`.tray .item[data-zone="${dining}"]`).click()
     await page.mouse.move(5, 5)
     const key = `${dining}-${family}`
-    const block = `.tray .item[data-room="${family}"]`
+    const block = `.tray .item[data-zone="${family}"]`
     await expect(page.locator(block)).toHaveClass(/check-linked/)
 
     const tray = page.locator('.tray')
     await tray.evaluate((list, id) => {
-      const item = list.querySelector(`.item[data-room="${id}"]`)
+      const item = list.querySelector(`.item[data-zone="${id}"]`)
       item?.scrollIntoView({ block: 'center' })
     }, family)
     await expect.poll(() => missBy(page, key, block)).toBeLessThan(1.5)
 
     const arrow = await tray.evaluate((list, id) => {
-      const item = list.querySelector(`.item[data-room="${id}"]`) as HTMLElement
+      const item = list.querySelector(`.item[data-zone="${id}"]`) as HTMLElement
       const low = item.offsetTop - (list as HTMLElement).offsetTop > list.scrollHeight / 2
       list.scrollTop = low ? 0 : list.scrollHeight
       return low ? '↓' : '↑'
@@ -311,7 +315,7 @@ test.describe('on a short screen, where the program scrolls', () => {
       const svg = document.querySelector('svg.sheet') as SVGSVGElement
       const box = document.querySelector('.body-row') as HTMLElement
       const list = box.querySelector('.tray') as HTMLElement
-      const ids = [...list.querySelectorAll<HTMLElement>('.item')].map((item) => item.dataset.room!)
+      const ids = [...list.querySelectorAll<HTMLElement>('.item')].map((item) => item.dataset.zone!)
       const lines = Array.from({ length: 40 }, (_, i) => ({ from, to: ids[i % ids.length]! }))
       let best = Infinity
       for (let round = 0; round < 10; round++) {

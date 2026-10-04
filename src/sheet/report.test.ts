@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { report, boundaryWalls, sideOver, sideUsed } from './report'
+import { report, boundaryEdges, sideOver, sideUsed } from './report'
 import { fixtureSheet } from './fixture'
-import { sheetOf, type Room } from './model'
+import { sheetOf, type Zone } from './model'
 import { fmt } from './geometry'
 
-const room = (over: Partial<Room>): Room => ({
+const zone = (over: Partial<Zone>): Zone => ({
   id: 'a',
   name: 'A',
-  kind: 'room',
+  kind: 'zone',
   cat: 'shared',
   target: 10,
   x: 5,
@@ -60,7 +60,7 @@ describe('the report of the embedded sheet', () => {
     expect(rep.overRatio).toBe(false)
   })
 
-  it('names the rooms short of their target', () => {
+  it('names the zones short of their target', () => {
     const rep = report(fixtureSheet(), 0)
     expect(rep.shortfalls.map((s) => s.name)).toEqual(['Diwaniya', 'Kitchen', 'Store'])
   })
@@ -73,9 +73,9 @@ describe('the report of the embedded sheet', () => {
   it('names an overlap and a spill', () => {
     const sheet = sheetOf(
       [
-        room({}),
-        room({ id: 'b', name: 'B', x: 6, y: 6 }),
-        room({ id: 'c', name: 'C', x: 19, y: 5 }),
+        zone({}),
+        zone({ id: 'b', name: 'B', x: 6, y: 6 }),
+        zone({ id: 'c', name: 'C', x: 19, y: 5 }),
       ],
       { allowSpill: 1, boundary: 'off' },
     )
@@ -86,20 +86,20 @@ describe('the report of the embedded sheet', () => {
 })
 
 describe('the boundary', () => {
-  it('finds a wall on the west boundary and measures overlapping runs once', () => {
+  it('finds an edge on the west boundary and measures overlapping runs once', () => {
     const sheet = sheetOf([
-      room({ x: 0, y: 2, w: 3, h: 6 }),
-      room({ id: 'b', name: 'B', x: 0, y: 5, w: 3, h: 6 }),
+      zone({ x: 0, y: 2, w: 3, h: 6 }),
+      zone({ id: 'b', name: 'B', x: 0, y: 5, w: 3, h: 6 }),
     ])
-    expect(boundaryWalls(sheet.rooms[0]!, sheet.plot).map((w) => w.side)).toEqual(['west'])
+    expect(boundaryEdges(sheet.zones[0]!, sheet.plot).map((w) => w.side)).toEqual(['west'])
     expect(sideUsed(sheet, 'west')).toBe(9)
     expect(sideOver(sheet, 'west')).toBe(false)
   })
 
   it('leaves a court and open ground out of the boundary reading', () => {
     const sheet = sheetOf([
-      room({ x: 0, y: 0, w: 3, h: 20, fixed: true, kind: 'court', cat: 'open' }),
-      room({ id: 'b', name: 'Garden', cat: 'open', kind: 'garden', x: 0, y: 20, w: 3, h: 5 }),
+      zone({ x: 0, y: 0, w: 3, h: 20, fixed: true, kind: 'court', cat: 'open' }),
+      zone({ id: 'b', name: 'Garden', cat: 'open', kind: 'garden', x: 0, y: 20, w: 3, h: 5 }),
     ])
     expect(sideUsed(sheet, 'west')).toBe(0)
   })

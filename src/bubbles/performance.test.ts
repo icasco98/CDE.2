@@ -1,12 +1,12 @@
 import { expect, it } from 'vitest'
 import { EXTERIOR } from '../model'
-import { arrange, type ArrangeEdge, type ArrangeRoom } from './arrange'
+import { arrange, type ArrangeConnection, type ArrangeZone } from './arrange'
 import { cloudsOf } from './clouds'
 
 /*
  * The budget: the diagram is arranged again on every edit and every frame of a nudge, rows ordered
- * to uncross included, so forty rooms over three storeys must arrange inside one 16 ms frame, and
- * the zone clouds drawn round them, remade as often, inside 4 ms.
+ * to uncross included, so forty zones over three storeys must arrange inside one 16 ms frame, and
+ * the category clouds drawn round them, remade as often, inside 4 ms.
  */
 
 function milliseconds(work: () => void): number {
@@ -22,31 +22,31 @@ function milliseconds(work: () => void): number {
 
 const tiers = ['public', 'semi-public', 'private', 'exempt']
 
-const rooms: readonly ArrangeRoom[] = Array.from({ length: 40 }, (_, i) => ({
-  id: `room${i}`,
+const zones: readonly ArrangeZone[] = Array.from({ length: 40 }, (_, i) => ({
+  id: `zone${i}`,
   tier: tiers[i % tiers.length]!,
   storey: i % 3,
   storeysSpanned: i === 0 ? 3 : 1,
   targetArea: 8 + (i % 7) * 5,
 }))
 
-const edges: readonly ArrangeEdge[] = [
-  { a: EXTERIOR, b: 'room1', storey: 1 },
-  ...rooms.slice(1).map((each, i) => ({ a: rooms[i]!.id, b: each.id, storey: each.storey })),
-  ...rooms.slice(3).map((each, i) => ({ a: rooms[i]!.id, b: each.id, storey: each.storey })),
+const connections: readonly ArrangeConnection[] = [
+  { a: EXTERIOR, b: 'zone1', storey: 1 },
+  ...zones.slice(1).map((each, i) => ({ a: zones[i]!.id, b: each.id, storey: each.storey })),
+  ...zones.slice(3).map((each, i) => ({ a: zones[i]!.id, b: each.id, storey: each.storey })),
 ]
 
-it('arranges forty rooms on three storeys in under 16 ms', () => {
-  const took = milliseconds(() => arrange(rooms, edges, 3))
-  console.info(`arrange, 40 rooms: ${took.toFixed(3)} ms`)
+it('arranges forty zones on three storeys in under 16 ms', () => {
+  const took = milliseconds(() => arrange(zones, connections, 3))
+  console.info(`arrange, 40 zones: ${took.toFixed(3)} ms`)
   expect(took).toBeLessThan(16)
 })
 
-it('draws the zone clouds round forty rooms in under 4 ms', () => {
-  const { spots } = arrange(rooms, edges, 3)
+it('draws the category clouds round forty zones in under 4 ms', () => {
+  const { spots } = arrange(zones, connections, 3)
   const categories = ['reception', 'shared', 'private', 'service', 'open']
   const categoryOf = (id: string) => categories[Number(id.slice(4)) % categories.length]
   const took = milliseconds(() => cloudsOf(spots, categoryOf))
-  console.info(`clouds, 40 rooms: ${took.toFixed(3)} ms`)
+  console.info(`clouds, 40 zones: ${took.toFixed(3)} ms`)
   expect(took).toBeLessThan(4)
 })

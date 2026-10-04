@@ -1,5 +1,5 @@
 /**
- * The sheet itself: the plot, the setback line, the rooms and every mark the mock draws over them.
+ * The sheet itself: the plot, the setback line, the zones and every mark the mock draws over them.
  * It draws what it is given and reports where the pointer landed; the stage decides what that means.
  */
 
@@ -19,7 +19,7 @@ import {
   isGhost,
   areaOf,
   bboxOf,
-  boundaryWalls,
+  boundaryEdges,
   facing,
   fmt,
   isOpen,
@@ -36,7 +36,7 @@ import {
   type Point,
   type Poly,
   type Report,
-  type Room,
+  type Zone,
   type PlotSpec,
   type Seg,
   type Side,
@@ -49,7 +49,7 @@ import { viewBoxOf, type Camera, type Extent } from '../camera'
 import {
   angleShown,
   shapePolygon,
-  shownRoom,
+  shownZone,
   type Drag,
   type Drawing,
   type Measure,
@@ -59,7 +59,7 @@ import { frameOf, p4 } from './shape'
 import { Doors, type OpeningsDraw } from './Doors'
 import { CheckMarks, type SheetCheck } from './CheckMarks'
 
-/** How far past the plot the sheet is drawn, so the north arrow and the street names have room. */
+/** How far past the plot the sheet is drawn, so the north arrow and the street names have space. */
 const PAD = 1.6
 
 export const sheetExtent = (plot: PlotSpec): Extent => ({
@@ -71,36 +71,36 @@ export const sheetExtent = (plot: PlotSpec): Extent => ({
 
 /** Everything the sheet draws that is read from the sheet rather than from the hand. */
 export type SheetRead = {
-  rooms: Room[]
+  zones: Zone[]
   labels: Map<string, LabelPlan>
   overlaps: { ids: [string, string]; polys: Poly[] }[]
   pockets: Pocket[]
   read: Report
-  /** The sides built past their budget, so a boundary wall is drawn in the warning colour. */
+  /** The sides built past their budget, so an edge on the boundary is drawn in the warning colour. */
   over: Set<string>
-  /** How many doors in each room stands, and which the walk never reaches: the Openings step only. */
+  /** How many doors in each zone stands, and which the walk never reaches: the Openings step only. */
   walk: { depth: Map<string, number>; unreached: Set<string> } | null
 }
 
 export type SheetHandlers = {
-  onRoomDown: (room: Room, event: ReactPointerEvent) => void
-  onRoomMenu: (room: Room, event: ReactMouseEvent) => void
-  onWallDown: (
-    room: Room,
-    wall: number,
+  onZoneDown: (zone: Zone, event: ReactPointerEvent) => void
+  onZoneMenu: (zone: Zone, event: ReactMouseEvent) => void
+  onEdgeDown: (
+    zone: Zone,
+    edge: number,
     side: Side4 | null,
     shared: string | null,
     event: ReactPointerEvent,
   ) => void
-  onCornerDown: (room: Room, index: number, loop: Poly, event: ReactPointerEvent) => void
-  onTurnDown: (room: Room, event: ReactPointerEvent) => void
+  onCornerDown: (zone: Zone, index: number, loop: Poly, event: ReactPointerEvent) => void
+  onTurnDown: (zone: Zone, event: ReactPointerEvent) => void
   onGroupTurnDown: (event: ReactPointerEvent) => void
-  onLabelDown: (room: Room, event: ReactPointerEvent) => void
+  onLabelDown: (zone: Zone, event: ReactPointerEvent) => void
   onBackgroundDown: (event: ReactPointerEvent) => void
   onBackgroundMenu: (event: ReactMouseEvent) => void
   onPocketDown: (index: number, event: ReactPointerEvent) => void
   onPocketMenu: (index: number, event: ReactMouseEvent) => void
-  onTypeSize: (room: Room, what: 'w' | 'h' | 'angle' | 'area', event: ReactMouseEvent) => void
+  onTypeSize: (zone: Zone, what: 'w' | 'h' | 'angle' | 'area', event: ReactMouseEvent) => void
   onWheel: (event: ReactWheelEvent) => void
   onPointerMove: (event: ReactPointerEvent) => void
   onDoubleClick: () => void
@@ -116,12 +116,12 @@ type SheetViewProps = {
   measure: Measure | null
   reshaping: string | null
   pocketPicked: number | null
-  /** The room the pointer is over, in the sheet or in the mass: hover is shared between them. */
+  /** The zone the pointer is over, in the sheet or in the mass: hover is shared between them. */
   hover: string | null
-  /** The Openings step: the doors answer the hand, and the room lit from the program list. */
+  /** The Openings step: the doors answer the hand, and the zone lit from the program list. */
   openings: OpeningsDraw | null
   lit: string | null
-  /** What Check draws while it is on: lines to connected rooms, and keep-apart pairs broken. */
+  /** What Check draws while it is on: lines to connected zones, and keep-apart pairs broken. */
   check: SheetCheck | null
   panning: boolean
   camera: Camera
@@ -129,7 +129,7 @@ type SheetViewProps = {
   on: SheetHandlers
 }
 
-const bodyPath = (r: Room) =>
+const bodyPath = (r: Zone) =>
   piecesOf(r)
     .map(
       (p) =>
@@ -144,18 +144,18 @@ const bodyPath = (r: Room) =>
 const segsPath = (segs: Seg[]) =>
   segs.map((s) => `M${p4(s.a[0])} ${p4(s.a[1])}L${p4(s.b[0])} ${p4(s.b[1])}`).join('')
 
-const wallPath = (r: Room) => segsPath(outlineOf(r))
+const edgePath = (r: Zone) => segsPath(outlineOf(r))
 
 const points = (p: Poly) => p.map((v) => `${p4(v[0])},${p4(v[1])}`).join(' ')
 
-/** A plain room's neighbour on the other side of a whole shared wall, which a drag takes with it. */
-function sharedWallOf(r: Room, side: Side4, rooms: Room[], settings: Settings): Room | null {
-  if (!settings.sharedWalls || !square(r) || (r.pieces && r.pieces.length)) return null
+/** A plain zone's neighbour on the other side of a whole shared edge, which a drag takes with it. */
+function sharedEdgeOf(r: Zone, side: Side4, zones: Zone[], settings: Settings): Zone | null {
+  if (!settings.sharedEdges || !square(r) || (r.pieces && r.pieces.length)) return null
   const tol = 0.02
-  const right = (o: Room) => o.x + o.w
-  const bottom = (o: Room) => o.y + o.h
+  const right = (o: Zone) => o.x + o.w
+  const bottom = (o: Zone) => o.y + o.h
   return (
-    rooms.find(
+    zones.find(
       (o) =>
         o !== r &&
         square(o) &&
@@ -182,7 +182,7 @@ export function SheetView(props: SheetViewProps) {
   const { settings } = sheet
   const { plot } = sheet
   const background = useMemo(() => <Background settings={settings} plot={plot} />, [settings, plot])
-  const shown = view.rooms.map((r) => shownRoom(r, drag))
+  const shown = view.zones.map((r) => shownZone(r, drag))
   const storey = props.storey
   // The storey below is drawn faint under the one in hand, and what stands open to below with an X.
   const under = useMemo(
@@ -266,8 +266,8 @@ export function SheetView(props: SheetViewProps) {
         )),
       )}
       {under.map((r) => (
-        <g key={`under-${r.id}`} className="room under" data-under={r.id} transform={frameOf(r)}>
-          <path className="outline" d={wallPath(r)} />
+        <g key={`under-${r.id}`} className="zone under" data-under={r.id} transform={frameOf(r)}>
+          <path className="outline" d={edgePath(r)} />
         </g>
       ))}
       {ghosts.map((r) => {
@@ -278,9 +278,9 @@ export function SheetView(props: SheetViewProps) {
         const y1 = Math.max(...pts.map((q) => q[1]))
         const c = centreOfFootprint(r)
         return (
-          <g key={`below-${r.id}`} className={`room below ${r.cat}`} transform={frameOf(r)}>
+          <g key={`below-${r.id}`} className={`zone below ${r.cat}`} transform={frameOf(r)}>
             <path className="body" d={bodyPath(r)} fillRule="evenodd" />
-            <path className="outline" d={wallPath(r)} />
+            <path className="outline" d={edgePath(r)} />
             <line className="x" x1={p4(x0)} y1={p4(y0)} x2={p4(x1)} y2={p4(y1)} />
             <line className="x" x1={p4(x1)} y1={p4(y0)} x2={p4(x0)} y2={p4(y1)} />
             <text className="below-label" x={p4(c[0])} y={p4(c[1] + 0.15)}>
@@ -293,12 +293,12 @@ export function SheetView(props: SheetViewProps) {
         shown
           .filter((r) => !r.fixed && !isOpen(r))
           .flatMap((r) =>
-            boundaryWalls(r, plot).map((wall, i) => (
-              <BoundaryWall
+            boundaryEdges(r, plot).map((edge, i) => (
+              <BoundaryEdge
                 key={`b-${r.id}-${i}`}
-                wall={wall}
-                over={view.over.has(wall.side)}
-                street={plot.streets.includes(wall.side) ? plot.name[wall.side] : null}
+                edge={edge}
+                over={view.over.has(edge.side)}
+                street={plot.streets.includes(edge.side) ? plot.name[edge.side] : null}
               />
             )),
           )}
@@ -311,15 +311,15 @@ export function SheetView(props: SheetViewProps) {
         return (
           <g
             key={r.id}
-            className={`room ${r.cat}${picked ? ' selected' : ''}${hover === r.id ? ' hover' : ''}${over ? ' over' : ''}${
+            className={`zone ${r.cat}${picked ? ' selected' : ''}${hover === r.id ? ' hover' : ''}${over ? ' over' : ''}${
               drag && 'id' in drag && drag.id === r.id ? ' moving' : ''
             }${r.locked ? ' locked' : ''}${reshaping === r.id ? ' target' : ''}${
               view.walk?.unreached.has(r.id) ? ' unreached' : ''
-            }${props.lit === r.id ? ' lit' : ''}${props.check?.apartRooms.has(r.id) ? ' apart-through' : ''}`}
+            }${props.lit === r.id ? ' lit' : ''}${props.check?.apartZones.has(r.id) ? ' apart-through' : ''}`}
             transform={frameOf(r)}
-            data-room={r.id}
-            onPointerDown={(event) => on.onRoomDown(r, event)}
-            onContextMenu={(event) => on.onRoomMenu(r, event)}
+            data-zone={r.id}
+            onPointerDown={(event) => on.onZoneDown(r, event)}
+            onContextMenu={(event) => on.onZoneMenu(r, event)}
           >
             <path className="body" d={bodyPath(r)} fill={r.color ?? undefined} />
             {r.fixed && <path className="court-hatch" d={bodyPath(r)} />}
@@ -329,13 +329,13 @@ export function SheetView(props: SheetViewProps) {
                 d={`M${p4(r.w - 0.55)} 0.42h0.35v0.28h-0.35zM${p4(r.w - 0.48)} 0.42v-0.12a0.105 0.105 0 0 1 0.21 0v0.12`}
               />
             )}
-            <path className="wall" d={wallPath(r)} />
+            <path className="edge" d={edgePath(r)} />
             {spill && (
               <rect className="spill" x={0.04} y={0.04} width={r.w - 0.08} height={r.h - 0.08} />
             )}
             {plan && (
               <Label
-                room={r}
+                zone={r}
                 plan={plan}
                 depth={depth === undefined ? null : `${depth} ${depth === 1 ? 'door' : 'doors'} in`}
                 movable={
@@ -375,7 +375,7 @@ export function SheetView(props: SheetViewProps) {
         guides.map((g, i) => (
           <line key={`guide-${i}`} className="guide" x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} />
         ))}
-      {chosen.length > 1 && !measure && !reshaping && <GroupKnob rooms={chosen} on={on} />}
+      {chosen.length > 1 && !measure && !reshaping && <GroupKnob zones={chosen} on={on} />}
       {drag && 'lock' in drag && drag.lock && (
         <Fragment>
           {drag.lock.through.map((c, i) => {
@@ -396,7 +396,7 @@ export function SheetView(props: SheetViewProps) {
             <path
               className="mate"
               transform={frameOf(drag.lock.mate)}
-              d={wallPath(drag.lock.mate)}
+              d={edgePath(drag.lock.mate)}
             />
           )}
         </Fragment>
@@ -441,10 +441,10 @@ export function SheetView(props: SheetViewProps) {
           />
         )
       })}
-      <Doors sheet={sheet} storey={storey} rooms={shown} openings={props.openings} />
-      {props.check && <CheckMarks rooms={shown} check={props.check} />}
+      <Doors sheet={sheet} storey={storey} zones={shown} openings={props.openings} />
+      {props.check && <CheckMarks zones={shown} check={props.check} />}
       {focus && settings.dims !== 'none' && !reshaping && (
-        <Dims room={focus} rooms={shown} settings={settings} plot={plot} typable={!drag} on={on} />
+        <Dims zone={focus} zones={shown} settings={settings} plot={plot} typable={!drag} on={on} />
       )}
       {focus &&
         !focus.locked &&
@@ -453,8 +453,8 @@ export function SheetView(props: SheetViewProps) {
         !reshaping &&
         (!drag || drag.kind === 'turn') && (
           <Handles
-            room={focus}
-            rooms={shown}
+            zone={focus}
+            zones={shown}
             settings={settings}
             turning={drag?.kind === 'turn'}
             degrees={angleShown(drag, focus.angle || 0)}
@@ -462,16 +462,16 @@ export function SheetView(props: SheetViewProps) {
           />
         )}
       {drag?.kind === 'new' && drag.started && (
-        <g className="ghost" transform={frameOf(drag.room)}>
-          <rect x={0} y={0} width={drag.room.w} height={drag.room.h} />
+        <g className="ghost" transform={frameOf(drag.zone)}>
+          <rect x={0} y={0} width={drag.zone.w} height={drag.zone.h} />
         </g>
       )}
     </svg>
   )
 }
 
-const boxOf = (rooms: Room[]) => {
-  const boxes = rooms.map(bboxOf)
+const boxOf = (zones: Zone[]) => {
+  const boxes = zones.map(bboxOf)
   const x = Math.min(...boxes.map((b) => b.x))
   const y = Math.min(...boxes.map((b) => b.y))
   return {
@@ -559,22 +559,22 @@ function StreetLabel({ side, plot }: { side: Side; plot: PlotSpec }) {
   )
 }
 
-function BoundaryWall({
-  wall,
+function BoundaryEdge({
+  edge,
   over,
   street,
 }: {
-  wall: Seg & { side: string }
+  edge: Seg & { side: string }
   over: boolean
   street: string | null
 }) {
-  const length = Math.hypot(wall.b[0] - wall.a[0], wall.b[1] - wall.a[1])
-  const mx = (wall.a[0] + wall.b[0]) / 2 - wall.n[0] * 0.28
-  const my = (wall.a[1] + wall.b[1]) / 2 - wall.n[1] * 0.28
-  const angle = wall.side === 'west' ? -90 : wall.side === 'east' ? 90 : 0
+  const length = Math.hypot(edge.b[0] - edge.a[0], edge.b[1] - edge.a[1])
+  const mx = (edge.a[0] + edge.b[0]) / 2 - edge.n[0] * 0.28
+  const my = (edge.a[1] + edge.b[1]) / 2 - edge.n[1] * 0.28
+  const angle = edge.side === 'west' ? -90 : edge.side === 'east' ? 90 : 0
   return (
-    <g className={`bwall${over ? ' over' : ''}`}>
-      <line x1={p4(wall.a[0])} y1={p4(wall.a[1])} x2={p4(wall.b[0])} y2={p4(wall.b[1])} />
+    <g className={`bedge${over ? ' over' : ''}`}>
+      <line x1={p4(edge.a[0])} y1={p4(edge.a[1])} x2={p4(edge.b[0])} y2={p4(edge.b[1])} />
       {length >= 1.6 && (
         <text
           x={p4(mx)}
@@ -592,33 +592,33 @@ function BoundaryWall({
 }
 
 function Label({
-  room,
+  zone,
   plan,
   depth,
   movable,
   typable,
   on,
 }: {
-  room: Room
+  zone: Zone
   plan: LabelPlan
-  /** How many doors in the room stands, written over its name while the walk is read. */
+  /** How many doors in the zone stands, written over its name while the walk is read. */
   depth: string | null
   movable: boolean
   typable: boolean
   on: SheetHandlers
 }) {
   const [cx, cy] = plan.pt
-  const world = norm((room.angle || 0) + (plan.along ? 90 : 0))
+  const world = norm((zone.angle || 0) + (plan.along ? 90 : 0))
   const flip = world > 90 && world < 270
   const rotation = (plan.along ? 90 : 0) + (flip ? 180 : 0)
-  const area = r2(areaOf(room))
-  const short = area < room.target - 0.05
+  const area = r2(areaOf(zone))
+  const short = area < zone.target - 0.05
   const line = plan.lines[0]
   return (
     <g
       className={`label${movable ? ' movable' : ''}`}
       transform={`rotate(${rotation} ${p4(cx)} ${p4(cy)})`}
-      onPointerDown={movable ? (event) => on.onLabelDown(room, event) : undefined}
+      onPointerDown={movable ? (event) => on.onLabelDown(zone, event) : undefined}
     >
       <text
         className="name"
@@ -647,7 +647,7 @@ function Label({
           textAnchor="middle"
           style={{ fontSize: `${p4(line[1])}px` }}
           onPointerDown={typable ? (event) => event.stopPropagation() : undefined}
-          onClick={typable ? (event) => on.onTypeSize(room, 'area', event) : undefined}
+          onClick={typable ? (event) => on.onTypeSize(zone, 'area', event) : undefined}
         >
           {line[0]}
         </text>
@@ -661,11 +661,11 @@ function SnapMarks({ snap, at }: { snap: NonNullable<Drawing['snap']>; at: Point
     snap.kind === 'corner'
       ? 'corner'
       : snap.kind === 'meet'
-        ? 'where two walls meet'
-        : snap.kind === 'wall'
-          ? 'on the wall'
+        ? 'where two edges meet'
+        : snap.kind === 'edge'
+          ? 'on the edge'
           : snap.kind === 'line'
-            ? 'in line with a wall'
+            ? 'in line with an edge'
             : snap.kind === 'angle' && snap.ray
               ? `${Math.round(snap.ray.angle)}°, with the neighbours · ${fmt(snap.ray.length)} m`
               : snapWord(snap.kind)
@@ -754,8 +754,8 @@ function MeasureMarks({ measure }: { measure: Measure }) {
   )
 }
 
-function GroupKnob({ rooms, on }: { rooms: Room[]; on: SheetHandlers }) {
-  const b = boxOf(rooms)
+function GroupKnob({ zones, on }: { zones: Zone[]; on: SheetHandlers }) {
+  const b = boxOf(zones)
   return (
     <Fragment>
       <rect
@@ -783,17 +783,17 @@ function GroupKnob({ rooms, on }: { rooms: Room[]; on: SheetHandlers }) {
   )
 }
 
-/** The room's own size, written in its frame so it turns with it, and the gaps round a square room. */
+/** The zone's own size, written in its frame so it turns with it, and the gaps round a square zone. */
 function Dims({
-  room,
-  rooms,
+  zone,
+  zones,
   settings,
   plot,
   typable,
   on,
 }: {
-  room: Room
-  rooms: Room[]
+  zone: Zone
+  zones: Zone[]
   settings: Settings
   plot: PlotSpec
   typable: boolean
@@ -801,34 +801,34 @@ function Dims({
 }) {
   const off = 0.45
   const size = settings.dimSize
-  const gaps = settings.dims === 'all' && square(room) ? gapsRound(room, rooms, plot) : []
+  const gaps = settings.dims === 'all' && square(zone) ? gapsRound(zone, zones, plot) : []
   return (
     <Fragment>
-      <g className="dim" transform={frameOf(room)}>
-        <line x1={0} y1={-off} x2={room.w} y2={-off} />
+      <g className="dim" transform={frameOf(zone)}>
+        <line x1={0} y1={-off} x2={zone.w} y2={-off} />
         <text
-          x={p4(room.w / 2)}
+          x={p4(zone.w / 2)}
           y={p4(-off - 0.12)}
           textAnchor="middle"
           className={typable ? 'typable' : ''}
           style={{ fontSize: `${size}px` }}
           onPointerDown={typable ? (event) => event.stopPropagation() : undefined}
-          onClick={typable ? (event) => on.onTypeSize(room, 'w', event) : undefined}
+          onClick={typable ? (event) => on.onTypeSize(zone, 'w', event) : undefined}
         >
-          {fmt(room.w)}
+          {fmt(zone.w)}
         </text>
-        <line x1={-off} y1={0} x2={-off} y2={room.h} />
+        <line x1={-off} y1={0} x2={-off} y2={zone.h} />
         <text
           x={p4(-off - 0.15)}
-          y={p4(room.h / 2)}
+          y={p4(zone.h / 2)}
           textAnchor="middle"
           className={typable ? 'typable' : ''}
           style={{ fontSize: `${size}px` }}
-          transform={`rotate(-90 ${p4(-off - 0.15)} ${p4(room.h / 2)})`}
+          transform={`rotate(-90 ${p4(-off - 0.15)} ${p4(zone.h / 2)})`}
           onPointerDown={typable ? (event) => event.stopPropagation() : undefined}
-          onClick={typable ? (event) => on.onTypeSize(room, 'h', event) : undefined}
+          onClick={typable ? (event) => on.onTypeSize(zone, 'h', event) : undefined}
         >
-          {fmt(room.h)}
+          {fmt(zone.h)}
         </text>
       </g>
       {gaps.map((gap, i) => (
@@ -864,12 +864,12 @@ function Dims({
   )
 }
 
-function gapsRound(r: Room, rooms: Room[], plot: PlotSpec) {
-  const right = (o: Room) => o.x + o.w
-  const bottom = (o: Room) => o.y + o.h
-  const others = rooms.filter((o) => o !== r && square(o))
-  const spanY = (o: Room) => o.y < bottom(r) && bottom(o) > r.y
-  const spanX = (o: Room) => o.x < right(r) && right(o) > r.x
+function gapsRound(r: Zone, zones: Zone[], plot: PlotSpec) {
+  const right = (o: Zone) => o.x + o.w
+  const bottom = (o: Zone) => o.y + o.h
+  const others = zones.filter((o) => o !== r && square(o))
+  const spanY = (o: Zone) => o.y < bottom(r) && bottom(o) > r.y
+  const spanX = (o: Zone) => o.x < right(r) && right(o) > r.x
   const A = plot.box
   const list = [
     {
@@ -906,40 +906,40 @@ function gapsRound(r: Room, rooms: Room[], plot: PlotSpec) {
   return list.filter((gap) => Math.abs(gap.to - gap.from) >= 0.05)
 }
 
-/** One handle per wall on the wall, a handle on every corner of a carved room, and the turning knob. */
+/** One handle per edge on the edge, a handle on every corner of a carved zone, and the turning knob. */
 function Handles({
-  room,
-  rooms,
+  zone,
+  zones,
   settings,
   turning,
   degrees,
   on,
 }: {
-  room: Room
-  rooms: Room[]
+  zone: Zone
+  zones: Zone[]
   settings: Settings
   turning: boolean
   degrees: number
   on: SheetHandlers
 }) {
   const s = 0.36
-  const loops = room.pieces && room.pieces.length ? loopsOf(room) : null
+  const loops = zone.pieces && zone.pieces.length ? loopsOf(zone) : null
   const corners = loops && loops.length === 1 ? loops[0]!.map((e) => e.a) : null
   return (
-    <g transform={frameOf(room)}>
+    <g transform={frameOf(zone)}>
       {!turning &&
-        outlineOf(room).map((seg, i) => {
+        outlineOf(zone).map((seg, i) => {
           const length = Math.hypot(seg.b[0] - seg.a[0], seg.b[1] - seg.a[1])
           if (length < 0.5) return null
           const mx = (seg.a[0] + seg.b[0]) / 2
           const my = (seg.a[1] + seg.b[1]) / 2
           const angle = r2((Math.atan2(seg.b[1] - seg.a[1], seg.b[0] - seg.a[0]) * 180) / Math.PI)
           const cls = Math.abs(seg.n[0]) > 0.999 ? 'h' : Math.abs(seg.n[1]) > 0.999 ? 'v' : 'd'
-          const side = sideOf(room, seg)
-          const shared = side ? sharedWallOf(room, side, rooms, settings) : null
+          const side = sideOf(zone, seg)
+          const shared = side ? sharedEdgeOf(zone, side, zones, settings) : null
           return (
             <rect
-              key={`wall-${i}`}
+              key={`edge-${i}`}
               className={`handle ${cls}${shared ? ' shared' : ''}`}
               x={r2(mx - s / 2)}
               y={r2(my - s / 2)}
@@ -948,7 +948,7 @@ function Handles({
               rx={0.04}
               transform={`rotate(${angle} ${r2(mx)} ${r2(my)})`}
               onPointerDown={(event) =>
-                on.onWallDown(room, i, side, shared ? shared.id : null, event)
+                on.onEdgeDown(zone, i, side, shared ? shared.id : null, event)
               }
             />
           )
@@ -961,23 +961,23 @@ function Handles({
             cx={p4(c[0])}
             cy={p4(c[1])}
             r={0.16}
-            onPointerDown={(event) => on.onCornerDown(room, i, corners, event)}
+            onPointerDown={(event) => on.onCornerDown(zone, i, corners, event)}
           />
         ))}
       <g className="turn">
-        <line x1={room.w / 2} y1={-0.7} x2={room.w / 2} y2={-1.3} />
+        <line x1={zone.w / 2} y1={-0.7} x2={zone.w / 2} y2={-1.3} />
         <circle
-          cx={room.w / 2}
+          cx={zone.w / 2}
           cy={-1.5}
           r={0.22}
-          onPointerDown={(event) => on.onTurnDown(room, event)}
+          onPointerDown={(event) => on.onTurnDown(zone, event)}
         />
         <text
-          x={room.w / 2 + 0.45}
+          x={zone.w / 2 + 0.45}
           y={-1.35}
           style={{ fontSize: `${settings.dimSize}px` }}
           onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => on.onTypeSize(room, 'angle', event)}
+          onClick={(event) => on.onTypeSize(zone, 'angle', event)}
         >
           {degrees}°
         </text>

@@ -26,14 +26,17 @@ function householdMasterOnGround(document: Document): Document {
   return { ...document, household: { masterOnGround: false, ...household } }
 }
 
+/** Where a document before version 11 kept its zones, under the model's old word for them. */
+const ZONES_BEFORE_11 = 'rooms'
+
 /** A bubble stood on the plot until the diagram became the graph alone; its place there is no nudge. */
 function bubblesOffThePlot(document: Document): Document {
-  const rooms = Array.isArray(document.rooms) ? document.rooms : []
+  const zones = Array.isArray(document[ZONES_BEFORE_11]) ? document[ZONES_BEFORE_11] : []
   return {
     ...document,
-    rooms: rooms.map((room: unknown) => {
-      if (!isDocument(room)) return room
-      const kept = { ...room }
+    [ZONES_BEFORE_11]: zones.map((zone: unknown) => {
+      if (!isDocument(zone)) return zone
+      const kept = { ...zone }
       delete kept.bubble
       return kept
     }),
@@ -51,6 +54,32 @@ function declinedNotWeighed(document: Document): Document {
   return kept
 }
 
+/** A field moved from its old name to its new one; a document already carrying the new name keeps it. */
+function renamed(document: Document, from: string, to: string): Document {
+  if (!(from in document)) return document
+  const kept: Document = { [to]: document[from], ...document }
+  delete kept[from]
+  return kept
+}
+
+/** The zone-type id a version 10 document gave a space of no listed type. */
+const OTHER_BEFORE_11 = 'room-other'
+
+/**
+ * Version 10 named the program's spaces and the access between them as the model then did, and
+ * kept a space of no listed type under the old word too.
+ */
+function zonesAndConnections(document: Document): Document {
+  const moved = renamed(renamed(document, ZONES_BEFORE_11, 'zones'), 'edges', 'connections')
+  if (!Array.isArray(moved.zones)) return moved
+  return {
+    ...moved,
+    zones: moved.zones.map((zone: unknown) =>
+      isDocument(zone) && zone.type === OTHER_BEFORE_11 ? { ...zone, type: 'zone-other' } : zone,
+    ),
+  }
+}
+
 /** From the version keyed to the next one. */
 const migrations: ReadonlyMap<number, Migration> = new Map<number, Migration>([
   [1, (document) => ({ household: startingHousehold, ...document })],
@@ -64,6 +93,7 @@ const migrations: ReadonlyMap<number, Migration> = new Map<number, Migration>([
   [7, bubblesOffThePlot],
   [8, (document) => ({ apart: [], ...document })],
   [9, declinedNotWeighed],
+  [10, zonesAndConnections],
 ])
 
 export function serialize(project: Project): string {

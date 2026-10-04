@@ -1,10 +1,10 @@
 /**
  * A stair is on every floor between the two it names, so its row asks for both ends rather than one
- * storey. What the model stores is unchanged: the lower end is the room's storey and the span is
+ * storey. What the model stores is unchanged: the lower end is the zone's storey and the span is
  * the count of floors up to the higher one.
  */
 
-/** The storeys a stair may start on: with more than one storey it must leave room to reach one above. */
+/** The storeys a stair may start on: with more than one storey it must leave space to reach one above. */
 export function startsFor(storeys: number): readonly number[] {
   const levels = Math.max(1, Math.trunc(storeys))
   return Array.from({ length: Math.max(1, levels - 1) }, (_unused, storey) => storey)
@@ -23,9 +23,9 @@ export function spanBetween(from: number, to: number): number {
   return Math.max(1, to - from + 1)
 }
 
-/** The top storey a room reaches, which is the far end of what it stores. */
-export function topOf(room: { readonly storey: number; readonly storeysSpanned: number }): number {
-  return room.storey + Math.max(1, Math.trunc(room.storeysSpanned)) - 1
+/** The top storey a zone reaches, which is the far end of what it stores. */
+export function topOf(zone: { readonly storey: number; readonly storeysSpanned: number }): number {
+  return zone.storey + Math.max(1, Math.trunc(zone.storeysSpanned)) - 1
 }
 
 /** Where a stair reaches after its lower end moves: where it did, unless the move has passed it. */

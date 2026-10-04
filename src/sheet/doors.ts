@@ -1,10 +1,10 @@
 /**
- * Doors. A door is the drawing of an edge. Between two rooms it stands on the stretch of wall the two
- * share on its `side` of the room that holds it, `along` of the way along it, or on the longest
- * stretch when that side shares none now; to the outside it stands on the outside wall of its room it
- * was placed on. Where the two rooms share no wall a door wide, or that wall no longer faces outside, it
- * is simply not drawn, and it comes back where it was when the rooms do. Nothing here reads an edge
- * off the walls: the room across a wall is looked up only to ask which pair a new door would draw.
+ * Doors. A door is the drawing of a connection. Between two zones it stands on the stretch of edge the two
+ * share on its `side` of the zone that holds it, `along` of the way along it, or on the longest
+ * stretch when that side shares none now; to the outside it stands on the outside edge of its zone it
+ * was placed on. Where the two zones share no edge a door wide, or that edge no longer faces outside, it
+ * is simply not drawn, and it comes back where it was when the zones do. Nothing here reads a connection
+ * off the edges: the zone across an edge is looked up only to ask which pair a new door would draw.
  */
 
 import {
@@ -13,17 +13,17 @@ import {
   ghostsOf,
   isOpen,
   isStair,
-  placedRooms,
+  placedZones,
   storeyOf,
   type Door,
   type DoorType,
   type Point,
-  type Room,
+  type Zone,
   type Sheet,
 } from './model'
 import {
   insideConvex,
-  insideRoomLocal,
+  insideZoneLocal,
   outlineOf,
   r6,
   same,
@@ -32,13 +32,13 @@ import {
   toWorld,
   worldN,
   worldPieces,
-  worldWalls,
+  worldEdges,
   type Seg,
 } from './geometry'
 import { isStreetDoor } from './kinds'
-import type { WallName } from './against'
+import type { EdgeName } from './against'
 
-/** Where a door sits: a wall of its room, the run along it, and its normal. */
+/** Where a door sits: an edge of its zone, the run along it, and its normal. */
 export type Place = {
   dist: number
   seg: Seg
@@ -51,12 +51,12 @@ export type Place = {
   snapped?: 'jamb' | 'middle' | null
 }
 
-/** The least run an opened wall is left with, and the room kept at each end of it. */
+/** The least run an opened edge is left with, and the zone kept at each end of it. */
 const OPEN_LEAST = 0.6
 const OPEN_KEEP = 0.05
 
-/** The nearest wall of a room to a point of its frame, within a metre, and the door's run on it. */
-function wallNear(r: Room, at: Point, w: number): Place | null {
+/** The nearest edge of a zone to a point of its frame, within a metre, and the door's run on it. */
+function edgeNear(r: Zone, at: Point, w: number): Place | null {
   let best: Omit<Place, 'p' | 'fits'> | null = null
   for (const seg of outlineOf(r)) {
     const u = [seg.b[0] - seg.a[0], seg.b[1] - seg.a[1]]
@@ -83,43 +83,43 @@ function wallNear(r: Room, at: Point, w: number): Place | null {
   }
 }
 
-const roomAt = (x: number, y: number, except: Room, onStorey: Room[]) =>
+const zoneAt = (x: number, y: number, except: Zone, onStorey: Zone[]) =>
   onStorey.find(
     (o) => o !== except && !isOpen(o) && worldPieces(o).some((wp) => insideConvex(wp, x, y)),
   ) ?? null
 
-/** The room across a wall at a place on it, or null for outside and open ground. */
-export function doorAcross(r: Room, pl: Place, sheet: Sheet, storey: number): Room | null {
+/** The zone across an edge at a place on it, or null for outside and open ground. */
+export function doorAcross(r: Zone, pl: Place, sheet: Sheet, storey: number): Zone | null {
   const wp = toWorld(r, pl.p[0], pl.p[1])
   const n = worldN(r, pl.n)
-  return roomAt(wp[0] + n[0] * 0.3, wp[1] + n[1] * 0.3, r, placedRooms(sheet, storey))
+  return zoneAt(wp[0] + n[0] * 0.3, wp[1] + n[1] * 0.3, r, placedZones(sheet, storey))
 }
 
 /**
- * A run of wall two rooms share, on one wall of the first: from `lo` to `hi` along it, in its frame.
+ * A run of edge two zones share, on one edge of the first: from `lo` to `hi` along it, in its frame.
  * `fromLo` says which end `along` counts from, the one further west, then further north, in the
- * world, so turning either room over does not send a door to the other end.
+ * world, so turning either zone over does not send a door to the other end.
  */
 type Stretch = { seg: Seg; L: number; u: Point; lo: number; hi: number; fromLo: boolean }
 
-/** A room's walls in its own frame and in the world, read once per room when many doors need them. */
-type Lines = { own: (r: Room) => Seg[]; world: (r: Room) => Seg[] }
+/** A zone's edges in its own frame and in the world, read once per zone when many doors need them. */
+type Lines = { own: (r: Zone) => Seg[]; world: (r: Zone) => Seg[] }
 
-const direct: Lines = { own: outlineOf, world: worldWalls }
+const direct: Lines = { own: outlineOf, world: worldEdges }
 
 function linesOnce(): Lines {
-  const own = new Map<Room, Seg[]>()
-  const world = new Map<Room, Seg[]>()
-  const once = (seen: Map<Room, Seg[]>, read: (r: Room) => Seg[]) => (r: Room) => {
+  const own = new Map<Zone, Seg[]>()
+  const world = new Map<Zone, Seg[]>()
+  const once = (seen: Map<Zone, Seg[]>, read: (r: Zone) => Seg[]) => (r: Zone) => {
     let segs = seen.get(r)
     if (!segs) seen.set(r, (segs = read(r)))
     return segs
   }
-  return { own: once(own, outlineOf), world: once(world, worldWalls) }
+  return { own: once(own, outlineOf), world: once(world, worldEdges) }
 }
 
-function stretchesOf(r: Room, o: Room, lines: Lines = direct): Stretch[] {
-  const walls = lines.world(o)
+function stretchesOf(r: Zone, o: Zone, lines: Lines = direct): Stretch[] {
+  const edges = lines.world(o)
   const out: Stretch[] = []
   for (const seg of lines.own(r)) {
     const A = toWorld(r, seg.a[0], seg.a[1])
@@ -129,7 +129,7 @@ function stretchesOf(r: Room, o: Room, lines: Lines = direct): Stretch[] {
     const wu = [(B[0] - A[0]) / L, (B[1] - A[1]) / L]
     const wn = worldN(r, seg.n)
     const runs: [number, number][] = []
-    for (const w of walls) {
+    for (const w of edges) {
       if (w.n[0] * wn[0] + w.n[1] * wn[1] > -0.98) continue
       const off = (w.a[0] - A[0]) * wn[0] + (w.a[1] - A[1]) * wn[1]
       if (Math.abs(off) > 0.06) continue
@@ -165,8 +165,8 @@ const longest = (stretches: readonly Stretch[]): Stretch | null => {
   return best
 }
 
-/** The side of its room a wall faces, read in the room's own frame so turning the room keeps it. */
-function sideOf(n: Point): WallName {
+/** The side of its zone an edge faces, read in the zone's own frame so turning the zone keeps it. */
+function sideOf(n: Point): EdgeName {
   if (Math.abs(n[0]) > Math.abs(n[1])) return n[0] > 0 ? 'east' : 'west'
   return n[1] > 0 ? 'south' : 'north'
 }
@@ -178,12 +178,12 @@ const holds = (s: Stretch, d: { type: DoorType; w: number }) => {
 }
 
 /**
- * The run of wall two rooms share that a door between them stands on: the longest on the side it
+ * The run of edge two zones share that a door between them stands on: the longest on the side it
  * was placed on that still holds it, else the longest of all.
  */
 function stretchFor(
-  r: Room,
-  o: Room,
+  r: Zone,
+  o: Zone,
   d: Pick<Door, 'side' | 'type' | 'w'>,
   lines: Lines = direct,
 ): Stretch | null {
@@ -202,7 +202,7 @@ const alongOf = (s: Stretch, t: number): number => {
   return Math.min(Math.max((s.fromLo ? t - s.lo : s.hi - t) / run, 0), 1)
 }
 
-/** How wide a door is drawn on a stretch: its own width, or the whole run for an opened wall. */
+/** How wide a door is drawn on a stretch: its own width, or the whole run for an opened edge. */
 const widthOn = (d: { type: DoorType; w: number }, s: Stretch) =>
   d.type === 'open' ? s.hi - s.lo - 2 * OPEN_KEEP : d.w
 
@@ -222,32 +222,32 @@ function placeOn(s: Stretch, t: number, w: number): Place {
   }
 }
 
-/** Whether every part of a door's gap still opens onto the outside: no room stands across it. */
-function facesOutside(r: Room, pl: Place, w: number, onStorey: Room[]): boolean {
+/** Whether every part of a door's gap still opens onto the outside: no zone stands across it. */
+function facesOutside(r: Zone, pl: Place, w: number, onStorey: Zone[]): boolean {
   const n = worldN(r, pl.n)
   const reach = Math.max(0, w / 2 - 0.05)
   return [-reach, 0, reach].every((off) => {
     const wp = toWorld(r, pl.p[0] + pl.u[0] * off, pl.p[1] + pl.u[1] * off)
-    return !roomAt(wp[0] + n[0] * 0.3, wp[1] + n[1] * 0.3, r, onStorey)
+    return !zoneAt(wp[0] + n[0] * 0.3, wp[1] + n[1] * 0.3, r, onStorey)
   })
 }
 
 /**
- * Where a door of a room is drawn on a storey and how wide, or nothing when it is not: between two
- * rooms, on the wall they share when they share one the door fits; to the outside, on its own
- * storey, on the wall it was placed on while that wall still faces outside.
+ * Where a door of a zone is drawn on a storey and how wide, or nothing when it is not: between two
+ * zones, on the edge they share when they share one the door fits; to the outside, on its own
+ * storey, on the edge it was placed on while that edge still faces outside.
  */
 function spotOf(
   sheet: Sheet,
   storey: number,
-  r: Room,
+  r: Zone,
   d: Door,
-  onStorey: Room[] = placedRooms(sheet, storey),
+  onStorey: Zone[] = placedZones(sheet, storey),
   lines: Lines = direct,
 ): { pl: Place; w: number } | null {
   if (d.to === OUTSIDE) {
     if (!d.at || storeyOf(r) !== storey) return null
-    const pl = wallNear(r, d.at, d.w)
+    const pl = edgeNear(r, d.at, d.w)
     return pl && pl.fits && facesOutside(r, pl, d.w, onStorey) ? { pl, w: d.w } : null
   }
   const o = onStorey.find((each) => each.id === d.to)
@@ -258,15 +258,15 @@ function spotOf(
   return { pl: placeOn(s, middleOf(s, d.along ?? 0.5), w), w }
 }
 
-export const doorSpot = (sheet: Sheet, storey: number, r: Room, d: Door): Place | null =>
+export const doorSpot = (sheet: Sheet, storey: number, r: Zone, d: Door): Place | null =>
   spotOf(sheet, storey, r, d)?.pl ?? null
 
 /**
- * Which stretch of the wall two rooms share a point of the first room's frame stands on, and how far
- * along it, for a door saved as a point before doors stood on their edge's wall; the middle of the
- * longest when the two share no wall now.
+ * Which stretch of the edge two zones share a point of the first zone's frame stands on, and how far
+ * along it, for a door saved as a point before doors stood on their connection's edge; the middle of the
+ * longest when the two share no edge now.
  */
-export function standingAt(r: Room, o: Room, at: Point): { side?: WallName; along: number } {
+export function standingAt(r: Zone, o: Zone, at: Point): { side?: EdgeName; along: number } {
   let best: { s: Stretch; t: number; dist: number } | null = null
   for (const s of stretchesOf(r, o)) {
     const t0 = (at[0] - s.seg.a[0]) * s.u[0] + (at[1] - s.seg.a[1]) * s.u[1]
@@ -278,24 +278,24 @@ export function standingAt(r: Room, o: Room, at: Point): { side?: WallName; alon
   return best ? { side: sideOf(best.s.seg.n), along: r6(alongOf(best.s, best.t)) } : { along: 0.5 }
 }
 
-/** A door drawn on a storey: its room, itself, where it stands, and how wide it is drawn there. */
-export type Drawn = { room: Room; door: Door; pl: Place; w: number }
+/** A door drawn on a storey: its zone, itself, where it stands, and how wide it is drawn there. */
+export type Drawn = { zone: Zone; door: Door; pl: Place; w: number }
 
 /** Every door drawn on a storey. */
 export function drawnDoors(sheet: Sheet, storey: number): Drawn[] {
   const out: Drawn[] = []
-  const onStorey = placedRooms(sheet, storey)
+  const onStorey = placedZones(sheet, storey)
   const lines = linesOnce()
-  for (const room of onStorey)
-    for (const door of doorsOf(room)) {
-      const spot = spotOf(sheet, storey, room, door, onStorey, lines)
-      if (spot) out.push({ room, door, ...spot })
+  for (const zone of onStorey)
+    for (const door of doorsOf(zone)) {
+      const spot = spotOf(sheet, storey, zone, door, onStorey, lines)
+      if (spot) out.push({ zone, door, ...spot })
     }
   return out
 }
 
-/** A door's gap in plot metres: its two ends and the wall's normal there. */
-function gapOf(r: Room, pl: Place, w: number): { a: Point; b: Point; n: Point } {
+/** A door's gap in plot metres: its two ends and the edge's normal there. */
+function gapOf(r: Zone, pl: Place, w: number): { a: Point; b: Point; n: Point } {
   const half = w / 2
   return {
     a: toWorld(r, pl.p[0] - pl.u[0] * half, pl.p[1] - pl.u[1] * half),
@@ -305,13 +305,13 @@ function gapOf(r: Room, pl: Place, w: number): { a: Point; b: Point; n: Point } 
 }
 
 /**
- * The door already drawn on the same wall whose gap a door of width `w` at `pl` on room `r` would
- * overlap, whichever of the two rooms holds it; `except` is a door that is being moved.
+ * The door already drawn on the same edge whose gap a door of width `w` at `pl` on zone `r` would
+ * overlap, whichever of the two zones holds it; `except` is a door that is being moved.
  */
 export function doorInTheWay(
   sheet: Sheet,
   storey: number,
-  r: Room,
+  r: Zone,
   pl: Place,
   w: number,
   except?: string,
@@ -322,7 +322,7 @@ export function doorInTheWay(
   const u = [run[0]! / L, run[1]! / L]
   for (const other of drawnDoors(sheet, storey)) {
     if (other.door.id === except) continue
-    const theirs = gapOf(other.room, other.pl, other.w)
+    const theirs = gapOf(other.zone, other.pl, other.w)
     if (Math.abs(theirs.n[0] * mine.n[0] + theirs.n[1] * mine.n[1]) < 0.98) continue
     const off = (theirs.a[0] - mine.a[0]) * mine.n[0] + (theirs.a[1] - mine.a[1]) * mine.n[1]
     if (Math.abs(off) > 0.06) continue
@@ -333,16 +333,16 @@ export function doorInTheWay(
   return null
 }
 
-/** The drawn door a door of a room now overlaps where it is drawn, or nothing. */
-export function doorClash(sheet: Sheet, storey: number, r: Room, d: Door): Drawn | null {
+/** The drawn door a door of a zone now overlaps where it is drawn, or nothing. */
+export function doorClash(sheet: Sheet, storey: number, r: Zone, d: Door): Drawn | null {
   const spot = spotOf(sheet, storey, r, d)
   return spot ? doorInTheWay(sheet, storey, r, spot.pl, spot.w, d.id) : null
 }
 
-export type Hit = { room: Room; pl: Place; why: string | null }
+export type Hit = { zone: Zone; pl: Place; why: string | null }
 
 /**
- * The wall under the hand, and where on it a door of this width would sit: a jamb distance from
+ * The edge under the hand, and where on it a door of this width would sit: a jamb distance from
  * either end and the middle snap, then the grid. Says why a spot will not do.
  */
 export function doorAt(
@@ -351,18 +351,18 @@ export function doorAt(
   w: number,
   sheet: Sheet,
   storey: number,
-  only?: Room | null,
+  only?: Zone | null,
 ): Hit | null {
   const { settings } = sheet
-  let best: { room: Room; pl: Place } | null = null
-  for (const r of placedRooms(sheet, storey)) {
+  let best: { zone: Zone; pl: Place } | null = null
+  for (const r of placedZones(sheet, storey)) {
     if (isOpen(r) || r.fixed || (only && r !== only)) continue
-    const pl = wallNear(r, toLocal(r, x, y), w)
+    const pl = edgeNear(r, toLocal(r, x, y), w)
     if (!pl) continue
-    if (!best || pl.dist < best.pl.dist) best = { room: r, pl }
+    if (!best || pl.dist < best.pl.dist) best = { zone: r, pl }
   }
   if (!best || best.pl.dist > 0.7) return null
-  const room = best.room
+  const zone = best.zone
   const pl = { ...best.pl }
   const half = w / 2
   const jamb = settings.jamb
@@ -390,36 +390,36 @@ export function doorAt(
   pl.t = t
   pl.p = [pl.seg.a[0] + pl.u[0] * t, pl.seg.a[1] + pl.u[1] * t]
   pl.snapped = kind
-  const wp = toWorld(room, pl.p[0], pl.p[1])
+  const wp = toWorld(zone, pl.p[0], pl.p[1])
   const onBoundary =
     [0, sheet.plot.w].some((v) => Math.abs(wp[0] - v) < 0.03) ||
     [0, sheet.plot.h].some((v) => Math.abs(wp[1] - v) < 0.03)
-  const wn = worldN(room, pl.n)
+  const wn = worldN(zone, pl.n)
   const beyond = [wp[0] + wn[0] * 0.3, wp[1] + wn[1] * 0.3]
   const toVoid = ghostsOf(sheet, storey).some((g) =>
     worldPieces(g).some((wpc) => insideConvex(wpc, beyond[0]!, beyond[1]!)),
   )
   return {
-    room,
+    zone,
     pl,
     why: !pl.fits
-      ? 'That wall is too short for this door.'
+      ? 'That edge is too short for this door.'
       : onBoundary
-        ? 'A wall on the boundary takes no door.'
+        ? 'An edge on the boundary takes no door.'
         : toVoid
-          ? 'That wall faces the open to below; no door there.'
+          ? 'That edge faces the open to below; no door there.'
           : null,
   }
 }
 
 /** Where a door would stand, as the fields it keeps: its stretch and how far along it, or its point. */
 export type Standing =
-  | { side: WallName; along: number; at?: undefined }
+  | { side: EdgeName; along: number; at?: undefined }
   | { at: Point; side?: undefined; along?: undefined }
 
 /**
- * A door of type `type` put where the hand points, between room `r` and `to`: on the stretch the two
- * share under the pointer, or on the outside wall there. Says why when it cannot stand there.
+ * A door of type `type` put where the hand points, between zone `r` and `to`: on the stretch the two
+ * share under the pointer, or on the outside edge there. Says why when it cannot stand there.
  */
 export function doorStanding(
   sheet: Sheet,
@@ -427,14 +427,14 @@ export function doorStanding(
   hit: Hit,
   door: { type: DoorType; w: number; to: string },
 ): { standing: Standing; w: number; pl: Place } | { why: string } {
-  const r = hit.room
+  const r = hit.zone
   if (door.to === OUTSIDE) {
-    if (door.type === 'open') return { why: 'Only a wall shared with a neighbour can be opened.' }
+    if (door.type === 'open') return { why: 'Only an edge shared with a neighbour can be opened.' }
     if (hit.why) return { why: hit.why }
     return { standing: { at: [r6(hit.pl.p[0]), r6(hit.pl.p[1])] }, w: door.w, pl: hit.pl }
   }
-  const o = placedRooms(sheet, storey).find((each) => each.id === door.to)
-  if (!o) return { why: 'The room across is not on this storey.' }
+  const o = placedZones(sheet, storey).find((each) => each.id === door.to)
+  if (!o) return { why: 'The zone across is not on this storey.' }
   const s = stretchesOf(r, o).find(
     (each) =>
       same(each.seg.a, hit.pl.seg.a) &&
@@ -442,8 +442,8 @@ export function doorStanding(
       hit.pl.t >= each.lo - 0.05 &&
       hit.pl.t <= each.hi + 0.05,
   )
-  if (!s) return { why: `${r.name} and ${o.name} share no wall there.` }
-  if (!holds(s, door)) return { why: 'The wall they share is too short for this door.' }
+  if (!s) return { why: `${r.name} and ${o.name} share no edge there.` }
+  if (!holds(s, door)) return { why: 'The edge they share is too short for this door.' }
   const w = widthOn(door, s)
   const pl = placeOn(s, door.type === 'open' ? (s.lo + s.hi) / 2 : hit.pl.t, w)
   pl.snapped = hit.pl.snapped ?? null
@@ -451,13 +451,13 @@ export function doorStanding(
 }
 
 /**
- * A door slid by the hand: kept on its own stretch or its own wall, at the point nearest the
- * pointer. Refused off them, since a door never changes the edge it draws.
+ * A door slid by the hand: kept on its own stretch or its own edge, at the point nearest the
+ * pointer. Refused off them, since a door never changes the connection it draws.
  */
 export function doorSlid(
   sheet: Sheet,
   storey: number,
-  r: Room,
+  r: Zone,
   d: Door,
   x: number,
   y: number,
@@ -475,29 +475,29 @@ export function doorSlid(
       t: at,
       p: [pl.seg.a[0] + pl.u[0] * at, pl.seg.a[1] + pl.u[1] * at],
     }
-    const why = Math.abs(off) > 1 ? 'A door stays on its wall.' : null
+    const why = Math.abs(off) > 1 ? 'A door stays on its edge.' : null
     return {
-      hit: { room: r, pl: next, why },
+      hit: { zone: r, pl: next, why },
       standing: { at: [r6(next.p[0]), r6(next.p[1])] },
     }
   }
-  const o = sheet.rooms.find((each) => each.id === d.to)
+  const o = sheet.zones.find((each) => each.id === d.to)
   const s = o ? stretchFor(r, o, d) : null
   if (!s) return null
   const next = placeOn(s, t, widthOn(d, s))
-  const why = Math.abs(off) > 1 ? `A door stays on the wall ${r.name} and ${o!.name} share.` : null
+  const why = Math.abs(off) > 1 ? `A door stays on the edge ${r.name} and ${o!.name} share.` : null
   return {
-    hit: { room: r, pl: next, why },
+    hit: { zone: r, pl: next, why },
     standing: { side: sideOf(s.seg.n), along: r6(alongOf(s, next.t)) },
   }
 }
 
 /** The widest a door may be drawn where it stands, or nothing when it is not drawn. */
-export function roomForDoor(sheet: Sheet, storey: number, r: Room, d: Door): number | null {
+export function zoneForDoor(sheet: Sheet, storey: number, r: Zone, d: Door): number | null {
   const pl = doorSpot(sheet, storey, r, d)
   if (!pl) return null
   if (d.to === OUTSIDE) return pl.L - 0.1
-  const o = sheet.rooms.find((each) => each.id === d.to)
+  const o = sheet.zones.find((each) => each.id === d.to)
   const s = o ? stretchFor(r, o, d) : null
   return s ? s.hi - s.lo : null
 }
@@ -505,10 +505,10 @@ export function roomForDoor(sheet: Sheet, storey: number, r: Room, d: Door): num
 const hasSwing = (d: Door) => d.type !== 'opening' && d.type !== 'sliding' && d.type !== 'open'
 
 /**
- * Whether the leaf can open: its swing must lie inside the room it swings into. A door that swings
+ * Whether the leaf can open: its swing must lie inside the zone it swings into. A door that swings
  * out to the open, and one that does not swing at all, has nothing in its way.
  */
-export function doorBlocked(r: Room, d: Door, pl: Place, across: Room | null): boolean {
+export function doorBlocked(r: Zone, d: Door, pl: Place, across: Zone | null): boolean {
   const [px, py] = pl.p
   const [ux, uy] = pl.u
   const [nx, ny] = pl.n
@@ -516,7 +516,7 @@ export function doorBlocked(r: Room, d: Door, pl: Place, across: Room | null): b
   const a: Point = [px - ux * half, py - uy * half]
   const b: Point = [px + ux * half, py + uy * half]
   const inward = d.flip ? 1 : -1
-  const into = d.flip ? across : r // the room the leaf swings into
+  const into = d.flip ? across : r // the zone the leaf swings into
   let blocked = false
   const leaf = (h: Point, len: number, dir: number) => {
     const e: Point = [h[0] + nx * inward * len, h[1] + ny * inward * len]
@@ -530,7 +530,7 @@ export function doorBlocked(r: Room, d: Door, pl: Place, across: Room | null): b
               const w = toWorld(r, pt[0], pt[1])
               return toLocal(into, w[0], w[1])
             })()
-      if (!insideRoomLocal(into, lp)) blocked = true
+      if (!insideZoneLocal(into, lp)) blocked = true
     }
   }
   if (d.type === 'door' || d.type === 'street') leaf(d.hinge ? b : a, d.w, d.hinge ? -1 : 1)
@@ -543,37 +543,37 @@ export function doorBlocked(r: Room, d: Door, pl: Place, across: Room | null): b
   return blocked
 }
 
-/** The room a door leads into from its own, or null for the outside. */
-export const doorInto = (sheet: Sheet, d: Door): Room | null =>
-  d.to === OUTSIDE ? null : (sheet.rooms.find((each) => each.id === d.to && each.placed) ?? null)
+/** The zone a door leads into from its own, or null for the outside. */
+export const doorInto = (sheet: Sheet, d: Door): Zone | null =>
+  d.to === OUTSIDE ? null : (sheet.zones.find((each) => each.id === d.to && each.placed) ?? null)
 
 export type Walk = {
   depth: Map<string, number>
   count: Map<string, number>
   street: Set<string>
   outside: Set<string>
-  reached: Room[]
-  unreached: Room[]
-  blocked: Room[]
+  reached: Zone[]
+  unreached: Zone[]
+  blocked: Zone[]
 }
 
 /**
- * The walk test: from outside, through every door drawn on the storey, which rooms can be reached
- * and in how many doors. A door joins the two ends of its edge; the wall it stands on joins nothing.
+ * The walk test: from outside, through every door drawn on the storey, which zones can be reached
+ * and in how many doors. A door joins the two ends of its connection; the edge it stands on joins nothing.
  */
 export function walkTest(sheet: Sheet, storey: number): Walk | null {
-  const placed = placedRooms(sheet, storey).filter((r) => !isOpen(r) && !r.fixed)
+  const placed = placedZones(sheet, storey).filter((r) => !isOpen(r) && !r.fixed)
   const links = new Map<string, Set<string>>()
   const count = new Map<string, number>()
   const street = new Set<string>()
   const outside = new Set<string>()
-  const blocked: Room[] = []
+  const blocked: Zone[] = []
   let any = false
   const link = (p: string, q: string) => {
     if (!links.has(p)) links.set(p, new Set())
     links.get(p)!.add(q)
   }
-  for (const { room: r, door: d, pl } of drawnDoors(sheet, storey)) {
+  for (const { zone: r, door: d, pl } of drawnDoors(sheet, storey)) {
     any = true
     count.set(r.id, (count.get(r.id) ?? 0) + 1)
     const o = doorInto(sheet, d)

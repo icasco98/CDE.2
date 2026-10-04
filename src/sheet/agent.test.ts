@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MOVES_PER_CALL, layoutTools, sheetRead, type SheetRead, type StoreyRead } from './agent'
-import { roomNamed, storeyNamed, type Desk } from './desk'
+import { zoneNamed, storeyNamed, type Desk } from './desk'
 import { fixtureSheet } from './fixture'
 import { DEFAULT_PLOT } from './plot'
 import { setStorey } from './actions'
@@ -22,7 +22,7 @@ function desk(start: Sheet = fixtureSheet()) {
     say: (line) => said.push(line),
     note: (text) => notes.push(text),
     request: (text) => asked.push(text),
-    edgeBetween: () => null,
+    connectionBetween: () => null,
   }
   return { at, said, notes, asked, sheet: () => sheet }
 }
@@ -46,7 +46,7 @@ describe('the tools the architect is given', () => {
     expect(tools.map((t) => t.name)).toEqual([
       'read_sheet',
       'place_against',
-      'place_rooms',
+      'place_zones',
       'settle',
       'take_back',
       'remember',
@@ -59,7 +59,7 @@ describe('the tools the architect is given', () => {
       )
   })
 
-  it('reads the whole house: the frames, the waiting rooms and the report of each storey', () => {
+  it('reads the whole house: the frames, the waiting zones and the report of each storey', () => {
     const table = desk()
     const read = toolNamed(layoutTools(table.at, 0), 'read_sheet').execute({}) as SheetRead
     expect(read.waiting.map((r) => r.name)).toEqual(['Bedroom'])
@@ -88,32 +88,32 @@ describe('the tools the architect is given', () => {
     expect(read.totals.floorAreas).toHaveLength(2)
   })
 
-  it('says how the rooms stand to each other on the embedded sheet', () => {
+  it('says how the zones stand to each other on the embedded sheet', () => {
     const read = sheetRead(fixtureSheet(), 0)
-    // the stair stands along the whole back of the family living: 6.25 m of shared wall
-    expect(ground(read).sharing[0]).toEqual({ rooms: ['Stair', 'Family Living'], metres: 6.25 })
+    // the stair stands along the whole back of the family living: 6.25 m of shared edge
+    expect(ground(read).sharing[0]).toEqual({ zones: ['Stair', 'Family Living'], metres: 6.25 })
     expect(
-      ground(read).allButTouching.find((pair) => pair.rooms.includes('Guest WC')),
-    ).toMatchObject({ rooms: ['Entry', 'Guest WC'], how: 'a corner' })
+      ground(read).allButTouching.find((pair) => pair.zones.includes('Guest WC')),
+    ).toMatchObject({ zones: ['Entry', 'Guest WC'], how: 'a corner' })
   })
 
-  it('places a waiting room and snaps it onto the wall it was put beside', () => {
+  it('places a waiting zone and snaps it onto the edge it was put beside', () => {
     const table = desk()
-    // Formal Living's left wall is at x 11.39; the Bedroom is asked for a hand's width off it.
-    const out = toolNamed(layoutTools(table.at, 0), 'place_rooms').execute({
+    // Formal Living's left edge is at x 11.39; the Bedroom is asked for a hand's width off it.
+    const out = toolNamed(layoutTools(table.at, 0), 'place_zones').execute({
       moves: [{ name: 'Bedroom', x: 11.2, y: 1.5 }],
     }) as Done
     const bedroom = ground(out.house).placed.find((r) => r.name === 'Bedroom')
     expect(bedroom).toBeDefined()
     expect(bedroom!.x).toBe(11.39)
     expect(out.landed[0]).toContain('Bedroom at')
-    expect(out.changed.moves).toEqual([{ room: 'Bedroom', how: 'placed' }])
+    expect(out.changed.moves).toEqual([{ zone: 'Bedroom', how: 'placed' }])
     expect(table.said[0]).toContain('placed 18 of 18')
   })
 
-  it('holds a room asked for past the plot inside the line', () => {
+  it('holds a zone asked for past the plot inside the line', () => {
     const table = desk()
-    const out = toolNamed(layoutTools(table.at, 0), 'place_rooms').execute({
+    const out = toolNamed(layoutTools(table.at, 0), 'place_zones').execute({
       moves: [{ name: 'Bedroom', x: 40, y: 40 }],
     }) as Done
     const bedroom = ground(out.house).placed.find((r) => r.name === 'Bedroom')!
@@ -121,9 +121,9 @@ describe('the tools the architect is given', () => {
     expect(bedroom.y + bedroom.h).toBeLessThanOrEqual(DEFAULT_PLOT.h + 1e-6)
   })
 
-  it('reports the overlaps a room dropped on others leaves, under the waiting rule', () => {
+  it('reports the overlaps a zone dropped on others leaves, under the waiting rule', () => {
     const table = desk()
-    const out = toolNamed(layoutTools(table.at, 0), 'place_rooms').execute({
+    const out = toolNamed(layoutTools(table.at, 0), 'place_zones').execute({
       moves: [{ name: 'Bedroom', x: 6, y: 5 }],
     }) as Done
     const bedroom = ground(out.house).placed.find((r) => r.name === 'Bedroom')!
@@ -137,9 +137,9 @@ describe('the tools the architect is given', () => {
     expect(overlapArea(out.house)).toBeCloseTo(14, 0)
   })
 
-  it('slides the room lower in the program aside instead when the sheet is set to push', () => {
+  it('slides the zone lower in the program aside instead when the sheet is set to push', () => {
     const table = desk(fixtureSheet({ rule: 'push' }))
-    const out = toolNamed(layoutTools(table.at, 0), 'place_rooms').execute({
+    const out = toolNamed(layoutTools(table.at, 0), 'place_zones').execute({
       moves: [{ name: 'Bedroom', x: 6, y: 5 }],
     }) as Done
     const bedroom = ground(out.house).placed.find((r) => r.name === 'Bedroom')!
@@ -147,11 +147,11 @@ describe('the tools the architect is given', () => {
     expect(overlapArea(out.house)).toBeLessThan(14)
   })
 
-  it('resizes and turns a room already on the sheet, then moves it', () => {
+  it('resizes and turns a zone already on the sheet, then moves it', () => {
     const table = desk()
-    const rooms = toolNamed(layoutTools(table.at, 0), 'place_rooms')
-    rooms.execute({ moves: [{ name: 'Bedroom', x: 11.2, y: 1.5 }] })
-    rooms.execute({ moves: [{ name: 'Bedroom', x: 15, y: 20, w: 4, h: 3.5, angle: 90 }] })
+    const zones = toolNamed(layoutTools(table.at, 0), 'place_zones')
+    zones.execute({ moves: [{ name: 'Bedroom', x: 11.2, y: 1.5 }] })
+    zones.execute({ moves: [{ name: 'Bedroom', x: 15, y: 20, w: 4, h: 3.5, angle: 90 }] })
     const bedroom = ground(sheetRead(table.sheet(), 0)).placed.find((r) => r.name === 'Bedroom')!
     // a quarter turn is kept as a square frame with its sides swapped, not as an angle
     expect([bedroom.w, bedroom.h]).toEqual([3.5, 4])
@@ -159,34 +159,34 @@ describe('the tools the architect is given', () => {
     expect(bedroom.y).toBeGreaterThan(15)
   })
 
-  it('takes a room back to the program and leaves it waiting', () => {
+  it('takes a zone back to the program and leaves it waiting', () => {
     const table = desk()
     const tools = layoutTools(table.at, 0)
     const out = toolNamed(tools, 'do').execute({
       deeds: [
-        { verb: 'send_back', rooms: ['Kitchen'] },
-        { verb: 'send_back', rooms: ['Bedroom'] },
+        { verb: 'send_back', zones: ['Kitchen'] },
+        { verb: 'send_back', zones: ['Bedroom'] },
       ],
     }) as Done
     expect(out.landed[1]).toContain('Bedroom is not on the sheet yet')
     expect(out.house.waiting.map((r) => r.name).sort()).toEqual(['Bedroom', 'Kitchen'])
     expect(ground(out.house).placed.some((r) => r.name === 'Kitchen')).toBe(false)
-    expect(out.changed.moves).toEqual([{ room: 'Kitchen', how: 'sent back' }])
+    expect(out.changed.moves).toEqual([{ zone: 'Kitchen', how: 'sent back' }])
   })
 
   it('refuses a move it cannot make and says so instead of changing the sheet', () => {
     const table = desk()
-    const out = toolNamed(layoutTools(table.at, 0), 'place_rooms').execute({
+    const out = toolNamed(layoutTools(table.at, 0), 'place_zones').execute({
       moves: [{ name: 'Ballroom', x: 2, y: 2 }, { name: 'Bedroom' }],
     }) as Done
-    expect(out.landed[0]).toBe('no room called Ballroom')
+    expect(out.landed[0]).toBe('no zone called Ballroom')
     expect(out.landed[1]).toBe('Bedroom: x and y are needed')
   })
 
   it('takes at most forty moves in one call', () => {
     const table = desk()
     const moves = Array.from({ length: MOVES_PER_CALL + 6 }, () => ({ name: 'Nobody', x: 1, y: 1 }))
-    const out = toolNamed(layoutTools(table.at, 0), 'place_rooms').execute({ moves }) as Done
+    const out = toolNamed(layoutTools(table.at, 0), 'place_zones').execute({ moves }) as Done
     expect(out.landed).toHaveLength(MOVES_PER_CALL)
   })
 
@@ -200,12 +200,12 @@ describe('the tools the architect is given', () => {
     expect(table.asked).toEqual(['let me place a door'])
   })
 
-  it('finds a room by its name, the start of it, or its kind', () => {
+  it('finds a zone by its name, the start of it, or its kind', () => {
     const sheet = fixtureSheet()
-    expect(roomNamed(sheet, 'diwaniya')!.name).toBe('Diwaniya')
-    expect(roomNamed(sheet, 'Kitch')!.name).toBe('Kitchen')
-    expect(roomNamed(sheet, 'entry-foyer')!.name).toBe('Entry')
-    expect(roomNamed(sheet, 'a garage')).toBeNull()
+    expect(zoneNamed(sheet, 'diwaniya')!.name).toBe('Diwaniya')
+    expect(zoneNamed(sheet, 'Kitch')!.name).toBe('Kitchen')
+    expect(zoneNamed(sheet, 'entry-foyer')!.name).toBe('Entry')
+    expect(zoneNamed(sheet, 'a garage')).toBeNull()
   })
 
   it('finds a storey by its name, and stays where it is told when there is no name', () => {
@@ -217,62 +217,62 @@ describe('the tools the architect is given', () => {
   })
 })
 
-describe('putting a room against a wall', () => {
-  it('stands a room flush to each end of the wall, and says what it stands against', () => {
+describe('putting a zone against an edge', () => {
+  it('stands a zone flush to each end of the edge, and says what it stands against', () => {
     const along = (align: string) => {
       const table = desk()
       const out = toolNamed(layoutTools(table.at, 0), 'place_against').execute({
-        placements: [{ room: 'Bedroom', against: 'Family Living', wall: 'east', along: align }],
+        placements: [{ zone: 'Bedroom', against: 'Family Living', edge: 'east', along: align }],
       }) as Done
       const bedroom = ground(out.house).placed.find((r) => r.name === 'Bedroom')!
       return { bedroom, out }
     }
-    // Family Living stands at x 0..7.75, y 0..9: its east wall is the 9 m run at x = 7.75
+    // Family Living stands at x 0..7.75, y 0..9: its east edge is the 9 m run at x = 7.75
     const start = along('start')
     expect(start.bedroom.x).toBe(7.75)
     expect(start.bedroom.y).toBe(0)
-    expect(start.out.landed[0]).toContain("against Family Living's east wall")
+    expect(start.out.landed[0]).toContain("against Family Living's east edge")
     const end = along('end')
     expect(end.bedroom.x).toBe(7.75)
     expect(end.bedroom.y + end.bedroom.h).toBeCloseTo(9, 2)
   })
 
-  it('shares a wall with the room it was put against', () => {
+  it('shares an edge with the zone it was put against', () => {
     const table = desk()
     const out = toolNamed(layoutTools(table.at, 0), 'place_against').execute({
-      placements: [{ room: 'Bedroom', against: 'Family Living', wall: 'east', along: 'start' }],
+      placements: [{ zone: 'Bedroom', against: 'Family Living', edge: 'east', along: 'start' }],
     }) as Done
     const shared = ground(out.house).sharing.find(
-      (pair) => pair.rooms.includes('Bedroom') && pair.rooms.includes('Family Living'),
+      (pair) => pair.zones.includes('Bedroom') && pair.zones.includes('Family Living'),
     )
     expect(shared!.metres).toBeGreaterThan(1.5)
   })
 
-  it('takes an offset along the wall instead of an alignment', () => {
+  it('takes an offset along the edge instead of an alignment', () => {
     const table = desk()
     toolNamed(layoutTools(table.at, 0), 'place_against').execute({
       placements: [
-        { room: 'Bedroom', against: 'Family Living', wall: 'east', offset: 2, w: 4, h: 3 },
+        { zone: 'Bedroom', against: 'Family Living', edge: 'east', offset: 2, w: 4, h: 3 },
       ],
     })
     const bedroom = ground(sheetRead(table.sheet(), 0)).placed.find((r) => r.name === 'Bedroom')!
     expect(bedroom.y).toBeCloseTo(2, 1)
   })
 
-  it('refuses a wall too short for the room, with the reason, and changes nothing', () => {
+  it('refuses an edge too short for the zone, with the reason, and changes nothing', () => {
     const table = desk()
-    const before = JSON.stringify(table.sheet().rooms)
+    const before = JSON.stringify(table.sheet().zones)
     const out = toolNamed(layoutTools(table.at, 0), 'place_against').execute({
-      placements: [{ room: 'Bedroom', against: 'Guest WC', wall: 'north', w: 12, h: 4 }],
+      placements: [{ zone: 'Bedroom', against: 'Guest WC', edge: 'north', w: 12, h: 4 }],
     }) as Done
     expect(out.landed[0]).toContain('needs 12 m along it')
-    expect(JSON.stringify(table.sheet().rooms)).toBe(before)
+    expect(JSON.stringify(table.sheet().zones)).toBe(before)
   })
 
-  it('refuses a room on another storey than the wall it was asked for', () => {
+  it('refuses a zone on another storey than the edge it was asked for', () => {
     const table = desk()
     const out = toolNamed(layoutTools(table.at, 0), 'place_against').execute({
-      placements: [{ room: 'Bedroom', against: 'Family Living', wall: 'east' }],
+      placements: [{ zone: 'Bedroom', against: 'Family Living', edge: 'east' }],
       storey: 'First',
     }) as Done
     expect(out.landed[0]).toContain('stands on the Ground storey')
@@ -284,14 +284,14 @@ describe('settling and taking back', () => {
   const overlapped = () => {
     const table = desk()
     const tools = layoutTools(table.at, 0)
-    toolNamed(tools, 'place_rooms').execute({ moves: [{ name: 'Bedroom', x: 6, y: 5 }] })
+    toolNamed(tools, 'place_zones').execute({ moves: [{ name: 'Bedroom', x: 6, y: 5 }] })
     return { table, tools }
   }
 
-  it('carves the room lower in the program and leaves no overlap', () => {
+  it('carves the zone lower in the program and leaves no overlap', () => {
     const { table, tools } = overlapped()
     const out = toolNamed(tools, 'settle').execute({
-      room: 'Bedroom',
+      zone: 'Bedroom',
       with: 'Family Living',
       how: 'carve',
     }) as Done
@@ -302,20 +302,20 @@ describe('settling and taking back', () => {
     expect(left).toEqual([])
   })
 
-  it('pushes the room lower in the program aside instead', () => {
+  it('pushes the zone lower in the program aside instead', () => {
     const { table, tools } = overlapped()
     const before = sheetRead(table.sheet(), 0)
     const was = ground(before).placed.find((r) => r.name === 'Bedroom')!
-    const out = toolNamed(tools, 'settle').execute({ room: 'Bedroom', how: 'push' }) as Done
+    const out = toolNamed(tools, 'settle').execute({ zone: 'Bedroom', how: 'push' }) as Done
     const now = ground(out.house).placed.find((r) => r.name === 'Bedroom')!
     expect([now.x, now.y]).not.toEqual([was.x, was.y])
-    expect(out.changed.moves.some((m) => m.room === 'Bedroom' && m.how === 'moved')).toBe(true)
+    expect(out.changed.moves.some((m) => m.zone === 'Bedroom' && m.how === 'moved')).toBe(true)
   })
 
-  it('says so when nothing lies under the room named', () => {
+  it('says so when nothing lies under the zone named', () => {
     const table = desk()
     const out = toolNamed(layoutTools(table.at, 0), 'settle').execute({
-      room: 'Stair',
+      zone: 'Stair',
       how: 'carve',
     }) as Done
     expect(out.landed[0]).toBe('nothing lies under Stair')
@@ -324,16 +324,16 @@ describe('settling and taking back', () => {
   it('takes its own last batch back exactly, and only its own', () => {
     const table = desk()
     const tools = layoutTools(table.at, 0)
-    const before = JSON.stringify(table.sheet().rooms)
-    toolNamed(tools, 'place_rooms').execute({ moves: [{ name: 'Bedroom', x: 11.2, y: 1.5 }] })
-    const between = JSON.stringify(table.sheet().rooms)
-    toolNamed(tools, 'place_rooms').execute({ moves: [{ name: 'Kitchen', x: 2, y: 2 }] })
-    expect(JSON.stringify(table.sheet().rooms)).not.toBe(between)
+    const before = JSON.stringify(table.sheet().zones)
+    toolNamed(tools, 'place_zones').execute({ moves: [{ name: 'Bedroom', x: 11.2, y: 1.5 }] })
+    const between = JSON.stringify(table.sheet().zones)
+    toolNamed(tools, 'place_zones').execute({ moves: [{ name: 'Kitchen', x: 2, y: 2 }] })
+    expect(JSON.stringify(table.sheet().zones)).not.toBe(between)
     const out = toolNamed(tools, 'take_back').execute({}) as { tookBack: boolean }
     expect(out.tookBack).toBe(true)
-    expect(JSON.stringify(table.sheet().rooms)).toBe(between)
+    expect(JSON.stringify(table.sheet().zones)).toBe(between)
     expect(toolNamed(tools, 'take_back').execute({})).toMatchObject({ tookBack: true })
-    expect(JSON.stringify(table.sheet().rooms)).toBe(before)
+    expect(JSON.stringify(table.sheet().zones)).toBe(before)
     expect(toolNamed(tools, 'take_back').execute({})).toMatchObject({ tookBack: false })
   })
 })

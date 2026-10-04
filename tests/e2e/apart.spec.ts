@@ -1,8 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
-import { centreOf, connect, drag, openVilla, reachOf, saved, selectRoom } from './bubbles'
+import { centreOf, connect, drag, openVilla, reachOf, saved, selectZone } from './bubbles'
 
 /*
- * Keep apart, the opposite of a connection: set in the diagram like one, drawn unlike any edge,
+ * Keep apart, the opposite of a connection: set in the diagram like one, drawn unlike any connection,
  * kept in the project and its undo, and a warning that never refuses.
  */
 
@@ -13,7 +13,7 @@ async function pairs(page: Page) {
   return (await saved(page)).apart ?? []
 }
 
-test('a drag in keep-apart mode keeps two rooms apart; Allow together and undo', async ({
+test('a drag in keep-apart mode keeps two zones apart; Allow together and undo', async ({
   page,
 }) => {
   await openVilla(page)
@@ -53,17 +53,17 @@ test('connecting a pair kept apart is allowed and warned about', async ({ page }
   await expect(page.locator('.messages')).toContainText(
     'Kitchen and Formal Living are to be kept apart; connected all the same.',
   )
-  await expect.poll(async () => (await saved(page)).edges.length).toBeGreaterThan(0)
+  await expect.poll(async () => (await saved(page)).connections.length).toBeGreaterThan(0)
   await expect(page.locator('[data-apart]')).toHaveCount(1)
 })
 
-test('deleting a room takes its keep-apart pairs with it', async ({ page }) => {
+test('deleting a zone takes its keep-apart pairs with it', async ({ page }) => {
   await openVilla(page)
   await makes(page, 'Keep apart')
   await connect(page, 'Kitchen', 'Formal Living')
   await expect(page.locator('[data-apart]')).toHaveCount(1)
-  await selectRoom(page, 'Kitchen')
-  await page.getByRole('button', { name: 'Delete room' }).click()
+  await selectZone(page, 'Kitchen')
+  await page.getByRole('button', { name: 'Delete zone' }).click()
   await expect(page.locator('[data-apart]')).toHaveCount(0)
   await expect.poll(async () => (await pairs(page)).length).toBe(0)
 })

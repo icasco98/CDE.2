@@ -15,33 +15,33 @@ const id = (result: Result<string>): string => {
 const codes = (result: Result<unknown>): readonly string[] =>
   result.ok ? [] : result.problems.map((problem) => problem.code)
 
-const addRoom = (type: string, extra: { storey?: number; storeysSpanned?: number } = {}): string =>
-  id(store.actions.addRoom({ type, targetArea: 20, ...extra }))
+const addZone = (type: string, extra: { storey?: number; storeysSpanned?: number } = {}): string =>
+  id(store.actions.addZone({ type, targetArea: 20, ...extra }))
 
 beforeEach(() => {
   store = createStore(undefined, { newId: createIdGenerator(7) })
 })
 
-describe('rooms', () => {
-  it('adds a room with a target area and refuses one without', () => {
-    const room = addRoom('bedroom')
-    expect(store.getState().rooms.map((r) => r.id)).toEqual([room])
-    expect(codes(store.actions.addRoom({ type: 'bedroom', targetArea: 0 }))).toEqual(['bad-area'])
+describe('zones', () => {
+  it('adds a zone with a target area and refuses one without', () => {
+    const zone = addZone('bedroom')
+    expect(store.getState().zones.map((r) => r.id)).toEqual([zone])
+    expect(codes(store.actions.addZone({ type: 'bedroom', targetArea: 0 }))).toEqual(['bad-area'])
   })
 
-  it('refuses to work on a room that is not there', () => {
-    expect(codes(store.actions.rename('ghost', 'Majlis'))).toEqual(['no-such-room'])
+  it('refuses to work on a zone that is not there', () => {
+    expect(codes(store.actions.rename('ghost', 'Majlis'))).toEqual(['no-such-zone'])
   })
 
   it('refuses a storey the project does not have', () => {
-    const room = addRoom('bedroom')
-    expect(codes(store.actions.setStorey(room, 1))).toEqual(['storey-range'])
+    const zone = addZone('bedroom')
+    expect(codes(store.actions.setStorey(zone, 1))).toEqual(['storey-range'])
     store.actions.addStorey()
-    expect(store.actions.setStorey(room, 1).ok).toBe(true)
+    expect(store.actions.setStorey(zone, 1).ok).toBe(true)
   })
 
-  it('places and unplaces a room whole', () => {
-    const room = addRoom('bedroom')
+  it('places and unplaces a zone whole', () => {
+    const zone = addZone('bedroom')
     const footprint = {
       polygon: [
         [0, 0],
@@ -50,32 +50,32 @@ describe('rooms', () => {
       ] as const,
       rotation: 0,
     }
-    expect(store.actions.place(room, footprint).ok).toBe(true)
-    expect(store.getState().rooms[0]?.footprint).toEqual(footprint)
-    store.actions.unplace(room)
-    expect(store.getState().rooms[0]).not.toHaveProperty('footprint')
+    expect(store.actions.place(zone, footprint).ok).toBe(true)
+    expect(store.getState().zones[0]?.footprint).toEqual(footprint)
+    store.actions.unplace(zone)
+    expect(store.getState().zones[0]).not.toHaveProperty('footprint')
   })
 
-  it('deletes a room with its edges and its place in every route', () => {
-    const kitchen = addRoom('kitchen')
-    const hall = addRoom('hall')
+  it('deletes a zone with its connections and its place in every route', () => {
+    const kitchen = addZone('kitchen')
+    const hall = addZone('hall')
     store.actions.connect({ a: kitchen, b: hall, kind: 'door' })
     const actor = id(store.actions.addActor({ name: 'Cook', role: 'household' }))
     store.actions.addWaypoint(actor, hall)
     store.actions.addWaypoint(actor, kitchen)
 
-    store.actions.removeRoom(kitchen)
+    store.actions.removeZone(kitchen)
 
-    expect(store.getState().rooms.map((room) => room.id)).toEqual([hall])
-    expect(store.getState().edges).toEqual([])
+    expect(store.getState().zones.map((zone) => zone.id)).toEqual([hall])
+    expect(store.getState().connections).toEqual([])
     expect(store.getState().actors[0]?.waypoints).toEqual([hall])
   })
 })
 
 describe('keep apart', () => {
-  it('keeps two rooms apart and lets them together again, each one step to undo', () => {
-    const diwaniya = addRoom('diwaniya')
-    const family = addRoom('family-living')
+  it('keeps two zones apart and lets them together again, each one step to undo', () => {
+    const diwaniya = addZone('diwaniya')
+    const family = addZone('family-living')
     const pair = id(store.actions.keepApart({ a: diwaniya, b: family }))
     expect(store.getState().apart).toEqual([{ id: pair, a: diwaniya, b: family }])
     expect(codes(store.actions.keepApart({ a: family, b: diwaniya }))).toEqual(['apart-duplicate'])
@@ -89,19 +89,19 @@ describe('keep apart', () => {
     expect(codes(store.actions.allowTogether('apart_none'))).toEqual(['no-such-pair'])
   })
 
-  it('goes with either of its rooms', () => {
-    const maid = addRoom('maid-room')
-    const master = addRoom('master-bedroom')
+  it('goes with either of its zones', () => {
+    const maid = addZone('maid-room')
+    const master = addZone('master-bedroom')
     store.actions.keepApart({ a: maid, b: master })
-    store.actions.removeRoom(master)
+    store.actions.removeZone(master)
     expect(store.getState().apart).toEqual([])
   })
 })
 
 describe('declined suggestions', () => {
-  it('keeps a pair once, forgets one room’s or all, and goes with its room', () => {
-    const kitchen = addRoom('kitchen')
-    const dining = addRoom('dining-room')
+  it('keeps a pair once, forgets one zone’s or all, and goes with its zone', () => {
+    const kitchen = addZone('kitchen')
+    const dining = addZone('dining-room')
     store.actions.decline(kitchen, dining)
     store.actions.decline(dining, kitchen)
     store.actions.decline(dining, EXTERIOR)
@@ -112,7 +112,7 @@ describe('declined suggestions', () => {
     store.actions.forgetDeclined(kitchen)
     expect(store.getState().declined).toEqual([{ a: dining, b: EXTERIOR }])
     store.actions.decline(kitchen, dining)
-    store.actions.removeRoom(kitchen)
+    store.actions.removeZone(kitchen)
     expect(store.getState().declined).toEqual([{ a: dining, b: EXTERIOR }])
     store.actions.forgetDeclined()
     expect(store.getState().declined).toEqual([])
@@ -120,61 +120,68 @@ describe('declined suggestions', () => {
 })
 
 describe('connect', () => {
-  it('refuses a second edge between the same pair on one storey', () => {
-    const a = addRoom('bedroom')
-    const b = addRoom('bathroom')
+  it('refuses a second connection between the same pair on one storey', () => {
+    const a = addZone('bedroom')
+    const b = addZone('bathroom')
     store.actions.connect({ a, b, kind: 'door' })
-    expect(codes(store.actions.connect({ a: b, b: a, kind: 'open' }))).toEqual(['edge-duplicate'])
+    expect(codes(store.actions.connect({ a: b, b: a, kind: 'open' }))).toEqual([
+      'connection-duplicate',
+    ])
   })
 
-  it('refuses a cross-storey edge unless a stair spans both', () => {
+  it('refuses a cross-storey connection unless a stair spans both', () => {
     store.actions.addStorey()
-    const below = addRoom('kitchen')
-    const above = addRoom('bedroom', { storey: 1 })
+    const below = addZone('kitchen')
+    const above = addZone('bedroom', { storey: 1 })
     expect(codes(store.actions.connect({ a: below, b: above, kind: 'door', storey: 1 }))).toEqual([
-      'edge-storey',
+      'connection-storey',
     ])
-    const stair = addRoom('stair', { storeysSpanned: 2 })
+    const stair = addZone('stair', { storeysSpanned: 2 })
     expect(store.actions.connect({ a: stair, b: below, kind: 'open', storey: 0 }).ok).toBe(true)
     expect(store.actions.connect({ a: stair, b: above, kind: 'open', storey: 1 }).ok).toBe(true)
   })
 
   it('refuses a second main door', () => {
-    const hall = addRoom('hall')
-    const diwaniya = addRoom('diwaniya')
+    const hall = addZone('hall')
+    const diwaniya = addZone('diwaniya')
     expect(store.actions.connect({ a: EXTERIOR, b: hall, kind: 'main-door' }).ok).toBe(true)
     expect(codes(store.actions.connect({ a: EXTERIOR, b: diwaniya, kind: 'main-door' }))).toEqual([
       'main-door-count',
     ])
   })
 
-  it('changes an edge kind in place, keeping the same edge', () => {
-    const a = addRoom('bedroom')
-    const b = addRoom('bathroom')
-    const edge = id(store.actions.connect({ a, b, kind: 'door' }))
-    expect(store.actions.setEdgeKind(edge, 'open').ok).toBe(true)
-    expect(store.getState().edges).toEqual([{ id: edge, a, b, kind: 'open', storey: 0 }])
+  it('changes a connection kind in place, keeping the same connection', () => {
+    const a = addZone('bedroom')
+    const b = addZone('bathroom')
+    const connection = id(store.actions.connect({ a, b, kind: 'door' }))
+    expect(store.actions.setConnectionKind(connection, 'open').ok).toBe(true)
+    expect(store.getState().connections).toEqual([
+      { id: connection, a, b, kind: 'open', storey: 0 },
+    ])
     store.undo()
-    expect(store.getState().edges[0]?.kind).toBe('door')
+    expect(store.getState().connections[0]?.kind).toBe('door')
   })
 
-  it('refuses a kind for an edge that is not there, and refuses the main door either way', () => {
-    const hall = addRoom('hall')
-    const diwaniya = addRoom('diwaniya')
-    expect(codes(store.actions.setEdgeKind('ghost', 'open'))).toEqual(['no-such-edge'])
+  it('refuses a kind for a connection that is not there, and refuses the main door either way', () => {
+    const hall = addZone('hall')
+    const diwaniya = addZone('diwaniya')
+    expect(codes(store.actions.setConnectionKind('ghost', 'open'))).toEqual(['no-such-connection'])
     const main = id(store.actions.connect({ a: EXTERIOR, b: hall, kind: 'main-door' }))
     const inside = id(store.actions.connect({ a: hall, b: diwaniya, kind: 'door' }))
-    expect(codes(store.actions.setEdgeKind(main, 'door'))).toEqual(['main-door-kind'])
-    expect(codes(store.actions.setEdgeKind(inside, 'main-door'))).toEqual(['main-door-kind'])
-    expect(store.getState().edges.map((edge) => edge.kind)).toEqual(['main-door', 'door'])
+    expect(codes(store.actions.setConnectionKind(main, 'door'))).toEqual(['main-door-kind'])
+    expect(codes(store.actions.setConnectionKind(inside, 'main-door'))).toEqual(['main-door-kind'])
+    expect(store.getState().connections.map((connection) => connection.kind)).toEqual([
+      'main-door',
+      'door',
+    ])
   })
 
-  it('disconnects an edge and refuses one that is not there', () => {
-    const a = addRoom('bedroom')
-    const b = addRoom('bathroom')
-    const edge = id(store.actions.connect({ a, b, kind: 'door' }))
-    expect(store.actions.disconnect(edge).ok).toBe(true)
-    expect(codes(store.actions.disconnect(edge))).toEqual(['no-such-edge'])
+  it('disconnects a connection and refuses one that is not there', () => {
+    const a = addZone('bedroom')
+    const b = addZone('bathroom')
+    const connection = id(store.actions.connect({ a, b, kind: 'door' }))
+    expect(store.actions.disconnect(connection).ok).toBe(true)
+    expect(codes(store.actions.disconnect(connection))).toEqual(['no-such-connection'])
   })
 })
 
@@ -182,9 +189,9 @@ describe('storeys', () => {
   it('removes only an empty top storey, and never the last one', () => {
     expect(codes(store.actions.removeStorey())).toEqual(['last-storey'])
     store.actions.addStorey()
-    addRoom('bedroom', { storey: 1 })
+    addZone('bedroom', { storey: 1 })
     expect(codes(store.actions.removeStorey())).toEqual(['storey-in-use'])
-    store.actions.removeRoom(store.getState().rooms[0]!.id)
+    store.actions.removeZone(store.getState().zones[0]!.id)
     expect(store.actions.removeStorey().ok).toBe(true)
     expect(store.getState().storeys).toBe(1)
   })
@@ -221,16 +228,16 @@ describe('storey heights', () => {
 })
 
 describe('undo', () => {
-  it('covers rooms, edges, declined suggestions, plot, storeys and household', () => {
-    const room = addRoom('bedroom')
+  it('covers zones, connections, declined suggestions, plot, storeys and household', () => {
+    const zone = addZone('bedroom')
     store.actions.addStorey()
     store.actions.setPlot({ on: true, polygon: [], north: 30, street: [0] })
-    store.actions.decline(room, EXTERIOR)
+    store.actions.decline(zone, EXTERIOR)
     store.actions.setHousehold({ ...store.getState().household, bedrooms: 6 })
-    store.actions.connect({ a: EXTERIOR, b: room, kind: 'main-door' })
+    store.actions.connect({ a: EXTERIOR, b: zone, kind: 'main-door' })
 
     store.undo()
-    expect(store.getState().edges).toEqual([])
+    expect(store.getState().connections).toEqual([])
     store.undo()
     expect(store.getState().household.bedrooms).toBe(startingHousehold.bedrooms)
     store.undo()
@@ -240,48 +247,48 @@ describe('undo', () => {
     store.undo()
     expect(store.getState().storeys).toBe(1)
     store.undo()
-    expect(store.getState().rooms).toEqual([])
+    expect(store.getState().zones).toEqual([])
     expect(store.canUndo()).toBe(false)
   })
 
   it('leaves the project name alone', () => {
-    addRoom('bedroom')
+    addZone('bedroom')
     store.actions.setName('Al Bidaa House')
     expect(store.getState().name).toBe('Al Bidaa House')
     store.undo()
-    expect(store.getState().rooms).toEqual([])
+    expect(store.getState().zones).toEqual([])
     expect(store.getState().name).toBe('Al Bidaa House')
     expect(store.canUndo()).toBe(false)
   })
 
   it('leaves actors alone', () => {
-    const room = addRoom('bedroom')
+    const zone = addZone('bedroom')
     const actor = id(store.actions.addActor({ name: 'Guest', role: 'visitor' }))
-    store.actions.addWaypoint(actor, room)
+    store.actions.addWaypoint(actor, zone)
     store.actions.updateActor(actor, { name: 'Neighbour' })
 
     expect(store.canUndo()).toBe(true)
     store.undo()
 
-    expect(store.getState().rooms).toEqual([])
+    expect(store.getState().zones).toEqual([])
     expect(store.getState().actors[0]).toEqual({
       id: actor,
       name: 'Neighbour',
       role: 'visitor',
-      waypoints: [room],
+      waypoints: [zone],
     })
   })
 
   it('covers the storey count, and its heights with it', () => {
-    addRoom('bedroom')
+    addZone('bedroom')
     store.actions.addStorey()
     expect(store.getState().storeys).toBe(2)
     store.undo()
     expect(store.getState().storeys).toBe(1)
     expect(store.getState().heights).toEqual([3.5])
-    expect(store.getState().rooms).toHaveLength(1)
+    expect(store.getState().zones).toHaveLength(1)
     store.undo()
-    expect(store.getState().rooms).toEqual([])
+    expect(store.getState().zones).toEqual([])
     expect(store.getState().storeys).toBe(1)
   })
 
@@ -312,22 +319,22 @@ describe('undo', () => {
   })
 
   it('redoes what it undid, and forgets the redo after a new change', () => {
-    const room = addRoom('bedroom')
-    store.actions.rename(room, 'Majlis')
+    const zone = addZone('bedroom')
+    store.actions.rename(zone, 'Majlis')
     store.undo()
-    expect(store.getState().rooms[0]?.name).toBe('bedroom')
+    expect(store.getState().zones[0]?.name).toBe('bedroom')
     store.redo()
-    expect(store.getState().rooms[0]?.name).toBe('Majlis')
+    expect(store.getState().zones[0]?.name).toBe('Majlis')
     store.undo()
-    store.actions.setType(room, 'diwaniya')
+    store.actions.setType(zone, 'diwaniya')
     expect(store.canRedo()).toBe(false)
   })
 
   it('leaves a project every check passes at every step back and forward', () => {
-    const stair = addRoom('stair')
+    const stair = addZone('stair')
     store.actions.addStorey()
     store.actions.setStorey(stair, 0, 2)
-    const upstairs = addRoom('bedroom', { storey: 1 })
+    const upstairs = addZone('bedroom', { storey: 1 })
     store.actions.connect({ a: stair, b: upstairs, kind: 'open', storey: 1 })
     store.actions.setHeight(1, 3)
     store.actions.addStorey()
@@ -336,8 +343,8 @@ describe('undo', () => {
       const project = store.getState()
       expect(checkProject(project)).toEqual([])
       expect(project.heights).toHaveLength(project.storeys)
-      for (const room of project.rooms)
-        expect(room.storey + room.storeysSpanned).toBeLessThanOrEqual(project.storeys)
+      for (const zone of project.zones)
+        expect(zone.storey + zone.storeysSpanned).toBeLessThanOrEqual(project.storeys)
     }
 
     sound()
@@ -352,44 +359,44 @@ describe('undo', () => {
   })
 
   it('keeps a hundred steps', () => {
-    const room = addRoom('bedroom')
-    for (let i = 0; i < 150; i += 1) store.actions.rename(room, `name ${i}`)
+    const zone = addZone('bedroom')
+    for (let i = 0; i < 150; i += 1) store.actions.rename(zone, `name ${i}`)
     let steps = 0
     while (store.undo()) steps += 1
     expect(steps).toBe(100)
-    expect(store.getState().rooms[0]?.name).toBe('name 49')
+    expect(store.getState().zones[0]?.name).toBe('name 49')
   })
 })
 
 describe('a gesture in flight', () => {
   it('previews without recording and records the whole drag when it commits', () => {
-    const room = addRoom('bedroom')
+    const zone = addZone('bedroom')
     const changes: string[] = []
     store.subscribe((_project, change) => changes.push(change))
 
-    store.actions.setBubble(room, { x: 1, y: 1 }, 'preview')
-    store.actions.setBubble(room, { x: 2, y: 2 }, 'preview')
-    expect(store.getState().rooms[0]?.bubble).toEqual({ x: 2, y: 2 })
+    store.actions.setBubble(zone, { x: 1, y: 1 }, 'preview')
+    store.actions.setBubble(zone, { x: 2, y: 2 }, 'preview')
+    expect(store.getState().zones[0]?.bubble).toEqual({ x: 2, y: 2 })
     expect(changes).toEqual(['preview', 'preview'])
 
-    store.actions.setBubble(room, { x: 3, y: 3 }, 'commit')
+    store.actions.setBubble(zone, { x: 3, y: 3 }, 'commit')
     expect(changes).toEqual(['preview', 'preview', 'committed'])
 
     store.undo()
-    expect(store.getState().rooms[0]?.bubble).toBeUndefined()
+    expect(store.getState().zones[0]?.bubble).toBeUndefined()
     store.undo()
-    expect(store.getState().rooms).toEqual([])
+    expect(store.getState().zones).toEqual([])
     expect(store.canUndo()).toBe(false)
   })
 })
 
 describe('a project opened from a file', () => {
   it('replaces the one in hand and starts its history again', () => {
-    addRoom('bedroom')
+    addZone('bedroom')
     const opened = createStore(undefined, { newId: createIdGenerator(21) }).getState()
     expect(store.actions.load({ ...opened, name: 'Opened House' }).ok).toBe(true)
     expect(store.getState().name).toBe('Opened House')
-    expect(store.getState().rooms).toEqual([])
+    expect(store.getState().zones).toEqual([])
     expect(store.canUndo()).toBe(false)
   })
 
@@ -397,69 +404,71 @@ describe('a project opened from a file', () => {
     const opened = createStore(undefined, { newId: createIdGenerator(23) }).getState()
     const broken = {
       ...opened,
-      edges: [{ id: 'edge_1', a: 'ghost', b: EXTERIOR, kind: 'door' as const, storey: 0 }],
+      connections: [
+        { id: 'connection_1', a: 'ghost', b: EXTERIOR, kind: 'door' as const, storey: 0 },
+      ],
     }
-    expect(codes(store.actions.load(broken))).toContain('edge-endpoint-missing')
-    expect(store.getState().rooms).toHaveLength(0)
+    expect(codes(store.actions.load(broken))).toContain('connection-endpoint-missing')
+    expect(store.getState().zones).toHaveLength(0)
   })
 })
 
 describe('several actions as one step', () => {
   it('records one undo step for the whole run', () => {
-    addRoom('bedroom')
+    addZone('bedroom')
     const changes: string[] = []
     store.subscribe((_project, change) => changes.push(change))
 
     const done = store.transaction(() => {
-      store.actions.addRoom({ type: 'kitchen', targetArea: 20 })
-      store.actions.addRoom({ type: 'diwaniya', targetArea: 50 })
+      store.actions.addZone({ type: 'kitchen', targetArea: 20 })
+      store.actions.addZone({ type: 'diwaniya', targetArea: 50 })
     })
 
     expect(done.ok).toBe(true)
     expect(changes).toEqual(['committed'])
-    expect(store.getState().rooms).toHaveLength(3)
+    expect(store.getState().zones).toHaveLength(3)
     store.undo()
-    expect(store.getState().rooms).toHaveLength(1)
+    expect(store.getState().zones).toHaveLength(1)
     store.redo()
-    expect(store.getState().rooms).toHaveLength(3)
+    expect(store.getState().zones).toHaveLength(3)
   })
 
   it('keeps none of it when one action is refused', () => {
-    const room = addRoom('bedroom')
+    const zone = addZone('bedroom')
     const refused = store.transaction(() => {
-      store.actions.rename(room, 'Majlis')
-      return store.actions.setTargetArea(room, 0)
+      store.actions.rename(zone, 'Majlis')
+      return store.actions.setTargetArea(zone, 0)
     })
 
     expect(codes(refused)).toEqual(['bad-area'])
-    expect(store.getState().rooms[0]?.name).toBe('bedroom')
+    expect(store.getState().zones[0]?.name).toBe('bedroom')
     store.undo()
-    expect(store.getState().rooms).toEqual([])
+    expect(store.getState().zones).toEqual([])
     expect(store.canUndo()).toBe(false)
   })
 
   it('keeps none of it when an action inside is refused and the run ignores it', () => {
-    const room = addRoom('bedroom')
+    const zone = addZone('bedroom')
     store.transaction(() => {
-      store.actions.rename(room, 'Majlis')
-      store.actions.setStorey(room, 4)
+      store.actions.rename(zone, 'Majlis')
+      store.actions.setStorey(zone, 4)
       return ok(undefined)
     })
 
-    expect(store.getState().rooms[0]?.name).toBe('bedroom')
+    expect(store.getState().zones[0]?.name).toBe('bedroom')
   })
 
   it('refuses to run inside another one, and rolls back when the run throws', () => {
-    const room = addRoom('bedroom')
+    const zone = addZone('bedroom')
     expect(codes(store.transaction(() => store.transaction(() => undefined)))).toEqual([
       'inside-transaction',
     ])
     expect(() =>
       store.transaction(() => {
-        store.actions.rename(room, 'Majlis')
+        store.actions.rename(zone, 'Majlis')
         throw new Error('the run gave up')
       }),
     ).toThrow('the run gave up')
-    expect(store.getState().rooms[0]?.name).toBe('bedroom')
+    expect(store.getState().zones[0]?.name).toBe('bedroom')
   })
 })

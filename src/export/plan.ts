@@ -1,6 +1,6 @@
 /**
  * What both drawings read from a sheet: the plot, the setback line, the shapes standing on one
- * storey and the openings in their walls, in plot metres with y running south, as the sheet holds
+ * storey and the openings in their edges, in plot metres with y running south, as the sheet holds
  * them. Nothing here writes to the sheet.
  */
 
@@ -11,48 +11,48 @@ import {
   centreOfFootprint,
   drawnDoors,
   loopsOf,
-  placedRooms,
+  placedZones,
   toWorld,
   worldCorners,
   type Box,
   type Point,
   type Side,
   type Poly,
-  type Room,
+  type Zone,
   type Sheet,
 } from '../sheet'
 
-/** A room as it stands on the storey being drawn: its outline, where its name goes, and its area. */
+/** A zone as it stands on the storey being drawn: its outline, where its name goes, and its area. */
 export type Placed = {
-  readonly room: Room
+  readonly zone: Zone
   readonly loops: readonly Poly[]
   readonly labelAt: Point
   readonly area: number
 }
 
-const toWorldPoint = (room: Room, local: Point): Point => toWorld(room, local[0], local[1])
+const toWorldPoint = (zone: Zone, local: Point): Point => toWorld(zone, local[0], local[1])
 
 export function standingOn(sheet: Sheet, storey: number): readonly Placed[] {
-  return placedRooms(sheet, storey).map((room) => {
-    const loops = loopsOf(room) ?? []
+  return placedZones(sheet, storey).map((zone) => {
+    const loops = loopsOf(zone) ?? []
     const rectangle: Poly = [
       [0, 0],
-      [room.w, 0],
-      [room.w, room.h],
-      [0, room.h],
+      [zone.w, 0],
+      [zone.w, zone.h],
+      [0, zone.h],
     ]
     const outlines =
-      loops.length > 0 ? loops.map((loop) => loop.map((wall) => wall.a)) : [rectangle]
+      loops.length > 0 ? loops.map((loop) => loop.map((edge) => edge.a)) : [rectangle]
     return {
-      room,
-      loops: outlines.map((loop) => loop.map((corner) => toWorldPoint(room, corner))),
-      labelAt: toWorldPoint(room, room.labelAt ?? centreOfFootprint(room)),
-      area: areaOf(room),
+      zone,
+      loops: outlines.map((loop) => loop.map((corner) => toWorldPoint(zone, corner))),
+      labelAt: toWorldPoint(zone, zone.labelAt ?? centreOfFootprint(zone)),
+      area: areaOf(zone),
     }
   })
 }
 
-/** A door as a gap: where it sits in the world, the way its wall runs, and how wide the gap is. */
+/** A door as a gap: where it sits in the world, the way its edge runs, and how wide the gap is. */
 export type Opening = {
   readonly at: Point
   readonly along: Point
@@ -61,13 +61,13 @@ export type Opening = {
 
 export function openingsOn(sheet: Sheet, storey: number): readonly Opening[] {
   const openings: Opening[] = []
-  for (const { room, pl: place, w } of drawnDoors(sheet, storey)) {
-    const from = toWorldPoint(room, place.seg.a)
-    const to = toWorldPoint(room, place.seg.b)
+  for (const { zone, pl: place, w } of drawnDoors(sheet, storey)) {
+    const from = toWorldPoint(zone, place.seg.a)
+    const to = toWorldPoint(zone, place.seg.b)
     const run = Math.hypot(to[0] - from[0], to[1] - from[1])
     if (run < 1e-9) continue
     openings.push({
-      at: toWorldPoint(room, place.p),
+      at: toWorldPoint(zone, place.p),
       along: [(to[0] - from[0]) / run, (to[1] - from[1]) / run],
       width: w,
     })
@@ -103,10 +103,10 @@ export function streetSides(sheet: Sheet): readonly (readonly [Point, Point])[] 
   return sheet.plot.streets.map((side) => runs[side])
 }
 
-/** Everything a drawing has to hold: the plot, and every room placed on any storey. */
+/** Everything a drawing has to hold: the plot, and every zone placed on any storey. */
 export function contentBounds(sheet: Sheet): Box {
   const corners: Point[] = [...plotCorners(sheet)]
-  for (const room of allPlaced(sheet)) corners.push(...worldCorners(room))
+  for (const zone of allPlaced(sheet)) corners.push(...worldCorners(zone))
   const xs = corners.map((corner) => corner[0])
   const ys = corners.map((corner) => corner[1])
   const x = Math.min(...xs)

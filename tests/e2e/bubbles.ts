@@ -12,24 +12,24 @@ export async function openVilla(
   if (masterOnGround) await page.getByLabel('Master bedroom on the ground floor').check()
   await page.getByRole('button', { name: /rebuild program from household/i }).click()
   await tab(page, 'Bubbles').click()
-  await expect(page.locator('svg g[data-room]').first()).toBeVisible()
+  await expect(page.locator('svg g[data-zone]').first()).toBeVisible()
 }
 
-/** A room's bubble by the name it carries, on one storey's column. */
-export function roomNamed(page: Page, name: string, storey = 0) {
-  return page.locator(`.bubbles-sheet [data-room][data-name="${name}"][data-storey="${storey}"]`)
+/** A zone's bubble by the name it carries, on one storey's column. */
+export function zoneNamed(page: Page, name: string, storey = 0) {
+  return page.locator(`.bubbles-sheet [data-zone][data-name="${name}"][data-storey="${storey}"]`)
 }
 
-/** The middle of a room's circle on the screen. */
+/** The middle of a zone's circle on the screen. */
 export async function centreOf(page: Page, name: string, storey = 0) {
-  const box = await roomNamed(page, name, storey).locator('.bubble-shape').boundingBox()
+  const box = await zoneNamed(page, name, storey).locator('.bubble-shape').boundingBox()
   if (!box) throw new Error(`${name} is not drawn on storey ${storey}`)
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
 }
 
 /** The small ring on a bubble's rim that a connection is dragged from. */
 export async function reachOf(page: Page, name: string, storey = 0) {
-  const box = await roomNamed(page, name, storey).locator('.reach').boundingBox()
+  const box = await zoneNamed(page, name, storey).locator('.reach').boundingBox()
   if (!box) throw new Error(`${name} has no ring on storey ${storey}`)
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
 }
@@ -46,7 +46,7 @@ export async function drag(
   await page.mouse.up()
 }
 
-/** A connection drawn by hand: from the ring on one room to the middle of the other. */
+/** A connection drawn by hand: from the ring on one zone to the middle of the other. */
 export async function connect(page: Page, from: string, to: string, storey = 0) {
   await page.mouse.move(
     (await centreOf(page, from, storey)).x,
@@ -55,21 +55,21 @@ export async function connect(page: Page, from: string, to: string, storey = 0) 
   await drag(page, await reachOf(page, from, storey), await centreOf(page, to, storey))
 }
 
-export async function selectRoom(page: Page, name: string, storey = 0) {
+export async function selectZone(page: Page, name: string, storey = 0) {
   const at = await centreOf(page, name, storey)
   await page.mouse.click(at.x, at.y)
-  await expect(roomNamed(page, name, storey)).toHaveClass(/bubble-selected/)
+  await expect(zoneNamed(page, name, storey)).toHaveClass(/bubble-selected/)
 }
 
 type Saved = {
-  rooms: {
+  zones: {
     id: string
     name: string
     storey: number
     targetArea: number
     bubble?: { x: number; y: number }
   }[]
-  edges: { id: string; a: string; b: string; kind: string; storey: number }[]
+  connections: { id: string; a: string; b: string; kind: string; storey: number }[]
   apart?: { id: string; a: string; b: string }[]
 }
 
@@ -78,33 +78,36 @@ export async function saved(page: Page): Promise<Saved> {
   const project = await page.evaluate(() =>
     JSON.parse(window.localStorage.getItem('cde.project') ?? '{}'),
   )
-  return { rooms: [], edges: [], ...project }
+  return { zones: [], connections: [], ...project }
 }
 
 const pairName = (a: string, b: string) => [a, b].sort((x, y) => (x < y ? -1 : 1)).join(' to ')
 
-/** Every edge as the two names it joins, sorted, so a test reads the graph as a person would. */
+/** Every connection as the two names it joins, sorted, so a test reads the graph as a person would. */
 export async function linkedPairs(page: Page): Promise<readonly string[]> {
   const project = await saved(page)
-  const name = (id: string) => project.rooms?.find((room) => room.id === id)?.name ?? 'Outside'
-  return (project.edges ?? []).map((edge) => pairName(name(edge.a), name(edge.b))).sort()
+  const name = (id: string) => project.zones?.find((zone) => zone.id === id)?.name ?? 'Outside'
+  return (project.connections ?? [])
+    .map((connection) => pairName(name(connection.a), name(connection.b)))
+    .sort()
 }
 
-/** The edge between two rooms by name, as the autosave has it. */
-export async function edgeBetween(page: Page, one: string, other: string) {
+/** The connection between two zones by name, as the autosave has it. */
+export async function connectionBetween(page: Page, one: string, other: string) {
   const project = await saved(page)
-  const id = (name: string) => project.rooms.find((room) => room.name === name)?.id
+  const id = (name: string) => project.zones.find((zone) => zone.name === name)?.id
   const [a, b] = [id(one), id(other)]
-  return project.edges.find(
-    (edge) => (edge.a === a && edge.b === b) || (edge.a === b && edge.b === a),
+  return project.connections.find(
+    (connection) =>
+      (connection.a === a && connection.b === b) || (connection.a === b && connection.b === a),
   )
 }
 
-/** The storey the program table gives a room, by the name in its row. */
+/** The storey the program table gives a zone, by the name in its row. */
 export async function storeyOf(page: Page, name: string): Promise<string> {
   return page.locator('table.program tbody tr').evaluateAll((rows, wanted) => {
     for (const row of rows) {
-      const named = row.querySelector('input[aria-label="Room name"]')
+      const named = row.querySelector('input[aria-label="Zone name"]')
       const storey = row.querySelector('select[aria-label="Storey"]')
       if (!(named instanceof HTMLInputElement) || !(storey instanceof HTMLSelectElement)) continue
       if (named.value === wanted) return storey.options[storey.selectedIndex]?.text ?? ''

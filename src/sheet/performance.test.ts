@@ -29,7 +29,7 @@ it('reads the embedded sheet’s report inside 5 ms', () => {
   expect(taken).toBeLessThan(10)
 })
 
-it('finds where every door of the test plan stands, on its edge’s wall, inside 2 ms', () => {
+it('finds where every door of the test plan stands, on its connection’s edge, inside 2 ms', () => {
   // Read once per change of the sheet, never per frame of a drag: a drag re-renders from the memo.
   const taken = milliseconds(() => drawnDoors(sheet, 0))
   console.log(`drawnDoors on the test plan, 20 doors: ${taken.toFixed(2)} ms, budget 2 ms`)
@@ -37,17 +37,17 @@ it('finds where every door of the test plan stands, on its edge’s wall, inside
   expect(taken).toBeLessThan(4)
 })
 
-it('checks a door against the others on its wall inside 3 ms, once per placement or drop', () => {
+it('checks a door against the others on its edge inside 3 ms, once per placement or drop', () => {
   const [first] = drawnDoors(sheet, 0)
-  const taken = milliseconds(() => doorClash(sheet, 0, first!.room, first!.door))
+  const taken = milliseconds(() => doorClash(sheet, 0, first!.zone, first!.door))
   console.log(`doorClash on the test plan, 20 doors: ${taken.toFixed(2)} ms, budget 3 ms`)
-  expect(drawnDoors(sheet, 0).every((each) => !doorClash(sheet, 0, each.room, each.door))).toBe(
+  expect(drawnDoors(sheet, 0).every((each) => !doorClash(sheet, 0, each.zone, each.door))).toBe(
     true,
   )
   expect(taken).toBeLessThan(6)
 })
 
-it('reads how the embedded sheet’s rooms stand to each other inside 5 ms', () => {
+it('reads how the embedded sheet’s zones stand to each other inside 5 ms', () => {
   const taken = milliseconds(() => meetingsOf(sheet, 0))
   console.log(`meetingsOf on the embedded sheet: ${taken.toFixed(2)} ms, budget 5 ms`)
   expect(taken).toBeLessThan(10)
@@ -68,12 +68,12 @@ it('finds the embedded sheet’s enclosed spaces inside 20 ms', () => {
   expect(taken).toBeLessThan(40)
 })
 
-it('sorts the mass’s wall-line tree inside 4 ms for 60 prisms', () => {
+it('sorts the mass’s edge-line tree inside 4 ms for 60 prisms', () => {
   const P = massProjection(MASS_START, 600, 420)
   const crowd = {
     ...sheet,
-    rooms: sheet.rooms.concat(
-      sheet.rooms
+    zones: sheet.zones.concat(
+      sheet.zones
         .filter((r) => r.placed && !r.fixed)
         .map((r, i) => ({ ...r, id: `up${i}`, storey: 1 })),
     ),
@@ -81,22 +81,22 @@ it('sorts the mass’s wall-line tree inside 4 ms for 60 prisms', () => {
   const prisms = prismsOf(crowd, P)
   expect(prisms.length).toBeGreaterThanOrEqual(40)
   const taken = milliseconds(() => orderPrisms(prisms, P))
-  console.log(`the wall-line tree for ${prisms.length} prisms: ${taken.toFixed(2)} ms, budget 4 ms`)
+  console.log(`the edge-line tree for ${prisms.length} prisms: ${taken.toFixed(2)} ms, budget 4 ms`)
   expect(taken).toBeLessThan(8)
 })
 
 it('applies a list of ten deeds inside 60 ms', () => {
   const deeds = [
-    { verb: 'turn', room: 'Store', quarter: true },
-    { verb: 'mirror', room: 'Kitchen', axis: 'x' },
-    { verb: 'resize', room: 'Guest WC', w: 3, h: 3 },
-    { verb: 'lock', rooms: ['Store'] },
-    { verb: 'unlock', rooms: ['Store'] },
-    { verb: 'group', rooms: ['Kitchen', 'Store'] },
-    { verb: 'ungroup', rooms: ['Kitchen'] },
-    { verb: 'height', room: 'Dining Room', metres: 4 },
+    { verb: 'turn', zone: 'Store', quarter: true },
+    { verb: 'mirror', zone: 'Kitchen', axis: 'x' },
+    { verb: 'resize', zone: 'Guest WC', w: 3, h: 3 },
+    { verb: 'lock', zones: ['Store'] },
+    { verb: 'unlock', zones: ['Store'] },
+    { verb: 'group', zones: ['Kitchen', 'Store'] },
+    { verb: 'ungroup', zones: ['Kitchen'] },
+    { verb: 'height', zone: 'Dining Room', metres: 4 },
     { verb: 'court', between: ['Maid Room', 'Stair'] },
-    { verb: 'storey', rooms: ['Store'], to: 'First' },
+    { verb: 'storey', zones: ['Store'], to: 'First' },
   ]
   const taken = milliseconds(() => {
     let held = sheet
@@ -109,7 +109,7 @@ it('applies a list of ten deeds inside 60 ms', () => {
       say: () => {},
       note: () => {},
       request: () => {},
-      edgeBetween: () => null,
+      connectionBetween: () => null,
     }
     for (const deed of deeds) doDeed(at, 0, deed)
   })

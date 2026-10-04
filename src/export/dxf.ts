@@ -9,10 +9,10 @@ import { contentBounds, openingsOn, plotCorners, setbackCorners, standingOn } fr
 /** AutoCAD R12, the last release with a plain, wholly documented ASCII form. */
 const ACAD_VERSION = 'AC1009'
 
-/** `$INSUNITS` 6: the drawing is in metres, so a room measures true when it is opened. */
+/** `$INSUNITS` 6: the drawing is in metres, so a zone measures true when it is opened. */
 const INSUNITS_METRES = 6
 
-/** Room names and areas are lettered at 0.3 m, which reads at 1:100 and does not fill a small room. */
+/** Zone names and areas are lettered at 0.3 m, which reads at 1:100 and does not fill a small zone. */
 const TEXT_HEIGHT_M = 0.3
 
 /** Where the north arrow stands: this far clear of the drawing's east side, and this long. */
@@ -173,8 +173,8 @@ const PLOT_LAYER = 'PLOT'
 const SETBACK_LAYER = 'SETBACK'
 const NORTH_LAYER = 'NORTH'
 
-function roomsLayer(storey: number): string {
-  return `S${storey}-ROOMS`
+function zonesLayer(storey: number): string {
+  return `S${storey}-ZONES`
 }
 
 function doorsLayer(storey: number): string {
@@ -187,7 +187,7 @@ function textLayer(storey: number): string {
 
 function layersFor(storeys: number): readonly Layer[] {
   const perStorey = Array.from({ length: storeys }, (_unused, storey) => [
-    { name: roomsLayer(storey), colour: 3 },
+    { name: zonesLayer(storey), colour: 3 },
     { name: doorsLayer(storey), colour: 1 },
     { name: textLayer(storey), colour: 8 },
   ]).flat()
@@ -254,19 +254,19 @@ function entitiesOf(sheet: Sheet): readonly Entity[] {
       for (const loop of loops) {
         entities.push({
           kind: 'polyline',
-          layer: roomsLayer(storey),
+          layer: zonesLayer(storey),
           points: loop.map(transform.at),
           closed: true,
         })
       }
     }
-    for (const { room, labelAt, area } of standing) {
+    for (const { zone, labelAt, area } of standing) {
       entities.push({
         kind: 'text',
         layer: textLayer(storey),
         at: transform.at(labelAt),
         // ASCII only, so the file reads the same in every CAD program: "m2", not "m²".
-        text: `${room.name} ${fmt(area)} m2`,
+        text: `${zone.name} ${fmt(area)} m2`,
         height: TEXT_HEIGHT_M,
       })
     }

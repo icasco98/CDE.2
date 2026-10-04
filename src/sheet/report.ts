@@ -9,25 +9,25 @@ import {
   ghostsOf,
   isCourt,
   isOpen,
-  placedRooms,
+  placedZones,
   storeyCountOf,
   storeyNameOf,
   storeyOf,
   acrossStoreys,
-  type Room,
+  type Zone,
   type Sheet,
 } from './model'
-import { areaOf, polyArea, r2, worldWalls, type Seg } from './geometry'
+import { areaOf, polyArea, r2, worldEdges, type Seg } from './geometry'
 import { allowedBox, outsideBuildable, overlapsOf } from './settle'
 import { pocketsOf } from './pockets'
 import { walkTest, type Walk } from './doors'
 
 const onLine = (v: number, at: number) => Math.abs(v - at) < 0.02
 
-/** A room's walls that lie on the plot boundary, each with the side it is on. */
-export function boundaryWalls(r: Room, plot: PlotSpec): (Seg & { side: Side })[] {
+/** A zone's edges that lie on the plot boundary, each with the side it is on. */
+export function boundaryEdges(r: Zone, plot: PlotSpec): (Seg & { side: Side })[] {
   const out: (Seg & { side: Side })[] = []
-  for (const w of worldWalls(r)) {
+  for (const w of worldEdges(r)) {
     const side: Side | null =
       onLine(w.a[0], 0) && onLine(w.b[0], 0)
         ? 'west'
@@ -43,13 +43,13 @@ export function boundaryWalls(r: Room, plot: PlotSpec): (Seg & { side: Side })[]
   return out
 }
 
-/** How much of a side is built to the boundary: the walls' runs, overlaps counted once. */
+/** How much of a side is built to the boundary: the edges' runs, overlaps counted once. */
 export function sideUsed(sheet: Sheet, side: Side): number {
   const runs: [number, number][] = []
   const k = side === 'west' || side === 'east' ? 1 : 0 // the coordinate that runs along that side
   for (const r of allPlaced(sheet))
     if (storeyOf(r) === 0 && !r.fixed && !isOpen(r))
-      for (const w of boundaryWalls(r, sheet.plot))
+      for (const w of boundaryEdges(r, sheet.plot))
         if (w.side === side) runs.push([Math.min(w.a[k], w.b[k]), Math.max(w.a[k], w.b[k])])
   runs.sort((p, q) => p[0] - q[0])
   let used = 0
@@ -111,11 +111,11 @@ export type Report = {
  */
 export function report(sheet: Sheet, storey: number): Report {
   const { settings } = sheet
-  const onStorey = placedRooms(sheet, storey)
+  const onStorey = placedZones(sheet, storey)
   const p = onStorey.filter((r) => !r.fixed && !isOpen(r))
   const courts = onStorey.filter((r) => r.fixed)
   const placedArea = p.reduce((s, r) => s + areaOf(r), 0)
-  const askedArea = sheet.rooms.filter((r) => !isOpen(r)).reduce((s, r) => s + r.target, 0)
+  const askedArea = sheet.zones.filter((r) => !isOpen(r)).reduce((s, r) => s + r.target, 0)
   const box = allowedBox(sheet, storey)
   const ov = overlapsOf(sheet, storey)
   const n = storeyCountOf(sheet)
@@ -175,7 +175,7 @@ export function report(sheet: Sheet, storey: number): Report {
   }
 }
 
-function walkRead(walk: Walk, p: Room[], storey: number): NonNullable<Report['walk']> {
+function walkRead(walk: Walk, p: Zone[], storey: number): NonNullable<Report['walk']> {
   const entry = p.find((r) => r.kind === 'entry-foyer')
   const diw = p.find((r) => r.kind === 'diwaniya')
   return {

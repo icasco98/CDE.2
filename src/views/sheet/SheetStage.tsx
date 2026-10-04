@@ -54,7 +54,7 @@ import {
   outsideBuildable,
   overlapsOf,
   place,
-  placedRooms,
+  placedZones,
   pocketsOf,
   pushOthers,
   polyArea,
@@ -90,19 +90,19 @@ import {
   type Pocket,
   type Point,
   type Result,
-  type Room,
+  type Zone,
   type Settings,
   type Sheet,
   type Side4,
 } from '../../sheet'
-import { EXTERIOR, type EdgeKind, type Result as ModelResult } from '../../model'
+import { EXTERIOR, type ConnectionKind, type Result as ModelResult } from '../../model'
 import { noStair } from '../../graph/stairs'
 import { onlyThrough } from '../../graph/apart'
 import { session } from '../../app/session'
 import { useProject } from '../../app/useProject'
 import {
   addToProgram,
-  adoptRooms,
+  adoptZones,
   followSheetStoreys,
   createAside,
   followProject,
@@ -121,10 +121,10 @@ import {
   EmptyNote,
   PocketBar,
   PocketMenu,
-  RoomMenu,
+  ZoneMenu,
   type DoorChoice,
   type PocketChoice,
-  type RoomChoice,
+  type ZoneChoice,
 } from './menus'
 import { OpeningsTools } from './OpeningsTools'
 import { checkRead, linesFrom, pairKey } from './check'
@@ -142,7 +142,7 @@ import {
   beginNew,
   beginResize,
   beginTurn,
-  beginWall,
+  beginEdge,
   closesPolygon,
   dragTo,
   drawnAt,
@@ -196,17 +196,23 @@ declare global {
 type Doc = { sheet: Sheet; history: ReturnType<typeof newHistory> }
 
 // What the sheet sets down while following the project lives as long as the project's undo, which
-// outlasts this screen: a room deleted in the bubbles and undone there comes back where it stood.
+// outlasts this screen: a zone deleted in the bubbles and undone there comes back where it stood.
 const aside = createAside()
 
 /** The sheet as the project in the session asks for it, read afresh. */
 const followSession = (sheet: Sheet): Sheet => {
   const project = session.getState()
-  return followProject(sheet, programOf(project.rooms), plotOf(project.plot), project.edges, aside)
+  return followProject(
+    sheet,
+    programOf(project.zones),
+    plotOf(project.plot),
+    project.connections,
+    aside,
+  )
 }
 
 type Menu =
-  | { kind: 'room'; room: Room; corner: Point | null; at: { x: number; y: number } }
+  | { kind: 'zone'; zone: Zone; corner: Point | null; at: { x: number; y: number } }
   | { kind: 'door'; door: DoorRef; at: { x: number; y: number } }
   | { kind: 'pocket'; pocket: Pocket; at: { x: number; y: number } }
   | { kind: 'note'; note: string; at: { x: number; y: number } }
@@ -227,7 +233,7 @@ type TypeIn = {
   apply: (value: number) => Change | null
 }
 
-/** Zoning edits rooms, Openings edits doors; the tab decides which, and Esc never changes it. */
+/** Zoning edits zones, Openings edits doors; the tab decides which, and Esc never changes it. */
 export type SheetMode = 'zoning' | 'openings'
 
 type SheetStageProps = {
@@ -242,14 +248,14 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
   const [storey, showStorey] = useState(0)
   const STOREY = storey
   const project = useProject()
-  // The brief is the project's: its rooms are the program and its plot is the ground, and the sheet
+  // The brief is the project's: its zones are the program and its plot is the ground, and the sheet
   // is read from the two on the way in rather than carrying a program of its own.
-  const program = useMemo(() => programOf(project.rooms), [project.rooms])
+  const program = useMemo(() => programOf(project.zones), [project.zones])
   const plot = useMemo(() => plotOf(project.plot), [project.plot])
   const [doc, setDoc] = useState<Doc>(() => ({
     // Nothing saved yet: the plot opens empty with the project's program waiting, and a project
     // with no program opens on an empty plot with nothing to place.
-    sheet: followSession(localSheet(project.edges) ?? sheetOf([])),
+    sheet: followSession(localSheet(project.connections) ?? sheetOf([])),
     history: newHistory(),
   }))
   const [memory, setMemory] = useState<Memory>(() => localMemory())
@@ -280,7 +286,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
   const [lit, setLit] = useState<string | null>(null)
   const [drawMenuFor, setDrawMenuFor] = useState<string | null>(null)
   const [specState, setSpecState] = useState('')
-  // Show connections: the project's edges drawn on the sheet, off until asked for.
+  // Show connections: the project's connections drawn on the sheet, off until asked for.
   const [checking, setChecking] = useState(false)
   const [offer, setOffer] = useState<Offer | null>(null)
   const links = useRef(createLinks(session))
@@ -316,7 +322,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
     }
     let live = true
     void Promise.all([
-      storedSheet(store, () => session.getState().edges),
+      storedSheet(store, () => session.getState().connections),
       storedMemory(store),
       storedSettings(store),
       storedSpec(store),
@@ -326,7 +332,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
       if (!touched.current && (stored || saved)) {
         const held = stored ?? docRef.current.sheet
         const withSettings = saved
-          ? sheetOf(held.rooms, { ...held.settings, ...saved }, held.storeyCount, held.plot)
+          ? sheetOf(held.zones, { ...held.settings, ...saved }, held.storeyCount, held.plot)
           : held
         docRef.current = {
           // A sheet out of the link's store is reconciled like any other: the project's brief wins.
@@ -347,11 +353,11 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
   // leaves the sheet, set aside for its undo.
   useEffect(() => {
     const held = docRef.current.sheet
-    const next = followProject(held, program, plot, project.edges, aside)
+    const next = followProject(held, program, plot, project.connections, aside)
     if (next === held) return
     docRef.current = { ...docRef.current, sheet: next }
     setDoc(docRef.current)
-  }, [program, plot, project.edges])
+  }, [program, plot, project.connections])
 
   useEffect(() => {
     if (!keeping) return
@@ -383,10 +389,10 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
 
   // Everything read from the sheet is read once per change, so a drag pays for none of it.
   const view: SheetRead = useMemo(() => {
-    const rooms = placedRooms(sheet, STOREY)
+    const zones = placedZones(sheet, STOREY)
     const read = report(sheet, STOREY)
     const labels = new Map(
-      rooms.map((r) => {
+      zones.map((r) => {
         const area = r2(areaOf(r))
         const short = area < r.target - 0.05
         const text =
@@ -399,7 +405,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
       }),
     )
     return {
-      rooms,
+      zones,
       labels,
       overlaps: overlapsOf(sheet, STOREY).map((o) => ({
         ids: [o.a.id, o.b.id] as [string, string],
@@ -420,21 +426,24 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
     }
   }, [sheet, settings, STOREY, openingsOn])
 
-  const selected = view.rooms.filter((r) => selection.includes(r.id))
+  const selected = view.zones.filter((r) => selection.includes(r.id))
 
   // Check reads the project's graph against the sheet: once per change, and the lines once per hover.
-  const roomEdges = useMemo(
-    () => project.edges.filter((edge) => edge.a !== EXTERIOR && edge.b !== EXTERIOR),
-    [project.edges],
+  const zoneConnections = useMemo(
+    () =>
+      project.connections.filter(
+        (connection) => connection.a !== EXTERIOR && connection.b !== EXTERIOR,
+      ),
+    [project.connections],
   )
   const through = useMemo(
     () =>
       new Set(
         project.apart.flatMap((pair) =>
-          onlyThrough(pair, project.edges) ? [pairKey(pair.a, pair.b)] : [],
+          onlyThrough(pair, project.connections) ? [pairKey(pair.a, pair.b)] : [],
         ),
       ),
-    [project.apart, project.edges],
+    [project.apart, project.connections],
   )
   const checked = useMemo(
     () =>
@@ -442,11 +451,11 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
         ? checkRead(
             sheet,
             STOREY,
-            { edges: roomEdges, apart: project.apart, through },
+            { connections: zoneConnections, apart: project.apart, through },
             openingsOn ? 'openings' : 'zoning',
           )
         : null,
-    [checking, sheet, STOREY, roomEdges, project.apart, through, openingsOn],
+    [checking, sheet, STOREY, zoneConnections, project.apart, through, openingsOn],
   )
   const focusLines = useMemo(() => {
     if (!checked) return null
@@ -457,20 +466,20 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
       for (const to of reach.placed) lines.push({ from: id, to, bold })
       for (const to of reach.tray) tray.push({ from: id, to })
     }
-    if (hover && view.rooms.some((r) => r.id === hover)) from(hover, false)
-    for (const id of selection) if (view.rooms.some((r) => r.id === id)) from(id, true)
+    if (hover && view.zones.some((r) => r.id === hover)) from(hover, false)
+    for (const id of selection) if (view.zones.some((r) => r.id === id)) from(id, true)
     return { lines, tray }
-  }, [checked, hover, selection, sheet, STOREY, view.rooms])
+  }, [checked, hover, selection, sheet, STOREY, view.zones])
   const trayLinked = useMemo(() => new Set(focusLines?.tray.map((line) => line.to)), [focusLines])
   const sheetCheck: SheetCheck | null =
     checked && focusLines
-      ? { lines: focusLines.lines, apartDoors: checked.apartDoors, apartRooms: checked.apartRooms }
+      ? { lines: focusLines.lines, apartDoors: checked.apartDoors, apartZones: checked.apartZones }
       : null
   const nameOf = (id: string): string =>
     id === EXTERIOR
       ? 'Outside'
-      : (project.rooms.find((room) => room.id === id)?.name ??
-        sheet.rooms.find((room) => room.id === id)?.name ??
+      : (project.zones.find((zone) => zone.id === id)?.name ??
+        sheet.zones.find((zone) => zone.id === id)?.name ??
         id)
 
   /** A refusal from the project's own actions is read where the sheet's refusals are read. */
@@ -497,21 +506,21 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
   }
 
   /**
-   * A room the sheet made — a court, a corridor, a copy, a piece a cut split off — joins the program
-   * as the step that made it, and a room it moved to another storey moves in the program too, so the
-   * program, the bubbles and the sheet show the same rooms on the same storeys.
+   * A zone the sheet made — a court, a corridor, a copy, a piece a cut split off — joins the program
+   * as the step that made it, and a zone it moved to another storey moves in the program too, so the
+   * program, the bubbles and the sheet show the same zones on the same storeys.
    */
   const adopt = (before: Sheet, sheet: Sheet, depth: number): void => {
-    const made = adoptRooms(session, sheet.rooms)
+    const made = adoptZones(session, sheet.zones)
     if (!made.ok) {
       refuse(made)
       return
     }
     if (made.value.length) {
-      const rooms = session.getState().rooms.filter((room) => made.value.includes(room.id))
-      links.current.rooms(
+      const zones = session.getState().zones.filter((zone) => made.value.includes(zone.id))
+      links.current.zones(
         depth,
-        rooms.map(({ id, type, name, targetArea, storey }) => ({
+        zones.map(({ id, type, name, targetArea, storey }) => ({
           id,
           type,
           name,
@@ -535,7 +544,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
     const to = Math.max(0, Math.min(storeyCountOf(docRef.current.sheet) - 1, Math.floor(k)))
     showStorey(to)
     setSelection((was) =>
-      was.filter((id) => placedRooms(docRef.current.sheet, to).some((r) => r.id === id)),
+      was.filter((id) => placedZones(docRef.current.sheet, to).some((r) => r.id === id)),
     )
     setMenu(null)
     setPocketPicked(null)
@@ -560,7 +569,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
     const back = undo(docRef.current.sheet, { history: docRef.current.history })
     if (!back.result.ok) return false
     links.current.undone(depth)
-    // A step taken back may hold a room or a door the project has since let go of.
+    // A step taken back may hold a zone or a door the project has since let go of.
     docRef.current = { sheet: followSession(back.sheet), history: back.history }
     setDoc(docRef.current)
     return true
@@ -630,7 +639,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
   }
 
   const clearPlan = () => {
-    if (apply(sendBack(docRef.current.sheet, { ids: docRef.current.sheet.rooms.map((r) => r.id) })))
+    if (apply(sendBack(docRef.current.sheet, { ids: docRef.current.sheet.zones.map((r) => r.id) })))
       setSelection([])
   }
 
@@ -669,14 +678,14 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
     setDoorSel(null)
   }
 
-  /** A click on the sheet in Openings: a door nearby is taken, else the armed type lands on a wall. */
+  /** A click on the sheet in Openings: a door nearby is taken, else the armed type lands on an edge. */
   const doorClick = (event: ReactPointerEvent) => {
     if (event.button !== 0) return
     event.preventDefault()
     const [x, y] = pointAt(event.clientX, event.clientY)
     const near = doorNear(docRef.current.sheet, STOREY, x, y, 0.45)
     if (near) {
-      setDoorSel({ room: near.room, id: near.id })
+      setDoorSel({ zone: near.zone, id: near.id })
       setMenu(null)
       return
     }
@@ -687,17 +696,17 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
     const before = docRef.current.sheet
     const pair = pairAt(before, x, y, armed)
     if (!pair) {
-      setFlash(doorAt(x, y, doorWidth, before, STOREY)?.why ?? 'No wall there.')
+      setFlash(doorAt(x, y, doorWidth, before, STOREY)?.why ?? 'No edge there.')
       setDoorSel(null)
       return
     }
     if (armed === 'open' && pair[1] === OUTSIDE) {
-      setFlash('Only a wall shared with a neighbour can be opened.')
+      setFlash('Only an edge shared with a neighbour can be opened.')
       return
     }
-    const edge = edgeFor(pair[0], pair[1])
-    // A door is the drawing of an edge: between two rooms with none it asks before it is placed.
-    if (!edge) {
+    const connection = connectionFor(pair[0], pair[1])
+    // A door is the drawing of a connection: between two zones with none it asks before it is placed.
+    if (!connection) {
       setOffer({
         x,
         y,
@@ -714,40 +723,43 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
       type: armed,
       width: doorWidth,
       storey: STOREY,
-      edge,
+      connection,
       to: pair[1],
     })
     if (apply(change)) setDoorSel(newDoors(before, change.sheet).at(-1) ?? null)
   }
 
-  /** The project's edge between two ends, the one on this storey first: the edge a door would draw. */
-  const edgeFor = (a: string, b: string): string | null => {
+  /** The project's connection between two ends, the one on this storey first: the connection a door would draw. */
+  const connectionFor = (a: string, b: string): string | null => {
     const between = session
       .getState()
-      .edges.filter((edge) => (edge.a === a && edge.b === b) || (edge.a === b && edge.b === a))
-    return (between.find((edge) => edge.storey === STOREY) ?? between[0])?.id ?? null
+      .connections.filter(
+        (connection) =>
+          (connection.a === a && connection.b === b) || (connection.a === b && connection.b === a),
+      )
+    return (between.find((connection) => connection.storey === STOREY) ?? between[0])?.id ?? null
   }
 
   /**
-   * The pair a door put here would draw, read once as it is placed: the room whose wall it is on and
-   * the room across, or the outside. Reading the wall only asks which edge is meant; the door then
-   * draws that edge or asks for it. Nothing for a wall no door may take.
+   * The pair a door put here would draw, read once as it is placed: the zone whose edge it is on and
+   * the zone across, or the outside. Reading the edge only asks which connection is meant; the door then
+   * draws that connection or asks for it. Nothing for an edge no door may take.
    */
   const pairAt = (sheet: Sheet, x: number, y: number, type: DoorType): [string, string] | null => {
     const hit = doorAt(x, y, type === 'open' ? 0.6 : doorWidth, sheet, STOREY)
     if (!hit || (hit.why && type !== 'open')) return null
-    const rooms = session.getState().rooms
-    const known = (id: string) => id === OUTSIDE || rooms.some((room) => room.id === id)
-    const across = doorAcross(hit.room, hit.pl, sheet, STOREY)?.id ?? OUTSIDE
-    return known(hit.room.id) && known(across) ? [hit.room.id, across] : null
+    const zones = session.getState().zones
+    const known = (id: string) => id === OUTSIDE || zones.some((zone) => zone.id === id)
+    const across = doorAcross(hit.zone, hit.pl, sheet, STOREY)?.id ?? OUTSIDE
+    return known(hit.zone.id) && known(across) ? [hit.zone.id, across] : null
   }
 
-  /** Yes to the door's question: the edge through the project's connect, and the door that draws it. */
+  /** Yes to the door's question: the connection through the project's connect, and the door that draws it. */
   const acceptOffer = () => {
     const held = offer
     setOffer(null)
     if (!held) return
-    const kind: EdgeKind = held.type === 'opening' || held.type === 'open' ? 'open' : 'door'
+    const kind: ConnectionKind = held.type === 'opening' || held.type === 'open' ? 'open' : 'door'
     const made = session.actions.connect({ a: held.pair[0], b: held.pair[1], kind })
     if (!made.ok) {
       refuse(made)
@@ -760,15 +772,15 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
       type: held.type,
       width: held.width,
       storey: STOREY,
-      edge: made.value,
+      connection: made.value,
       to: held.pair[1],
     })
     if (!apply(change)) {
       session.actions.disconnect(made.value)
       return
     }
-    links.current.edge(docRef.current.history.past.length, {
-      edge: made.value,
+    links.current.connection(docRef.current.history.past.length, {
+      connection: made.value,
       a: held.pair[0],
       b: held.pair[1],
       kind,
@@ -782,15 +794,15 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
     const held = doorSel
     const change = make(held)
     if (!apply(change)) return
-    const owner = change.sheet.rooms.find((r) => doorsOf(r).some((d) => d.id === held.id))
-    setDoorSel(owner ? { room: owner.id, id: held.id } : null)
+    const owner = change.sheet.zones.find((r) => doorsOf(r).some((d) => d.id === held.id))
+    setDoorSel(owner ? { zone: owner.id, id: held.id } : null)
   }
 
   const doorChoice = (choice: DoorChoice) => {
     const ref = menu?.kind === 'door' ? menu.door : doorSel
     setMenu(null)
     if (!ref) return
-    const at = { room: ref.room, door: ref.id }
+    const at = { zone: ref.zone, door: ref.id }
     if (choice.kind === 'flip') apply(flipDoor(docRef.current.sheet, at))
     if (choice.kind === 'hinge') apply(hingeDoor(docRef.current.sheet, at))
     if (choice.kind === 'remove' && apply(removeDoor(docRef.current.sheet, at))) setDoorSel(null)
@@ -836,8 +848,8 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
           apply(
             place(docRef.current.sheet, {
               id: held.id,
-              x: held.room.x,
-              y: held.room.y,
+              x: held.zone.x,
+              y: held.zone.y,
               storey: STOREY,
             }),
           )
@@ -880,8 +892,8 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
       if (!held) return
       const change = doorDrop(held, docRef.current.sheet, STOREY)
       if (change && apply(change)) {
-        const owner = change.sheet.rooms.find((r) => doorsOf(r).some((d) => d.id === held.id))
-        setDoorSel(owner ? { room: owner.id, id: held.id } : null)
+        const owner = change.sheet.zones.find((r) => doorsOf(r).some((d) => d.id === held.id))
+        setDoorSel(owner ? { zone: owner.id, id: held.id } : null)
       }
     }
     window.addEventListener('pointermove', onMove)
@@ -950,14 +962,14 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
     if (held.reshaping) setDrawing(startDrawing(held.id, held.shape, true))
   }
 
-  const startReshape = (room: Room) => {
-    if (!room.placed || room.fixed || room.locked || isOpen(room)) return
+  const startReshape = (zone: Zone) => {
+    if (!zone.placed || zone.fixed || zone.locked || isOpen(zone)) return
     setMeasure(null)
     setMenu(null)
     setPocketPicked(null)
-    setSelection([room.id])
-    setReshaping({ id: room.id, before: docRef.current.sheet, shape: 'rect' })
-    setDrawing(startDrawing(room.id, 'rect', true))
+    setSelection([zone.id])
+    setReshaping({ id: zone.id, before: docRef.current.sheet, shape: 'rect' })
+    setDrawing(startDrawing(zone.id, 'rect', true))
   }
 
   const doneReshape = () => {
@@ -978,7 +990,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
   // ---------- what the sheet reports ----------
 
   const on = {
-    onRoomDown: (room: Room, event: ReactPointerEvent) => {
+    onZoneDown: (zone: Zone, event: ReactPointerEvent) => {
       if (event.button !== 0) return
       if (drawing) {
         event.stopPropagation()
@@ -998,44 +1010,44 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
       event.preventDefault()
       event.stopPropagation()
       if (pocketPicked !== null && view.pockets[pocketPicked]) {
-        givePocketTo(view.pockets[pocketPicked]!, room.id)
+        givePocketTo(view.pockets[pocketPicked]!, zone.id)
         return
       }
       setPocketPicked(null)
       if (event.shiftKey) {
         setSelection((was) =>
-          was.includes(room.id) ? was.filter((id) => id !== room.id) : [...was, room.id],
+          was.includes(zone.id) ? was.filter((id) => id !== zone.id) : [...was, zone.id],
         )
         return
       }
-      const kin = room.group ? view.rooms.filter((o) => o.group === room.group) : [room]
-      const ids = selection.includes(room.id) ? selection : kin.map((o) => o.id)
+      const kin = zone.group ? view.zones.filter((o) => o.group === zone.group) : [zone]
+      const ids = selection.includes(zone.id) ? selection : kin.map((o) => o.id)
       setSelection(ids)
-      if (room.locked || room.fixed) return
-      hold(beginMove(ids, room.id, pointAt(event.clientX, event.clientY)))
+      if (zone.locked || zone.fixed) return
+      hold(beginMove(ids, zone.id, pointAt(event.clientX, event.clientY)))
     },
-    onRoomMenu: (room: Room, event: ReactMouseEvent) => {
+    onZoneMenu: (zone: Zone, event: ReactMouseEvent) => {
       event.preventDefault()
       event.stopPropagation()
-      if (drawing || room.fixed || openingsOn) return
-      if (!selection.includes(room.id)) setSelection([room.id])
+      if (drawing || zone.fixed || openingsOn) return
+      if (!selection.includes(zone.id)) setSelection([zone.id])
       const [x, y] = pointAt(event.clientX, event.clientY)
       let corner: { at: Point; d: number } | null = null
-      for (const c of worldCorners(room)) {
+      for (const c of worldCorners(zone)) {
         const d = Math.hypot(c[0] - x, c[1] - y)
         if (d < 0.8 && (!corner || d < corner.d)) corner = { at: c, d }
       }
       setPocketPicked(null)
       setMenu({
-        kind: 'room',
-        room,
+        kind: 'zone',
+        zone,
         corner: corner ? corner.at : null,
         at: inBox(event.clientX, event.clientY),
       })
     },
-    onWallDown: (
-      room: Room,
-      wall: number,
+    onEdgeDown: (
+      zone: Zone,
+      edge: number,
       side: Side4 | null,
       shared: string | null,
       event: ReactPointerEvent,
@@ -1045,22 +1057,22 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
       event.stopPropagation()
       const at = pointAt(event.clientX, event.clientY)
       hold(
-        side ? beginResize(sheet, room.id, side, shared, at) : beginWall(sheet, room.id, wall, at),
+        side ? beginResize(sheet, zone.id, side, shared, at) : beginEdge(sheet, zone.id, edge, at),
       )
     },
-    onCornerDown: (room: Room, index: number, loop: Point[], event: ReactPointerEvent) => {
+    onCornerDown: (zone: Zone, index: number, loop: Point[], event: ReactPointerEvent) => {
       if (event.button !== 0 || shiftPick(event)) return
       event.preventDefault()
       event.stopPropagation()
-      hold(beginCorner(room.id, index, loop, pointAt(event.clientX, event.clientY)))
+      hold(beginCorner(zone.id, index, loop, pointAt(event.clientX, event.clientY)))
     },
-    onTurnDown: (room: Room, event: ReactPointerEvent) => {
+    onTurnDown: (zone: Zone, event: ReactPointerEvent) => {
       if (event.button !== 0 || shiftPick(event)) return
       event.preventDefault()
       event.stopPropagation()
       const at = pointAt(event.clientX, event.clientY)
-      if (pivot && pivot.key === keyOf([room.id])) hold(beginGroupTurn([room.id], pivot.at, at))
-      else hold(beginTurn(sheet, room.id))
+      if (pivot && pivot.key === keyOf([zone.id])) hold(beginGroupTurn([zone.id], pivot.at, at))
+      else hold(beginTurn(sheet, zone.id))
     },
     onGroupTurnDown: (event: ReactPointerEvent) => {
       if (event.button !== 0 || shiftPick(event)) return
@@ -1071,11 +1083,11 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
       const about = pivot && pivot.key === keyOf(ids) ? pivot.at : middleOf(sheet, STOREY, ids)
       hold(beginGroupTurn(ids, about, at))
     },
-    onLabelDown: (room: Room, event: ReactPointerEvent) => {
+    onLabelDown: (zone: Zone, event: ReactPointerEvent) => {
       if (event.button !== 0 || shiftPick(event)) return
       event.preventDefault()
       event.stopPropagation()
-      hold(beginLabel(room.id, pointAt(event.clientX, event.clientY)))
+      hold(beginLabel(zone.id, pointAt(event.clientX, event.clientY)))
     },
     onBackgroundDown: (event: ReactPointerEvent) => {
       if (event.button === 1 || (event.button === 0 && spaceHeld.current)) {
@@ -1124,7 +1136,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
       const target = event.target
       if (
         target instanceof Element &&
-        (target.closest('.room') ||
+        (target.closest('.zone') ||
           target.closest('.handle') ||
           target.closest('.turn') ||
           target.closest('[data-pocket]'))
@@ -1142,11 +1154,11 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
         setMenu({
           kind: 'note',
           note: outsideBuildable(
-            { x: at[0], y: at[1], w: 0, h: 0 } as unknown as Room,
+            { x: at[0], y: at[1], w: 0, h: 0 } as unknown as Zone,
             sheet.plot.build,
           )
             ? 'Outside the line the ground floor may reach.'
-            : 'No room walls this space yet, so there is nothing to give it to.',
+            : 'No zone encloses this space yet, so there is nothing to give it to.',
           at: where,
         })
     },
@@ -1179,26 +1191,26 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
       setSelection([])
       setMenu({ kind: 'pocket', pocket, at: inBox(event.clientX, event.clientY) })
     },
-    onTypeSize: (room: Room, what: 'w' | 'h' | 'angle' | 'area', event: ReactMouseEvent) => {
+    onTypeSize: (zone: Zone, what: 'w' | 'h' | 'angle' | 'area', event: ReactMouseEvent) => {
       event.stopPropagation()
       if (event.shiftKey) return
       const value =
         what === 'angle'
-          ? String(Math.round(room.angle || 0))
+          ? String(Math.round(zone.angle || 0))
           : what === 'area'
-            ? fmt(r2(areaOf(room)))
-            : fmt(room[what])
+            ? fmt(r2(areaOf(zone)))
+            : fmt(zone[what])
       const where = inBox(event.clientX, event.clientY)
       setTypeIn({
         at: { x: where.x - 32, y: where.y - 12 },
         value,
         apply: (typed) =>
           what === 'angle'
-            ? turn(docRef.current.sheet, { ids: [room.id], storey: STOREY, angle: typed })
+            ? turn(docRef.current.sheet, { ids: [zone.id], storey: STOREY, angle: typed })
             : what === 'area'
-              ? setArea(docRef.current.sheet, { id: room.id, area: typed, storey: STOREY })
+              ? setArea(docRef.current.sheet, { id: zone.id, area: typed, storey: STOREY })
               : setSize(docRef.current.sheet, {
-                  id: room.id,
+                  id: zone.id,
                   [what]: typed,
                   storey: STOREY,
                 }),
@@ -1220,8 +1232,8 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
         const [x, y] = pointAt(event.clientX, event.clientY)
         setDoorHover(armed && armed !== 'open' ? doorAt(x, y, doorWidth, sheet, STOREY) : null)
         // The connections' lines follow the hand in this tab too.
-        const over = event.target instanceof Element ? event.target.closest('[data-room]') : null
-        const id = over?.getAttribute('data-room') ?? null
+        const over = event.target instanceof Element ? event.target.closest('[data-zone]') : null
+        const id = over?.getAttribute('data-zone') ?? null
         if (checking && hover !== id) setHover(id)
         return
       }
@@ -1241,8 +1253,8 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
       }
       if (drag) return
       const target = event.target
-      const over = target instanceof Element ? target.closest('[data-room]') : null
-      const id = over instanceof Element ? over.getAttribute('data-room') : null
+      const over = target instanceof Element ? target.closest('[data-zone]') : null
+      const id = over instanceof Element ? over.getAttribute('data-zone') : null
       const where = inBox(event.clientX, event.clientY)
       if (hover !== id) setHover(id)
       if (!id) {
@@ -1266,13 +1278,13 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
     },
   }
 
-  /** Shift over a handle, a knob or a label picks the room under the pointer instead of grabbing. */
+  /** Shift over a handle, a knob or a label picks the zone under the pointer instead of grabbing. */
   const shiftPick = (event: ReactPointerEvent) => {
     if (!event.shiftKey || event.button !== 0) return false
     event.preventDefault()
     event.stopPropagation()
     const [x, y] = pointAt(event.clientX, event.clientY)
-    const under = [...view.rooms]
+    const under = [...view.zones]
       .reverse()
       .find((o) => !o.fixed && worldPieces(o).some((wp) => insideConvex(wp, x, y)))
     if (under)
@@ -1328,13 +1340,13 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
     setMeasure(measureClick(measure, snap))
   }
 
-  const givePocketTo = (pocket: Pocket, room?: string) => {
+  const givePocketTo = (pocket: Pocket, zone?: string) => {
     const index = pocketsOf(sheet, STOREY).findIndex(
       (k) =>
         Math.abs(k.area - pocket.area) < 1e-6 && Math.abs(k.centre[0] - pocket.centre[0]) < 1e-6,
     )
     if (index < 0) return
-    apply(givePocket(sheet, { pocket: index, room, storey: STOREY }))
+    apply(givePocket(sheet, { pocket: index, zone, storey: STOREY }))
     setPocketPicked(null)
     setMenu(null)
   }
@@ -1346,7 +1358,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
     )
     if (index < 0) return
     if (choice.kind === 'give')
-      apply(givePocket(sheet, { pocket: index, room: choice.room, storey: STOREY }))
+      apply(givePocket(sheet, { pocket: index, zone: choice.zone, storey: STOREY }))
     if (choice.kind === 'court') apply(makeCourt(sheet, { pocket: index, storey: STOREY }))
     if (choice.kind === 'corridor') apply(makeCorridor(sheet, { pocket: index, storey: STOREY }))
     setMenu(null)
@@ -1357,7 +1369,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
 
   const keyOf = (ids: string[]) => [...ids].sort().join(',')
 
-  const roomChoice = (choice: RoomChoice) => {
+  const zoneChoice = (choice: ZoneChoice) => {
     const ids = selected.filter((r) => !r.fixed).map((r) => r.id)
     setMenu(null)
     if (!ids.length) return
@@ -1391,8 +1403,8 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
         setSelection([choice.survivor])
         return
       case 'reshape': {
-        const room = selected[0]
-        if (room) startReshape(room)
+        const zone = selected[0]
+        if (zone) startReshape(zone)
         return
       }
       case 'give':
@@ -1511,23 +1523,23 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
           onMode(command.to === 'other' ? (openingsOn ? 'zoning' : 'openings') : command.to)
           return
         case 'door-swing':
-          onDoor((ref) => flipDoor(docRef.current.sheet, { room: ref.room, door: ref.id }))
+          onDoor((ref) => flipDoor(docRef.current.sheet, { zone: ref.zone, door: ref.id }))
           return
         case 'door-hinge':
-          onDoor((ref) => hingeDoor(docRef.current.sheet, { room: ref.room, door: ref.id }))
+          onDoor((ref) => hingeDoor(docRef.current.sheet, { zone: ref.zone, door: ref.id }))
           return
         case 'door-hinge-or-swing':
           event.preventDefault()
           if (doorInHand?.hinges)
-            onDoor((ref) => hingeDoor(docRef.current.sheet, { room: ref.room, door: ref.id }))
+            onDoor((ref) => hingeDoor(docRef.current.sheet, { zone: ref.zone, door: ref.id }))
           else if (doorInHand?.swings)
-            onDoor((ref) => flipDoor(docRef.current.sheet, { room: ref.room, door: ref.id }))
+            onDoor((ref) => flipDoor(docRef.current.sheet, { zone: ref.zone, door: ref.id }))
           return
         case 'door-slide':
           event.preventDefault()
           onDoor((ref) =>
             slideDoor(docRef.current.sheet, {
-              room: ref.room,
+              zone: ref.zone,
               door: ref.id,
               step: command.step,
               storey: STOREY,
@@ -1536,7 +1548,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
           return
         case 'door-remove':
           event.preventDefault()
-          onDoor((ref) => removeDoor(docRef.current.sheet, { room: ref.room, door: ref.id }))
+          onDoor((ref) => removeDoor(docRef.current.sheet, { zone: ref.zone, door: ref.id }))
           return
         case 'escape':
           // Esc never leaves the tab: it drops the door in hand, then the type armed
@@ -1608,7 +1620,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
   // ---------- the sentence ----------
 
   // What the project's graph warns of that no drawing on the sheet can answer.
-  const briefWarnings = noStair(project.rooms, project.storeys).map((check) =>
+  const briefWarnings = noStair(project.zones, project.storeys).map((check) =>
     check.sentence.replace(/\.$/, ''),
   )
 
@@ -1624,8 +1636,8 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
         })
       : drawing
         ? drawingSentence({
-            name: sheet.rooms.find((r) => r.id === drawing.id)?.name ?? '',
-            target: sheet.rooms.find((r) => r.id === drawing.id)?.target ?? 0,
+            name: sheet.zones.find((r) => r.id === drawing.id)?.name ?? '',
+            target: sheet.zones.find((r) => r.id === drawing.id)?.target ?? 0,
             shape: drawing.shape,
             area: (() => {
               const poly = shapePolygon(drawing)
@@ -1633,9 +1645,9 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
             })(),
             snapKind: drawing.snap?.kind ?? null,
             reshaping: drawing.reshaping,
-            roomArea: (() => {
-              const room = view.rooms.find((r) => r.id === drawing.id)
-              return room ? r2(areaOf(room)) : 0
+            zoneArea: (() => {
+              const zone = view.zones.find((r) => r.id === drawing.id)
+              return zone ? r2(areaOf(zone)) : 0
             })(),
           })
         : sentenceOf(view.read, settings, briefWarnings)
@@ -1650,16 +1662,16 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
     })
   }
 
-  const tagRoom = tag ? view.rooms.find((r) => r.id === tag.id) : null
+  const tagZone = tag ? view.zones.find((r) => r.id === tag.id) : null
 
   const under = (() => {
     const ids = selected.map((r) => r.id)
-    const rooms = overlapsOf(sheet, STOREY)
+    const zones = overlapsOf(sheet, STOREY)
       .filter((o) => ids.includes(o.a.id) !== ids.includes(o.b.id))
       .map((o) => (ids.includes(o.a.id) ? o.b : o.a))
     return {
-      names: [...new Set(rooms.map((r) => r.name))],
-      can: rooms.some((r) => !r.locked && !r.fixed),
+      names: [...new Set(zones.map((r) => r.name))],
+      can: zones.some((r) => !r.locked && !r.fixed),
     }
   })()
 
@@ -1670,21 +1682,21 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
       <p className="head-line">
         {openingsOn ? (
           <>
-            Openings. Rooms fade to outlines and every click is about a wall or a door. A door is
-            the drawing of a connection: arm a type in the bar and click a wall, and it lands on the
-            connection between the two rooms, or between a room and the outside, asking first when
-            they have none. Click near a door to select it and drag it to slide it along its wall. A
-            door stands on the wall its two rooms share; move them apart and it is not drawn until
-            they meet again. Open wall takes out the whole stretch two rooms share. Click a room in
-            the list to light its walls.
+            Openings. Zones fade to outlines and every click is about an edge or a door. A door is
+            the drawing of a connection: arm a type in the bar and click an edge, and it lands on
+            the connection between the two zones, or between a zone and the outside, asking first
+            when they have none. Click near a door to select it and drag it to slide it along its
+            edge. A door stands on the edge its two zones share; move them apart and it is not drawn
+            until they meet again. Open edge takes out the whole stretch two zones share. Click a
+            zone in the list to light its edges.
           </>
         ) : (
           <>
-            Zoning by hand on the project&rsquo;s plot, with the project&rsquo;s program: the rooms
-            here are the rooms of Requirements and the bubbles, no more and no fewer. Drag a room
-            from the program and drop it where you want it, or draw it; R turns it; a room dropped
+            Zoning by hand on the project&rsquo;s plot, with the project&rsquo;s program: the zones
+            here are the zones of Requirements and the bubbles, no more and no fewer. Drag a zone
+            from the program and drop it where you want it, or draw it; R turns it; a zone dropped
             on another waits, tinted, or pushes the lower one; right-click it to settle the overlap,
-            or right-click an empty space walled in by rooms to give it away, make it a court, or
+            or right-click an empty space enclosed by zones to give it away, make it a court, or
             make it a corridor, which joins the program.
           </>
         )}
@@ -1712,7 +1724,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
             type="button"
             className={checking ? 'on' : ''}
             aria-pressed={checking}
-            title="Show the connections: lines from the room under the hand and the room selected"
+            title="Show the connections: lines from the zone under the hand and the zone selected"
             onClick={() => setChecking((was) => !was)}
           >
             Show connections
@@ -1773,7 +1785,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
             onWider={(by) =>
               onDoor((ref) =>
                 setDoorWidth(docRef.current.sheet, {
-                  room: ref.room,
+                  zone: ref.zone,
                   door: ref.id,
                   w: (doorInHand?.width ?? DOOR.door.w) + by,
                   storey: STOREY,
@@ -1783,12 +1795,12 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
             onRemove={() => doorChoice({ kind: 'remove' })}
           />
         )}
-        <span className="grp room-tools">
+        <span className="grp zone-tools">
           <button
             type="button"
             title="R"
             disabled={!selected.length}
-            onClick={() => roomChoice({ kind: 'quarter' })}
+            onClick={() => zoneChoice({ kind: 'quarter' })}
           >
             Rotate 90°
           </button>
@@ -1802,7 +1814,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
           <button
             type="button"
             disabled={selected.length !== 1}
-            onClick={() => roomChoice({ kind: 'restore' })}
+            onClick={() => zoneChoice({ kind: 'restore' })}
           >
             Restore shape
           </button>
@@ -1810,7 +1822,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
             type="button"
             disabled={selected.length < 2 && !selected.some((r) => r.group)}
             onClick={() =>
-              roomChoice(selected.some((r) => r.group) ? { kind: 'ungroup' } : { kind: 'group' })
+              zoneChoice(selected.some((r) => r.group) ? { kind: 'ungroup' } : { kind: 'group' })
             }
           >
             Group
@@ -1818,7 +1830,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
           <button
             type="button"
             disabled={!selected.length}
-            onClick={() => roomChoice({ kind: 'lock', on: !selected.every((r) => r.locked) })}
+            onClick={() => zoneChoice({ kind: 'lock', on: !selected.every((r) => r.locked) })}
           >
             Lock
           </button>
@@ -1826,12 +1838,12 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
       </div>
       <div className="behave">
         <div className="row">
-          <label>When a room lands on another</label>
+          <label>When a zone lands on another</label>
           <div className="seg">
             <button
               type="button"
               className={settings.rule === 'wait' ? 'on' : ''}
-              title="The dropped room lands where you put it. Overlaps are tinted and wait; right-click a room to settle each one."
+              title="The dropped zone lands where you put it. Overlaps are tinted and wait; right-click a zone to settle each one."
               onClick={() => apply(setSetting(sheet, { name: 'rule', value: 'wait' }))}
             >
               Wait
@@ -1839,7 +1851,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
             <button
               type="button"
               className={settings.rule === 'push' ? 'on' : ''}
-              title="The dropped room shoves the rooms lower in the program aside. They slide, never shrink."
+              title="The dropped zone shoves the zones lower in the program aside. They slide, never shrink."
               onClick={() => apply(setSetting(sheet, { name: 'rule', value: 'push' }))}
             >
               Push others
@@ -1887,22 +1899,22 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
           linked={trayLinked}
           drawingId={drawing && !drawing.reshaping ? drawing.id : null}
           drawMenuFor={drawMenuFor}
-          onNewDown={(room, event) => {
+          onNewDown={(zone, event) => {
             event.preventDefault()
-            hold(beginNew(sheet, room.id))
+            hold(beginNew(sheet, zone.id))
           }}
-          onPick={(room) => {
-            if (storeyOf(room) !== storey && !acrossStoreys(room, settings))
-              goStorey(storeyOf(room))
-            setSelection([room.id])
+          onPick={(zone) => {
+            if (storeyOf(zone) !== storey && !acrossStoreys(zone, settings))
+              goStorey(storeyOf(zone))
+            setSelection([zone.id])
             setPocketPicked(null)
             setMenu(null)
           }}
           openings={openingsOn}
           lit={lit}
-          onLight={(room) => setLit((was) => (was === room.id ? null : room.id))}
-          // The room goes out of the brief, and the sheet follows the brief off the sheet.
-          onRemove={(room) => refuse(removeFromProgram(session, room.id))}
+          onLight={(zone) => setLit((was) => (was === zone.id ? null : zone.id))}
+          // The zone goes out of the brief, and the sheet follows the brief off the sheet.
+          onRemove={(zone) => refuse(removeFromProgram(session, zone.id))}
           onReorder={(id, before) => refuse(moveInProgram(session, id, before))}
           onDrawMenu={setDrawMenuFor}
           onDraw={(id, shape) => startDraw(id, shape)}
@@ -1914,7 +1926,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
               <div className="reshape-bar">
                 <span className="who">
                   {reshaping ? 'Reshaping' : 'Drawing'}{' '}
-                  {sheet.rooms.find((r) => r.id === (reshaping?.id ?? drawing?.id))?.name}
+                  {sheet.zones.find((r) => r.id === (reshaping?.id ?? drawing?.id))?.name}
                 </span>
                 {(['rect', 'circle', 'poly'] as const).map((shape) => (
                   <button
@@ -1966,29 +1978,29 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
                         armedAt: doorHover,
                         draggedTo: doorDrag?.hit ?? null,
                         dragged: doorDrag ? { type: doorDrag.type, w: doorDrag.w } : null,
-                        onDoorDown: (room, door, event) => {
+                        onDoorDown: (zone, door, event) => {
                           if (event.button !== 0) return
                           event.preventDefault()
                           event.stopPropagation()
-                          setDoorSel({ room: room.id, id: door.id })
+                          setDoorSel({ zone: zone.id, id: door.id })
                           setMenu(null)
                           const began = beginDoorDrag(
                             docRef.current.sheet,
                             STOREY,
-                            { room: room.id, id: door.id },
+                            { zone: zone.id, id: door.id },
                             pointAt(event.clientX, event.clientY),
                           )
                           doorDragRef.current = began
                           setDoorDrag(began)
                         },
-                        onDoorMenu: (room, door, event) => {
+                        onDoorMenu: (zone, door, event) => {
                           event.preventDefault()
                           event.stopPropagation()
-                          setDoorSel({ room: room.id, id: door.id })
+                          setDoorSel({ zone: zone.id, id: door.id })
                           setSelection([])
                           setMenu({
                             kind: 'door',
-                            door: { room: room.id, id: door.id },
+                            door: { zone: zone.id, id: door.id },
                             at: inBox(event.clientX, event.clientY),
                           })
                         },
@@ -2011,20 +2023,20 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
                   onChoose={(choice) => pocketChoice(pickedPocket, choice)}
                 />
               )}
-              {menu?.kind === 'room' && (
-                <RoomMenu
+              {menu?.kind === 'zone' && (
+                <ZoneMenu
                   at={menu.at}
                   corner={menu.corner}
                   pivotSet={!!pivot && pivot.key === keyOf(selected.map((r) => r.id))}
-                  room={menu.room}
+                  zone={menu.zone}
                   selection={selected.filter((r) => !r.fixed)}
                   under={under}
-                  canRestore={canRestore(menu.room)}
+                  canRestore={canRestore(menu.zone)}
                   pastSetback={selected.some((r) => outsideBuildable(r, sheet.plot.build))}
                   settings={settings}
                   storey={storey}
                   storeys={storeyCountOf(sheet)}
-                  onChoose={roomChoice}
+                  onChoose={zoneChoice}
                 />
               )}
               {menu?.kind === 'pocket' && (
@@ -2047,17 +2059,17 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
                   onDecline={() => setOffer(null)}
                 />
               )}
-              {tagRoom && tag && (
-                <div className="room-tag" style={{ left: `${tag.x}px`, top: `${tag.y}px` }}>
-                  <b>{tagRoom.name}</b> ·{' '}
-                  {r2(areaOf(tagRoom)) < tagRoom.target - 0.05 ? (
+              {tagZone && tag && (
+                <div className="zone-tag" style={{ left: `${tag.x}px`, top: `${tag.y}px` }}>
+                  <b>{tagZone.name}</b> ·{' '}
+                  {r2(areaOf(tagZone)) < tagZone.target - 0.05 ? (
                     <span className="bad">
-                      {fmt(r2(areaOf(tagRoom)))} of {fmt(tagRoom.target)} m²
+                      {fmt(r2(areaOf(tagZone)))} of {fmt(tagZone.target)} m²
                     </span>
                   ) : (
-                    `${fmt(r2(areaOf(tagRoom)))} m²`
+                    `${fmt(r2(areaOf(tagZone)))} m²`
                   )}
-                  {tagRoom.locked ? ' · locked' : ''}
+                  {tagZone.locked ? ' · locked' : ''}
                 </div>
               )}
               {typeIn && (
@@ -2108,20 +2120,20 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
             onWrite={agentWrite}
             onEnd={agentEnd}
             apply={apply}
-            roomMenu={(room, at) => (
-              <RoomMenu
+            zoneMenu={(zone, at) => (
+              <ZoneMenu
                 at={at}
                 corner={null}
                 pivotSet={false}
-                room={room}
+                zone={zone}
                 selection={selected.filter((r) => !r.fixed)}
                 under={under}
-                canRestore={canRestore(room)}
+                canRestore={canRestore(zone)}
                 pastSetback={selected.some((r) => outsideBuildable(r, sheet.plot.build))}
                 settings={settings}
                 storey={storey}
                 storeys={storeyCountOf(sheet)}
-                onChoose={roomChoice}
+                onChoose={zoneChoice}
               />
             )}
           />
@@ -2170,7 +2182,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
           memory={memory}
           onMemory={setMemory}
           sample={runtime.sample}
-          edgeBetween={edgeFor}
+          connectionBetween={connectionFor}
           ready={runtime.ready}
           onBegin={agentBegin}
           onEnd={agentEnd}
@@ -2178,7 +2190,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
         {focusLines && (
           <TrayLines
             lines={focusLines.tray}
-            rooms={view.rooms}
+            zones={view.zones}
             svg={svg.current}
             box={row.current}
             camera={camera}
@@ -2190,7 +2202,7 @@ export function SheetStage({ mode, onMode }: SheetStageProps) {
   )
 }
 
-const canRestore = (r: Room) =>
+const canRestore = (r: Zone) =>
   !!(r.pieces && r.pieces.length) || !!(r.lost && (r.lost.w > 1e-6 || r.lost.h > 1e-6))
 
 /** Where the bar for the space in hand stands: beside the space, inside the sheet's box. */

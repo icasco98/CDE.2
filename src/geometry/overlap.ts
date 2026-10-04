@@ -2,7 +2,7 @@ import { outlineOf } from './footprint'
 import { area, boundingBox, differencePolygons, edgesOf } from './polygon'
 import type { Footprint, Point, Polygon } from './types'
 
-/** Two shapes count as overlapping only past this much, in metres: a shared wall and the rounding either side of it are not an overlap. */
+/** Two shapes count as overlapping only past this much, in metres: a shared edge and the rounding either side of it are not an overlap. */
 export const OVERLAP_TOLERANCE = 0.002
 
 /** An oriented bounding box: centre, half extents, and its own unit axes. */
@@ -76,7 +76,7 @@ function polygonsSeparated(a: Polygon, b: Polygon): boolean {
   return false
 }
 
-/** True only where two footprints share real area: rooms brought flush wall to wall do not overlap. */
+/** True only where two footprints share real area: zones brought flush edge to edge do not overlap. */
 export function footprintsOverlap(a: Footprint, b: Footprint): boolean {
   if (obbsSeparated(obbOf(a), obbOf(b))) return false
   return !polygonsSeparated(outlineOf(a), outlineOf(b))

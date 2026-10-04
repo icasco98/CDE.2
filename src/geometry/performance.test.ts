@@ -4,11 +4,11 @@ import { buildingOutline } from './outline'
 import type { Footprint, Point, Polygon } from './types'
 
 /**
- * A twenty-vertex room on a six-by-five grid of rooms that meet along their walls, five vertices
- * to a wall and a depth that alternates, so the walls only partly match and really have to be
+ * A twenty-vertex zone on a six-by-five grid of zones that meet along their edges, five vertices
+ * to an edge and a depth that alternates, so the edges only partly match and really have to be
  * resolved against each other.
  */
-function room(index: number): Polygon {
+function zone(index: number): Polygon {
   const left = (index % 6) * 5
   const top = Math.floor(index / 6) * 4
   const depth = index % 2 ? 4 : 3.5
@@ -24,8 +24,8 @@ function room(index: number): Polygon {
   return [...along(nw, ne), ...along(ne, se), ...along(se, sw), ...along(sw, nw)]
 }
 
-const rooms = Array.from({ length: 30 }, (_unused, i) => room(i))
-const footprints: Footprint[] = rooms.map((polygon, i) => ({ polygon, rotation: i * 7 }))
+const zones = Array.from({ length: 30 }, (_unused, i) => zone(i))
+const footprints: Footprint[] = zones.map((polygon, i) => ({ polygon, rotation: i * 7 }))
 
 /** The best of five runs after a warm-up, so neither compilation nor a stray collection is charged to the budget. */
 function milliseconds(work: () => void): number {
@@ -39,10 +39,10 @@ function milliseconds(work: () => void): number {
   return best
 }
 
-it('unions thirty twenty-vertex rooms in under 10 ms', () => {
+it('unions thirty twenty-vertex zones in under 10 ms', () => {
   let rings = 0
   const took = milliseconds(() => {
-    rings = buildingOutline(rooms).length
+    rings = buildingOutline(zones).length
   })
   expect(rings).toBeGreaterThan(0)
   expect(took).toBeLessThan(10)

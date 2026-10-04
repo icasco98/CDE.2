@@ -4,7 +4,7 @@ import { kerbFor } from './kerb'
 import { isPlanar, type Pair } from './planarity'
 import { sidesOf } from './sides'
 import type { PlotShape } from './setbacks'
-import { roomTypeById } from './sizes'
+import { zoneTypeById } from './sizes'
 import { freeProportion } from './types'
 import { inWords, listedNames, metresIn } from './words'
 
@@ -14,8 +14,8 @@ import { inWords, listedNames, metresIn } from './words'
  * which it is and what to do about it, and never stops anything.
  */
 
-/** A room as the check reads one: what it is, what it is called and how much of it there is. */
-export type BriefRoom = {
+/** A zone as the check reads one: what it is, what it is called and how much of it there is. */
+export type BriefZone = {
   readonly id: string
   readonly name: string
   readonly type: string
@@ -24,29 +24,33 @@ export type BriefRoom = {
   readonly targetArea: number
 }
 
-export type BriefEdge = { readonly a: Endpoint; readonly b: Endpoint; readonly storey: number }
+export type BriefConnection = {
+  readonly a: Endpoint
+  readonly b: Endpoint
+  readonly storey: number
+}
 
 export type Finding = {
-  readonly code: 'crossing' | 'wall' | 'kerb' | 'run'
+  readonly code: 'crossing' | 'edge' | 'kerb' | 'run'
   readonly storey: number
   /** What is wrong and what to do about it, in one sentence. */
   readonly sentence: string
 }
 
-/** How much wall one link needs, in metres, and the area under which a room counts as small. */
+/** How much edge one link needs, in metres, and the area under which a zone counts as small. */
 const PER_LINK = 1
 const SMALL_LINK = 0.9
 
 /**
- * How many times that a link really spends of a room's wall. A door needs its metre and a length
- * of wall either side of it to be a door rather than a hole, and the room has to turn the corner
+ * How many times that a link really spends of a zone's edge. A door needs its metre and a length
+ * of edge either side of it to be a door rather than a hole, and the zone has to turn the corner
  * between one neighbour and the next; three metres of perimeter to a link is what a plan spends.
  * Judgement, like the rest of the table, and among the first numbers the known house will correct.
  */
-const WALL_PER_LINK = 3
+const EDGE_PER_LINK = 3
 
-/** The Municipality's smallest room; under it a door may take a little less wall. */
-const SMALL_ROOM_M2 = 10
+/** The Municipality's smallest zone; under it a door may take a little less edge. */
+const SMALL_ZONE_M2 = 10
 
 /** A corridor with no width of its own is read at the Municipality's clear minimum, in metres. */
 const CORRIDOR_WIDTH = 1.2
@@ -54,62 +58,62 @@ const CORRIDOR_WIDTH = 1.2
 /** The overlap two bubbles on one kerb may take of each other, as a share of the smaller radius. */
 const LIE_OVER = 0.6
 
-function standsOn(room: BriefRoom, storey: number): boolean {
-  const span = Math.max(1, Math.trunc(room.storeysSpanned))
-  return storey >= room.storey && storey < room.storey + span
+function standsOn(zone: BriefZone, storey: number): boolean {
+  const span = Math.max(1, Math.trunc(zone.storeysSpanned))
+  return storey >= zone.storey && storey < zone.storey + span
 }
 
 /**
- * How many links a room's wall can hold at its target aspect: its perimeter at the most generous
+ * How many links a zone's edge can hold at its target aspect: its perimeter at the most generous
  * aspect its kind admits, divided by what a link really spends of it.
  *
  * A corridor is the exception, and it is the reason a corridor exists: it is served down both of
  * its long sides, a door every metre, so what it can hold is read off its length twice over. Its
  * own row leaves the proportion free, so the length is the one its area gives at its clear width.
  */
-export function linksHeld(room: BriefRoom): number | undefined {
-  const kind = roomTypeById(room.type)
+export function linksHeld(zone: BriefZone): number | undefined {
+  const kind = zoneTypeById(zone.type)
   if (!kind) return undefined
-  const per = room.targetArea < SMALL_ROOM_M2 ? SMALL_LINK : PER_LINK
+  const per = zone.targetArea < SMALL_ZONE_M2 ? SMALL_LINK : PER_LINK
   if (kind.proportion === freeProportion) {
     const width = kind.legalFloor?.width ?? CORRIDOR_WIDTH
-    return Math.floor((2 * Math.max(room.targetArea, 0)) / width / per)
+    return Math.floor((2 * Math.max(zone.targetArea, 0)) / width / per)
   }
   const ratio = Math.max(1, kind.proportion.max)
-  const short = Math.sqrt(Math.max(room.targetArea, 0) / ratio)
+  const short = Math.sqrt(Math.max(zone.targetArea, 0) / ratio)
   const long = short * ratio
-  return Math.floor((2 * (short + long)) / (WALL_PER_LINK * per))
+  return Math.floor((2 * (short + long)) / (EDGE_PER_LINK * per))
 }
 
 function radiusOf(area: number): number {
   return Math.sqrt(Math.max(area, 0) / Math.PI)
 }
 
-/** The rooms of a storey and the links between two of them, as the planarity test reads them. */
+/** The zones of a storey and the links between two of them, as the planarity test reads them. */
 function graphOn(
-  rooms: readonly BriefRoom[],
-  edges: readonly BriefEdge[],
+  zones: readonly BriefZone[],
+  connections: readonly BriefConnection[],
   storey: number,
 ): { readonly nodes: string[]; readonly pairs: Pair[] } {
-  const here = rooms.filter((room) => standsOn(room, storey))
-  const known = new Set(here.map((room) => room.id))
+  const here = zones.filter((zone) => standsOn(zone, storey))
+  const known = new Set(here.map((zone) => zone.id))
   const pairs: Pair[] = []
-  for (const edge of edges) {
-    if (edge.storey !== storey) continue
-    if (!known.has(edge.a) || !known.has(edge.b)) continue
-    pairs.push([edge.a, edge.b])
+  for (const connection of connections) {
+    if (connection.storey !== storey) continue
+    if (!known.has(connection.a) || !known.has(connection.b)) continue
+    pairs.push([connection.a, connection.b])
   }
-  return { nodes: here.map((room) => room.id), pairs }
+  return { nodes: here.map((zone) => zone.id), pairs }
 }
 
 /**
  * Every finding this program carries on this plot, storey by storey: the links that cannot be
- * drawn without one crossing another, the rooms asked to touch more than their wall can hold, and
+ * drawn without one crossing another, the zones asked to touch more than their edge can hold, and
  * the kerb asked to hold more frontage than it has.
  */
 export function feasibility(
-  rooms: readonly BriefRoom[],
-  edges: readonly BriefEdge[],
+  zones: readonly BriefZone[],
+  connections: readonly BriefConnection[],
   plot: PlotShape,
   storeys: number,
 ): readonly Finding[] {
@@ -118,58 +122,58 @@ export function feasibility(
   const sides = sidesOf(plot)
 
   for (let storey = 0; storey < levels; storey++) {
-    const { nodes, pairs } = graphOn(rooms, edges, storey)
+    const { nodes, pairs } = graphOn(zones, connections, storey)
     if (nodes.length > 0 && !isPlanar(nodes, pairs))
       found.push({
         code: 'crossing',
         storey,
-        sentence: `${storeyLabel(storey)}: these links cannot all be drawn without one crossing another, so one pair can never share a wall. Remove a link between two rooms that do not need a door.`,
+        sentence: `${storeyLabel(storey)}: these links cannot all be drawn without one crossing another, so one pair can never share an edge. Remove a link between two zones that do not need a door.`,
       })
 
-    for (const room of rooms) {
-      if (!standsOn(room, storey) || room.storey !== storey) continue
-      const held = linksHeld(room)
+    for (const zone of zones) {
+      if (!standsOn(zone, storey) || zone.storey !== storey) continue
+      const held = linksHeld(zone)
       if (held === undefined) continue
-      const links = edges.filter(
-        (edge) =>
-          (edge.a === room.id || edge.b === room.id) &&
-          (edge.a === EXTERIOR || edge.b === EXTERIOR || edge.storey === storey),
+      const links = connections.filter(
+        (connection) =>
+          (connection.a === zone.id || connection.b === zone.id) &&
+          (connection.a === EXTERIOR || connection.b === EXTERIOR || connection.storey === storey),
       ).length
       if (links <= held) continue
       found.push({
-        code: 'wall',
+        code: 'edge',
         storey,
-        sentence: `${room.name} is linked to ${inWords(links)} rooms; at ${metresIn(room.targetArea)} m² it can touch ${inWords(held)}. Remove a link.`,
+        sentence: `${zone.name} is linked to ${inWords(links)} zones; at ${metresIn(zone.targetArea)} m² it can touch ${inWords(held)}. Remove a link.`,
       })
     }
 
-    // The kerb, one boundary at a time: two rooms walled onto the same street cannot both have the
+    // The kerb, one boundary at a time: two zones set on the same street cannot both have the
     // frontage. The bubbles may lie over one another by the quarter the model allows, so the run
     // they really need is that much less than the sum of their widths.
-    const onKerb = new Map<number, BriefRoom[]>()
-    for (const room of rooms) {
-      if (!standsOn(room, storey) || room.storey !== storey) continue
-      const side = kerbFor(room.type, sides)
+    const onKerb = new Map<number, BriefZone[]>()
+    for (const zone of zones) {
+      if (!standsOn(zone, storey) || zone.storey !== storey) continue
+      const side = kerbFor(zone.type, sides)
       if (!side) continue
-      onKerb.set(side.index, [...(onKerb.get(side.index) ?? []), room])
+      onKerb.set(side.index, [...(onKerb.get(side.index) ?? []), zone])
     }
     for (const [index, standing] of onKerb) {
       const side = sides.every.find((each) => each.index === index)
       if (!side || standing.length === 0) continue
-      // The frontage is claimed by the rooms that need a street door before the garage has any of
+      // The frontage is claimed by the zones that need a street door before the garage has any of
       // it; where what is left will not hold one bay, the first bay has nothing to stand on and
       // nothing to stand behind, and every bay after it is in tandem behind a bay with no run.
-      const bays = standing.filter((room) => room.type === 'garage')
+      const bays = standing.filter((zone) => zone.type === 'garage')
       const first = bays[0]
       const spare =
         side.length -
         standing
-          .filter((room) => room.type !== 'garage')
-          .reduce((total, room) => total + 2 * radiusOf(room.targetArea), 0)
+          .filter((zone) => zone.type !== 'garage')
+          .reduce((total, zone) => total + 2 * radiusOf(zone.targetArea), 0)
       if (first && spare < 2 * radiusOf(first.targetArea))
         found.push({ code: 'run', storey, sentence: blockedRun(first.name) })
 
-      const radii = standing.map((room) => radiusOf(room.targetArea))
+      const radii = standing.map((zone) => radiusOf(zone.targetArea))
       let needed = radii.reduce((total, radius) => total + 2 * radius, 0)
       for (let i = 0; i + 1 < radii.length; i++)
         needed -= LIE_OVER * Math.min(radii[i] as number, radii[i + 1] as number)
@@ -177,7 +181,7 @@ export function feasibility(
       found.push({
         code: 'kerb',
         storey,
-        sentence: `The kerb is ${metresIn(side.length)} m and ${listedNames(standing.map((room) => room.name))} need ${metresIn(needed)} m of it. Move one to another storey, or give it less area.`,
+        sentence: `The kerb is ${metresIn(side.length)} m and ${listedNames(standing.map((zone) => zone.name))} need ${metresIn(needed)} m of it. Move one to another storey, or give it less area.`,
       })
     }
   }
@@ -192,6 +196,6 @@ export function feasibility(
  */
 export function blockedRun(bay: string, front?: string): string {
   return front === undefined
-    ? `${bay} has no straight run to the street; the frontage has no room left for it. Move a room to another storey, or give the garage fewer bays.`
-    : `${bay} has no straight run to the street; move the room in front of it or stack it behind ${front}.`
+    ? `${bay} has no straight run to the street; the frontage has no length left for it. Move a zone to another storey, or give the garage fewer bays.`
+    : `${bay} has no straight run to the street; move the zone in front of it or stack it behind ${front}.`
 }

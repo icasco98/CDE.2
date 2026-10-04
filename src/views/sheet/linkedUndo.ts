@@ -1,12 +1,12 @@
 /**
  * A step on the sheet that changed the project too is one step to undo, though the sheet and the
- * project keep histories of their own: a door placed with the connection it asked for, a room the
- * sheet made that joined the program, or a room the sheet moved to another storey. Each such step is remembered by the depth of the sheet's
+ * project keep histories of their own: a door placed with the connection it asked for, a zone the
+ * sheet made that joined the program, or a zone the sheet moved to another storey. Each such step is remembered by the depth of the sheet's
  * history it made, and undoing or redoing it takes the project's part back or brings it again.
  */
 
-import type { EdgeKind, Store } from '../../model'
-import { sendRoomsToStorey } from '../../app/sendToStorey'
+import type { ConnectionKind, Store } from '../../model'
+import { sendZonesToStorey } from '../../app/sendToStorey'
 
 type Linking = Pick<Store, 'undo' | 'redo' | 'getState' | 'actions' | 'transaction'>
 
@@ -18,11 +18,11 @@ type Link = {
   readonly make: () => void
 }
 
-/** A room the sheet moved to another storey, from where the program had it. */
-export type MovedRoom = { readonly id: string; readonly from: number; readonly to: number }
+/** A zone the sheet moved to another storey, from where the program had it. */
+export type MovedZone = { readonly id: string; readonly from: number; readonly to: number }
 
-/** A room as the program had it when the sheet made it, so a redo makes the same room again. */
-export type MadeRoom = {
+/** A zone as the program had it when the sheet made it, so a redo makes the same zone again. */
+export type MadeZone = {
   readonly id: string
   readonly type: string
   readonly name: string
@@ -40,42 +40,45 @@ export function createLinks(store: Linking) {
     },
 
     /** A connection made with the door the sheet step placed. */
-    edge(depth: number, input: { edge: string; a: string; b: string; kind: EdgeKind }): void {
-      let edge = input.edge
-      const has = () => store.getState().edges.some((each) => each.id === edge)
+    connection(
+      depth: number,
+      input: { connection: string; a: string; b: string; kind: ConnectionKind },
+    ): void {
+      let connection = input.connection
+      const has = () => store.getState().connections.some((each) => each.id === connection)
       links.push({
         depth,
         stands: has,
         take: () => {
-          store.actions.disconnect(edge)
+          store.actions.disconnect(connection)
         },
         make: () => {
           const made = store.actions.connect({ a: input.a, b: input.b, kind: input.kind })
-          if (made.ok) edge = made.value
+          if (made.ok) connection = made.value
         },
       })
     },
 
-    /** Rooms the sheet step made that joined the program. */
-    rooms(depth: number, rooms: readonly MadeRoom[]): void {
-      const held = () => store.getState().rooms.map((room) => room.id)
+    /** Zones the sheet step made that joined the program. */
+    zones(depth: number, zones: readonly MadeZone[]): void {
+      const held = () => store.getState().zones.map((zone) => zone.id)
       links.push({
         depth,
-        stands: () => rooms.every((room) => held().includes(room.id)),
+        stands: () => zones.every((zone) => held().includes(zone.id)),
         take: () => {
           store.transaction(() => {
-            for (const room of rooms)
-              if (held().includes(room.id)) {
-                const gone = store.actions.removeRoom(room.id)
+            for (const zone of zones)
+              if (held().includes(zone.id)) {
+                const gone = store.actions.removeZone(zone.id)
                 if (!gone.ok) return gone
               }
           })
         },
         make: () => {
           store.transaction(() => {
-            for (const room of rooms)
-              if (!held().includes(room.id)) {
-                const made = store.actions.addRoom({ ...room, storeysSpanned: 1 })
+            for (const zone of zones)
+              if (!held().includes(zone.id)) {
+                const made = store.actions.addZone({ ...zone, storeysSpanned: 1 })
                 if (!made.ok) return made
               }
           })
@@ -83,25 +86,25 @@ export function createLinks(store: Linking) {
       })
     },
 
-    /** Rooms the sheet step moved to another storey, moved in the program with it. */
-    storeys(depth: number, moved: readonly MovedRoom[]): void {
-      const at = (pick: (room: MovedRoom) => number) => () =>
+    /** Zones the sheet step moved to another storey, moved in the program with it. */
+    storeys(depth: number, moved: readonly MovedZone[]): void {
+      const at = (pick: (zone: MovedZone) => number) => () =>
         moved.every(
-          (room) =>
-            store.getState().rooms.find((each) => each.id === room.id)?.storey === pick(room),
+          (zone) =>
+            store.getState().zones.find((each) => each.id === zone.id)?.storey === pick(zone),
         )
-      const send = (pick: (room: MovedRoom) => number) => () => {
-        sendRoomsToStorey(
+      const send = (pick: (zone: MovedZone) => number) => () => {
+        sendZonesToStorey(
           store,
-          moved.map((room) => ({ id: room.id, storey: pick(room) })),
+          moved.map((zone) => ({ id: zone.id, storey: pick(zone) })),
           () => false,
         )
       }
       links.push({
         depth,
-        stands: at((room) => room.to),
-        take: send((room) => room.from),
-        make: send((room) => room.to),
+        stands: at((zone) => zone.to),
+        take: send((zone) => zone.from),
+        make: send((zone) => zone.to),
       })
     },
 

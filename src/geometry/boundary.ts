@@ -5,13 +5,13 @@ import type { Footprint, Point, Polygon } from './types'
 /** A millimetre: floating point puts an edge a hair either side of the boundary, and a footprint 0.0001 m over the line is on it. */
 const TOLERANCE = 1e-3
 
-/** The boundary is read as convex: every edge of it is a wall the whole sheet-side of which is out. A concave boundary is not yet handled. */
-type Wall = { readonly nx: number; readonly ny: number; readonly depth: number }
+/** The boundary is read as convex: every edge of it is a half-plane the whole sheet-side of which is out. A concave boundary is not yet handled. */
+type HalfPlane = { readonly nx: number; readonly ny: number; readonly depth: number }
 
-/** One wall per boundary edge, each carrying how far `polygon` reaches past it. */
-function wallsOf(polygon: Polygon, boundary: Polygon): Wall[] {
+/** One half-plane per boundary edge, each carrying how far `polygon` reaches past it. */
+function halfPlanesOf(polygon: Polygon, boundary: Polygon): HalfPlane[] {
   const outward = signedArea(boundary) >= 0 ? 1 : -1
-  const walls: Wall[] = []
+  const halfPlanes: HalfPlane[] = []
   for (const [a, b] of edgesOf(boundary)) {
     const ex = b[0] - a[0]
     const ey = b[1] - a[1]
@@ -21,22 +21,25 @@ function wallsOf(polygon: Polygon, boundary: Polygon): Wall[] {
     const ny = (-outward * ex) / length
     let depth = -Infinity
     for (const p of polygon) depth = Math.max(depth, (p[0] - a[0]) * nx + (p[1] - a[1]) * ny)
-    walls.push({ nx, ny, depth })
+    halfPlanes.push({ nx, ny, depth })
   }
-  return walls
+  return halfPlanes
 }
 
-function worstWall(walls: readonly Wall[], shift: Point): { wall: Wall | null; over: number } {
-  let worst: Wall | null = null
+function worstHalfPlane(
+  halfPlanes: readonly HalfPlane[],
+  shift: Point,
+): { halfPlane: HalfPlane | null; over: number } {
+  let worst: HalfPlane | null = null
   let over = -Infinity
-  for (const wall of walls) {
-    const g = shift[0] * wall.nx + shift[1] * wall.ny + wall.depth
+  for (const halfPlane of halfPlanes) {
+    const g = shift[0] * halfPlane.nx + shift[1] * halfPlane.ny + halfPlane.depth
     if (g > over) {
       over = g
-      worst = wall
+      worst = halfPlane
     }
   }
-  return { wall: worst, over }
+  return { halfPlane: worst, over }
 }
 
 /** Axis by axis against the boundary's extent, leaving an axis that cannot fit where it is. */
@@ -63,18 +66,19 @@ function shiftInsideExtent(polygon: Polygon, boundary: Polygon): Point {
 /**
  * The smallest shift that brings `polygon` back inside `boundary`, `[0, 0]` when it is already
  * in. A polygon too big to fit is left where it is on the axis that cannot hold it: it can only
- * be flagged, and yanking it against a wall it can never satisfy would just fight the person.
+ * be flagged, and yanking it against a half-plane it can never satisfy would just fight the person.
  */
 export function shiftInside(polygon: Polygon, boundary: Polygon): Point {
   if (!polygon.length || boundary.length < 3) return [0, 0]
-  const walls = wallsOf(polygon, boundary)
+  const halfPlanes = halfPlanesOf(polygon, boundary)
   let shift: Point = [0, 0]
   for (let i = 0; i < 64; i++) {
-    const { wall, over } = worstWall(walls, shift)
-    if (!wall || over <= TOLERANCE) break
-    shift = [shift[0] - over * wall.nx, shift[1] - over * wall.ny]
+    const { halfPlane, over } = worstHalfPlane(halfPlanes, shift)
+    if (!halfPlane || over <= TOLERANCE) break
+    shift = [shift[0] - over * halfPlane.nx, shift[1] - over * halfPlane.ny]
   }
-  if (worstWall(walls, shift).over > TOLERANCE) return shiftInsideExtent(polygon, boundary)
+  if (worstHalfPlane(halfPlanes, shift).over > TOLERANCE)
+    return shiftInsideExtent(polygon, boundary)
   return shift
 }
 
@@ -85,7 +89,7 @@ export function shiftFootprintInside(footprint: Footprint, boundary: Polygon): P
 /** Does the footprint's turned outline leave the boundary? */
 export function isOutsideBoundary(footprint: Footprint, boundary: Polygon): boolean {
   if (boundary.length < 3) return false
-  return worstWall(wallsOf(outlineOf(footprint), boundary), [0, 0]).over > TOLERANCE
+  return worstHalfPlane(halfPlanesOf(outlineOf(footprint), boundary), [0, 0]).over > TOLERANCE
 }
 
 /** One shift for the whole set, so a group brought back inside keeps its arrangement. */
@@ -123,7 +127,7 @@ function between(from: Footprint, to: Footprint, s: number): Footprint {
 /**
  * How far a resize may travel from `from` towards `to` before the outline leaves the boundary.
  * The vertices move together, so the overhang grows with the fraction travelled and bisection
- * lands within a hundredth of a millimetre of the wall. A footprint already outside before the
+ * lands within a hundredth of a millimetre of the boundary. A footprint already outside before the
  * edit is returned untouched: this edit did not put it there.
  */
 export function limitResize(from: Footprint, to: Footprint, boundary: Polygon): Footprint {

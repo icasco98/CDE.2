@@ -1,37 +1,37 @@
 /**
- * Show connections' faint lines from a room on the sheet to the rooms it has an edge with that still wait in
+ * Show connections' faint lines from a zone on the sheet to the zones it has a connection with that still wait in
  * the program: the program is beside the sheet, not on it, so these are drawn over both in screen
  * pixels, measured after every render and again whenever anything under them scrolls or resizes.
  */
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { centreOfFootprint, toWorld, type Room } from '../../sheet'
+import { centreOfFootprint, toWorld, type Zone } from '../../sheet'
 import type { Camera } from '../camera'
 import { TAG_HEIGHT, measureTray, scrollTrayTo, type TrayReach } from './trayReach'
 
-const centreOf = (room: Room): readonly [number, number] => {
-  const [cx, cy] = centreOfFootprint(room)
-  return toWorld(room, cx, cy)
+const centreOf = (zone: Zone): readonly [number, number] => {
+  const [cx, cy] = centreOfFootprint(zone)
+  return toWorld(zone, cx, cy)
 }
 
 export function TrayLines(props: {
   readonly lines: readonly { readonly from: string; readonly to: string }[]
-  readonly rooms: readonly Room[]
+  readonly zones: readonly Zone[]
   readonly svg: SVGSVGElement | null
   readonly box: HTMLElement | null
   readonly camera: Camera
   readonly nameOf: (id: string) => string
 }) {
-  const { lines, rooms, svg, box, camera } = props
+  const { lines, zones, svg, box, camera } = props
   const [reaches, setReaches] = useState<readonly TrayReach[]>([])
   const measure = (): readonly TrayReach[] =>
-    svg && box ? measureTray(lines, rooms, centreOf, svg, box) : []
+    svg && box ? measureTray(lines, zones, centreOf, svg, box) : []
   const live = useRef(measure)
   live.current = measure
 
   useLayoutEffect(() => {
     setReaches(live.current())
-  }, [lines, rooms, svg, box, camera])
+  }, [lines, zones, svg, box, camera])
 
   /** A scroll of the list, the page or any box between, or a resize, measures again once a frame. */
   useEffect(() => {

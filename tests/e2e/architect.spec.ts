@@ -44,7 +44,7 @@ type House = {
   storeys: {
     storey: string
     placed: { name: string }[]
-    sharing: { rooms: string[]; metres: number }[]
+    sharing: { zones: string[]; metres: number }[]
   }[]
 }
 
@@ -55,15 +55,15 @@ const readings = (page: Page) => page.evaluate(() => window.agentResults as Read
 
 test.use({ viewport: { width: 1600, height: 1100 } })
 
-test('two rooms put against each other share a wall', async ({ page }) => {
+test('two zones put against each other share an edge', async ({ page }) => {
   await fakeArchitect(page, {
     first: [
       {
         tool: 'place_against',
         input: {
           placements: [
-            { room: 'Bedroom', against: 'Family Living', wall: 'east', along: 'start' },
-            { room: 'Guest WC', against: 'Bedroom', wall: 'south', along: 'start', w: 3, h: 2.5 },
+            { zone: 'Bedroom', against: 'Family Living', edge: 'east', along: 'start' },
+            { zone: 'Guest WC', against: 'Bedroom', edge: 'south', along: 'start', w: 3, h: 2.5 },
           ],
         },
       },
@@ -74,15 +74,15 @@ test('two rooms put against each other share a wall', async ({ page }) => {
   await say(page, 'put the bedroom against the family living')
 
   await expect(log(page).getByText(/placed against · Ground/)).toBeVisible()
-  await expect(page.locator('svg.sheet g.room[data-room="nmu436pzls0vk"]')).toHaveCount(1)
+  await expect(page.locator('svg.sheet g.zone[data-zone="nmu436pzls0vk"]')).toHaveCount(1)
   const [read] = await readings(page)
   const ground = read!.house.storeys[0]!
-  expect(read!.landed[0]).toContain("against Family Living's east wall")
+  expect(read!.landed[0]).toContain("against Family Living's east edge")
   const withLiving = ground.sharing.find(
-    (pair) => pair.rooms.includes('Bedroom') && pair.rooms.includes('Family Living'),
+    (pair) => pair.zones.includes('Bedroom') && pair.zones.includes('Family Living'),
   )
   const withWC = ground.sharing.find(
-    (pair) => pair.rooms.includes('Bedroom') && pair.rooms.includes('Guest WC'),
+    (pair) => pair.zones.includes('Bedroom') && pair.zones.includes('Guest WC'),
   )
   expect(withLiving!.metres).toBeGreaterThan(1.5)
   expect(withWC!.metres).toBeGreaterThan(1.5)
@@ -91,7 +91,7 @@ test('two rooms put against each other share a wall', async ({ page }) => {
 test('working on the first storey leaves the storey the owner is looking at', async ({ page }) => {
   await fakeArchitect(page, {
     first: [
-      { tool: 'place_rooms', input: { moves: [{ name: 'Bedroom', x: 6, y: 6 }], storey: 'First' } },
+      { tool: 'place_zones', input: { moves: [{ name: 'Bedroom', x: 6, y: 6 }], storey: 'First' } },
       { tool: 'read_sheet', input: {} },
     ],
     text: 'Bedroom upstairs, off the stair.',
@@ -102,10 +102,10 @@ test('working on the first storey leaves the storey the owner is looking at', as
   await say(page, 'put the bedroom on the first floor')
 
   await expect(log(page).getByText('Bedroom upstairs, off the stair.')).toBeVisible()
-  // the owner is still on the ground, and the room is not drawn on it
+  // the owner is still on the ground, and the zone is not drawn on it
   await expect(switcher).toHaveClass(/on/)
   await expect(page.locator('.seg.storeys button[data-storey="1"]')).not.toHaveClass(/on/)
-  await expect(page.locator('svg.sheet g.room[data-room="nmu436pzls0vk"]')).toHaveCount(0)
+  await expect(page.locator('svg.sheet g.zone[data-zone="nmu436pzls0vk"]')).toHaveCount(0)
   await expect(page.locator('.tray .item', { hasText: 'Bedroom' }).locator('.st')).toHaveText('1st')
   // the last call was read_sheet, which gives the house itself
   const read = (await readings(page)).at(-1)!
@@ -117,7 +117,7 @@ test('an architect that wrote nothing down is asked once, and its lessons are ke
   page,
 }) => {
   await fakeArchitect(page, {
-    first: [{ tool: 'place_rooms', input: { moves: [{ name: 'Bedroom', x: 11.2, y: 1.5 }] } }],
+    first: [{ tool: 'place_zones', input: { moves: [{ name: 'Bedroom', x: 11.2, y: 1.5 }] } }],
     later: [
       {
         tool: 'remember',
@@ -150,10 +150,10 @@ test('one Ctrl+Z takes back everything a message did', async ({ page }) => {
       {
         tool: 'place_against',
         input: {
-          placements: [{ room: 'Bedroom', against: 'Family Living', wall: 'east', along: 'start' }],
+          placements: [{ zone: 'Bedroom', against: 'Family Living', edge: 'east', along: 'start' }],
         },
       },
-      { tool: 'place_rooms', input: { moves: [{ name: 'Store', x: 2, y: 2 }] } },
+      { tool: 'place_zones', input: { moves: [{ name: 'Store', x: 2, y: 2 }] } },
     ],
     text: 'Bedroom in, store moved.',
   })
@@ -162,11 +162,11 @@ test('one Ctrl+Z takes back everything a message did', async ({ page }) => {
   const before = await store.textContent()
   await say(page, 'lay out the ground floor')
   await expect(log(page).getByText('Bedroom in, store moved.')).toBeVisible()
-  await expect(page.locator('svg.sheet g.room[data-room="nmu436pzls0vk"]')).toHaveCount(1)
+  await expect(page.locator('svg.sheet g.zone[data-zone="nmu436pzls0vk"]')).toHaveCount(1)
 
   await page.locator('svg.sheet').click({ position: { x: 5, y: 5 } })
   await page.keyboard.press('Control+z')
-  await expect(page.locator('svg.sheet g.room[data-room="nmu436pzls0vk"]')).toHaveCount(0)
+  await expect(page.locator('svg.sheet g.zone[data-zone="nmu436pzls0vk"]')).toHaveCount(0)
   await expect(store).toHaveText(before ?? '')
 })
 
@@ -177,7 +177,7 @@ test('a turn and a court asked for in one call are both done on the sheet', asyn
         tool: 'do',
         input: {
           deeds: [
-            { verb: 'turn', room: 'Store', degrees: 45 },
+            { verb: 'turn', zone: 'Store', degrees: 45 },
             { verb: 'court', between: ['Entry', 'Formal Living'] },
           ],
         },
@@ -186,7 +186,7 @@ test('a turn and a court asked for in one call are both done on the sheet', asyn
     text: 'Store turned, and the space by the entry is a court.',
   })
   await openSheet(page)
-  const store = page.locator('svg.sheet g.room[data-room="r15"]')
+  const store = page.locator('svg.sheet g.zone[data-zone="r15"]')
   await expect(page.locator('svg.sheet path.court-hatch')).toHaveCount(0)
   await say(page, 'turn the store and make that space a court')
 
@@ -214,7 +214,7 @@ test('an answer that claims a change no command made says so in the log', async 
     log(page).getByText('Nothing was placed: no command ran this message.'),
   ).toBeVisible()
   // nothing on the sheet moved, and no undo step was left behind
-  await expect(page.locator('svg.sheet g.room[data-room="r8"]')).toHaveAttribute(
+  await expect(page.locator('svg.sheet g.zone[data-zone="r8"]')).toHaveAttribute(
     'transform',
     /translate\(1.5 16.37\)/,
   )
@@ -223,10 +223,10 @@ test('an answer that claims a change no command made says so in the log', async 
 test('a verb on another storey leaves the storey the owner is looking at', async ({ page }) => {
   await fakeArchitect(page, {
     first: [
-      { tool: 'do', input: { deeds: [{ verb: 'storey', rooms: ['Store'], to: 'First' }] } },
+      { tool: 'do', input: { deeds: [{ verb: 'storey', zones: ['Store'], to: 'First' }] } },
       {
         tool: 'do',
-        input: { deeds: [{ verb: 'turn', room: 'Store', degrees: 45 }], storey: 'First' },
+        input: { deeds: [{ verb: 'turn', zone: 'Store', degrees: 45 }], storey: 'First' },
       },
     ],
     text: 'Store upstairs and turned.',
@@ -238,7 +238,7 @@ test('a verb on another storey leaves the storey the owner is looking at', async
 
   await expect(log(page).getByText('Store upstairs and turned.')).toBeVisible()
   await expect(switcher).toHaveClass(/on/)
-  await expect(page.locator('svg.sheet g.room[data-room="r15"]')).toHaveCount(0)
+  await expect(page.locator('svg.sheet g.zone[data-zone="r15"]')).toHaveCount(0)
   await expect(page.locator('.tray .item', { hasText: 'Store' }).locator('.st')).toHaveText('1st')
   const upstairs = (await readings(page)).at(-1)!
   expect(upstairs.landed).toEqual(['turn · Store at 45°'])

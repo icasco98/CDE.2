@@ -5,8 +5,8 @@ import { sendToStorey } from '../../app/sendToStorey'
 import { session } from '../../app/session'
 import { useProject } from '../../app/useProject'
 import { graphChecks } from '../../graph/checks'
-import { EXTERIOR, type Bubble, type Commit, type EdgeKind, type Result } from '../../model'
-import { circulationPerStorey, connectionSource, roomTypeById } from '../../rulebook'
+import { EXTERIOR, type Bubble, type Commit, type ConnectionKind, type Result } from '../../model'
+import { circulationPerStorey, connectionSource, zoneTypeById } from '../../rulebook'
 import { addHallway } from './addHallway'
 import { setPair, type PairChoice } from './setPair'
 import { BubblesView } from './BubblesView'
@@ -16,37 +16,42 @@ export function BubblesStage() {
   const project = useProject()
   const selected = useSelection()
 
-  const rooms = useMemo(
+  const zones = useMemo(
     () =>
-      project.rooms.map((room) => {
-        const kind = roomTypeById(room.type)
-        return { ...room, category: kind?.category, tier: kind?.tier }
+      project.zones.map((zone) => {
+        const kind = zoneTypeById(zone.type)
+        return { ...zone, category: kind?.category, tier: kind?.tier }
       }),
-    [project.rooms],
+    [project.zones],
   )
 
   /** A connection the rulebook wants says which row and why; any other was added by hand. */
-  const edges = useMemo(() => {
+  const connections = useMemo(() => {
     const kindOf = (id: string): string =>
-      id === EXTERIOR ? EXTERIOR : (project.rooms.find((room) => room.id === id)?.type ?? '')
-    return project.edges.map((edge) => {
-      const row = connectionSource(kindOf(edge.a), kindOf(edge.b))
-      return row ? { ...edge, source: `Rulebook ${row.id}: ${row.source}` } : edge
+      id === EXTERIOR ? EXTERIOR : (project.zones.find((zone) => zone.id === id)?.type ?? '')
+    return project.connections.map((connection) => {
+      const row = connectionSource(kindOf(connection.a), kindOf(connection.b))
+      return row ? { ...connection, source: `Rulebook ${row.id}: ${row.source}` } : connection
     })
-  }, [project.edges, project.rooms])
+  }, [project.connections, project.zones])
 
   const checks = useMemo(
     () =>
-      graphChecks({ rooms, edges: project.edges, apart: project.apart, storeys: project.storeys }),
-    [rooms, project.edges, project.apart, project.storeys],
+      graphChecks({
+        zones,
+        connections: project.connections,
+        apart: project.apart,
+        storeys: project.storeys,
+      }),
+    [zones, project.connections, project.apart, project.storeys],
   )
 
   const hallwayWanted = useMemo(
     () =>
-      circulationPerStorey(project.rooms, project.storeys).flatMap((entry) =>
+      circulationPerStorey(project.zones, project.storeys).flatMap((entry) =>
         entry.wanted === undefined ? [] : [{ storey: entry.storey, sentence: entry.wanted }],
       ),
-    [project.rooms, project.storeys],
+    [project.zones, project.storeys],
   )
 
   const report = (result: Result<unknown>): boolean => {
@@ -54,25 +59,28 @@ export function BubblesStage() {
     return result.ok
   }
 
-  /** A room takes its edges with it, so a selection that named either of them is let go with them. */
+  /** A zone takes its connections with it, so a selection that named either of them is let go with them. */
   const remove = (id: string): void => {
-    if (!report(session.actions.removeRoom(id))) return
+    if (!report(session.actions.removeZone(id))) return
     const left = session.getState()
     const held = selection.get()
     if (
       held &&
-      !left.rooms.some((room) => room.id === held) &&
-      !left.edges.some((edge) => edge.id === held)
+      !left.zones.some((zone) => zone.id === held) &&
+      !left.connections.some((connection) => connection.id === held)
     )
       selection.select(null)
   }
 
   const nameOf = (id: string): string =>
-    project.rooms.find((room) => room.id === id)?.name ?? 'the outside'
+    project.zones.find((zone) => zone.id === id)?.name ?? 'the outside'
   const keptApart = (a: string, b: string): boolean =>
     project.apart.some((pair) => (pair.a === a && pair.b === b) || (pair.a === b && pair.b === a))
   const joined = (a: string, b: string): boolean =>
-    project.edges.some((edge) => (edge.a === a && edge.b === b) || (edge.a === b && edge.b === a))
+    project.connections.some(
+      (connection) =>
+        (connection.a === a && connection.b === b) || (connection.a === b && connection.b === a),
+    )
 
   /** Connecting a pair kept apart is allowed and said out loud, never refused. */
   const connect = (a: string, b: string): void => {
@@ -99,20 +107,23 @@ export function BubblesStage() {
       after.apart.some(
         (pair) => (pair.a === a && pair.b === b) || (pair.a === b && pair.b === a),
       ) &&
-      after.edges.some((edge) => (edge.a === a && edge.b === b) || (edge.a === b && edge.b === a))
+      after.connections.some(
+        (connection) =>
+          (connection.a === a && connection.b === b) || (connection.a === b && connection.b === a),
+      )
     if (both) session.say(`${nameOf(a)} and ${nameOf(b)} are kept apart and connected.`)
   }
 
   /** A suggestion taken out is one this house does not want, so the project keeps it declined. */
-  const disconnect = (edgeId: string): void => {
-    if (!report(session.transaction(() => takeOut(session, edgeId)))) return
-    if (selection.get() === edgeId) selection.select(null)
+  const disconnect = (connectionId: string): void => {
+    if (!report(session.transaction(() => takeOut(session, connectionId)))) return
+    if (selection.get() === connectionId) selection.select(null)
   }
 
   return (
     <BubblesView
-      rooms={rooms}
-      edges={edges}
+      zones={zones}
+      connections={connections}
       apart={project.apart}
       declined={project.declined}
       storeys={project.storeys}
@@ -133,22 +144,22 @@ export function BubblesStage() {
       onKeepApart={keepApart}
       onAllowTogether={allowTogether}
       onSetPair={setOnePair}
-      onSetEdgeKind={(edgeId: string, kind: EdgeKind) =>
-        report(session.actions.setEdgeKind(edgeId, kind))
+      onSetConnectionKind={(connectionId: string, kind: ConnectionKind) =>
+        report(session.actions.setConnectionKind(connectionId, kind))
       }
-      onRemoveRoom={remove}
+      onRemoveZone={remove}
       onAddHallway={(storey: number) =>
         report(
           session.transaction(() => {
-            const added = addHallway(session, project.rooms, storey, project.storeys)
+            const added = addHallway(session, project.zones, storey, project.storeys)
             if (!added.ok) return added
-            // The corridor arrives linked to what it serves, as every other room does.
+            // The corridor arrives linked to what it serves, as every other zone does.
             return connectDefaults(session)
           }),
         )
       }
-      onRestore={(room?: string) =>
-        report(session.transaction(() => restoreSuggested(session, room)))
+      onRestore={(zone?: string) =>
+        report(session.transaction(() => restoreSuggested(session, zone)))
       }
       onSelect={selection.select}
       onRefuse={session.say}

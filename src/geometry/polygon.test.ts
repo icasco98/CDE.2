@@ -16,7 +16,7 @@ import {
 } from './polygon'
 import type { Polygon } from './types'
 
-const room: Polygon = rectangleToPolygon({ left: 0, top: 0, width: 4, depth: 6 })
+const zone: Polygon = rectangleToPolygon({ left: 0, top: 0, width: 4, depth: 6 })
 
 /** An L: the 6 x 4 rectangle less its bottom-right 3 x 2 quarter. */
 const lShape: Polygon = [
@@ -29,14 +29,14 @@ const lShape: Polygon = [
 ]
 
 describe('area', () => {
-  it('measures a 4 x 6 m room as 24 m2', () => {
-    expect(area(room)).toBe(24)
+  it('measures a 4 x 6 m zone as 24 m2', () => {
+    expect(area(zone)).toBe(24)
   })
 
   it('signs a clockwise ring on the sheet positive and its reverse negative', () => {
-    expect(signedArea(room)).toBe(24)
-    expect(signedArea([...room].reverse())).toBe(-24)
-    expect(area([...room].reverse())).toBe(24)
+    expect(signedArea(zone)).toBe(24)
+    expect(signedArea([...zone].reverse())).toBe(-24)
+    expect(area([...zone].reverse())).toBe(24)
   })
 
   it('measures the L as its rectangle less the missing quarter', () => {
@@ -46,7 +46,7 @@ describe('area', () => {
 
 describe('centroid', () => {
   it('puts the centroid of a rectangle at its centre', () => {
-    expect(centroid(room)).toEqual([2, 3])
+    expect(centroid(zone)).toEqual([2, 3])
   })
 
   it('puts the centroid of a triangle at the mean of its corners', () => {
@@ -94,8 +94,8 @@ describe('rectangle to polygon', () => {
 
 describe('edges', () => {
   it('closes the ring, last vertex back to first', () => {
-    expect(edgesOf(room)).toHaveLength(4)
-    expect(edgesOf(room)[3]).toEqual([
+    expect(edgesOf(zone)).toHaveLength(4)
+    expect(edgesOf(zone)[3]).toEqual([
       [0, 6],
       [0, 0],
     ])
@@ -112,18 +112,18 @@ describe('point in polygon', () => {
 })
 
 describe('the boundary', () => {
-  it('finds the nearest point on a wall, not merely somewhere inside', () => {
-    expect(nearestPointOnBoundary(room, [1, 3])).toEqual([0, 3])
-    expect(nearestPointOnBoundary(room, [10, 10])).toEqual([4, 6])
+  it('finds the nearest point on an edge, not merely somewhere inside', () => {
+    expect(nearestPointOnBoundary(zone, [1, 3])).toEqual([0, 3])
+    expect(nearestPointOnBoundary(zone, [10, 10])).toEqual([4, 6])
   })
 
-  it('finds the real nearest wall of the L, not a side of its bounding box', () => {
+  it('finds the real nearest edge of the L, not a side of its bounding box', () => {
     expect(nearestPointOnBoundary(lShape, [5, 3])).toEqual([5, 2])
   })
 
-  it('reads a point within the tolerance of a wall as on it', () => {
-    expect(pointOnBoundary(room, [0.01, 3], 0.05)).toBe(true)
-    expect(pointOnBoundary(room, [0.1, 3], 0.05)).toBe(false)
+  it('reads a point within the tolerance of an edge as on it', () => {
+    expect(pointOnBoundary(zone, [0.01, 3], 0.05)).toBe(true)
+    expect(pointOnBoundary(zone, [0.1, 3], 0.05)).toBe(false)
   })
 
   it('holds a point to the ends of one segment', () => {
@@ -190,7 +190,7 @@ describe('union', () => {
 })
 
 describe('difference', () => {
-  it('takes a 1 x 1 bite out of a 3 x 3 room and leaves 8 m2', () => {
+  it('takes a 1 x 1 bite out of a 3 x 3 zone and leaves 8 m2', () => {
     const subject = rectangleToPolygon({ left: 0, top: 0, width: 3, depth: 3 })
     const bite = rectangleToPolygon({ left: 2, top: 2, width: 1, depth: 1 })
     const pieces = differencePolygons(subject, [bite])
@@ -199,6 +199,6 @@ describe('difference', () => {
   })
 
   it('returns the subject untouched when nothing cuts it', () => {
-    expect(differencePolygons(room, [])).toEqual([[room]])
+    expect(differencePolygons(zone, [])).toEqual([[zone]])
   })
 })
