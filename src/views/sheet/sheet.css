@@ -332,8 +332,10 @@ body:has(main.stage-sheet) {
   color: var(--warn);
 }
 
+/* One column no wider than the tray, so the form's fields shrink to it instead of spilling out. */
 .sheet-stage .add-zone {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px;
   padding: 8px;
   border-top: 1px solid var(--line-2);
@@ -355,6 +357,7 @@ body:has(main.stage-sheet) {
 
 .sheet-stage .add-zone .add-line input[type='text'] {
   flex: 1;
+  width: 0;
   min-width: 0;
 }
 
