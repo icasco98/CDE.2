@@ -3,24 +3,13 @@ import type { Household } from '../model'
 import { defaultProgram } from './program'
 import { reductionFor, type SlackZone } from './slack'
 import { pastAllowed, pastRange, type MeasuredZone } from './sizeCheck'
+import { milliseconds } from '../../tests/milliseconds'
 
 /*
  * The budgets the brief set: the offer a spilling storey makes under 5 ms, because it is worked
  * out beside the morph, and the size check under 1 ms, because it runs after every gesture on the
  * plan sheet and a gesture has a frame to spare and no more.
  */
-
-/** The best of five runs after a warm-up, so neither compilation nor a stray collection is charged. */
-function milliseconds(work: () => void): number {
-  for (let i = 0; i < 5; i++) work()
-  let best = Infinity
-  for (let i = 0; i < 5; i++) {
-    const started = performance.now()
-    work()
-    best = Math.min(best, performance.now() - started)
-  }
-  return best
-}
 
 const household: Household = {
   familySize: 4,

@@ -2,23 +2,13 @@ import { expect, it } from 'vitest'
 import { EXTERIOR } from '../model'
 import { arrange, type ArrangeConnection, type ArrangeZone } from './arrange'
 import { cloudsOf } from './clouds'
+import { milliseconds } from '../../tests/milliseconds'
 
 /*
  * The budget: the diagram is arranged again on every edit and every frame of a nudge, rows ordered
  * to uncross included, so forty zones over three storeys must arrange inside one 16 ms frame, and
  * the category clouds drawn round them, remade as often, inside 4 ms.
  */
-
-function milliseconds(work: () => void): number {
-  for (let i = 0; i < 5; i++) work()
-  let best = Infinity
-  for (let i = 0; i < 5; i++) {
-    const started = performance.now()
-    work()
-    best = Math.min(best, performance.now() - started)
-  }
-  return best
-}
 
 const tiers = ['public', 'semi-public', 'private', 'exempt']
 

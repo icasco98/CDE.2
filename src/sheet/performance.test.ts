@@ -8,18 +8,7 @@ import { MASS_START, massProjection, orderPrisms, prismsOf } from './mass'
 import { doDeed } from './verbs'
 import { doorClash, drawnDoors } from './doors'
 import type { Desk } from './desk'
-
-/** The best of five runs after a warm-up, so neither compilation nor a stray collection is charged. */
-function milliseconds(work: () => void): number {
-  for (let i = 0; i < 5; i++) work()
-  let best = Infinity
-  for (let i = 0; i < 5; i++) {
-    const started = performance.now()
-    work()
-    best = Math.min(best, performance.now() - started)
-  }
-  return best
-}
+import { milliseconds } from '../../tests/milliseconds'
 
 const sheet = fixtureSheet()
 

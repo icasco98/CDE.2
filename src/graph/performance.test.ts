@@ -2,22 +2,12 @@ import { expect, it } from 'vitest'
 import { EXTERIOR } from '../model'
 import { graphChecks } from './checks'
 import type { CheckConnection, CheckZone } from './types'
+import { milliseconds } from '../../tests/milliseconds'
 
 /*
  * The budget: the checks are read again on every edit, so forty zones on three storeys with a
  * dozen keep-apart pairs must be read inside one 16 ms frame.
  */
-
-function milliseconds(work: () => void): number {
-  for (let i = 0; i < 5; i++) work()
-  let best = Infinity
-  for (let i = 0; i < 5; i++) {
-    const started = performance.now()
-    work()
-    best = Math.min(best, performance.now() - started)
-  }
-  return best
-}
 
 const tiers = ['public', 'semi-public', 'private', 'exempt']
 

@@ -2,6 +2,7 @@ import { expect, it } from 'vitest'
 import { footprintsOverlap } from './overlap'
 import { buildingOutline } from './outline'
 import type { Footprint, Point, Polygon } from './types'
+import { milliseconds } from '../../tests/milliseconds'
 
 /**
  * A twenty-vertex zone on a six-by-five grid of zones that meet along their edges, five vertices
@@ -26,18 +27,6 @@ function zone(index: number): Polygon {
 
 const zones = Array.from({ length: 30 }, (_unused, i) => zone(i))
 const footprints: Footprint[] = zones.map((polygon, i) => ({ polygon, rotation: i * 7 }))
-
-/** The best of five runs after a warm-up, so neither compilation nor a stray collection is charged to the budget. */
-function milliseconds(work: () => void): number {
-  for (let i = 0; i < 5; i++) work()
-  let best = Infinity
-  for (let i = 0; i < 5; i++) {
-    const started = performance.now()
-    work()
-    best = Math.min(best, performance.now() - started)
-  }
-  return best
-}
 
 it('unions thirty twenty-vertex zones in under 10 ms', () => {
   let rings = 0

@@ -6,6 +6,7 @@ import { sendToStorey } from '../../app/sendToStorey'
 import { place, setStorey, sheetOf, type Sheet } from '../../sheet'
 import { createAside, followProject, followSheetStoreys, plotOf, programOf } from './project'
 import { createLinks } from './linkedUndo'
+import { milliseconds } from '../../../tests/milliseconds'
 
 let store: Store
 
@@ -114,13 +115,7 @@ describe('a zone moved to another storey on the sheet', () => {
 it('reads a sheet step that moved no storey inside 1 ms, as every step of the hand does', () => {
   const sheet = sheetWith(store.getState().zones.map((zone) => zone.name))
   const nudged = { ...sheet, zones: sheet.zones.map((r) => ({ ...r, x: r.x + 0.25 })) }
-  for (let i = 0; i < 5; i++) followSheetStoreys(store, sheet, nudged)
-  let best = Infinity
-  for (let i = 0; i < 5; i++) {
-    const started = performance.now()
-    followSheetStoreys(store, sheet, nudged)
-    best = Math.min(best, performance.now() - started)
-  }
+  const best = milliseconds(() => followSheetStoreys(store, sheet, nudged))
   console.log(`followSheetStoreys on the rebuilt program: ${best.toFixed(3)} ms, budget 1 ms`)
   expect(best).toBeLessThan(2)
 })

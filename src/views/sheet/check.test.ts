@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { sheetOf, type Door, type Zone, type Sheet } from '../../sheet'
 import { checkRead, linesFrom, pairKey, type SheetConnection } from './check'
+import { milliseconds } from '../../../tests/milliseconds'
 
 /*
  * Reference cases worked on paper: zones 4 × 3 m on the ground, standing side by side so the edge
@@ -164,13 +165,7 @@ describe('the budget', () => {
       linesFrom('r12', read.waiting, big, 0)
       checkRead(big, 0, input, 'openings')
     }
-    for (let i = 0; i < 5; i++) once()
-    let best = Infinity
-    for (let i = 0; i < 5; i++) {
-      const started = performance.now()
-      once()
-      best = Math.min(best, performance.now() - started)
-    }
+    const best = milliseconds(once)
     console.info(`check on the sheet, 40 zones, 80 connections: ${best.toFixed(3)} ms`)
     expect(best).toBeLessThan(4)
   })
