@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { linkedPairs, saved } from './bubbles'
+import { connectedPairs, saved } from './bubbles'
 import { tab } from './tabs'
 
 /*
@@ -178,7 +178,7 @@ test('a door between two zones with no connection asks, and yes adds both as one
   page,
 }) => {
   const { edge } = await sideBySide(page, 'Kitchen', 'Formal Living')
-  await expect.poll(() => linkedPairs(page)).not.toContain('Formal Living to Kitchen')
+  await expect.poll(() => connectedPairs(page)).not.toContain('Formal Living to Kitchen')
   const before = await doors(page).count()
   await page.mouse.click(
     ...(Object.values(await onSheet(page, edge.x, edge.y)) as [number, number]),
@@ -189,11 +189,11 @@ test('a door between two zones with no connection asks, and yes adds both as one
   )
   await offer.getByRole('button', { name: 'Add connection' }).click()
   await expect(doors(page)).toHaveCount(before + 1)
-  await expect.poll(() => linkedPairs(page)).toContain('Formal Living to Kitchen')
+  await expect.poll(() => connectedPairs(page)).toContain('Formal Living to Kitchen')
 
   await page.keyboard.press('Control+z')
   await expect(doors(page)).toHaveCount(before)
-  await expect.poll(() => linkedPairs(page)).not.toContain('Formal Living to Kitchen')
+  await expect.poll(() => connectedPairs(page)).not.toContain('Formal Living to Kitchen')
 })
 
 test('a door between two zones with no connection asks, and no places nothing', async ({
@@ -208,7 +208,7 @@ test('a door between two zones with no connection asks, and no places nothing', 
   await offer.getByRole('button', { name: 'Cancel' }).click()
   await expect(offer).toHaveCount(0)
   await expect(doors(page)).toHaveCount(before)
-  await expect.poll(() => linkedPairs(page)).not.toContain('Formal Living to Kitchen')
+  await expect.poll(() => connectedPairs(page)).not.toContain('Formal Living to Kitchen')
 })
 
 test('a door joining a pair kept apart is crossed, and both zones outlined where one is reached only through the other', async ({
@@ -278,7 +278,7 @@ test.describe('on a short screen, where the program scrolls', () => {
     await page.mouse.move(5, 5)
     const key = `${dining}-${family}`
     const block = `.tray .item[data-zone="${family}"]`
-    await expect(page.locator(block)).toHaveClass(/check-linked/)
+    await expect(page.locator(block)).toHaveClass(/check-connected/)
 
     const tray = page.locator('.tray')
     await tray.evaluate((list, id) => {

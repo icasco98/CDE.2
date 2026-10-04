@@ -24,7 +24,7 @@ type ProgramProps = {
   sheet: Sheet
   selection: string[]
   /** The zones in the list Check draws a line to, outlined while the line shows. */
-  linked: ReadonlySet<string>
+  connected: ReadonlySet<string>
   /** The zone a shape is being drawn for, so its Draw button reads as in hand. */
   drawingId: string | null
   drawMenuFor: string | null
@@ -96,7 +96,7 @@ export function Program(props: ProgramProps) {
                 (props.openings ? props.lit === zone.id : props.selection.includes(zone.id))
                   ? ' selected'
                   : ''
-              }${zone.group ? ' grouped' : ''}${props.linked.has(zone.id) ? ' check-linked' : ''}`}
+              }${zone.group ? ' grouped' : ''}${props.connected.has(zone.id) ? ' check-connected' : ''}`}
               data-zone={zone.id}
               style={{ flex: `${zone.target} 1 0`, background: zone.color ?? undefined }}
               title={

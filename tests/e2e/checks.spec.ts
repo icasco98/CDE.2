@@ -28,7 +28,7 @@ test('the diwaniya is reached by its own street door, and named once that door g
   await expect.poll(async () => (await street())?.id).toBeTruthy()
   const connection = await street()
   await page
-    .locator(`[data-connection="${connection!.id}"] .link-grip`)
+    .locator(`[data-connection="${connection!.id}"] .line-grip`)
     .dispatchEvent('pointerdown')
   await page.locator('svg.bubbles-sheet').dispatchEvent('pointerup')
   await page.getByRole('button', { name: 'Delete connection' }).click()

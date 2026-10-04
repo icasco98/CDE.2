@@ -10,7 +10,7 @@ import {
 } from '../model'
 import { companionsOf } from '../rulebook'
 import { STAIR_STAYS } from '../views/bubbles/types'
-import { connectDefaults } from './defaultLinks'
+import { connectDefaults } from './connectionDefaults'
 
 /** What a storey change needs of the session: its actions, the project, and one undo step round them. */
 type Moving = Pick<Store, 'actions' | 'getState' | 'transaction'>
@@ -33,10 +33,10 @@ export type StoreyMove = { readonly id: string; readonly storey: number }
 
 /**
  * Zones change the storey they stand on, and what belongs with them goes too. The companions each
- * owns travel with it, unless `carries` says one stays, the links they can no longer hold are let
- * go, and the default connections are made again on the floors they have arrived at, so a bedroom
- * moved upstairs takes its ensuite, leaves the ground-floor corridor behind and finds the corridor
- * upstairs.
+ * owns travel with it, unless `carries` says one stays, the connections they can no longer hold are
+ * let go, and the default connections are made again on the floors they have arrived at, so a
+ * bedroom moved upstairs takes its ensuite, leaves the ground-floor corridor behind and finds the
+ * corridor upstairs.
  *
  * It is one transaction with whatever `first` does, so one undo puts every move back. A stair refuses: it stands on every
  * storey it reaches and its span is the program's to set. What comes back is a sentence for every

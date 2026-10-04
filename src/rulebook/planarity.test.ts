@@ -13,7 +13,7 @@ function both(one: readonly string[], other: readonly string[]): Pair[] {
   return one.flatMap((a) => other.map((b) => [a, b] as Pair))
 }
 
-describe('whether a storey’s links can be drawn without a crossing', () => {
+describe('whether a storey’s connections can be drawn without a crossing', () => {
   it('draws a tree, a cycle and a square with one diagonal', () => {
     expect(
       isPlanar(
@@ -55,12 +55,12 @@ describe('whether a storey’s links can be drawn without a crossing', () => {
     expect(isPlanar(['a', 'b', 'c', 'd', 'e'], complete(['a', 'b', 'c', 'd', 'e']))).toBe(false)
   })
 
-  it('refuses three zones each linked to the same three others', () => {
+  it('refuses three zones each connected to the same three others', () => {
     const nodes = ['a', 'b', 'c', 'x', 'y', 'z']
     expect(isPlanar(nodes, both(['a', 'b', 'c'], ['x', 'y', 'z']))).toBe(false)
   })
 
-  it('refuses a crossing with a corridor hung off it, and draws it once a link goes', () => {
+  it('refuses a crossing with a corridor hung off it, and draws it once a connection goes', () => {
     const nodes = ['a', 'b', 'c', 'd', 'e', 'hall', 'wc']
     const five = complete(['a', 'b', 'c', 'd', 'e'])
     const hung: Pair[] = [
@@ -99,7 +99,7 @@ describe('whether a storey’s links can be drawn without a crossing', () => {
     expect(isPlanar(nodes, pairs)).toBe(true)
   })
 
-  it('leaves a zone with no links alone, and a pair joined twice', () => {
+  it('leaves a zone with no connections alone, and a pair joined twice', () => {
     expect(
       isPlanar(
         ['a', 'b', 'lonely'],

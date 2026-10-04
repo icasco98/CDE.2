@@ -1,4 +1,4 @@
-import { takeOut } from '../../app/defaultLinks'
+import { takeOut } from '../../app/connectionDefaults'
 import type { Result, Store } from '../../model'
 
 /** What one cell of the matrix may be set to. */

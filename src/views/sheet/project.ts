@@ -189,9 +189,9 @@ export type StoreyShift = { readonly id: string; readonly from: number; readonly
 
 /**
  * Zones the sheet step moved to another storey go there in the project too, in one step to undo,
- * by the program's own storey move: the links they can no longer hold are let go with a sentence
- * each. A companion still waiting in the program goes with its zone; one drawn on the sheet stays
- * where the hand put it. The project gains the storeys they reach, its stairs stretched to the top.
+ * by the program's own storey move: the connections they can no longer hold are let go with a
+ * sentence each. A companion still waiting in the program goes with its zone; one drawn on the
+ * sheet stays where the hand put it. The project gains the storeys they reach, its stairs stretched to the top.
  * Only zones whose storey this step changed are read, so a zone the program moved stays moved.
  */
 export function followSheetStoreys(

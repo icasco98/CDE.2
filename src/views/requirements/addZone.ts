@@ -1,4 +1,4 @@
-import { connectDefaults } from '../../app/defaultLinks'
+import { connectDefaults } from '../../app/connectionDefaults'
 import type { Result, Store } from '../../model'
 import { companionName, zoneTypeById, standingOf, typicalArea } from '../../rulebook'
 
@@ -39,7 +39,7 @@ export function addZoneWithCompanion(
       })
       if (!alongside.ok) return alongside
     }
-    // A zone arrives linked to what the rulebook expects it to touch, in the same step.
+    // A zone arrives connected to what the rulebook expects it to touch, in the same step.
     return connectDefaults(store)
   })
 }

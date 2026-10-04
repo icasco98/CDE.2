@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createIdGenerator, createStore, type Store } from '../../model'
 import { defaultProgram } from '../../rulebook'
-import { connectDefaults } from '../../app/defaultLinks'
+import { connectDefaults } from '../../app/connectionDefaults'
 import { sendToStorey } from '../../app/sendToStorey'
 import { place, setStorey, sheetOf, type Sheet } from '../../sheet'
 import { createAside, followProject, followSheetStoreys, plotOf, programOf } from './project'
@@ -24,7 +24,7 @@ const rebuild = (): void => {
 const idOf = (name: string): string => store.getState().zones.find((r) => r.name === name)!.id
 const storeyIn = (name: string): number =>
   store.getState().zones.find((r) => r.name === name)!.storey
-const linked = (a: string, b: string): boolean =>
+const connected = (a: string, b: string): boolean =>
   store
     .getState()
     .connections.some(
@@ -55,15 +55,15 @@ beforeEach(() => {
 })
 
 describe('a zone moved to another storey on the sheet', () => {
-  it('moves in the program too, lets go of the links it cannot hold, and finds the ones there', () => {
+  it('moves in the program too, lets go of the connections it cannot hold, and finds the ones there', () => {
     const before = sheetWith(['Kitchen'])
-    expect(linked('Kitchen', 'Dining Room')).toBe(true)
+    expect(connected('Kitchen', 'Dining Room')).toBe(true)
     const after = setStorey(before, { ids: [idOf('Kitchen')], storey: 0, to: 1 }).sheet
     const moved = followSheetStoreys(store, before, after)
     if (!moved.ok) throw new Error('refused')
     expect(moved.value.shifts).toEqual([{ id: idOf('Kitchen'), from: 0, to: 1 }])
     expect(storeyIn('Kitchen')).toBe(1)
-    expect(linked('Kitchen', 'Dining Room')).toBe(false)
+    expect(connected('Kitchen', 'Dining Room')).toBe(false)
     expect(moved.value.letGo).toContain('Kitchen: its door to Dining Room was let go.')
   })
 
@@ -91,7 +91,7 @@ describe('a zone moved to another storey on the sheet', () => {
     links.storeys(5, moved.value.shifts)
     links.undone(5)
     expect(storeyIn('Kitchen')).toBe(0)
-    expect(linked('Kitchen', 'Dining Room')).toBe(true)
+    expect(connected('Kitchen', 'Dining Room')).toBe(true)
     links.redone(5)
     expect(storeyIn('Kitchen')).toBe(1)
   })

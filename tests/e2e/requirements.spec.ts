@@ -241,7 +241,7 @@ test('a brief asking a 5 m² WC to touch four zones says so on the Requirements 
   })
   await seed(page, {
     id: 'project_z2',
-    name: 'Over-linked WC',
+    name: 'Over-connected WC',
     storeys: 1,
     heights: [3.5],
     plot: {
@@ -284,7 +284,7 @@ test('a brief asking a 5 m² WC to touch four zones says so on the Requirements 
   })
   await page.goto('/')
   await expect(page.locator('.findings')).toContainText(
-    'Diwaniya WC is linked to four zones; at 5 m² it can touch three. Remove a link.',
+    'Diwaniya WC is connected to four zones; at 5 m² it can touch three. Remove a connection.',
   )
 })
 

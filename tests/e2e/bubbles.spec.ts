@@ -3,7 +3,7 @@ import {
   centreOf,
   drag,
   connectionBetween,
-  linkedPairs,
+  connectedPairs,
   openVilla,
   zoneNamed,
   saved,
@@ -25,7 +25,7 @@ test('the rebuild draws every storey side by side with the default connections d
   await expect(page.locator('.bubbles-sheet .plot, .buildable')).toHaveCount(0)
   expect(await page.locator('[data-connection]').count()).toBeGreaterThan(10)
   await expect(page.locator('[data-kind="main-door"]')).toHaveCount(1)
-  await expect.poll(() => linkedPairs(page)).toContain('Dining Room to Kitchen')
+  await expect.poll(() => connectedPairs(page)).toContain('Dining Room to Kitchen')
   // The ground's zones stand left of the first floor's.
   const entry = await centreOf(page, 'Entry', 0)
   const bedroom = await centreOf(page, 'Bedroom 1', 1)
@@ -121,12 +121,12 @@ test('hovering a zone makes its connections bold and fades the rest; selecting i
   const at = await centreOf(page, 'Kitchen')
   await page.mouse.move(at.x, at.y)
   await expect(sheet).toHaveClass(/bubbles-focusing/)
-  await expect(page.locator(`[data-connection="${pair!.id}"]`)).toHaveClass(/link-near/)
+  await expect(page.locator(`[data-connection="${pair!.id}"]`)).toHaveClass(/line-near/)
   await expect(zoneNamed(page, 'Dining Room')).toHaveClass(/bubble-near/)
   await expect.poll(() => opacity(`[data-connection="${elsewhere.id}"]`)).toBeLessThan(0.3)
   await expect.poll(() => opacity(`[data-connection="${pair!.id}"]`)).toBe(1)
   const bold = await page
-    .locator(`[data-connection="${pair!.id}"] .link`)
+    .locator(`[data-connection="${pair!.id}"] .connection`)
     .first()
     .evaluate((line) => parseFloat(getComputedStyle(line).strokeWidth))
   expect(bold).toBeGreaterThan(3)
@@ -138,7 +138,7 @@ test('hovering a zone makes its connections bold and fades the rest; selecting i
   await selectZone(page, 'Kitchen')
   await page.mouse.move(5, 5)
   await expect(sheet).toHaveClass(/bubbles-focusing/)
-  await expect(page.locator(`[data-connection="${pair!.id}"]`)).toHaveClass(/link-near/)
+  await expect(page.locator(`[data-connection="${pair!.id}"]`)).toHaveClass(/line-near/)
 })
 
 test("clicking a storey's name brings it forward and fades the others", async ({ page }) => {
@@ -156,12 +156,12 @@ test("clicking a storey's name brings it forward and fades the others", async ({
 
 test('a zone sent upstairs takes its suite with it and changes column', async ({ page }) => {
   await openVilla(page, { masterOnGround: true })
-  await expect.poll(() => linkedPairs(page)).toContain('Ground Hallway to Master Bedroom')
+  await expect.poll(() => connectedPairs(page)).toContain('Ground Hallway to Master Bedroom')
   await selectZone(page, 'Master Bedroom')
   await page.getByRole('button', { name: 'To First' }).click()
   await expect(zoneNamed(page, 'Master Bedroom', 1)).toHaveCount(1)
   await expect(zoneNamed(page, 'Ensuite, Master Bedroom', 1)).toHaveCount(1)
-  await expect.poll(() => linkedPairs(page)).toContain('First Hallway to Master Bedroom')
+  await expect.poll(() => connectedPairs(page)).toContain('First Hallway to Master Bedroom')
   await page.getByRole('button', { name: 'Undo' }).click()
   await page.getByRole('button', { name: 'Requirements' }).click()
   expect(await storeyOf(page, 'Master Bedroom')).toBe('Ground')
@@ -171,14 +171,14 @@ test('a zone sent upstairs takes its suite with it and changes column', async ({
 test('Delete takes a zone and its connections, and one undo brings both back', async ({ page }) => {
   await openVilla(page)
   const zones = await page.locator('.bubbles-sheet [data-zone]').count()
-  const links = await page.locator('[data-connection]').count()
+  const connections = await page.locator('[data-connection]').count()
   await selectZone(page, 'Kitchen')
   await page.locator('svg.bubbles-sheet').press('Delete')
   await expect(page.locator('.bubbles-sheet [data-zone]')).toHaveCount(zones - 1)
-  expect(await page.locator('[data-connection]').count()).toBeLessThan(links)
+  expect(await page.locator('[data-connection]').count()).toBeLessThan(connections)
   await page.keyboard.press('Control+z')
   await expect(page.locator('.bubbles-sheet [data-zone]')).toHaveCount(zones)
-  await expect(page.locator('[data-connection]')).toHaveCount(links)
+  await expect(page.locator('[data-connection]')).toHaveCount(connections)
 })
 
 test('deleting the hallway upstairs brings the nudge, and Add hallway answers it', async ({

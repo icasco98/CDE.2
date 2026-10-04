@@ -1557,7 +1557,7 @@ body:has(main.stage-sheet) {
   z-index: 4;
 }
 
-.sheet-stage .tray .item.check-linked {
+.sheet-stage .tray .item.check-connected {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
 }

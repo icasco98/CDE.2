@@ -9,8 +9,8 @@ import { freeProportion } from './types'
 import { inWords, listedNames, metresIn } from './words'
 
 /*
- * The brief checked on the Requirements screen: a link can fail because the program asked for what
- * geometry cannot give, and that is knowable from the graph and the plot alone. A finding says
+ * The brief checked on the Requirements screen: a connection can fail because the program asked
+ * for what geometry cannot give, and that is knowable from the graph and the plot alone. A finding says
  * which it is and what to do about it, and never stops anything.
  */
 
@@ -37,17 +37,18 @@ export type Finding = {
   readonly sentence: string
 }
 
-/** How much edge one link needs, in metres, and the area under which a zone counts as small. */
-const PER_LINK = 1
-const SMALL_LINK = 0.9
+/** How much edge one connection needs, in metres, and the area under which a zone counts as small. */
+const PER_CONNECTION = 1
+const SMALL_CONNECTION = 0.9
 
 /**
- * How many times that a link really spends of a zone's edge. A door needs its metre and a length
- * of edge either side of it to be a door rather than a hole, and the zone has to turn the corner
- * between one neighbour and the next; three metres of perimeter to a link is what a plan spends.
+ * How many times that a connection really spends of a zone's edge. A door needs its metre and a
+ * length of edge either side of it to be a door rather than a hole, and the zone has to turn the
+ * corner between one neighbour and the next; three metres of perimeter to a connection is what a
+ * plan spends.
  * Judgement, like the rest of the table, and among the first numbers the known house will correct.
  */
-const EDGE_PER_LINK = 3
+const EDGE_PER_CONNECTION = 3
 
 /** The Municipality's smallest zone; under it a door may take a little less edge. */
 const SMALL_ZONE_M2 = 10
@@ -64,17 +65,17 @@ function standsOn(zone: BriefZone, storey: number): boolean {
 }
 
 /**
- * How many links a zone's edge can hold at its target aspect: its perimeter at the most generous
- * aspect its kind admits, divided by what a link really spends of it.
+ * How many connections a zone's edge can hold at its target aspect: its perimeter at the most
+ * generous aspect its kind admits, divided by what a connection really spends of it.
  *
  * A corridor is the exception, and it is the reason a corridor exists: it is served down both of
  * its long sides, a door every metre, so what it can hold is read off its length twice over. Its
  * own row leaves the proportion free, so the length is the one its area gives at its clear width.
  */
-export function linksHeld(zone: BriefZone): number | undefined {
+export function connectionsHeld(zone: BriefZone): number | undefined {
   const kind = zoneTypeById(zone.type)
   if (!kind) return undefined
-  const per = zone.targetArea < SMALL_ZONE_M2 ? SMALL_LINK : PER_LINK
+  const per = zone.targetArea < SMALL_ZONE_M2 ? SMALL_CONNECTION : PER_CONNECTION
   if (kind.proportion === freeProportion) {
     const width = kind.legalFloor?.width ?? CORRIDOR_WIDTH
     return Math.floor((2 * Math.max(zone.targetArea, 0)) / width / per)
@@ -82,14 +83,14 @@ export function linksHeld(zone: BriefZone): number | undefined {
   const ratio = Math.max(1, kind.proportion.max)
   const short = Math.sqrt(Math.max(zone.targetArea, 0) / ratio)
   const long = short * ratio
-  return Math.floor((2 * (short + long)) / (EDGE_PER_LINK * per))
+  return Math.floor((2 * (short + long)) / (EDGE_PER_CONNECTION * per))
 }
 
 function radiusOf(area: number): number {
   return Math.sqrt(Math.max(area, 0) / Math.PI)
 }
 
-/** The zones of a storey and the links between two of them, as the planarity test reads them. */
+/** The zones of a storey and the connections between two of them, as the planarity test reads them. */
 function graphOn(
   zones: readonly BriefZone[],
   connections: readonly BriefConnection[],
@@ -107,8 +108,8 @@ function graphOn(
 }
 
 /**
- * Every finding this program carries on this plot, storey by storey: the links that cannot be
- * drawn without one crossing another, the zones asked to touch more than their edge can hold, and
+ * Every finding this program carries on this plot, storey by storey: the connections that cannot
+ * be drawn without one crossing another, the zones asked to touch more than their edge can hold, and
  * the kerb asked to hold more frontage than it has.
  */
 export function feasibility(
@@ -127,23 +128,23 @@ export function feasibility(
       found.push({
         code: 'crossing',
         storey,
-        sentence: `${storeyLabel(storey)}: these links cannot all be drawn without one crossing another, so one pair can never share an edge. Remove a link between two zones that do not need a door.`,
+        sentence: `${storeyLabel(storey)}: these connections cannot all be drawn without one crossing another, so one pair can never share an edge. Remove a connection between two zones that do not need a door.`,
       })
 
     for (const zone of zones) {
       if (!standsOn(zone, storey) || zone.storey !== storey) continue
-      const held = linksHeld(zone)
+      const held = connectionsHeld(zone)
       if (held === undefined) continue
-      const links = connections.filter(
+      const joined = connections.filter(
         (connection) =>
           (connection.a === zone.id || connection.b === zone.id) &&
           (connection.a === EXTERIOR || connection.b === EXTERIOR || connection.storey === storey),
       ).length
-      if (links <= held) continue
+      if (joined <= held) continue
       found.push({
         code: 'edge',
         storey,
-        sentence: `${zone.name} is linked to ${inWords(links)} zones; at ${metresIn(zone.targetArea)} m² it can touch ${inWords(held)}. Remove a link.`,
+        sentence: `${zone.name} is connected to ${inWords(joined)} zones; at ${metresIn(zone.targetArea)} m² it can touch ${inWords(held)}. Remove a connection.`,
       })
     }
 

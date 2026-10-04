@@ -1,5 +1,5 @@
 import type { ConnectionKind } from '../../model'
-import type { BubbleLink } from './types'
+import type { BubbleConnection } from './types'
 
 const kinds: readonly { readonly kind: ConnectionKind; readonly label: string }[] = [
   { kind: 'door', label: 'Door' },
@@ -8,7 +8,7 @@ const kinds: readonly { readonly kind: ConnectionKind; readonly label: string }[
 
 /** The connection in hand: the two zones it joins, where it came from, its kind, and the way out. */
 export function ConnectionPanel(props: {
-  readonly connection: BubbleLink
+  readonly connection: BubbleConnection
   readonly nameOf: (id: string) => string
   readonly onSetKind: (kind: ConnectionKind) => void
   readonly onDelete: () => void

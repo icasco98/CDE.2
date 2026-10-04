@@ -563,15 +563,15 @@ export type Walk = {
  */
 export function walkTest(sheet: Sheet, storey: number): Walk | null {
   const placed = placedZones(sheet, storey).filter((r) => !isOpen(r) && !r.fixed)
-  const links = new Map<string, Set<string>>()
+  const joins = new Map<string, Set<string>>()
   const count = new Map<string, number>()
   const street = new Set<string>()
   const outside = new Set<string>()
   const blocked: Zone[] = []
   let any = false
-  const link = (p: string, q: string) => {
-    if (!links.has(p)) links.set(p, new Set())
-    links.get(p)!.add(q)
+  const join = (p: string, q: string) => {
+    if (!joins.has(p)) joins.set(p, new Set())
+    joins.get(p)!.add(q)
   }
   for (const { zone: r, door: d, pl } of drawnDoors(sheet, storey)) {
     any = true
@@ -579,11 +579,11 @@ export function walkTest(sheet: Sheet, storey: number): Walk | null {
     const o = doorInto(sheet, d)
     if (o) {
       count.set(o.id, (count.get(o.id) ?? 0) + 1)
-      link(r.id, o.id)
-      link(o.id, r.id)
+      join(r.id, o.id)
+      join(o.id, r.id)
     } else {
-      link('out', r.id)
-      link(r.id, 'out')
+      join('out', r.id)
+      join(r.id, 'out')
       outside.add(r.id)
       if (isStreetDoor(d)) street.add(r.id)
     }
@@ -591,8 +591,8 @@ export function walkTest(sheet: Sheet, storey: number): Walk | null {
   }
   if (storey > 0)
     for (const st of placed.filter(isStair)) {
-      link('out', st.id)
-      link(st.id, 'out')
+      join('out', st.id)
+      join(st.id, 'out')
       any = true
     }
   if (!any) return null
@@ -600,7 +600,7 @@ export function walkTest(sheet: Sheet, storey: number): Walk | null {
   const queue = ['out']
   while (queue.length) {
     const p = queue.shift()!
-    for (const q of links.get(p) ?? [])
+    for (const q of joins.get(p) ?? [])
       if (!depth.has(q)) {
         depth.set(q, depth.get(p)! + 1)
         queue.push(q)
