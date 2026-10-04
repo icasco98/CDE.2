@@ -7,7 +7,7 @@ const rowsOf = (page: Page) => page.locator('table.program tbody tr')
 /** A program row by the name it carries, which is the name the rebuild gave it. */
 function rowNamed(page: Page, name: string) {
   return rowsOf(page).filter({
-    has: page.getByLabel('Room name').and(page.locator(`[value="${name}"]`)),
+    has: page.getByLabel('Zone name').and(page.locator(`[value="${name}"]`)),
   })
 }
 
@@ -35,8 +35,8 @@ test('a person enters a plot, a household and a program, and it is still there a
   await enterRequirements(page)
 
   await expect(page.getByText('Plot area')).toContainText('500 m²')
-  const rooms = rowsOf(page)
-  expect(await rooms.count()).toBeGreaterThanOrEqual(12)
+  const zones = rowsOf(page)
+  expect(await zones.count()).toBeGreaterThanOrEqual(12)
 
   const diwaniya = rowNamed(page, 'Diwaniya')
   await expect(diwaniya.getByLabel('Target area')).toHaveValue('52.5')
@@ -45,8 +45,8 @@ test('a person enters a plot, a household and a program, and it is still there a
   await expect(diwaniya.getByText('Below the legal floor of 10 m²')).toBeVisible()
 
   await page.getByRole('button', { name: 'Add storey' }).click()
-  await rooms.nth(0).getByLabel('Storey').selectOption({ label: 'First' })
-  await expect(rooms.nth(0).getByLabel('Storey')).toHaveValue('1')
+  await zones.nth(0).getByLabel('Storey').selectOption({ label: 'First' })
+  await expect(zones.nth(0).getByLabel('Storey')).toHaveValue('1')
 
   await expect
     .poll(() =>
@@ -54,7 +54,7 @@ test('a person enters a plot, a household and a program, and it is still there a
     )
     .toBe(true)
 
-  const before = await rooms.count()
+  const before = await zones.count()
   await page.reload()
 
   await expect(page.getByLabel('Project name')).toHaveValue('Al Bidaa House')
@@ -70,13 +70,13 @@ test('a person enters a plot, a household and a program, and it is still there a
   await expect(rowsOf(page).nth(0).getByLabel('Storey')).toHaveValue('1')
 })
 
-test('a person saves the project to a file that reads back with the same rooms', async ({
+test('a person saves the project to a file that reads back with the same zones', async ({
   page,
 }) => {
   await enterRequirements(page)
 
   const names = await rowsOf(page)
-    .getByLabel('Room name')
+    .getByLabel('Zone name')
     .evaluateAll((inputs) => inputs.map((input) => (input as HTMLInputElement).value))
 
   const [download] = await Promise.all([
@@ -89,7 +89,7 @@ test('a person saves the project to a file that reads back with the same rooms',
   const read = deserialize(readFileSync(path, 'utf8'))
   if (!read.ok) throw new Error(read.problems.map((problem) => problem.message).join(', '))
   expect(read.value.name).toBe('Al Bidaa House')
-  expect(read.value.rooms.map((room) => room.name)).toEqual(names)
+  expect(read.value.zones.map((zone) => zone.name)).toEqual(names)
 })
 
 const opened = {
@@ -97,9 +97,9 @@ const opened = {
   name: 'Opened House',
   storeys: 1,
   plot: { on: true, polygon: [], north: 0, street: [] },
-  rooms: [
+  zones: [
     {
-      id: 'room_1',
+      id: 'zone_1',
       name: 'Diwaniya',
       type: 'diwaniya',
       storey: 0,
@@ -135,7 +135,7 @@ test('undo, redo, opening a file and refusing one that cannot be read', async ({
   })
   await expect(page.getByLabel('Project name')).toHaveValue('Opened House')
   await expect(rowsOf(page)).toHaveCount(1)
-  await expect(page.getByLabel('Hold rooms inside the plot')).toBeChecked()
+  await expect(page.getByLabel('Hold zones inside the plot')).toBeChecked()
 
   await page.locator('.file-button input').setInputFiles({
     name: 'broken.json',
@@ -173,7 +173,7 @@ test('two storeys put the bedrooms upstairs, and a bedroom added brings its ensu
 
   const before = await rowsOf(page).count()
   await page.getByLabel('Kind to add').selectOption('bedroom')
-  await page.getByRole('button', { name: 'Add room' }).click()
+  await page.getByRole('button', { name: 'Add zone' }).click()
   await expect(rowsOf(page)).toHaveCount(before + 2)
   await expect(rowNamed(page, 'Ensuite, Bedroom').getByLabel('Storey')).toHaveValue('1')
 
@@ -200,9 +200,9 @@ test('a storey added and undone takes the stair back down with it', async ({ pag
   await page.goto('/')
 
   await page.getByLabel('Kind to add').selectOption('stair')
-  await page.getByRole('button', { name: 'Add room' }).click()
+  await page.getByRole('button', { name: 'Add zone' }).click()
   await page.getByLabel('Kind to add').selectOption('bedroom')
-  await page.getByRole('button', { name: 'Add room' }).click()
+  await page.getByRole('button', { name: 'Add zone' }).click()
 
   const stair = rowNamed(page, 'Stair')
   const bedroom = rowNamed(page, 'Bedroom')
@@ -216,7 +216,7 @@ test('a storey added and undone takes the stair back down with it', async ({ pag
   await expect(bedroom.getByLabel('Storey').locator('option')).toHaveText(['Ground'])
   await expect(stair.getByLabel('From').locator('option:checked')).toHaveText('Ground')
   await expect(stair.getByLabel('To').locator('option:checked')).toHaveText('Ground')
-  // The one undo answered the storey alone: the three rooms added before it are still there.
+  // The one undo answered the storey alone: the three zones added before it are still there.
   await expect(rowsOf(page)).toHaveCount(3)
 })
 
@@ -227,10 +227,10 @@ async function seed(page: Page, project: unknown) {
   }, JSON.stringify(project))
 }
 
-test('a brief asking a 5 m² WC to touch four rooms says so on the Requirements screen', async ({
+test('a brief asking a 5 m² WC to touch four zones says so on the Requirements screen', async ({
   page,
 }) => {
-  const room = (id: string, name: string, type: string, targetArea: number) => ({
+  const zone = (id: string, name: string, type: string, targetArea: number) => ({
     id,
     name,
     type,
@@ -265,18 +265,18 @@ test('a brief asking a 5 m² WC to touch four rooms says so on the Requirements 
       womensReception: false,
       masterOnGround: false,
     },
-    rooms: [
-      room('room_wc', 'Diwaniya WC', 'diwaniya-wc', 5),
-      room('room_d', 'Diwaniya', 'diwaniya', 45),
-      room('room_f', 'Formal Living', 'formal-living', 30),
-      room('room_g', 'Dining Room', 'dining-room', 24),
-      room('room_h', 'Family Living', 'family-living', 32),
+    zones: [
+      zone('zone_wc', 'Diwaniya WC', 'diwaniya-wc', 5),
+      zone('zone_d', 'Diwaniya', 'diwaniya', 45),
+      zone('zone_f', 'Formal Living', 'formal-living', 30),
+      zone('zone_g', 'Dining Room', 'dining-room', 24),
+      zone('zone_h', 'Family Living', 'family-living', 32),
     ],
     connections: [
-      { id: 'connection_1', a: 'room_wc', b: 'room_d', kind: 'door', storey: 0 },
-      { id: 'connection_2', a: 'room_wc', b: 'room_f', kind: 'door', storey: 0 },
-      { id: 'connection_3', a: 'room_wc', b: 'room_g', kind: 'door', storey: 0 },
-      { id: 'connection_4', a: 'room_wc', b: 'room_h', kind: 'door', storey: 0 },
+      { id: 'connection_1', a: 'zone_wc', b: 'zone_d', kind: 'door', storey: 0 },
+      { id: 'connection_2', a: 'zone_wc', b: 'zone_f', kind: 'door', storey: 0 },
+      { id: 'connection_3', a: 'zone_wc', b: 'zone_g', kind: 'door', storey: 0 },
+      { id: 'connection_4', a: 'zone_wc', b: 'zone_h', kind: 'door', storey: 0 },
     ],
     weights: {},
     actors: [],
@@ -284,7 +284,7 @@ test('a brief asking a 5 m² WC to touch four rooms says so on the Requirements 
   })
   await page.goto('/')
   await expect(page.locator('.findings')).toContainText(
-    'Diwaniya WC is linked to four rooms; at 5 m² it can touch three. Remove a link.',
+    'Diwaniya WC is linked to four zones; at 5 m² it can touch three. Remove a link.',
   )
 })
 
@@ -296,7 +296,7 @@ test('a bedroom moved to First says which door it let go', async ({ page }) => {
 
   const row = page
     .locator('table.program tbody tr')
-    .filter({ has: page.getByLabel('Room name').and(page.locator('[value="Master Bedroom"]')) })
+    .filter({ has: page.getByLabel('Zone name').and(page.locator('[value="Master Bedroom"]')) })
   await row.getByLabel('Storey').selectOption({ label: 'First' })
   await expect(page.locator('.messages')).toContainText(
     'Master Bedroom: its door to Ground Hallway was let go.',
@@ -310,7 +310,7 @@ test('rebuilding from the default household proposes a Ground and a First, the b
   await page.getByRole('button', { name: 'Rebuild program from household' }).click()
   const why = page.getByRole('list', { name: 'Why these storeys' })
   await expect(why).toContainText('Two storeys, Ground and First')
-  await expect(why).toContainText('First takes the private rooms')
+  await expect(why).toContainText('First takes the private zones')
   await expect(why).toContainText('A stair spans Ground to First')
   await expect(why).toContainText('with 15% for walls')
   await expect(rowNamed(page, 'Master Bedroom').getByLabel('Storey')).toHaveValue('1')

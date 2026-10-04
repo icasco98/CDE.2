@@ -11,7 +11,7 @@ export type {
   Plot,
   Project,
   Result,
-  Room,
+  Zone,
   Violation,
   EdgeHint,
 } from './types'

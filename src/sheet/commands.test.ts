@@ -14,7 +14,7 @@ describe('the page that teaches the architect its commands', () => {
     for (const name of [
       'read_sheet',
       'place_against',
-      'place_rooms',
+      'place_zones',
       'settle',
       'take_back',
       'remember',
@@ -37,7 +37,7 @@ describe('the page that teaches the architect its commands', () => {
   })
 
   it('says the three things the architect has got wrong', () => {
-    expect(page).toContain('`place_against` takes several rooms in one call')
+    expect(page).toContain('`place_against` takes several zones in one call')
     expect(page).toContain('a sentence in the chat changes nothing')
     expect(page).toContain('a verb refused is a fact about')
   })

@@ -8,15 +8,15 @@ import {
   type Household,
   type Plot,
   type Project,
-  type Room,
+  type Zone,
 } from './types'
 
 /** The floor-to-floor height a storey opens at, in metres. */
 export const STARTING_HEIGHT_M = 3.5
 
-/** What undo restores: rooms, connections, keep-apart pairs, declined suggestions, plot, storeys, heights and household. */
+/** What undo restores: zones, connections, keep-apart pairs, declined suggestions, plot, storeys, heights and household. */
 export type Snapshot = {
-  readonly rooms: readonly Room[]
+  readonly zones: readonly Zone[]
   readonly connections: readonly Connection[]
   readonly apart: readonly Apart[]
   readonly declined: readonly Declined[]
@@ -58,7 +58,7 @@ export function emptyProject(newId: IdGenerator, name = 'Untitled'): Project {
     heights: [STARTING_HEIGHT_M],
     plot: startingPlot,
     household: startingHousehold,
-    rooms: [],
+    zones: [],
     connections: [],
     apart: [],
     declined: [],
@@ -68,26 +68,26 @@ export function emptyProject(newId: IdGenerator, name = 'Untitled'): Project {
 }
 
 export function snapshotOf(project: Project): Snapshot {
-  const { rooms, connections, apart, declined, plot, storeys, heights, household } = project
-  return { rooms, connections, apart, declined, plot, storeys, heights, household }
+  const { zones, connections, apart, declined, plot, storeys, heights, household } = project
+  return { zones, connections, apart, declined, plot, storeys, heights, household }
 }
 
 export function restore(project: Project, snapshot: Snapshot): Project {
   return { ...project, ...snapshot }
 }
 
-export function findRoom(project: Project, id: string): Room | undefined {
-  return project.rooms.find((room) => room.id === id)
+export function findZone(project: Project, id: string): Zone | undefined {
+  return project.zones.find((zone) => zone.id === id)
 }
 
 export function findActor(project: Project, id: string): Actor | undefined {
   return project.actors.find((actor) => actor.id === id)
 }
 
-export function patchRoom(project: Project, id: string, patch: Partial<Room>): Project {
+export function patchZone(project: Project, id: string, patch: Partial<Zone>): Project {
   return {
     ...project,
-    rooms: project.rooms.map((room) => (room.id === id ? { ...room, ...patch } : room)),
+    zones: project.zones.map((zone) => (zone.id === id ? { ...zone, ...patch } : zone)),
   }
 }
 
@@ -99,13 +99,13 @@ export function patchActor(project: Project, id: string, patch: Partial<Actor>):
 }
 
 /**
- * Deleting a room deletes its connections, its keep-apart pairs and the suggestions declined for it, and
+ * Deleting a zone deletes its connections, its keep-apart pairs and the suggestions declined for it, and
  * drops it from every actor's route.
  */
-export function dropRoom(project: Project, id: string): Project {
+export function dropZone(project: Project, id: string): Project {
   return {
     ...project,
-    rooms: project.rooms.filter((room) => room.id !== id),
+    zones: project.zones.filter((zone) => zone.id !== id),
     connections: project.connections.filter(
       (connection) => connection.a !== id && connection.b !== id,
     ),
@@ -119,16 +119,16 @@ export function dropRoom(project: Project, id: string): Project {
   }
 }
 
-/** A room's footprint is absent while it is unplaced, so it is rebuilt without one. */
-export function withoutFootprint(room: Room): Room {
+/** A zone's footprint is absent while it is unplaced, so it is rebuilt without one. */
+export function withoutFootprint(zone: Zone): Zone {
   return {
-    id: room.id,
-    name: room.name,
-    type: room.type,
-    storey: room.storey,
-    storeysSpanned: room.storeysSpanned,
-    targetArea: room.targetArea,
-    pinned: room.pinned,
-    ...(room.bubble === undefined ? {} : { bubble: room.bubble }),
+    id: zone.id,
+    name: zone.name,
+    type: zone.type,
+    storey: zone.storey,
+    storeysSpanned: zone.storeysSpanned,
+    targetArea: zone.targetArea,
+    pinned: zone.pinned,
+    ...(zone.bubble === undefined ? {} : { bubble: zone.bubble }),
   }
 }

@@ -34,7 +34,7 @@ forces; the table keeps the rows as the two defaults the input offers.
 
 **Strength** is weak, medium or strong, read as 0.3, 0.6 or 0.9 before
 the family weight multiplies it. **Acts on** names room kinds from
-`room-types.md`.
+`zone-types.md`.
 
 ## User requirements
 
@@ -45,7 +45,7 @@ the family weight multiplies it. **Acts on** names room kinds from
 | U3 | Kitchen serves dining | Kitchen, Dining Room | sharing an edge with a door | strong | adjacency-matrix practice; firm practice | provisional |
 | U4 | Family living is the hub | Family Living | short routes to bedrooms, kitchen and the family entrance | medium | firm practice | provisional |
 | U5 | Bedrooms are quiet | Master Bedroom, Bedroom | away from Diwaniya, Formal Living, Kitchen and the street | strong | room-type tiers; firm practice | owner |
-| U6 | Suite integrity | Ensuite Bathroom, Dressing Room | sharing an edge with their own bedroom, door between | strong | room-type auxiliary flag | provisional |
+| U6 | Suite integrity | Ensuite Bathroom, Dressing Room | sharing an edge with their own bedroom, door between | strong | zone-type auxiliary flag | provisional |
 | U7 | Staff near their work | Maid Room, Maid Bathroom | Kitchen, Laundry and the Service Entrance | medium | firm practice; program of government-model houses | provisional |
 | U8 | Driver by the cars | Driver Room, Driver Bathroom | the Garage and the street, with their own door | medium | firm practice | provisional |
 | U9 | Guests find the WC | Guest WC | Formal Living and the Entry, never through a private room | medium | firm practice | owner |

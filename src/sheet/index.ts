@@ -1,8 +1,8 @@
 /** The zoning sheet: its model, its geometry, its actions and its report. */
 
 export type { Box, PlotSpec, Side } from './plot'
-export type { HeldDoor, ProgramRoom, SetDown } from './program'
-export { followProgram, roomFromProgram } from './program'
+export type { HeldDoor, ProgramZone, SetDown } from './program'
+export { followProgram, zoneFromProgram } from './program'
 export {
   DEFAULT_PLOT,
   FRESH_PLOT,
@@ -23,7 +23,7 @@ export type {
   LandingRule,
   Point,
   Poly,
-  Room,
+  Zone,
   Settings,
   Sheet,
 } from './model'
@@ -34,7 +34,7 @@ export {
   SETTINGS_V,
   acrossStoreys,
   allPlaced,
-  cloneRoom,
+  cloneZone,
   cloneSheet,
   centreOf,
   doorsOf,
@@ -48,17 +48,17 @@ export {
   kin,
   migrate,
   piecesOf,
-  placedRooms,
+  placedZones,
   rank,
   ruleOf,
   sheetOf,
-  snapRooms,
+  snapZones,
   square,
   stH,
   storeyCountOf,
   storeyNameOf,
   storeyOf,
-  tallRoom,
+  tallZone,
   zBase,
   zTop,
 } from './model'
@@ -161,7 +161,7 @@ export {
   givePieces,
   holdsSquare,
   pocketsOf,
-  roomFromPocket,
+  zoneFromPocket,
 } from './pockets'
 
 export type { Hit, Place, Walk } from './doors'
@@ -226,7 +226,7 @@ export {
   restOnGrid,
   restore,
   sendBack,
-  sendBackRoom,
+  sendBackZone,
   setArea,
   setColor,
   setDoorWidth,

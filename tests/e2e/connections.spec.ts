@@ -22,7 +22,7 @@ async function selectConnection(page: Page, id: string) {
   await expect(page.getByRole('region', { name: 'Connection' })).toBeVisible()
 }
 
-test('a drag from one room to another connects them, added by hand', async ({ page }) => {
+test('a drag from one zone to another connects them, added by hand', async ({ page }) => {
   await openVilla(page)
   await expect.poll(() => linkedPairs(page)).not.toContain('Formal Living to Kitchen')
   await connect(page, 'Kitchen', 'Formal Living')
@@ -64,7 +64,7 @@ test('a default connection says its rulebook row, turns open, and one undo turns
   )
 })
 
-test('a default taken out is not made again when a room is added', async ({ page }) => {
+test('a default taken out is not made again when a zone is added', async ({ page }) => {
   await openVilla(page)
   await expect.poll(() => linkedPairs(page)).toContain('Dining Room to Kitchen')
   const connection = await connectionBetween(page, 'Kitchen', 'Dining Room')
@@ -74,12 +74,12 @@ test('a default taken out is not made again when a room is added', async ({ page
   await expect.poll(() => linkedPairs(page)).not.toContain('Dining Room to Kitchen')
 
   await tab(page, 'Requirements').click()
-  await page.getByRole('button', { name: 'Add room', exact: true }).click()
+  await page.getByRole('button', { name: 'Add zone', exact: true }).click()
   await tab(page, 'Bubbles').click()
   await expect.poll(() => linkedPairs(page)).not.toContain('Dining Room to Kitchen')
 })
 
-test('a drag to Outside gives a room its own door to the street', async ({ page }) => {
+test('a drag to Outside gives a zone its own door to the street', async ({ page }) => {
   await openVilla(page)
   await expect.poll(() => linkedPairs(page)).not.toContain('Kitchen to Outside')
   const outside = await page.locator('.bubbles-sheet .outside[data-storey="0"] rect').boundingBox()
@@ -90,7 +90,7 @@ test('a drag to Outside gives a room its own door to the street', async ({ page 
   await expect.poll(() => linkedPairs(page)).toContain('Kitchen to Outside')
 })
 
-test('a drag to a room on another storey is refused with the reason', async ({ page }) => {
+test('a drag to a zone on another storey is refused with the reason', async ({ page }) => {
   await openVilla(page)
   await expect.poll(async () => (await linkedPairs(page)).length).toBeGreaterThan(10)
   const pairs = await linkedPairs(page)
@@ -117,7 +117,7 @@ test('a deleted suggestion stays deleted after a reload, and Restore brings it b
   await expect(page.getByRole('button', { name: 'Restore suggested connections' })).toBeDisabled()
 })
 
-test('a right-click on a room restores its deleted suggestions and no other room’s', async ({
+test('a right-click on a zone restores its deleted suggestions and no other zone’s', async ({
   page,
 }) => {
   await openVilla(page)
@@ -132,10 +132,10 @@ test('a right-click on a room restores its deleted suggestions and no other room
   }
   await expect.poll(() => linkedPairs(page)).not.toContain('Entry to Formal Living')
   await page
-    .locator('.bubbles-sheet [data-room][data-name="Kitchen"] circle.bubble-shape')
+    .locator('.bubbles-sheet [data-zone][data-name="Kitchen"] circle.bubble-shape')
     .first()
     .click({ button: 'right' })
-  await page.getByRole('menuitem', { name: 'Restore suggested connections for this room' }).click()
+  await page.getByRole('menuitem', { name: 'Restore suggested connections for this zone' }).click()
   await expect.poll(() => linkedPairs(page)).toContain('Dining Room to Kitchen')
   expect(await linkedPairs(page)).not.toContain('Entry to Formal Living')
 })

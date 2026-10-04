@@ -11,7 +11,7 @@ import {
   type Plot,
   type Project,
   type Result,
-  type Room,
+  type Zone,
   type Violation,
   type EdgeHint,
 } from './types'
@@ -79,14 +79,14 @@ export function parseProject(document: Document): Result<Project> {
     return {
       polygon: polygon(raw.polygon, `${at}.polygon`),
       rotation: count(raw.rotation, `${at}.rotation`),
-      // A file written before rooms could curve carries no arcs and reads as it always did.
+      // A file written before zones could curve carries no arcs and reads as it always did.
       ...(raw.arcs === undefined
         ? {}
         : { arcs: list(raw.arcs, `${at}.arcs`).map((raw, i) => arc(raw, `${at}.arcs[${i}]`)) }),
     }
   }
 
-  const room = (value: unknown, at: string): Room => {
+  const zone = (value: unknown, at: string): Zone => {
     const raw = nested(value, at)
     return {
       id: text(raw.id, `${at}.id`),
@@ -180,7 +180,7 @@ export function parseProject(document: Document): Result<Project> {
     heights: list(document.heights, 'heights').map((height, i) => count(height, `heights[${i}]`)),
     plot: plotOf(document.plot, 'plot'),
     household: householdOf(document.household, 'household'),
-    rooms: list(document.rooms, 'rooms').map((raw, i) => room(raw, `rooms[${i}]`)),
+    zones: list(document.zones, 'zones').map((raw, i) => zone(raw, `zones[${i}]`)),
     connections: list(document.connections, 'connections').map((raw, i) =>
       connection(raw, `connections[${i}]`),
     ),

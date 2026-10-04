@@ -1,6 +1,6 @@
 import type { BubbleApart } from './types'
 
-/** The keep-apart pair in hand: the two rooms, what the pair asks, and the way to let it go. */
+/** The keep-apart pair in hand: the two zones, what the pair asks, and the way to let it go. */
 export function ApartPanel(props: {
   readonly pair: BubbleApart
   readonly nameOf: (id: string) => string

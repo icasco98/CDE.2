@@ -15,7 +15,7 @@ type StoreysProps = {
 
 export function Storeys(props: StoreysProps) {
   const n = storeyCountOf(props.sheet)
-  const topEmpty = n > 2 && !props.sheet.rooms.some((r) => r.placed && storeyOf(r) === n - 1)
+  const topEmpty = n > 2 && !props.sheet.zones.some((r) => r.placed && storeyOf(r) === n - 1)
   return (
     <span
       className="seg storeys"

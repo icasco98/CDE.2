@@ -10,8 +10,8 @@ test('the two buttons hand over a PDF and a DXF of the sheet as it stands', asyn
     'Zoning and 3D',
     'Openings',
   ])
-  const rooms = await page.locator('svg.sheet g.room[data-room]:not(.under)').count()
-  expect(rooms).toBeGreaterThan(4)
+  const zones = await page.locator('svg.sheet g.zone[data-zone]:not(.under)').count()
+  expect(zones).toBeGreaterThan(4)
 
   const pdf = await exported(page, 'Export PDF')
   expect(pdf.suggestedFilename()).toBe('test-plan.pdf')
@@ -22,10 +22,10 @@ test('the two buttons hand over a PDF and a DXF of the sheet as it stands', asyn
   const drawing = await textOf(dxf)
   expect(drawing.startsWith('0\nSECTION')).toBe(true)
   expect(drawing.endsWith('0\nEOF\n')).toBe(true)
-  // The ground storey has a rooms layer of its own, with at least one closed outline on it for
-  // every room the sheet is showing.
-  expect(drawing).toContain('0\nLAYER\n2\nS0-ROOMS\n')
-  expect(drawing.split('0\nPOLYLINE\n8\nS0-ROOMS\n').length - 1).toBeGreaterThanOrEqual(rooms)
+  // The ground storey has a zones layer of its own, with at least one closed outline on it for
+  // every zone the sheet is showing.
+  expect(drawing).toContain('0\nLAYER\n2\nS0-ZONES\n')
+  expect(drawing.split('0\nPOLYLINE\n8\nS0-ZONES\n').length - 1).toBeGreaterThanOrEqual(zones)
 })
 
 test('a project named by hand names the files it exports', async ({ page }) => {

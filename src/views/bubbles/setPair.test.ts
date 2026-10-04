@@ -9,7 +9,7 @@ let dining: string
 beforeEach(() => {
   store = createStore(undefined, { newId: createIdGenerator(3) })
   const add = (type: string) => {
-    const made = store.actions.addRoom({ type, targetArea: 20 })
+    const made = store.actions.addZone({ type, targetArea: 20 })
     if (!made.ok) throw new Error('refused')
     return made.value
   }

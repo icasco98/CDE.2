@@ -9,12 +9,12 @@ import {
   ghostsOf,
   isCourt,
   isOpen,
-  placedRooms,
+  placedZones,
   storeyCountOf,
   storeyNameOf,
   storeyOf,
   acrossStoreys,
-  type Room,
+  type Zone,
   type Sheet,
 } from './model'
 import { areaOf, polyArea, r2, worldEdges, type Seg } from './geometry'
@@ -24,8 +24,8 @@ import { walkTest, type Walk } from './doors'
 
 const onLine = (v: number, at: number) => Math.abs(v - at) < 0.02
 
-/** A room's edges that lie on the plot boundary, each with the side it is on. */
-export function boundaryEdges(r: Room, plot: PlotSpec): (Seg & { side: Side })[] {
+/** A zone's edges that lie on the plot boundary, each with the side it is on. */
+export function boundaryEdges(r: Zone, plot: PlotSpec): (Seg & { side: Side })[] {
   const out: (Seg & { side: Side })[] = []
   for (const w of worldEdges(r)) {
     const side: Side | null =
@@ -111,11 +111,11 @@ export type Report = {
  */
 export function report(sheet: Sheet, storey: number): Report {
   const { settings } = sheet
-  const onStorey = placedRooms(sheet, storey)
+  const onStorey = placedZones(sheet, storey)
   const p = onStorey.filter((r) => !r.fixed && !isOpen(r))
   const courts = onStorey.filter((r) => r.fixed)
   const placedArea = p.reduce((s, r) => s + areaOf(r), 0)
-  const askedArea = sheet.rooms.filter((r) => !isOpen(r)).reduce((s, r) => s + r.target, 0)
+  const askedArea = sheet.zones.filter((r) => !isOpen(r)).reduce((s, r) => s + r.target, 0)
   const box = allowedBox(sheet, storey)
   const ov = overlapsOf(sheet, storey)
   const n = storeyCountOf(sheet)
@@ -175,7 +175,7 @@ export function report(sheet: Sheet, storey: number): Report {
   }
 }
 
-function walkRead(walk: Walk, p: Room[], storey: number): NonNullable<Report['walk']> {
+function walkRead(walk: Walk, p: Zone[], storey: number): NonNullable<Report['walk']> {
   const entry = p.find((r) => r.kind === 'entry-foyer')
   const diw = p.find((r) => r.kind === 'diwaniya')
   return {

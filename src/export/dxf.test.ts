@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { sheetOf, type Door, type Point, type Room, type Sheet } from '../sheet'
+import { sheetOf, type Door, type Point, type Zone, type Sheet } from '../sheet'
 import { dxfOf } from './dxf'
 
-function room(
+function zone(
   name: string,
   box: { x: number; y: number; w: number; h: number },
-  extra: Partial<Room> = {},
-): Room {
+  extra: Partial<Zone> = {},
+): Zone {
   return {
     id: name,
     name,
-    kind: 'room',
+    kind: 'zone',
     cat: 'private',
     target: 20,
     angle: 0,
@@ -86,10 +86,10 @@ describe('the file a CAD program opens', () => {
     expect(layers.map((layer) => [valueOf(layer, 2), valueOf(layer, 62)])).toEqual([
       ['PLOT', '7'],
       ['SETBACK', '5'],
-      ['S0-ROOMS', '3'],
+      ['S0-ZONES', '3'],
       ['S0-DOORS', '1'],
       ['S0-TEXT', '8'],
-      ['S1-ROOMS', '3'],
+      ['S1-ZONES', '3'],
       ['S1-DOORS', '1'],
       ['S1-TEXT', '8'],
       ['NORTH', '7'],
@@ -134,15 +134,15 @@ describe('the file a CAD program opens', () => {
   })
 })
 
-describe('one 5 × 4 m room at (2, 3) on the ground', () => {
-  const kitchen = room('Kitchen', { x: 2, y: 3, w: 5, h: 4 })
+describe('one 5 × 4 m zone at (2, 3) on the ground', () => {
+  const kitchen = zone('Kitchen', { x: 2, y: 3, w: 5, h: 4 })
   const items = itemsIn(dxfOf(sheetOf([kitchen], {}, 1)), 'ENTITIES')
 
-  it('is one closed polyline of four vertices on S0-ROOMS, flipped y up', () => {
-    const on = items.filter((i) => i.type === 'POLYLINE' && valueOf(i, 8) === 'S0-ROOMS')
+  it('is one closed polyline of four vertices on S0-ZONES, flipped y up', () => {
+    const on = items.filter((i) => i.type === 'POLYLINE' && valueOf(i, 8) === 'S0-ZONES')
     expect(on).toHaveLength(1)
     const at = items.findIndex(
-      (item) => item.type === 'POLYLINE' && valueOf(item, 8) === 'S0-ROOMS',
+      (item) => item.type === 'POLYLINE' && valueOf(item, 8) === 'S0-ZONES',
     )
     expect(valueOf(items[at] as Item, 70)).toBe('1')
     const vertices = items.slice(at + 1, at + 5)
@@ -168,8 +168,8 @@ describe('one 5 × 4 m room at (2, 3) on the ground', () => {
 })
 
 it('draws a door as a line across the opening on the storey’s door layer', () => {
-  const kitchen = room('Kitchen', { x: 0, y: 0, w: 5, h: 4 })
-  const dining = room('Dining', { x: 5, y: 0, w: 5, h: 4 })
+  const kitchen = zone('Kitchen', { x: 0, y: 0, w: 5, h: 4 })
+  const dining = zone('Dining', { x: 5, y: 0, w: 5, h: 4 })
   const door: Door = {
     id: 'd1',
     connection: 'e1',
@@ -197,8 +197,8 @@ it('draws a door as a line across the opening on the storey’s door layer', () 
   )
 })
 
-it('gives a room carved into two parts a polyline for each', () => {
-  const split = room(
+it('gives a zone carved into two parts a polyline for each', () => {
+  const split = zone(
     'Split',
     { x: 4, y: 4, w: 6, h: 4 },
     {
@@ -219,5 +219,5 @@ it('gives a room carved into two parts a polyline for each', () => {
     },
   )
   const items = itemsIn(dxfOf(sheetOf([split], {}, 1)), 'ENTITIES')
-  expect(items.filter((i) => i.type === 'POLYLINE' && valueOf(i, 8) === 'S0-ROOMS')).toHaveLength(2)
+  expect(items.filter((i) => i.type === 'POLYLINE' && valueOf(i, 8) === 'S0-ZONES')).toHaveLength(2)
 })

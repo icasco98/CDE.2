@@ -1,18 +1,18 @@
 /**
- * Where each of Show connections' lines to a room still in the program ends, in the pixels of the box both the
- * sheet and the program stand in: at the room's block when the program's list shows it, else at a
+ * Where each of Show connections' lines to a zone still in the program ends, in the pixels of the box both the
+ * sheet and the program stand in: at the zone's block when the program's list shows it, else at a
  * tag on the list's top or bottom edge that points the way to it.
  */
 
 export type TrayReach = {
   readonly key: string
-  /** The room in the program the line goes to. */
+  /** The zone in the program the line goes to. */
   readonly to: string
   readonly x1: number
   readonly y1: number
   readonly x2: number
   readonly y2: number
-  /** Which way the room lies when the list is scrolled past it; absent while its block shows. */
+  /** Which way the zone lies when the list is scrolled past it; absent while its block shows. */
   readonly off?: 'up' | 'down'
   /** The tag's offsets from the box's right and top edges, while `off` is set. */
   readonly tag?: { readonly right: number; readonly top: number }
@@ -25,8 +25,8 @@ const TAG_INSET = 6
 
 export function measureTray<R extends { readonly id: string }>(
   lines: readonly { readonly from: string; readonly to: string }[],
-  rooms: readonly R[],
-  centreOf: (room: R) => readonly [number, number],
+  zones: readonly R[],
+  centreOf: (zone: R) => readonly [number, number],
   svg: SVGSVGElement,
   box: HTMLElement,
 ): readonly TrayReach[] {
@@ -39,10 +39,10 @@ export function measureTray<R extends { readonly id: string }>(
   const counts = { up: 0, down: 0 }
   const measured: TrayReach[] = []
   for (const line of lines) {
-    const room = rooms.find((each) => each.id === line.from)
-    const entry = tray.querySelector(`.item[data-room="${line.to}"]`)
-    if (!room || !entry) continue
-    const [wx, wy] = centreOf(room)
+    const zone = zones.find((each) => each.id === line.from)
+    const entry = tray.querySelector(`.item[data-zone="${line.to}"]`)
+    if (!zone || !entry) continue
+    const [wx, wy] = centreOf(zone)
     const at = new DOMPoint(wx, wy).matrixTransform(screen)
     const item = entry.getBoundingClientRect()
     const middle = item.top + item.height / 2
@@ -57,7 +57,7 @@ export function measureTray<R extends { readonly id: string }>(
       continue
     }
     const off = middle < list.top ? 'up' : 'down'
-    // One tag a room however many lines reach it, stacked inward from the edge it stands on.
+    // One tag a zone however many lines reach it, stacked inward from the edge it stands on.
     let tag = tags.get(line.to)
     if (!tag) {
       tag = { off, index: counts[off]++ }
@@ -78,10 +78,10 @@ export function measureTray<R extends { readonly id: string }>(
   return measured
 }
 
-/** The list scrolled so a room's block stands in its middle, smoothly. */
+/** The list scrolled so a zone's block stands in its middle, smoothly. */
 export function scrollTrayTo(box: HTMLElement, id: string): void {
   const tray = box.querySelector('.tray')
-  const entry = tray?.querySelector(`.item[data-room="${id}"]`)
+  const entry = tray?.querySelector(`.item[data-zone="${id}"]`)
   if (!tray || !entry) return
   const list = tray.getBoundingClientRect()
   const item = entry.getBoundingClientRect()

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Household } from '../model'
 import { defaultProgram } from './program'
-import { reductionFor, slackOf, type SlackRoom } from './slack'
+import { reductionFor, slackOf, type SlackZone } from './slack'
 
 /** The household a project opens on, which is the one the default program is read from. */
 const household: Household = {
@@ -20,23 +20,23 @@ const BUILDABLE_M2 = 365.5
 
 const laid = defaultProgram(PLOT_M2, household, 2)
 
-const asSlack = (room: (typeof laid)[number]): SlackRoom => ({
-  id: room.name,
-  name: room.name,
-  type: room.type,
-  targetArea: room.targetArea,
+const asSlack = (zone: (typeof laid)[number]): SlackZone => ({
+  id: zone.name,
+  name: zone.name,
+  type: zone.type,
+  targetArea: zone.targetArea,
 })
 
-const program: readonly SlackRoom[] = laid.map(asSlack)
+const program: readonly SlackZone[] = laid.map(asSlack)
 
 /** The ground storey of that program: a stair stands on it as well as on the floor above. */
-const ground: readonly SlackRoom[] = laid
-  .filter((room) => room.storey === 0 || room.storeysSpanned > 1)
+const ground: readonly SlackZone[] = laid
+  .filter((zone) => zone.storey === 0 || zone.storeysSpanned > 1)
   .map(asSlack)
 
-describe('the slack of a room', () => {
+describe('the slack of a zone', () => {
   it('is what every kind of the default program could give up', () => {
-    expect(program.map((room) => [room.name, slackOf(room, PLOT_M2)])).toEqual([
+    expect(program.map((zone) => [zone.name, slackOf(zone, PLOT_M2)])).toEqual([
       ['Entry', 2],
       ['Stair', 0],
       ['Ground Hallway', 0],
@@ -64,8 +64,8 @@ describe('the slack of a room', () => {
     expect([none('hallway', 27.8), none('stair', 15), none('lift', 5)]).toEqual([0, 0, 0])
   })
 
-  it('reads the plot band for the plot the room stands on, not the one it was made on', () => {
-    const diwaniya: SlackRoom = { id: 'd', name: 'Diwaniya', type: 'diwaniya', targetArea: 52.5 }
+  it('reads the plot band for the plot the zone stands on, not the one it was made on', () => {
+    const diwaniya: SlackZone = { id: 'd', name: 'Diwaniya', type: 'diwaniya', targetArea: 52.5 }
     expect([slackOf(diwaniya, 500), slackOf(diwaniya, 340), slackOf(diwaniya, 900)]).toEqual([
       7.5, 17.5, 0,
     ])
@@ -83,7 +83,7 @@ describe('the offer of reduction', () => {
   it('says nothing while the storey does not spill', () => {
     expect(
       reductionFor({
-        rooms: ground,
+        zones: ground,
         overflowM2: 0,
         buildableM2: BUILDABLE_M2,
         plotAreaM2: PLOT_M2,
@@ -92,15 +92,15 @@ describe('the offer of reduction', () => {
     ).toBe(null)
   })
 
-  it('takes the fewest rooms by largest slack that cover a 30 m² overflow', () => {
+  it('takes the fewest zones by largest slack that cover a 30 m² overflow', () => {
     const offer = reductionFor({
-      rooms: ground,
+      zones: ground,
       overflowM2: 30,
       buildableM2: BUILDABLE_M2,
       plotAreaM2: PLOT_M2,
       storey: 0,
     })
-    expect(offer?.offered.map((room) => [room.name, room.from, room.to])).toEqual([
+    expect(offer?.offered.map((zone) => [zone.name, zone.from, zone.to])).toEqual([
       ['Diwaniya', 52.5, 45],
       ['Family Living', 38.5, 32],
       ['Dining Room', 24, 18],
@@ -114,9 +114,9 @@ describe('the offer of reduction', () => {
     )
   })
 
-  it('offers one room where one covers the overflow', () => {
+  it('offers one zone where one covers the overflow', () => {
     const offer = reductionFor({
-      rooms: ground,
+      zones: ground,
       overflowM2: 5,
       buildableM2: BUILDABLE_M2,
       plotAreaM2: PLOT_M2,
@@ -127,26 +127,26 @@ describe('the offer of reduction', () => {
     )
   })
 
-  it('offers no room below the bottom of its range', () => {
+  it('offers no zone below the bottom of its range', () => {
     const offer = reductionFor({
-      rooms: ground,
+      zones: ground,
       overflowM2: 30,
       buildableM2: BUILDABLE_M2,
       plotAreaM2: PLOT_M2,
       storey: 0,
     })
-    for (const room of offer?.offered ?? []) {
-      const stands = ground.find((each) => each.id === room.id) as SlackRoom
-      expect(room.to).toBe(stands.targetArea - slackOf(stands, PLOT_M2))
-      expect(room.to).toBeLessThan(room.from)
+    for (const zone of offer?.offered ?? []) {
+      const stands = ground.find((each) => each.id === zone.id) as SlackZone
+      expect(zone.to).toBe(stands.targetArea - slackOf(stands, PLOT_M2))
+      expect(zone.to).toBeLessThan(zone.from)
     }
   })
 
-  it('says the storey is too big when every room at its smallest still does not fit', () => {
-    // The ground storey of the same program on a floor of 150 m²: its rooms at their smallest
+  it('says the storey is too big when every zone at its smallest still does not fit', () => {
+    // The ground storey of the same program on a floor of 150 m²: its zones at their smallest
     // come to 202.1 m².
     const offer = reductionFor({
-      rooms: ground,
+      zones: ground,
       overflowM2: 20,
       buildableM2: 150,
       plotAreaM2: PLOT_M2,
@@ -154,14 +154,14 @@ describe('the offer of reduction', () => {
     })
     expect(offer?.offered).toEqual([])
     expect(offer?.sentence).toBe(
-      'The ground floor program is too big for this plot by 52.1 m² even with every room at its ' +
-        'smallest: move rooms upstairs or remove some.',
+      'The ground floor program is too big for this plot by 52.1 m² even with every zone at its ' +
+        'smallest: move zones upstairs or remove some.',
     )
   })
 
   it('names the storey it is talking about', () => {
     const offer = reductionFor({
-      rooms: ground,
+      zones: ground,
       overflowM2: 20,
       buildableM2: 150,
       plotAreaM2: PLOT_M2,

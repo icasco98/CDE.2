@@ -1,12 +1,12 @@
 /**
- * The kinds of room the sheet draws: each one's category and default proportion, what it is called,
- * the door types with the width each arrives at, and the size a room of a kind arrives at.
+ * The kinds of zone the sheet draws: each one's category and default proportion, what it is called,
+ * the door types with the width each arrives at, and the size a zone of a kind arrives at.
  */
 
-import { type Category, type Door, type DoorType, type Room, type Settings } from './model'
+import { type Category, type Door, type DoorType, type Zone, type Settings } from './model'
 import { canonicalise, areaOf, r2, snapTo } from './geometry'
 
-/** Every kind the room-type table knows: its category and the proportion its default size takes. */
+/** Every kind the zone-type table knows: its category and the proportion its default size takes. */
 export const KINDS: Record<string, { cat: Category; ratio: number }> = {
   'entry-foyer': { cat: 'shared', ratio: 1.25 },
   stair: { cat: 'circulation', ratio: 1.9 },
@@ -37,11 +37,11 @@ export const KINDS: Record<string, { cat: Category; ratio: number }> = {
   'service-entrance': { cat: 'service', ratio: 1.5 },
   'women-reception': { cat: 'shared', ratio: 1.3 },
   courtyard: { cat: 'open', ratio: 1.3 },
-  room: { cat: 'shared', ratio: 1.3 },
+  zone: { cat: 'shared', ratio: 1.3 },
   court: { cat: 'open', ratio: 1.3 },
 }
 
-/** What each kind is called on the sheet; its size comes from the room-type table. */
+/** What each kind is called on the sheet; its size comes from the zone-type table. */
 export const KIND_LABEL: Record<string, string> = {
   'entry-foyer': 'Entry',
   stair: 'Stair',
@@ -71,7 +71,7 @@ export const KIND_LABEL: Record<string, string> = {
   'car-bay': 'Car bay',
   garden: 'Garden',
   courtyard: 'Courtyard',
-  room: 'Room (other)',
+  zone: 'Zone (other)',
 }
 
 /** The door types the Openings toolbar offers, each with the width it arrives at. */
@@ -96,28 +96,28 @@ export function sizeFor(
   target: number,
   settings: Settings,
 ): { w: number; h: number } {
-  const k = KINDS[kind] ?? KINDS.room!
+  const k = KINDS[kind] ?? KINDS.zone!
   if (kind === 'hallway') return { w: settings.hallW, h: r2(target / settings.hallW) }
   const w = snapTo(Math.sqrt(target * k.ratio), 0.25)
   return { w: r2(w), h: r2(target / w) }
 }
 
 /**
- * Rooms saved in pieces are put back together as they load. One left in so many pieces that keeping
- * the largest would lose a third of it was never a room any more: it comes back whole, at its target
+ * Zones saved in pieces are put back together as they load. One left in so many pieces that keeping
+ * the largest would lose a third of it was never a zone any more: it comes back whole, at its target
  * size, where its largest part stood.
  */
-export function repair(rooms: Room[], settings: Settings): Room[] {
-  const out: Room[] = []
-  for (const room of rooms) {
-    if (!room.placed || !(room.pieces && room.pieces.length)) {
-      out.push(room)
+export function repair(zones: Zone[], settings: Settings): Zone[] {
+  const out: Zone[] = []
+  for (const zone of zones) {
+    if (!zone.placed || !(zone.pieces && zone.pieces.length)) {
+      out.push(zone)
       continue
     }
-    const was = areaOf(room)
-    const cx = room.x + room.w / 2
-    const cy = room.y + room.h / 2
-    const kept = canonicalise(room)
+    const was = areaOf(zone)
+    const cx = zone.x + zone.w / 2
+    const cy = zone.y + zone.h / 2
+    const kept = canonicalise(zone)
     if (!kept) continue
     if (areaOf(kept) >= was * 0.67) {
       out.push(kept)

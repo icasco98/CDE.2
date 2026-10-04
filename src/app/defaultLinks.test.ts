@@ -9,8 +9,8 @@ let store: Store
 function rebuild(): void {
   const project = store.getState()
   store.transaction(() => {
-    for (const room of defaultProgram(500, project.household, project.storeys))
-      store.actions.addRoom(room)
+    for (const zone of defaultProgram(500, project.household, project.storeys))
+      store.actions.addZone(zone)
     return connectDefaults(store)
   })
 }
@@ -18,7 +18,7 @@ function rebuild(): void {
 const linkNames = (): readonly string[] => {
   const project = store.getState()
   const nameOf = (id: string): string =>
-    id === EXTERIOR ? 'Outside' : (project.rooms.find((room) => room.id === id)?.name ?? id)
+    id === EXTERIOR ? 'Outside' : (project.zones.find((zone) => zone.id === id)?.name ?? id)
   return project.connections.map(
     (connection) => `${nameOf(connection.a)} to ${nameOf(connection.b)}`,
   )
@@ -39,11 +39,11 @@ describe('the default connections made in the project', () => {
     ).toHaveLength(1)
   })
 
-  it('is one step to undo, rooms and links together', () => {
+  it('is one step to undo, zones and links together', () => {
     rebuild()
     expect(store.getState().connections.length).toBeGreaterThan(0)
     store.undo()
-    expect(store.getState().rooms).toEqual([])
+    expect(store.getState().zones).toEqual([])
     expect(store.getState().connections).toEqual([])
   })
 
@@ -54,10 +54,10 @@ describe('the default connections made in the project', () => {
     expect(store.getState().connections).toHaveLength(before)
   })
 
-  it('links a room added afterwards to what the table expects it to touch', () => {
+  it('links a zone added afterwards to what the table expects it to touch', () => {
     rebuild()
     const before = store.getState().connections.length
-    const added = store.actions.addRoom({ type: 'laundry', name: 'Laundry', targetArea: 8 })
+    const added = store.actions.addZone({ type: 'laundry', name: 'Laundry', targetArea: 8 })
     store.transaction(() => connectDefaults(store))
     expect(added.ok).toBe(true)
     expect(store.getState().connections.length).toBeGreaterThan(before)
@@ -70,7 +70,7 @@ describe('the default connections made in the project', () => {
     const link = project.connections.find(
       (connection) => connection.a !== EXTERIOR && connection.b !== EXTERIOR,
     )
-    if (!link) throw new Error('the rebuild made no link between two rooms')
+    if (!link) throw new Error('the rebuild made no link between two zones')
     const joined = () =>
       store
         .getState()
@@ -90,7 +90,7 @@ describe('the default connections made in the project', () => {
     expect(store.getState().declined).toEqual([])
   })
 
-  it('restores one room’s declined suggestions and leaves the others declined', () => {
+  it('restores one zone’s declined suggestions and leaves the others declined', () => {
     rebuild()
     const inside = store
       .getState()
@@ -110,18 +110,18 @@ describe('the default connections made in the project', () => {
   it('keeps nothing declined for a connection the rulebook never suggested', () => {
     rebuild()
     const project = store.getState()
-    const [first, second] = project.rooms
-    if (!first || !second) throw new Error('no rooms')
-    const unlinked = project.rooms.find(
-      (room) =>
-        room.id !== first.id &&
+    const [first, second] = project.zones
+    if (!first || !second) throw new Error('no zones')
+    const unlinked = project.zones.find(
+      (zone) =>
+        zone.id !== first.id &&
         !project.connections.some(
           (connection) =>
-            (connection.a === first.id && connection.b === room.id) ||
-            (connection.b === first.id && connection.a === room.id),
+            (connection.a === first.id && connection.b === zone.id) ||
+            (connection.b === first.id && connection.a === zone.id),
         ),
     )
-    if (!unlinked) throw new Error('every room is linked to the first')
+    if (!unlinked) throw new Error('every zone is linked to the first')
     const made = store.actions.connect({ a: first.id, b: unlinked.id, kind: 'door' })
     if (!made.ok) throw new Error('refused')
     store.transaction(() => takeOut(store, made.value))

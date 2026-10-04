@@ -6,32 +6,32 @@ import { fixtureSheet } from './fixture'
 describe('what an action changed', () => {
   const sheet = fixtureSheet()
 
-  it('names a room put on the sheet', () => {
+  it('names a zone put on the sheet', () => {
     const after = place(sheet, { id: 'nmu436pzls0vk', x: 11.2, y: 1.5, storey: 0 })
     expect(changesBetween(sheet, after.sheet, 0).moves).toEqual([
-      { room: 'Bedroom', how: 'placed' },
+      { zone: 'Bedroom', how: 'placed' },
     ])
   })
 
-  it('says how far a room moved, and says nothing of the rooms that stood still', () => {
+  it('says how far a zone moved, and says nothing of the zones that stood still', () => {
     const after = move(sheet, { ids: ['r10'], dx: 0, dy: -2, storey: 0 })
     const changed = changesBetween(sheet, after.sheet, 0)
-    expect(changed.moves).toEqual([{ room: 'Guest WC', how: 'moved', metres: 2 }])
+    expect(changed.moves).toEqual([{ zone: 'Guest WC', how: 'moved', metres: 2 }])
   })
 
-  it('names the overlap a room dropped on another leaves, and only the new one', () => {
+  it('names the overlap a zone dropped on another leaves, and only the new one', () => {
     const first = place(sheet, { id: 'nmu436pzls0vk', x: 6, y: 5, storey: 0 })
     const fresh = changesBetween(sheet, first.sheet, 0)
-    expect(fresh.newOverlaps.map((o) => o.rooms[1])).toEqual(['Bedroom', 'Bedroom', 'Bedroom'])
-    // moved a hair further onto the same rooms: the overlaps are no longer new
+    expect(fresh.newOverlaps.map((o) => o.zones[1])).toEqual(['Bedroom', 'Bedroom', 'Bedroom'])
+    // moved a hair further onto the same zones: the overlaps are no longer new
     const again = move(first.sheet, { ids: ['nmu436pzls0vk'], dx: 0.05, dy: 0, storey: 0 })
     expect(changesBetween(first.sheet, again.sheet, 0).newOverlaps).toEqual([])
   })
 
-  it('names a room taken back to the program', () => {
+  it('names a zone taken back to the program', () => {
     const after = sendBack(sheet, { ids: ['r10'] })
     expect(changesBetween(sheet, after.sheet, 0).moves).toEqual([
-      { room: 'Guest WC', how: 'sent back' },
+      { zone: 'Guest WC', how: 'sent back' },
     ])
   })
 

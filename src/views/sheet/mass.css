@@ -129,7 +129,7 @@
 
 .sheet-stage .m-edge {
   fill: none;
-  stroke: var(--room-line);
+  stroke: var(--zone-line);
   stroke-width: 1;
   stroke-linecap: round;
   pointer-events: none;

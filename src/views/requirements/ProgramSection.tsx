@@ -11,7 +11,7 @@ import {
   typesByCategory,
 } from '../../rulebook'
 import { session } from '../../app/session'
-import { addRoomWithCompanion } from './addRoom'
+import { addZoneWithCompanion } from './addZone'
 import { Section } from './fields'
 import { addStorey, removeStorey } from './storeys'
 import { metres2 } from './format'
@@ -23,17 +23,17 @@ export function ProgramSection({ project }: { project: Project }) {
   const [problem, setProblem] = useState<string | null>(null)
   const plotArea = area(project.plot.polygon)
 
-  const addRoom = (): void => {
-    setProblem(refusalOf(addRoomWithCompanion(session, kind, plotArea, project.storeys)))
+  const addZone = (): void => {
+    setProblem(refusalOf(addZoneWithCompanion(session, kind, plotArea, project.storeys)))
   }
 
   // What each storey's targets come to against the floor the setbacks leave it, a stair counted on
   // every storey it reaches.
-  const fits = storeyFits(project.rooms, buildableAreaOf(project.plot), project.storeys)
+  const fits = storeyFits(project.zones, buildableAreaOf(project.plot), project.storeys)
   const total = fits.reduce((sum, fit) => sum + fit.needed, 0)
   // What this program asks of geometry that geometry cannot give; a finding says what to change
   // and waits.
-  const findings = feasibility(project.rooms, project.connections, project.plot, project.storeys)
+  const findings = feasibility(project.zones, project.connections, project.plot, project.storeys)
 
   return (
     <Section title="Program">
@@ -50,13 +50,13 @@ export function ProgramSection({ project }: { project: Project }) {
           </tr>
         </thead>
         <tbody>
-          {project.rooms.map((room) => (
-            <ProgramRow key={room.id} room={room} storeys={project.storeys} />
+          {project.zones.map((zone) => (
+            <ProgramRow key={zone.id} zone={zone} storeys={project.storeys} />
           ))}
         </tbody>
       </table>
-      {project.rooms.length === 0 ? (
-        <p className="note">No rooms yet. Add one, or rebuild the program from the household.</p>
+      {project.zones.length === 0 ? (
+        <p className="note">No zones yet. Add one, or rebuild the program from the household.</p>
       ) : null}
       <div className="row">
         <label className="field">
@@ -73,8 +73,8 @@ export function ProgramSection({ project }: { project: Project }) {
             ))}
           </select>
         </label>
-        <button type="button" onClick={addRoom}>
-          Add room
+        <button type="button" onClick={addZone}>
+          Add zone
         </button>
         <button type="button" onClick={() => setProblem(refusalOf(addStorey(session)))}>
           Add storey

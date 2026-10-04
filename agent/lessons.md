@@ -14,7 +14,7 @@ replaces it, so the file stays about a page.
 - Never say you have placed, turned or changed anything unless the
   command was called this turn and came back done. If you only meant
   to, say what you propose to do instead.
-- Never write coordinates or dimensions in the chat. Say where a room
+- Never write coordinates or dimensions in the chat. Say where a zone
   stands by what it stands against: "the dining against the kitchen's
   east edge".
 - Never change a setting of the tool. Ask the owner if one is in your
@@ -24,7 +24,7 @@ replaces it, so the file stays about a page.
 
 ## How to work
 
-- Place a room against another room's edge, not at a coordinate you
+- Place a zone against another zone's edge, not at a coordinate you
   guessed. The tool works out where that is; a guess fights the
   snapping and costs a turn.
 - Put the whole job in one call. `place_against` takes a list;
@@ -41,17 +41,17 @@ replaces it, so the file stays about a page.
 - A stair is at least 2.4 m wide and about 6 m long; the length
   follows the floor-to-floor height, so it differs from project to
   project.
-- Rooms that meet at a corner are not connected. Two rooms are joined
+- Zones that meet at a corner are not connected. Two zones are joined
   only where they share a run of edge, about 1.5 m or more, and how
   much depends on the case.
 - A target area is a recommendation, not a quota. Where the plot has
-  room, take the high end. A hallway under its target is better, not
+  zone, take the high end. A hallway under its target is better, not
   worse.
 - No long spine hallway. Circulation is short and shared, not a
   corridor down the middle of the house.
 - The dining room is never the small one. If area is needed, take it
   from the kitchen.
-- The stair is one room standing on every storey: place it on the
+- The stair is one zone standing on every storey: place it on the
   ground and it is already upstairs. Never move a stair to suit a
   hallway above it.
 - Upstairs, start at the stair and build outward from it.
@@ -64,12 +64,12 @@ replaces it, so the file stays about a page.
 Commands the architect has asked for. The cofounder marks each one
 built or refused, and removes it.
 
-- Place a room against a named edge of another room, touching. (built)
+- Place a zone against a named edge of another zone, touching. (built)
 - Carve or push to settle an overlap I made. (built)
 - Take back my own last batch when it made the plan worse. (built)
 - Read the whole house at once, every storey, not only the one on
   screen. (built)
-- Read how rooms stand to each other — who shares an edge and how
+- Read how zones stand to each other — who shares an edge and how
   much of it, who only meets at a corner — instead of coordinates.
   (built)
 - Work on a named storey without moving the owner's view. (built)

@@ -1,5 +1,5 @@
 /**
- * The doors on the sheet: each one drawn on its edge in its room's frame where its two rooms share
+ * The doors on the sheet: each one drawn on its edge in its zone's frame where its two zones share
  * one, and the door the hand is about to place drawn faint over the edge under it.
  */
 
@@ -20,7 +20,7 @@ import {
   type Hit,
   type Place,
   type Poly,
-  type Room,
+  type Zone,
   type Sheet,
 } from '../../sheet'
 import { frameOf, p4 } from './shape'
@@ -34,14 +34,14 @@ export type OpeningsDraw = {
   /** Where the dragged door would land; refused edges are drawn in the warning colour. */
   draggedTo: Hit | null
   dragged: { type: Door['type']; w: number } | null
-  onDoorDown: (room: Room, door: Door, event: ReactPointerEvent) => void
-  onDoorMenu: (room: Room, door: Door, event: ReactMouseEvent) => void
+  onDoorDown: (zone: Zone, door: Door, event: ReactPointerEvent) => void
+  onDoorMenu: (zone: Zone, door: Door, event: ReactMouseEvent) => void
 }
 
 type DoorsProps = {
   sheet: Sheet
   storey: number
-  rooms: Room[]
+  zones: Zone[]
   openings: OpeningsDraw | null
 }
 
@@ -58,15 +58,15 @@ const preview = (type: Door['type'], w: number): Door => ({
 })
 
 export function Doors(props: DoorsProps) {
-  const { sheet, storey, rooms, openings } = props
+  const { sheet, storey, zones, openings } = props
   const armed = openings?.armedAt
   const dragged = openings?.draggedTo
   // Where each door stands is read once per change of the sheet, not once per frame of a drag.
   const drawn = useMemo(() => drawnDoors(sheet, storey), [sheet, storey])
   return (
     <Fragment>
-      {rooms.map((r) => {
-        const own = drawn.filter((each) => each.room.id === r.id)
+      {zones.map((r) => {
+        const own = drawn.filter((each) => each.zone.id === r.id)
         if (!own.length) return null
         return (
           <g key={`doors-${r.id}`} className="doors" transform={frameOf(r)}>
@@ -93,11 +93,11 @@ export function Doors(props: DoorsProps) {
         )
       })}
       {armed && !armed.why && !dragged && openings?.armed && (
-        <g className="doors" transform={frameOf(armed.room)}>
+        <g className="doors" transform={frameOf(armed.zone)}>
           <DoorMark
             door={preview(openings.armed.type, openings.armed.w)}
             drawing={doorDrawing(
-              armed.room,
+              armed.zone,
               preview(openings.armed.type, openings.armed.w),
               armed.pl,
               sheet,
@@ -110,11 +110,11 @@ export function Doors(props: DoorsProps) {
       )}
       {dragged && openings?.dragged && (
         <Fragment>
-          <g className={`doors${dragged.why ? ' refused' : ''}`} transform={frameOf(dragged.room)}>
+          <g className={`doors${dragged.why ? ' refused' : ''}`} transform={frameOf(dragged.zone)}>
             <DoorMark
               door={preview(openings.dragged.type, openings.dragged.w)}
               drawing={doorDrawing(
-                dragged.room,
+                dragged.zone,
                 preview(openings.dragged.type, openings.dragged.w),
                 dragged.pl,
                 sheet,
@@ -124,15 +124,15 @@ export function Doors(props: DoorsProps) {
               faint
             />
           </g>
-          {dragged.pl.snapped && <SnapNote room={dragged.room} pl={dragged.pl} />}
+          {dragged.pl.snapped && <SnapNote zone={dragged.zone} pl={dragged.pl} />}
         </Fragment>
       )}
     </Fragment>
   )
 }
 
-function SnapNote({ room, pl }: { room: Room; pl: Place }) {
-  const wp = toWorld(room, pl.p[0], pl.p[1])
+function SnapNote({ zone, pl }: { zone: Zone; pl: Place }) {
+  const wp = toWorld(zone, pl.p[0], pl.p[1])
   return (
     <text className="snap-note" x={p4(wp[0])} y={p4(wp[1] - 0.5)} textAnchor="middle">
       {pl.snapped === 'middle' ? 'middle of the edge' : 'a jamb from the corner'}

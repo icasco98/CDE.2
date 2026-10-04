@@ -12,27 +12,27 @@ function rebuild(): void {
   store.actions.setHousehold({ ...store.getState().household, masterOnGround: true })
   const project = store.getState()
   store.transaction(() => {
-    for (const room of defaultProgram(500, project.household, project.storeys))
-      store.actions.addRoom(room)
+    for (const zone of defaultProgram(500, project.household, project.storeys))
+      store.actions.addZone(zone)
     return connectDefaults(store)
   })
 }
 
 const idOf = (name: string): string => {
-  const room = store.getState().rooms.find((each) => each.name === name)
-  if (!room) throw new Error(`there is no ${name}`)
-  return room.id
+  const zone = store.getState().zones.find((each) => each.name === name)
+  if (!zone) throw new Error(`there is no ${name}`)
+  return zone.id
 }
 
 const storeyOf = (name: string): number =>
-  store.getState().rooms.find((room) => room.name === name)?.storey ?? -1
+  store.getState().zones.find((zone) => zone.name === name)?.storey ?? -1
 
-/** Everything the named room is joined to, in the words the program calls those rooms by. */
+/** Everything the named zone is joined to, in the words the program calls those zones by. */
 const linksOf = (name: string): readonly string[] => {
   const project = store.getState()
   const id = idOf(name)
   const nameOf = (each: string): string =>
-    each === EXTERIOR ? 'Outside' : (project.rooms.find((room) => room.id === each)?.name ?? each)
+    each === EXTERIOR ? 'Outside' : (project.zones.find((zone) => zone.id === each)?.name ?? each)
   return project.connections
     .filter((connection) => connection.a === id || connection.b === id)
     .map((connection) => nameOf(connection.a === id ? connection.b : connection.a))
@@ -43,8 +43,8 @@ beforeEach(() => {
   rebuild()
 })
 
-describe('a room sent to another storey', () => {
-  it('takes the rooms it owns with it', () => {
+describe('a zone sent to another storey', () => {
+  it('takes the zones it owns with it', () => {
     expect(sendToStorey(store, idOf('Master Bedroom'), 1).ok).toBe(true)
     expect(storeyOf('Master Bedroom')).toBe(1)
     expect(storeyOf('Ensuite, Master Bedroom')).toBe(1)
@@ -55,7 +55,7 @@ describe('a room sent to another storey', () => {
     expect(sendToStorey(store, idOf('Master Bedroom'), 1).ok).toBe(true)
     expect(linksOf('Master Bedroom')).not.toContain('Ground Hallway')
     expect(linksOf('Master Bedroom')).toContain('First Hallway')
-    // The suite is one room and its bathroom wherever it stands, so that link is made again.
+    // The suite is one zone and its bathroom wherever it stands, so that link is made again.
     expect(linksOf('Master Bedroom')).toContain('Ensuite, Master Bedroom')
   })
 
@@ -63,7 +63,7 @@ describe('a room sent to another storey', () => {
     const before = store.getState()
     expect(sendToStorey(store, idOf('Master Bedroom'), 1).ok).toBe(true)
     store.undo()
-    expect(store.getState().rooms).toEqual(before.rooms)
+    expect(store.getState().zones).toEqual(before.zones)
     expect(store.getState().connections).toEqual(before.connections)
   })
 
@@ -80,7 +80,7 @@ describe('a room sent to another storey', () => {
     expect(storeyOf('Stair')).toBe(0)
   })
 
-  it('says so when there is no such room', () => {
-    expect(sendToStorey(store, 'room_nothing', 1).ok).toBe(false)
+  it('says so when there is no such zone', () => {
+    expect(sendToStorey(store, 'zone_nothing', 1).ok).toBe(false)
   })
 })

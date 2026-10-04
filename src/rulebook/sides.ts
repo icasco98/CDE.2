@@ -3,7 +3,7 @@ import { buildableArea, setbackDepth, type PlotShape } from './setbacks'
 
 /**
  * One side of the plot as the brief check reads it: not the boundary itself but the line the
- * setback leaves inside it, which is where a room at that boundary really stands.
+ * setback leaves inside it, which is where a zone at that boundary really stands.
  */
 export type PlotSide = {
   /** The plot polygon's own side number, which is what `Plot.street` names. */

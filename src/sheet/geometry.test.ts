@@ -31,12 +31,12 @@ import {
   worldCorners,
   worldEdges,
 } from './geometry'
-import { RECT, type Poly, type Room } from './model'
+import { RECT, type Poly, type Zone } from './model'
 
-const room = (over: Partial<Room> = {}): Room => ({
+const zone = (over: Partial<Zone> = {}): Zone => ({
   id: 'a',
   name: 'A',
-  kind: 'room',
+  kind: 'zone',
   cat: 'shared',
   target: 10,
   x: 5,
@@ -130,7 +130,7 @@ describe('pieces', () => {
   })
 })
 
-describe('the edges a room shows', () => {
+describe('the edges a zone shows', () => {
   it('drops the seam between two pieces that sit against each other', () => {
     const { segs } = outlineFrom([
       RECT(2, 2),
@@ -178,12 +178,12 @@ describe('the edges a room shows', () => {
     expect(loops![0]!.length).toBe(4)
   })
 
-  it('names a whole side of a plain room, and nothing on a carved one', () => {
-    const r = room()
+  it('names a whole side of a plain zone, and nothing on a carved one', () => {
+    const r = zone()
     const sides = outlineOf(r).map((s) => sideOf(r, s))
     expect(new Set(sides)).toEqual(new Set(['left', 'right', 'top', 'bottom']))
     expect(
-      sideOf(room({ pieces: [RECT(2, 2)] }), outlineOf(room({ pieces: [RECT(2, 2)] }))[0]!),
+      sideOf(zone({ pieces: [RECT(2, 2)] }), outlineOf(zone({ pieces: [RECT(2, 2)] }))[0]!),
     ).toBeNull()
   })
 
@@ -218,28 +218,28 @@ describe('the edges a room shows', () => {
   })
 })
 
-describe('a room on the plot', () => {
+describe('a zone on the plot', () => {
   it('turns a point into the world and back', () => {
-    const r = room({ angle: 25 })
+    const r = zone({ angle: 25 })
     const w = toWorld(r, 1, 2)
     const l = toLocal(r, w[0], w[1])
     expect([r2(l[0]), r2(l[1])]).toEqual([1, 2])
   })
 
-  it('boxes a turned room by the corners it really has', () => {
-    const b = bboxOf(room({ angle: 90 }))
+  it('boxes a turned zone by the corners it really has', () => {
+    const b = bboxOf(zone({ angle: 90 }))
     expect([r2(b.w), r2(b.h)]).toEqual([3, 4])
   })
 
-  it('gives every edge its way out of the room', () => {
-    const edges = worldEdges(room())
+  it('gives every edge its way out of the zone', () => {
+    const edges = worldEdges(zone())
     expect(edges.length).toBe(4)
-    expect(worldCorners(room()).length).toBe(4)
+    expect(worldCorners(zone()).length).toBe(4)
     for (const w of edges) expect(r2(Math.hypot(w.n[0], w.n[1]))).toBe(1)
   })
 
-  it('folds a quarter turn into the rectangle so the room is square again', () => {
-    const r = room({ w: 4, h: 2 })
+  it('folds a quarter turn into the rectangle so the zone is square again', () => {
+    const r = zone({ w: 4, h: 2 })
     setAngle(r, 90)
     expect([r.w, r.h, r.angle]).toEqual([2, 4, 0])
     setAngle(r, 25)
@@ -248,9 +248,9 @@ describe('a room on the plot', () => {
 })
 
 describe('cutting', () => {
-  it('cuts one room out of another and keeps the slanted edge', () => {
-    const target = room({ x: 0, y: 0, w: 4, h: 4 })
-    const cutter = room({ id: 'b', x: 3, y: 3, w: 2, h: 2, angle: 45 })
+  it('cuts one zone out of another and keeps the slanted edge', () => {
+    const target = zone({ x: 0, y: 0, w: 4, h: 4 })
+    const cutter = zone({ id: 'b', x: 3, y: 3, w: 2, h: 2, angle: 45 })
     const before = areaOf(target)
     const kept = cutBy(target, cutter)!
     expect(areaOf(kept)).toBeLessThan(before)
@@ -259,34 +259,34 @@ describe('cutting', () => {
     expect(shared).toEqual([])
   })
 
-  it('sends a room back when a cut leaves under a square metre', () => {
-    const target = room({ x: 0, y: 0, w: 2, h: 1 })
-    expect(cutBy(target, room({ id: 'b', x: -1, y: -1, w: 4, h: 3 }))).toBeNull()
+  it('sends a zone back when a cut leaves under a square metre', () => {
+    const target = zone({ x: 0, y: 0, w: 2, h: 1 })
+    expect(cutBy(target, zone({ id: 'b', x: -1, y: -1, w: 4, h: 3 }))).toBeNull()
   })
 
   it('cuts by the setback line and says whether anything went', () => {
-    const outside = room({ x: 0, y: 5, w: 4, h: 3 })
+    const outside = zone({ x: 0, y: 5, w: 4, h: 3 })
     const out = cutToSetback(outside)
     expect(out.cut).toBe(true)
-    expect(r2(areaOf(out.room!))).toBe(r2(2.5 * 3))
-    expect(cutToSetback(room({ x: 5, y: 5 })).cut).toBe(false)
+    expect(r2(areaOf(out.zone!))).toBe(r2(2.5 * 3))
+    expect(cutToSetback(zone({ x: 5, y: 5 })).cut).toBe(false)
   })
 
   it('pulls an edge along its normal, the edges it meets following', () => {
-    const r = room({ x: 0, y: 0, w: 4, h: 4, pieces: triangulate(RECT(4, 4)) })
+    const r = zone({ x: 0, y: 0, w: 4, h: 4, pieces: triangulate(RECT(4, 4)) })
     const seg = outlineOf(r).find((s) => s.n[0] === 1)!
     const pulled = pullEdge(r, seg, 1)!
     expect(r2(areaOf(pulled))).toBe(20)
   })
 
-  it('stops an edge that would turn the room inside out', () => {
-    const r = room({ x: 0, y: 0, w: 4, h: 4, pieces: triangulate(RECT(4, 4)) })
+  it('stops an edge that would turn the zone inside out', () => {
+    const r = zone({ x: 0, y: 0, w: 4, h: 4, pieces: triangulate(RECT(4, 4)) })
     const seg = outlineOf(r).find((s) => s.n[0] === 1)!
     expect(pullEdge(r, seg, -4)).toBeNull()
   })
 
-  it('rebuilds a room from its own outline and drops the slivers', () => {
-    const r = room({
+  it('rebuilds a zone from its own outline and drops the slivers', () => {
+    const r = zone({
       x: 0,
       y: 0,
       w: 4,
@@ -305,8 +305,8 @@ describe('cutting', () => {
     expect(kept.pieces).toBeNull()
   })
 
-  it('keeps only the largest part when a cut leaves a room in two places', () => {
-    const r = room({
+  it('keeps only the largest part when a cut leaves a zone in two places', () => {
+    const r = zone({
       x: 0,
       y: 0,
       w: 6,
@@ -326,7 +326,7 @@ describe('cutting', () => {
   })
 
   it('pulls the frame in to what is left and goes back to a rectangle when whole', () => {
-    const r = room({
+    const r = zone({
       x: 0,
       y: 0,
       w: 4,

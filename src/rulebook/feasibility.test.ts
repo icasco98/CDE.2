@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { area } from '../geometry'
 import { createIdGenerator, createStore, EXTERIOR, type Plot } from '../model'
-import { feasibility, linksHeld, type BriefConnection, type BriefRoom } from './feasibility'
+import { feasibility, linksHeld, type BriefConnection, type BriefZone } from './feasibility'
 import { impliedConnections } from './impliedConnections'
 import { defaultProgram } from './program'
 
@@ -17,7 +17,7 @@ const plot: Plot = {
   street: [2],
 }
 
-function room(id: string, type: string, targetArea: number, name = id): BriefRoom {
+function zone(id: string, type: string, targetArea: number, name = id): BriefZone {
   return { id, name, type, storey: 0, storeysSpanned: 1, targetArea }
 }
 
@@ -32,8 +32,8 @@ function defaultVilla(storeys: number) {
   store.actions.setPlot(plot)
   const opened = store.getState()
   for (const each of defaultProgram(area(plot.polygon), opened.household, storeys))
-    store.actions.addRoom(each)
-  for (const link of impliedConnections(store.getState().rooms, store.getState().connections))
+    store.actions.addZone(each)
+  for (const link of impliedConnections(store.getState().zones, store.getState().connections))
     store.actions.connect({ a: link.a, b: link.b, kind: link.kind, storey: link.storey })
   return store.getState()
 }
@@ -43,26 +43,26 @@ describe('the brief checked before a bubble moves', () => {
     for (const storeys of [1, 2]) {
       const project = defaultVilla(storeys)
       expect(
-        feasibility(project.rooms, project.connections, project.plot, project.storeys),
+        feasibility(project.zones, project.connections, project.plot, project.storeys),
       ).toEqual([])
     }
   })
 
   it('says when a storey’s links cannot be drawn without a crossing', () => {
     const names = ['a', 'b', 'c', 'd', 'e']
-    const rooms = names.map((id) => room(id, 'room-other', 20))
+    const zones = names.map((id) => zone(id, 'zone-other', 20))
     const pairs: (readonly [string, string])[] = []
     for (let i = 0; i < names.length; i++)
       for (let j = i + 1; j < names.length; j++)
         pairs.push([names[i] as string, names[j] as string])
-    const found = feasibility(rooms, joined(pairs), plot, 1)
+    const found = feasibility(zones, joined(pairs), plot, 1)
     expect(found.map((each) => each.code)).toContain('crossing')
     expect(found.find((each) => each.code === 'crossing')?.sentence).toBe(
-      'Ground: these links cannot all be drawn without one crossing another, so one pair can never share an edge. Remove a link between two rooms that do not need a door.',
+      'Ground: these links cannot all be drawn without one crossing another, so one pair can never share an edge. Remove a link between two zones that do not need a door.',
     )
   })
 
-  it('says when the frontage will not hold a garage bay beside the rooms with street doors', () => {
+  it('says when the frontage will not hold a garage bay beside the zones with street doors', () => {
     const narrow = {
       ...plot,
       polygon: [
@@ -72,27 +72,27 @@ describe('the brief checked before a bubble moves', () => {
         [0, 25],
       ] as const,
     }
-    const rooms = [
-      room('entry', 'entry-foyer', 8, 'Entry'),
-      room('service', 'service-entrance', 6, 'Service Entrance'),
-      room('bay', 'garage', 18, 'Garage bay 1'),
+    const zones = [
+      zone('entry', 'entry-foyer', 8, 'Entry'),
+      zone('service', 'service-entrance', 6, 'Service Entrance'),
+      zone('bay', 'garage', 18, 'Garage bay 1'),
     ]
-    const found = feasibility(rooms, [], { ...narrow, polygon: [...narrow.polygon] }, 1)
+    const found = feasibility(zones, [], { ...narrow, polygon: [...narrow.polygon] }, 1)
     expect(found.filter((each) => each.code === 'run').map((each) => each.sentence)).toEqual([
-      'Garage bay 1 has no straight run to the street; the frontage has no room left for it. Move a room to another storey, or give the garage fewer bays.',
+      'Garage bay 1 has no straight run to the street; the frontage has no length left for it. Move a zone to another storey, or give the garage fewer bays.',
     ])
   })
 
-  it('says when a room is asked to touch more rooms than its edge can hold', () => {
-    const rooms = [
-      room('wc', 'diwaniya-wc', 5, 'Diwaniya WC'),
-      room('a', 'diwaniya', 45),
-      room('b', 'formal-living', 30),
-      room('c', 'dining-room', 24),
-      room('d', 'family-living', 32),
+  it('says when a zone is asked to touch more zones than its edge can hold', () => {
+    const zones = [
+      zone('wc', 'diwaniya-wc', 5, 'Diwaniya WC'),
+      zone('a', 'diwaniya', 45),
+      zone('b', 'formal-living', 30),
+      zone('c', 'dining-room', 24),
+      zone('d', 'family-living', 32),
     ]
     const found = feasibility(
-      rooms,
+      zones,
       joined([
         ['wc', 'a'],
         ['wc', 'b'],
@@ -103,31 +103,31 @@ describe('the brief checked before a bubble moves', () => {
       1,
     )
     expect(found.find((each) => each.code === 'edge')?.sentence).toBe(
-      'Diwaniya WC is linked to four rooms; at 5 m² it can touch three. Remove a link.',
+      'Diwaniya WC is linked to four zones; at 5 m² it can touch three. Remove a link.',
     )
   })
 
   it('counts a door to the street among the links an edge has to hold', () => {
-    const rooms = [room('wc', 'guest-wc', 3, 'Guest WC'), room('a', 'entry-foyer', 8)]
+    const zones = [zone('wc', 'guest-wc', 3, 'Guest WC'), zone('a', 'entry-foyer', 8)]
     const connections: BriefConnection[] = [
       { a: 'wc', b: 'a', storey: 0 },
       { a: EXTERIOR, b: 'wc', storey: 0 },
       { a: 'wc', b: 'nobody', storey: 0 },
     ]
-    expect(linksHeld(rooms[0] as BriefRoom)).toBe(2)
+    expect(linksHeld(zones[0] as BriefZone)).toBe(2)
     expect(
-      feasibility(rooms, connections, plot, 1).filter((each) => each.code === 'edge'),
+      feasibility(zones, connections, plot, 1).filter((each) => each.code === 'edge'),
     ).toHaveLength(1)
   })
 
   it('reads a corridor off both its long sides, because that is what a corridor is for', () => {
     // Twelve square metres at the Municipality's 1.20 m clear is a ten-metre run with a door every
-    // metre down each side of it; an eight-metre entry has room for the four the rulebook gives it.
-    expect(linksHeld(room('hall', 'hallway', 12))).toBe(20)
-    expect(linksHeld(room('entry', 'entry-foyer', 8))).toBe(4)
+    // metre down each side of it; an eight-metre entry has space for the four the rulebook gives it.
+    expect(linksHeld(zone('hall', 'hallway', 12))).toBe(20)
+    expect(linksHeld(zone('entry', 'entry-foyer', 8))).toBe(4)
   })
 
-  it('says when the rooms on the kerb ask for more than the frontage has', () => {
+  it('says when the zones on the kerb ask for more than the frontage has', () => {
     const narrow: Plot = {
       ...plot,
       polygon: [
@@ -137,13 +137,13 @@ describe('the brief checked before a bubble moves', () => {
         [0, 25],
       ],
     }
-    const rooms = [
-      room('entry', 'entry-foyer', 8, 'Entry'),
-      room('g1', 'garage', 18, 'Garage bay 1'),
-      room('g2', 'garage', 18, 'Garage bay 2'),
-      room('g3', 'garage', 18, 'Garage bay 3'),
+    const zones = [
+      zone('entry', 'entry-foyer', 8, 'Entry'),
+      zone('g1', 'garage', 18, 'Garage bay 1'),
+      zone('g2', 'garage', 18, 'Garage bay 2'),
+      zone('g3', 'garage', 18, 'Garage bay 3'),
     ]
-    const found = feasibility(rooms, [], narrow, 1)
+    const found = feasibility(zones, [], narrow, 1)
     const kerb = found.find((each) => each.code === 'kerb')
     expect(kerb?.sentence).toContain('The kerb is 11 m')
     expect(kerb?.sentence).toContain('Entry, Garage bay 1, Garage bay 2 and Garage bay 3')

@@ -5,8 +5,8 @@ export function storeyLabel(storey: number): string {
   return named[storey] ?? `Storey ${storey}`
 }
 
-/** A room as the fit reads one: what it asks for and which floors it stands on. */
-export type FitRoom = {
+/** A zone as the fit reads one: what it asks for and which floors it stands on. */
+export type FitZone = {
   readonly storey: number
   readonly storeysSpanned: number
   readonly targetArea: number
@@ -32,9 +32,9 @@ function metres2(value: number): string {
   return String(round(value))
 }
 
-function storeysOf(room: FitRoom): readonly number[] {
-  const span = Math.max(1, Math.trunc(room.storeysSpanned))
-  return Array.from({ length: span }, (_unused, above) => room.storey + above)
+function storeysOf(zone: FitZone): readonly number[] {
+  const span = Math.max(1, Math.trunc(zone.storeysSpanned))
+  return Array.from({ length: span }, (_unused, above) => zone.storey + above)
 }
 
 /**
@@ -42,16 +42,16 @@ function storeysOf(room: FitRoom): readonly number[] {
  * not a layout: it says whether a storey can hold its program at all, before a bubble is moved.
  */
 export function storeyFits(
-  rooms: readonly FitRoom[],
+  zones: readonly FitZone[],
   buildableM2: number,
   storeys: number,
 ): readonly StoreyFit[] {
   const levels = Math.max(1, Math.trunc(storeys))
   const needed = new Array<number>(levels).fill(0)
-  for (const room of rooms)
-    for (const storey of storeysOf(room))
+  for (const zone of zones)
+    for (const storey of storeysOf(zone))
       if (storey >= 0 && storey < levels)
-        needed[storey] = (needed[storey] ?? 0) + Math.max(0, room.targetArea)
+        needed[storey] = (needed[storey] ?? 0) + Math.max(0, zone.targetArea)
   const buildable = round(buildableM2)
   return needed.map((total, storey) => {
     const asked = round(total)

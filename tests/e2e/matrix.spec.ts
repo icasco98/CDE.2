@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { connectionBetween, openVilla } from './bubbles'
 
 /*
- * The matrix window: every pair of rooms once, each cell editable through the same actions and
+ * The matrix window: every pair of zones once, each cell editable through the same actions and
  * the same undo as the diagram behind it.
  */
 
@@ -61,7 +61,7 @@ test('keep apart set in the matrix is drawn in the diagram, and Nothing clears i
   await expect(matrix(page)).toHaveCount(0)
 })
 
-test('two rooms on storeys no stair joins may be kept apart but not connected', async ({
+test('two zones on storeys no stair joins may be kept apart but not connected', async ({
   page,
 }) => {
   await openVilla(page)

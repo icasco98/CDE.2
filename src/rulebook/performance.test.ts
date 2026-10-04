@@ -1,8 +1,8 @@
 import { expect, it } from 'vitest'
 import type { Household } from '../model'
 import { defaultProgram } from './program'
-import { reductionFor, type SlackRoom } from './slack'
-import { pastAllowed, pastRange, type MeasuredRoom } from './sizeCheck'
+import { reductionFor, type SlackZone } from './slack'
+import { pastAllowed, pastRange, type MeasuredZone } from './sizeCheck'
 
 /*
  * The budgets the brief set: the offer a spilling storey makes under 5 ms, because it is worked
@@ -35,36 +35,36 @@ const household: Household = {
 const PLOT_M2 = 500
 
 const laid = defaultProgram(PLOT_M2, household, 2)
-const ground = laid.filter((room) => room.storey === 0 || room.storeysSpanned > 1)
+const ground = laid.filter((zone) => zone.storey === 0 || zone.storeysSpanned > 1)
 
-const rooms: readonly SlackRoom[] = ground.map((room) => ({
-  id: room.name,
-  name: room.name,
-  type: room.type,
-  targetArea: room.targetArea,
+const zones: readonly SlackZone[] = ground.map((zone) => ({
+  id: zone.name,
+  name: zone.name,
+  type: zone.type,
+  targetArea: zone.targetArea,
 }))
 
-const measured: readonly MeasuredRoom[] = rooms.map((room) => ({
-  id: room.id,
-  name: room.name,
-  type: room.type,
-  areaM2: room.targetArea,
+const measured: readonly MeasuredZone[] = zones.map((zone) => ({
+  id: zone.id,
+  name: zone.name,
+  type: zone.type,
+  areaM2: zone.targetArea,
 }))
 
-it('offers the rooms to reduce on a spilling storey in under 5 ms', () => {
+it('offers the zones to reduce on a spilling storey in under 5 ms', () => {
   const took = milliseconds(() =>
     reductionFor({
-      rooms,
+      zones,
       overflowM2: 30,
       buildableM2: 250,
       plotAreaM2: PLOT_M2,
       storey: 0,
     }),
   )
-  expect([rooms.length > 12, took < 5]).toEqual([true, true])
+  expect([zones.length > 12, took < 5]).toEqual([true, true])
 })
 
-it('checks every placed room, the storey and the house in under 1 ms', () => {
+it('checks every placed zone, the storey and the house in under 1 ms', () => {
   const took = milliseconds(() => {
     pastRange(measured, PLOT_M2)
     pastAllowed({

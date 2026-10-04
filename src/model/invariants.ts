@@ -4,31 +4,31 @@ import {
   type Connection,
   type Endpoint,
   type Project,
-  type Room,
+  type Zone,
   type Violation,
 } from './types'
 
 // MODEL.md also states that footprints on one storey never overlap; that one is kept by the zoning
-// gestures, which clamp a dragged room, and is not checked here.
+// gestures, which clamp a dragged zone, and is not checked here.
 
 function say(code: string, message: string): Violation {
   return { code, message }
 }
 
-/** The storeys a room stands on: one, or several when it is a stair. */
-export function occupiedStoreys(room: Room): readonly number[] {
-  const span = Math.max(1, Math.trunc(room.storeysSpanned))
-  return Array.from({ length: span }, (_, i) => room.storey + i)
+/** The storeys a zone stands on: one, or several when it is a stair. */
+export function occupiedStoreys(zone: Zone): readonly number[] {
+  const span = Math.max(1, Math.trunc(zone.storeysSpanned))
+  return Array.from({ length: span }, (_, i) => zone.storey + i)
 }
 
-function standsOn(endpoint: Endpoint, storey: number, rooms: ReadonlyMap<string, Room>): boolean {
+function standsOn(endpoint: Endpoint, storey: number, zones: ReadonlyMap<string, Zone>): boolean {
   if (endpoint === EXTERIOR) return true
-  const room = rooms.get(endpoint)
-  return room !== undefined && occupiedStoreys(room).includes(storey)
+  const zone = zones.get(endpoint)
+  return zone !== undefined && occupiedStoreys(zone).includes(storey)
 }
 
-function roomIndex(project: Project): ReadonlyMap<string, Room> {
-  return new Map(project.rooms.map((room) => [room.id, room]))
+function zoneIndex(project: Project): ReadonlyMap<string, Zone> {
+  return new Map(project.zones.map((zone) => [zone.id, zone]))
 }
 
 function pairKey(connection: Connection): string {
@@ -38,26 +38,26 @@ function pairKey(connection: Connection): string {
 }
 
 export function checkConnectionEndpoints(project: Project): readonly Violation[] {
-  const rooms = roomIndex(project)
+  const zones = zoneIndex(project)
   return project.connections.flatMap((connection) =>
     [connection.a, connection.b]
-      .filter((endpoint) => endpoint !== EXTERIOR && !rooms.has(endpoint))
+      .filter((endpoint) => endpoint !== EXTERIOR && !zones.has(endpoint))
       .map((endpoint) =>
         say(
           'connection-endpoint-missing',
-          `connection ${connection.id} names ${endpoint}, which is not a room`,
+          `connection ${connection.id} names ${endpoint}, which is not a zone`,
         ),
       ),
   )
 }
 
 export function checkConnectionStoreys(project: Project): readonly Violation[] {
-  const rooms = roomIndex(project)
+  const zones = zoneIndex(project)
   return project.connections
     .filter(
       (connection) =>
-        !standsOn(connection.a, connection.storey, rooms) ||
-        !standsOn(connection.b, connection.storey, rooms),
+        !standsOn(connection.a, connection.storey, zones) ||
+        !standsOn(connection.b, connection.storey, zones),
     )
     .map((connection) =>
       say(
@@ -84,10 +84,10 @@ export function checkConnectionUniqueness(project: Project): readonly Violation[
   return violations
 }
 
-export function checkExteriorIsNotARoom(project: Project): readonly Violation[] {
-  return project.rooms
-    .filter((room) => room.id === EXTERIOR)
-    .map(() => say('exterior-as-room', `${EXTERIOR} is the outside, never a room`))
+export function checkExteriorIsNotAZone(project: Project): readonly Violation[] {
+  return project.zones
+    .filter((zone) => zone.id === EXTERIOR)
+    .map(() => say('exterior-as-zone', `${EXTERIOR} is the outside, never a zone`))
 }
 
 export function checkMainDoor(project: Project): readonly Violation[] {
@@ -104,9 +104,9 @@ export function checkMainDoor(project: Project): readonly Violation[] {
 }
 
 export function checkFootprints(project: Project): readonly Violation[] {
-  return project.rooms
-    .filter((room) => {
-      const footprint = room.footprint
+  return project.zones
+    .filter((zone) => {
+      const footprint = zone.footprint
       if (footprint === undefined) return false
       return (
         footprint.polygon.length < 3 ||
@@ -114,7 +114,7 @@ export function checkFootprints(project: Project): readonly Violation[] {
         footprint.polygon.some(([x, y]) => !Number.isFinite(x) || !Number.isFinite(y))
       )
     })
-    .map((room) => say('footprint-half', `room ${room.id} is neither placed nor unplaced`))
+    .map((zone) => say('footprint-half', `zone ${zone.id} is neither placed nor unplaced`))
 }
 
 /** How far a vertex may sit off the circle its arc names, in metres. */
@@ -123,12 +123,12 @@ const ARC_TOLERANCE = 1e-6
 /**
  * An arc has to name vertices the polygon has, and those vertices have to lie on the circle it
  * names: the polygon is what every calculation reads, so an arc that does not match it would
- * make the exact area and the exported curve disagree with the room on the sheet.
+ * make the exact area and the exported curve disagree with the zone on the sheet.
  */
 export function checkArcs(project: Project): readonly Violation[] {
   const violations: Violation[] = []
-  for (const room of project.rooms) {
-    const footprint = room.footprint
+  for (const zone of project.zones) {
+    const footprint = zone.footprint
     if (!footprint?.arcs) continue
     const vertices = footprint.polygon.length
     for (const arc of footprint.arcs) {
@@ -137,7 +137,7 @@ export function checkArcs(project: Project): readonly Violation[] {
       )
       if (!named || !Number.isFinite(arc.radius) || arc.radius <= 0) {
         violations.push(
-          say('arc-range', `room ${room.id} has an arc on vertices its polygon does not have`),
+          say('arc-range', `zone ${zone.id} has an arc on vertices its polygon does not have`),
         )
         continue
       }
@@ -149,23 +149,23 @@ export function checkArcs(project: Project): readonly Violation[] {
       })
       if (off)
         violations.push(
-          say('arc-off-circle', `room ${room.id} has an arc whose vertices are off its circle`),
+          say('arc-off-circle', `zone ${zone.id} has an arc whose vertices are off its circle`),
         )
     }
   }
   return violations
 }
 
-export function checkRoomStoreys(project: Project): readonly Violation[] {
+export function checkZoneStoreys(project: Project): readonly Violation[] {
   const violations: Violation[] = []
-  for (const room of project.rooms) {
-    if (room.storeysSpanned < 1)
-      violations.push(say('storeys-spanned', `room ${room.id} spans fewer than one storey`))
-    if (room.storey < 0 || room.storey + Math.max(1, room.storeysSpanned) > project.storeys)
+  for (const zone of project.zones) {
+    if (zone.storeysSpanned < 1)
+      violations.push(say('storeys-spanned', `zone ${zone.id} spans fewer than one storey`))
+    if (zone.storey < 0 || zone.storey + Math.max(1, zone.storeysSpanned) > project.storeys)
       violations.push(
         say(
           'storey-range',
-          `room ${room.id} stands outside the project's ${project.storeys} storeys`,
+          `zone ${zone.id} stands outside the project's ${project.storeys} storeys`,
         ),
       )
   }
@@ -186,40 +186,40 @@ export function checkHeights(project: Project): readonly Violation[] {
     .map(() => say('height-size', 'a storey height is a positive number of metres'))
 }
 
-/** A keep-apart pair names two different rooms, once per unordered pair, on any storeys. */
+/** A keep-apart pair names two different zones, once per unordered pair, on any storeys. */
 export function checkApart(project: Project): readonly Violation[] {
-  const rooms = roomIndex(project)
+  const zones = zoneIndex(project)
   const seen = new Set<string>()
   const violations: Violation[] = []
   for (const pair of project.apart) {
     for (const end of [pair.a, pair.b])
-      if (!rooms.has(end))
+      if (!zones.has(end))
         violations.push(
-          say('apart-endpoint', `keep-apart ${pair.id} names ${end}, which is not a room`),
+          say('apart-endpoint', `keep-apart ${pair.id} names ${end}, which is not a zone`),
         )
     if (pair.a === pair.b)
-      violations.push(say('apart-self', 'a room cannot be kept apart from itself'))
+      violations.push(say('apart-self', 'a zone cannot be kept apart from itself'))
     const key = pair.a <= pair.b ? `${pair.a}|${pair.b}` : `${pair.b}|${pair.a}`
     if (seen.has(key))
-      violations.push(say('apart-duplicate', 'those two rooms are already kept apart'))
+      violations.push(say('apart-duplicate', 'those two zones are already kept apart'))
     seen.add(key)
   }
   return violations
 }
 
-/** A declined suggestion names two different ends, each a room or the outside, once per pair. */
+/** A declined suggestion names two different ends, each a zone or the outside, once per pair. */
 export function checkDeclined(project: Project): readonly Violation[] {
-  const rooms = roomIndex(project)
+  const zones = zoneIndex(project)
   const seen = new Set<string>()
   const violations: Violation[] = []
   for (const pair of project.declined) {
     for (const end of [pair.a, pair.b])
-      if (end !== EXTERIOR && !rooms.has(end))
+      if (end !== EXTERIOR && !zones.has(end))
         violations.push(
-          say('declined-endpoint', `a declined connection names ${end}, which is not a room`),
+          say('declined-endpoint', `a declined connection names ${end}, which is not a zone`),
         )
     if (pair.a === pair.b)
-      violations.push(say('declined-self', 'a room is not connected to itself'))
+      violations.push(say('declined-self', 'a zone is not connected to itself'))
     const key = pair.a <= pair.b ? `${pair.a}|${pair.b}` : `${pair.b}|${pair.a}`
     if (seen.has(key))
       violations.push(say('declined-duplicate', 'that connection is already declined'))
@@ -234,11 +234,11 @@ const checks = [
   checkConnectionUniqueness,
   checkApart,
   checkDeclined,
-  checkExteriorIsNotARoom,
+  checkExteriorIsNotAZone,
   checkMainDoor,
   checkFootprints,
   checkArcs,
-  checkRoomStoreys,
+  checkZoneStoreys,
   checkHeights,
 ]
 

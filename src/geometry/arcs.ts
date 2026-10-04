@@ -120,7 +120,7 @@ function bulgeArea(polygon: Polygon, arc: Arc): number {
 }
 
 /**
- * The area the room really covers: the polygon's area with every arc's segments put back, so a
+ * The area the zone really covers: the polygon's area with every arc's segments put back, so a
  * circle measures πr² rather than the area of the many-sided figure standing for it.
  */
 export function exactArea(footprint: Footprint): number {

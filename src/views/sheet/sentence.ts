@@ -70,7 +70,7 @@ export function sentenceOf(
   if (read.openToBelow.length) parts.push({ text: `open to below: ${read.openToBelow.join(', ')}` })
   if (read.overlaps.length)
     parts.push({
-      text: `${read.overlaps.length} ${plural(read.overlaps.length, 'overlap', 'overlaps')} · right-click a room to settle by hand`,
+      text: `${read.overlaps.length} ${plural(read.overlaps.length, 'overlap', 'overlaps')} · right-click a zone to settle by hand`,
       bad: true,
     })
   if (read.spills.length)
@@ -145,7 +145,7 @@ export function openingsSentence(read: Report, state: OpeningsState): Part[] {
     return [
       {
         lead,
-        text: 'sliding along its edge; a door stays on the edge its two rooms share',
+        text: 'sliding along its edge; a door stays on the edge its two zones share',
       },
     ]
   const door = state.door
@@ -153,7 +153,7 @@ export function openingsSentence(read: Report, state: OpeningsState): Part[] {
     return [
       {
         lead,
-        text: `${door.label} on ${door.room}, ${fmt(door.width)} m${
+        text: `${door.label} on ${door.zone}, ${fmt(door.width)} m${
           door.across ? `, shared with ${door.across}` : ', to the outside'
         }${door.swingsInto ? `, swings into ${door.swingsInto}` : ''} · drag to slide, arrows a grid step${
           door.swings ? ' · F swing' : ''
@@ -219,7 +219,7 @@ const angleOf = (a: [number, number], b: [number, number]) => {
   return ((deg % 360) + 360) % 360
 }
 
-/** While a shape is being drawn for a room, or a room reshaped. */
+/** While a shape is being drawn for a zone, or a zone reshaped. */
 export function drawingSentence(state: {
   name: string
   target: number
@@ -227,7 +227,7 @@ export function drawingSentence(state: {
   area: number | null
   snapKind: string | null
   reshaping: boolean
-  roomArea?: number
+  zoneArea?: number
 }): Part[] {
   const how =
     state.shape === 'rect'
@@ -247,8 +247,8 @@ export function drawingSentence(state: {
     return [
       {
         lead: `Reshaping ${state.name}`,
-        text: `${fmt(state.roomArea ?? 0)} of ${fmt(state.target)} m² · draw a boundary, ${how}${state.area === null ? '' : ` · ${fmt(state.area)} m² in hand`}${caught} · what overlaps the room is taken away, a touching shape outside is added · Enter applies, Esc cancels`,
-        bad: (state.roomArea ?? 0) < state.target - 0.05,
+        text: `${fmt(state.zoneArea ?? 0)} of ${fmt(state.target)} m² · draw a boundary, ${how}${state.area === null ? '' : ` · ${fmt(state.area)} m² in hand`}${caught} · what overlaps the zone is taken away, a touching shape outside is added · Enter applies, Esc cancels`,
+        bad: (state.zoneArea ?? 0) < state.target - 0.05,
       },
     ]
   return [

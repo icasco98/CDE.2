@@ -73,7 +73,7 @@ describe('the vertices an arc runs through', () => {
   })
 })
 
-describe('the area a room with arcs really covers', () => {
+describe('the area a zone with arcs really covers', () => {
   const radius = 2.5
   const run = arcPoints(centre, radius, 0, 0, true)
   const circle = {
@@ -106,7 +106,7 @@ describe('the area a room with arcs really covers', () => {
 })
 
 describe('where the arcs stand on the sheet', () => {
-  it('turns the centre with the room and leaves the radius alone', () => {
+  it('turns the centre with the zone and leaves the radius alone', () => {
     const polygon = arcPoints([2, 2], 1, 0, 0, true).slice(0, -1)
     const arcs = sheetArcs({
       polygon,

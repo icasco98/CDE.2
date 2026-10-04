@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { alongNamed, standAgainst, edgeNamed, type Standing } from './against'
 import { fixtureSheet } from './fixture'
 import { setAngle } from './geometry'
-import { cloneRoom, type Room } from './model'
+import { cloneZone, type Zone } from './model'
 import { meetingOf } from './meetings'
 
-const roomIn = (name: string): Room => fixtureSheet().rooms.find((r) => r.name === name)!
+const zoneIn = (name: string): Zone => fixtureSheet().zones.find((r) => r.name === name)!
 
 const stood = (
-  target: Room,
+  target: Zone,
   edge: 'north' | 'south' | 'east' | 'west',
   mover: { w: number; h: number },
   along: 'start' | 'end' | 'centre',
@@ -19,13 +19,13 @@ const stood = (
   return placing.standing
 }
 
-describe('a room put against a named edge', () => {
+describe('a zone put against a named edge', () => {
   // Family Living stands at x 0..7.75, y 0..9, square to the sheet.
-  const living = roomIn('Family Living')
+  const living = zoneIn('Family Living')
   const mover = { w: 4, h: 3 }
 
   it('lies along the east edge, flush to its start, flush to its end, or centred', () => {
-    // the edge runs down the plot, so the room's 4 m goes along y and its 3 m reaches east
+    // the edge runs down the plot, so the zone's 4 m goes along y and its 3 m reaches east
     expect(stood(living, 'east', mover, 'start')).toEqual({ x: 7.75, y: 0, w: 3, h: 4, angle: 0 })
     expect(stood(living, 'east', mover, 'end')).toEqual({ x: 7.75, y: 5, w: 3, h: 4, angle: 0 })
     expect(stood(living, 'east', mover, 'centre')).toEqual({
@@ -39,7 +39,7 @@ describe('a room put against a named edge', () => {
 
   it('takes an offset from the start of the edge instead of an alignment', () => {
     expect(stood(living, 'east', mover, 'centre', 2)).toMatchObject({ x: 7.75, y: 2 })
-    // an offset that would hang the room off the end is held on the edge
+    // an offset that would hang the zone off the end is held on the edge
     expect(stood(living, 'east', mover, 'centre', 40)).toMatchObject({ y: 5 })
   })
 
@@ -53,17 +53,17 @@ describe('a room put against a named edge', () => {
     expect(stood(living, 'west', mover, 'start')).toEqual({ x: -3, y: 0, w: 3, h: 4, angle: 0 })
   })
 
-  it('follows a turned room, lying along the edge it is put against and touching it', () => {
-    const turned = cloneRoom(living)
+  it('follows a turned zone, lying along the edge it is put against and touching it', () => {
+    const turned = cloneZone(living)
     setAngle(turned, 30)
     const standing = stood(turned, 'east', mover, 'centre')
-    // the room's width runs along the edge, so it stands at the edge's own lie, not the room's
+    // the zone's width runs along the edge, so it stands at the edge's own lie, not the zone's
     expect(standing).toMatchObject({ angle: 300, w: 4, h: 3 })
-    const placed = { ...cloneRoom(living), name: 'Bedroom', ...standing }
-    expect(meetingOf(turned, placed)).toEqual({ rooms: ['Family Living', 'Bedroom'], metres: 4 })
+    const placed = { ...cloneZone(living), name: 'Bedroom', ...standing }
+    expect(meetingOf(turned, placed)).toEqual({ zones: ['Family Living', 'Bedroom'], metres: 4 })
   })
 
-  it('refuses an edge too short for the room, in plain words', () => {
+  it('refuses an edge too short for the zone, in plain words', () => {
     const placing = standAgainst(living, 'south', { name: 'Diwaniya', w: 12, h: 5 }, 'centre')
     expect(placing.ok).toBe(false)
     if (!placing.ok)

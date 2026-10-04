@@ -10,7 +10,7 @@ describe('a menu kept whole inside the window', () => {
     expect(600 + shiftOnScreen(600, 300, 720)).toBe(300)
   })
 
-  it('moves up only as far as it must when neither side of the point has room', () => {
+  it('moves up only as far as it must when neither side of the point has space', () => {
     expect(200 + shiftOnScreen(200, 500, 600)).toBe(96)
   })
 

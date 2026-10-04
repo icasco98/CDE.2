@@ -18,7 +18,7 @@ test('the diwaniya is reached by its own street door, and named once that door g
   await expect(checks(page)).not.toContainText('Diwaniya')
   const street = async () => {
     const project = await saved(page)
-    const diwaniya = project.rooms.find((room) => room.name === 'Diwaniya')?.id
+    const diwaniya = project.zones.find((zone) => zone.name === 'Diwaniya')?.id
     return project.connections.find(
       (connection) =>
         (connection.a === 'EXTERIOR' && connection.b === diwaniya) ||
@@ -43,21 +43,21 @@ test('the diwaniya is reached by its own street door, and named once that door g
 test('two storeys and no stair: the checks say so', async ({ page }) => {
   await openVilla(page)
   await expect(checks(page)).not.toContainText('No stair connects the storeys.')
-  await page.locator('.bubbles-sheet [data-room][data-name="Stair"]').first().click()
+  await page.locator('.bubbles-sheet [data-zone][data-name="Stair"]').first().click()
   await page.locator('svg.bubbles-sheet').press('Delete')
   await expect(checks(page).locator('[data-check="no-stair"]')).toHaveText(
     /No stair connects the storeys\./,
   )
 })
 
-test('a private room joined to a public one is a tier skip until the connection goes', async ({
+test('a private zone joined to a public one is a tier skip until the connection goes', async ({
   page,
 }) => {
   await openVilla(page)
   await expect(checks(page).locator('[data-check="tier-skip"]')).toHaveCount(0)
   await connect(page, 'Kitchen', 'Formal Living')
   await expect(checks(page).locator('[data-check="tier-skip"]')).toHaveText(
-    /Kitchen, a private room, is joined to Formal Living, a public one\./,
+    /Kitchen, a private zone, is joined to Formal Living, a public one\./,
   )
   await page.getByRole('button', { name: 'Undo' }).click()
   await expect(checks(page).locator('[data-check="tier-skip"]')).toHaveCount(0)

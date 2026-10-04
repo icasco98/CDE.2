@@ -18,8 +18,8 @@ type Moving = Pick<Store, 'actions' | 'getState' | 'transaction'>
 /** The storeys an endpoint stands on. The outside stands on every one of them. */
 function standsOn(project: Project, endpoint: Endpoint): readonly number[] {
   if (endpoint === EXTERIOR) return Array.from({ length: project.storeys }, (_, i) => i)
-  const room = project.rooms.find((each) => each.id === endpoint)
-  return room ? occupiedStoreys(room) : []
+  const zone = project.zones.find((each) => each.id === endpoint)
+  return zone ? occupiedStoreys(zone) : []
 }
 
 /** Whether a connection could still be held: its two ends have a storey in common to be joined on. */
@@ -28,11 +28,11 @@ function meet(project: Project, a: Endpoint, b: Endpoint): boolean {
   return standsOn(project, a).some((storey) => onB.includes(storey))
 }
 
-/** A room and the storey it is sent to. */
+/** A zone and the storey it is sent to. */
 export type StoreyMove = { readonly id: string; readonly storey: number }
 
 /**
- * Rooms change the storey they stand on, and what belongs with them goes too. The companions each
+ * Zones change the storey they stand on, and what belongs with them goes too. The companions each
  * owns travel with it, unless `carries` says one stays, the links they can no longer hold are let
  * go, and the default connections are made again on the floors they have arrived at, so a bedroom
  * moved upstairs takes its ensuite, leaves the ground-floor corridor behind and finds the corridor
@@ -42,15 +42,15 @@ export type StoreyMove = { readonly id: string; readonly storey: number }
  * storey it reaches and its span is the program's to set. What comes back is a sentence for every
  * door the moves let go, so the person is told rather than left to notice.
  */
-export function sendRoomsToStorey(
+export function sendZonesToStorey(
   store: Moving,
   moves: readonly StoreyMove[],
   carries: (companion: string) => boolean = () => true,
   first: () => Result | void = () => undefined,
 ): Result<readonly string[]> {
   for (const move of moves) {
-    const room = store.getState().rooms.find((each) => each.id === move.id)
-    if (room && Math.max(1, Math.trunc(room.storeysSpanned)) > 1)
+    const zone = store.getState().zones.find((each) => each.id === move.id)
+    if (zone && Math.max(1, Math.trunc(zone.storeysSpanned)) > 1)
       return refused({ code: 'stair-storey', message: STAIR_STAYS })
   }
   const letGo: string[] = []
@@ -61,7 +61,7 @@ export function sendRoomsToStorey(
     const storeyOfMoving = new Map<string, number>()
     for (const move of moves) {
       storeyOfMoving.set(move.id, move.storey)
-      for (const companion of companionsOf(project.rooms, project.connections, move.id))
+      for (const companion of companionsOf(project.zones, project.connections, move.id))
         if (!storeyOfMoving.has(companion) && carries(companion))
           storeyOfMoving.set(companion, move.storey)
     }
@@ -82,7 +82,7 @@ export function sendRoomsToStorey(
     const nameOf = (endpoint: Endpoint): string =>
       endpoint === EXTERIOR
         ? 'the street'
-        : (after.rooms.find((each) => each.id === endpoint)?.name ?? 'a room')
+        : (after.zones.find((each) => each.id === endpoint)?.name ?? 'a zone')
     for (const connection of held) {
       if (!meet(after, connection.a, connection.b)) {
         const near = carried.has(connection.a) ? connection.a : connection.b
@@ -103,9 +103,9 @@ export function sendRoomsToStorey(
   return moved.ok ? ok(letGo as readonly string[]) : moved
 }
 
-/** One room sent to another storey with everything it owns: the program's and the bubbles' move. */
+/** One zone sent to another storey with everything it owns: the program's and the bubbles' move. */
 export const sendToStorey = (
   store: Moving,
   id: string,
   storey: number,
-): Result<readonly string[]> => sendRoomsToStorey(store, [{ id, storey }])
+): Result<readonly string[]> => sendZonesToStorey(store, [{ id, storey }])

@@ -245,7 +245,7 @@ function blockIsPlanar(graph: Graph): boolean {
 }
 
 /**
- * Whether these rooms and the links between them can be drawn with no link crossing another. A
+ * Whether these zones and the links between them can be drawn with no link crossing another. A
  * graph is planar when every one of its blocks is, so the blocks are tested one at a time.
  */
 export function isPlanar(nodes: readonly string[], pairs: readonly Pair[]): boolean {

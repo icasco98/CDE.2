@@ -15,7 +15,7 @@ import {
   type Door,
   type Memory,
   type Point,
-  type Room,
+  type Zone,
   type Settings,
   type Sheet,
 } from '../../sheet'
@@ -37,6 +37,12 @@ const SHEET_FORMAT = 3
 
 /** Format 2 differs from 3 only in its names, so it is read by renaming. */
 const FORMAT_TWO = 2
+
+/** Where formats 1 and 2 kept the zones, under the model's old word for them. */
+const ZONES_BEFORE_3 = 'rooms'
+
+/** The kind formats 1 and 2 gave a zone of no listed kind. */
+const OTHER_BEFORE_3 = 'room'
 
 /** What the sheets of format 1 carried in place of a format, the program they were drawn for. */
 const FORMAT_ONE = 'fresh-brief-2'
@@ -70,7 +76,7 @@ const keepLocal = (key: string, value: unknown): void => {
 }
 
 export const sheetKept = (sheet: Sheet): Record<string, unknown> => ({
-  rooms: sheet.rooms,
+  zones: sheet.zones,
   storeyCount: sheet.storeyCount,
   settings: { ...sheet.settings, v: SETTINGS_V },
   format: SHEET_FORMAT,
@@ -98,11 +104,12 @@ export function sheetFrom(value: unknown, connections: readonly ConnectionEnds[]
   if (!value || typeof value !== 'object') return null
   const held = value as Record<string, unknown>
   const current = held.format === SHEET_FORMAT || held.format === FORMAT_TWO
-  if ((!current && held.program !== FORMAT_ONE) || !Array.isArray(held.rooms)) return null
+  const zones = held.format === SHEET_FORMAT ? held.zones : held[ZONES_BEFORE_3]
+  if ((!current && held.program !== FORMAT_ONE) || !Array.isArray(zones)) return null
   const settings = settingsFrom(held.settings) ?? {}
   const count = Number(held.storeyCount)
   const sheet = sheetOf([], settings, Number.isFinite(count) ? count : 2)
-  sheet.rooms = repair((held.rooms as Room[]).map(asRoom), sheet.settings)
+  sheet.zones = repair((zones as Zone[]).map(asZone), sheet.settings)
   if (!current) doorsOnConnections(sheet, connections)
   return sheet
 }
@@ -112,24 +119,26 @@ const isPair = (value: unknown): value is [string, string] =>
   value.length === 2 &&
   value.every((end) => typeof end === 'string' && end.length > 0)
 
-/** A stored room read back: its own copy, with the fields an older store may not have carried. */
-function asRoom(saved: Room): Room {
-  const room = JSON.parse(JSON.stringify(saved)) as Room
-  room.angle = Number(room.angle) || 0
-  room.pieces = room.pieces ?? null
-  const kept = room as Room & { extra?: unknown; aside?: unknown }
+/** A stored zone read back: its own copy, with the fields an older store may not have carried. */
+function asZone(saved: Zone): Zone {
+  const zone = JSON.parse(JSON.stringify(saved)) as Zone
+  zone.angle = Number(zone.angle) || 0
+  zone.pieces = zone.pieces ?? null
+  const kept = zone as Zone & { extra?: unknown; aside?: unknown }
   delete kept.extra
   delete kept.aside
-  for (const door of room.doors ?? []) {
+  // Formats 1 and 2 called a zone of no listed kind by the old word.
+  if (zone.kind === OTHER_BEFORE_3) zone.kind = 'zone'
+  for (const door of zone.doors ?? []) {
     // Format 2 called the connection a door draws its edge.
     const old = door as Door & { edge?: unknown }
     if (door.connection === undefined && typeof old.edge === 'string') door.connection = old.edge
     delete old.edge
   }
-  return room
+  return zone
 }
 
-/** A door of format 1: a point on its room's edge and, when placed after doors knew it, its pair. */
+/** A door of format 1: a point on its zone's edge and, when placed after doors knew it, its pair. */
 type FormatOneDoor = Omit<Door, 'connection' | 'to' | 'along' | 'at'> & {
   at: Point
   pair?: unknown
@@ -141,15 +150,15 @@ type FormatOneDoor = Omit<Door, 'connection' | 'to' | 'along' | 'at'> & {
  * project no longer joins, is dropped.
  */
 function doorsOnConnections(sheet: Sheet, connections: readonly ConnectionEnds[]): void {
-  const byId = new Map(sheet.rooms.map((r) => [r.id, r]))
-  for (const room of sheet.rooms) {
-    const old = (room.doors ?? []) as unknown as FormatOneDoor[]
+  const byId = new Map(sheet.zones.map((r) => [r.id, r]))
+  for (const zone of sheet.zones) {
+    const old = (zone.doors ?? []) as unknown as FormatOneDoor[]
     const doors: Door[] = []
     for (const door of old) {
-      if (!isPair(door.pair) || !door.pair.includes(room.id)) continue
-      const to = door.pair[0] === room.id ? door.pair[1] : door.pair[0]
+      if (!isPair(door.pair) || !door.pair.includes(zone.id)) continue
+      const to = door.pair[0] === zone.id ? door.pair[1] : door.pair[0]
       const connection = connections.find(
-        (each) => (each.a === room.id && each.b === to) || (each.a === to && each.b === room.id),
+        (each) => (each.a === zone.id && each.b === to) || (each.a === to && each.b === zone.id),
       )
       if (!connection) continue
       const { id, type, w, flip, hinge, at } = door
@@ -165,16 +174,16 @@ function doorsOnConnections(sheet: Sheet, connections: readonly ConnectionEnds[]
               w,
               flip,
               hinge,
-              ...(other ? standingAt(room, other, at) : { along: 0.5 }),
+              ...(other ? standingAt(zone, other, at) : { along: 0.5 }),
             },
       )
     }
-    if (doors.length) room.doors = doors
-    else delete room.doors
+    if (doors.length) zone.doors = doors
+    else delete zone.doors
   }
 }
 
-/** An emptied sheet comes back empty: its rooms are stored waiting in the program, not dropped. */
+/** An emptied sheet comes back empty: its zones are stored waiting in the program, not dropped. */
 export const localSheet = (connections: readonly ConnectionEnds[]): Sheet | null =>
   sheetFrom(readLocal(SHEET_KEY), connections)
 

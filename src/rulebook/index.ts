@@ -1,11 +1,11 @@
-export { roomTypes } from './roomTypes'
+export { zoneTypes } from './zoneTypes'
 export type {
   Band,
   LegalFloor,
-  RoomCategory,
-  RoomTier,
-  RoomType,
-  RoomTypeFlags,
+  ZoneCategory,
+  ZoneTier,
+  ZoneType,
+  ZoneTypeFlags,
   SizeRange,
   Typical,
 } from './types'
@@ -13,7 +13,7 @@ export { byPlotBand, freeProportion, lengthAsNeeded } from './types'
 export {
   categoryLabels,
   rangeFor,
-  roomTypeById,
+  zoneTypeById,
   spansAllStoreys,
   typesByCategory,
   typicalArea,
@@ -24,7 +24,7 @@ export type { Reduction } from './slack'
 export { pastAllowed, pastRange } from './sizeCheck'
 export { circulationPerStorey, hallwayArea, hallwayFollows, hallwayName } from './circulation'
 export { companionName, companionOwners, companionsOf, defaultProgram, standingOf } from './program'
-export type { CompanionConnection, CompanionRoom, ProgramRoom, Standing } from './program'
+export type { CompanionConnection, CompanionZone, ProgramZone, Standing } from './program'
 export { connectionSource } from './defaultConnections'
 export { impliedConnections } from './impliedConnections'
 export type { ImpliedConnection } from './impliedConnections'
@@ -35,6 +35,6 @@ export type { StoreyFit } from './fit'
 export { buildableArea, buildableAreaOf, setbackDepth } from './setbacks'
 export type { PlotShape } from './setbacks'
 export { blockedRun, feasibility, linksHeld } from './feasibility'
-export type { BriefConnection, BriefRoom, Finding } from './feasibility'
+export type { BriefConnection, BriefZone, Finding } from './feasibility'
 export { isPlanar } from './planarity'
 export { inWords, listedNames, metresIn } from './words'

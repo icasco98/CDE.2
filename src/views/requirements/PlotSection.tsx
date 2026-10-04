@@ -72,7 +72,7 @@ export function PlotSection({ project }: { project: Project }) {
         ))}
       </fieldset>
       <CheckField
-        label="Hold rooms inside the plot"
+        label="Hold zones inside the plot"
         checked={plot.on}
         onChange={(on) => answer(session.actions.setPlot({ ...plot, on }))}
       />

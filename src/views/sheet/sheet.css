@@ -25,7 +25,7 @@
   --service: #d7d5cf;
   --circ: #e4d2a8;
   --open: #fbfaf7;
-  --room-line: #2f4a63;
+  --zone-line: #2f4a63;
   --select: #2b57c7;
 }
 
@@ -46,7 +46,7 @@
     --accent-soft: #22314d;
     --warn: #e48b62;
     --warn-soft: rgba(228, 139, 98, 0.3);
-    --room-line: #a9c4dd;
+    --zone-line: #a9c4dd;
     --select: #8db0f0;
   }
 }
@@ -207,7 +207,7 @@ body:has(main.stage-sheet) {
   align-items: center;
   gap: 6px;
   padding: 2px 6px 2px 8px;
-  border: 1px solid var(--room-line);
+  border: 1px solid var(--zone-line);
   border-radius: 3px;
   cursor: grab;
   touch-action: none;
@@ -332,15 +332,15 @@ body:has(main.stage-sheet) {
   color: var(--warn);
 }
 
-.sheet-stage .add-room {
+.sheet-stage .add-zone {
   display: grid;
   gap: 4px;
   padding: 8px;
   border-top: 1px solid var(--line-2);
 }
 
-.sheet-stage .add-room select,
-.sheet-stage .add-room input {
+.sheet-stage .add-zone select,
+.sheet-stage .add-zone input {
   font:
     12px 'Archivo',
     sans-serif;
@@ -348,21 +348,21 @@ body:has(main.stage-sheet) {
   min-width: 0;
 }
 
-.sheet-stage .add-room .add-line {
+.sheet-stage .add-zone .add-line {
   display: flex;
   gap: 4px;
 }
 
-.sheet-stage .add-room .add-line input[type='text'] {
+.sheet-stage .add-zone .add-line input[type='text'] {
   flex: 1;
   min-width: 0;
 }
 
-.sheet-stage .add-room .add-line select {
+.sheet-stage .add-zone .add-line select {
   flex: 0 0 78px;
 }
 
-.sheet-stage .add-room .add-line input[type='number'] {
+.sheet-stage .add-zone .add-line input[type='number'] {
   flex: 0 0 62px;
 }
 
@@ -441,7 +441,7 @@ body:has(main.stage-sheet) {
   display: inline-block;
   width: 10px;
   height: 10px;
-  border: 1px solid var(--room-line);
+  border: 1px solid var(--zone-line);
   vertical-align: -1px;
   margin-right: 4px;
 }
@@ -529,59 +529,59 @@ body:has(main.stage-sheet) {
   stroke-width: 0.06;
 }
 
-.sheet-stage .room {
+.sheet-stage .zone {
   cursor: grab;
 }
 
-.sheet-stage .room.moving {
+.sheet-stage .zone.moving {
   cursor: grabbing;
 }
 
-.sheet-stage .room path.body {
+.sheet-stage .zone path.body {
   stroke: none;
   fill-opacity: 0.85;
 }
 
-.sheet-stage .room path.edge {
+.sheet-stage .zone path.edge {
   fill: none;
-  stroke: var(--room-line);
+  stroke: var(--zone-line);
   stroke-width: 0.07;
   stroke-linecap: square;
   pointer-events: none;
 }
 
-.sheet-stage .room.reception path.body {
+.sheet-stage .zone.reception path.body {
   fill: var(--reception);
 }
-.sheet-stage .room.shared path.body {
+.sheet-stage .zone.shared path.body {
   fill: var(--shared);
 }
-.sheet-stage .room.private path.body {
+.sheet-stage .zone.private path.body {
   fill: var(--private);
 }
-.sheet-stage .room.service path.body {
+.sheet-stage .zone.service path.body {
   fill: var(--service);
 }
-.sheet-stage .room.circulation path.body {
+.sheet-stage .zone.circulation path.body {
   fill: var(--circ);
 }
 
-.sheet-stage .room.open path.body {
+.sheet-stage .zone.open path.body {
   fill: var(--open);
   fill-opacity: 1;
 }
 
-.sheet-stage .room.open path.edge {
+.sheet-stage .zone.open path.edge {
   stroke: var(--build);
   stroke-dasharray: 0.3 0.2;
 }
 
-.sheet-stage .room.open text.name {
+.sheet-stage .zone.open text.name {
   fill: var(--build);
 }
 
 /* The storey below, drawn faint under the one in hand, and what stands open to below on it. */
-.sheet-stage .room.under path.outline {
+.sheet-stage .zone.under path.outline {
   fill: none;
   stroke: var(--ink-3);
   stroke-width: 0.03;
@@ -590,13 +590,13 @@ body:has(main.stage-sheet) {
   pointer-events: none;
 }
 
-.sheet-stage .room.below path.body {
+.sheet-stage .zone.below path.body {
   fill: var(--paper);
   pointer-events: none;
 }
 
-/* Only the outline is stroked: a room kept as several pieces would otherwise show every seam. */
-.sheet-stage .room.below path.outline {
+/* Only the outline is stroked: a zone kept as several pieces would otherwise show every seam. */
+.sheet-stage .zone.below path.outline {
   fill: none;
   stroke: var(--ink-2);
   stroke-width: 0.05;
@@ -604,13 +604,13 @@ body:has(main.stage-sheet) {
   pointer-events: none;
 }
 
-.sheet-stage .room.below .x {
+.sheet-stage .zone.below .x {
   stroke: var(--ink-3);
   stroke-width: 0.04;
   pointer-events: none;
 }
 
-.sheet-stage .room.below .below-label {
+.sheet-stage .zone.below .below-label {
   font:
     0.4px 'Archivo',
     sans-serif;
@@ -621,8 +621,8 @@ body:has(main.stage-sheet) {
   text-transform: uppercase;
 }
 
-/* Hover is shared with the mass: the room under the pointer there reads as under it here. */
-.sheet-stage .room.hover path.edge {
+/* Hover is shared with the mass: the zone under the pointer there reads as under it here. */
+.sheet-stage .zone.hover path.edge {
   stroke: var(--accent);
 }
 
@@ -632,24 +632,24 @@ body:has(main.stage-sheet) {
   border-color: var(--ink);
 }
 
-.sheet-stage .room.selected path.edge {
+.sheet-stage .zone.selected path.edge {
   stroke: var(--select);
   stroke-width: 0.12;
 }
 
-.sheet-stage .room.over path.edge {
+.sheet-stage .zone.over path.edge {
   stroke: var(--warn);
 }
 
-.sheet-stage .room:hover path.edge {
+.sheet-stage .zone:hover path.edge {
   stroke-width: 0.11;
 }
 
-.sheet-stage .room.locked path.body {
+.sheet-stage .zone.locked path.body {
   fill-opacity: 0.55;
 }
 
-.sheet-stage .room.locked path.edge {
+.sheet-stage .zone.locked path.edge {
   stroke: var(--ink-2);
 }
 
@@ -660,7 +660,7 @@ body:has(main.stage-sheet) {
   pointer-events: none;
 }
 
-.sheet-stage .room text.name {
+.sheet-stage .zone text.name {
   font:
     500 0.5px 'Archivo',
     sans-serif;
@@ -668,7 +668,7 @@ body:has(main.stage-sheet) {
   pointer-events: none;
 }
 
-.sheet-stage .room text.area {
+.sheet-stage .zone text.area {
   font:
     0.42px 'IBM Plex Mono',
     ui-monospace,
@@ -677,23 +677,23 @@ body:has(main.stage-sheet) {
   pointer-events: none;
 }
 
-.sheet-stage .room text.area.short {
+.sheet-stage .zone text.area.short {
   fill: var(--warn);
 }
 
-.sheet-stage .room text.area.typable {
+.sheet-stage .zone text.area.typable {
   pointer-events: all;
   cursor: text;
   fill: var(--select);
   text-decoration: underline dotted;
 }
 
-.sheet-stage .room .label.movable text {
+.sheet-stage .zone .label.movable text {
   pointer-events: all;
   cursor: move;
 }
 
-.sheet-stage .room .label.movable text.name {
+.sheet-stage .zone .label.movable text.name {
   fill: var(--select);
 }
 
@@ -976,16 +976,16 @@ body:has(main.stage-sheet) {
   pointer-events: none;
 }
 
-.sheet-stage svg.sheet.reshaping .room:not(.target) path.body {
+.sheet-stage svg.sheet.reshaping .zone:not(.target) path.body {
   fill-opacity: 0.12;
 }
 
-.sheet-stage svg.sheet.reshaping .room.target path.edge {
+.sheet-stage svg.sheet.reshaping .zone.target path.edge {
   stroke: var(--ink);
   stroke-width: 0.16;
 }
 
-.sheet-stage svg.sheet.drawing .room path.body {
+.sheet-stage svg.sheet.drawing .zone path.body {
   fill-opacity: 0.12;
 }
 
@@ -1099,7 +1099,7 @@ body:has(main.stage-sheet) {
   max-width: 220px;
 }
 
-.sheet-stage .room-tag {
+.sheet-stage .zone-tag {
   position: absolute;
   z-index: 5;
   pointer-events: none;
@@ -1113,7 +1113,7 @@ body:has(main.stage-sheet) {
   white-space: nowrap;
 }
 
-.sheet-stage .room-tag b {
+.sheet-stage .zone-tag b {
   color: var(--ink);
 }
 
@@ -1365,12 +1365,12 @@ body:has(main.stage-sheet) {
 }
 
 .sheet-stage.openings .behave,
-.sheet-stage.openings .tools .grp.room-tools,
+.sheet-stage.openings .tools .grp.zone-tools,
 .sheet-stage.openings .tray .item .a,
 .sheet-stage.openings .tray .item .ways,
 .sheet-stage.openings .tray .item .x,
 .sheet-stage.openings .tray .item .grip,
-.sheet-stage.openings .add-room {
+.sheet-stage.openings .add-zone {
   display: none;
 }
 
@@ -1378,38 +1378,38 @@ body:has(main.stage-sheet) {
   cursor: pointer;
 }
 
-/* The rooms fade to outlines, so the step reads as being about the edges and what opens them. */
-.sheet-stage svg.sheet.doormode .room path.body {
+/* The zones fade to outlines, so the step reads as being about the edges and what opens them. */
+.sheet-stage svg.sheet.doormode .zone path.body {
   fill-opacity: 0.12;
 }
 
-.sheet-stage svg.sheet.doormode .room path.edge {
+.sheet-stage svg.sheet.doormode .zone path.edge {
   stroke: var(--ink-2);
   stroke-width: 0.08;
 }
 
-.sheet-stage svg.sheet.doormode .room text {
+.sheet-stage svg.sheet.doormode .zone text {
   fill: var(--ink-3);
 }
 
-.sheet-stage .room.lit path.edge {
+.sheet-stage .zone.lit path.edge {
   stroke: var(--accent);
   stroke-width: 0.14;
 }
 
-.sheet-stage .room.unreached path.body {
+.sheet-stage .zone.unreached path.body {
   fill-opacity: 0.25;
 }
 
-.sheet-stage .room.unreached path.edge {
+.sheet-stage .zone.unreached path.edge {
   stroke: var(--ink-3);
 }
 
-.sheet-stage .room.unreached text.name {
+.sheet-stage .zone.unreached text.name {
   fill: var(--ink-3);
 }
 
-.sheet-stage .room text.depth {
+.sheet-stage .zone text.depth {
   font:
     0.32px 'IBM Plex Mono',
     ui-monospace,
@@ -1520,7 +1520,7 @@ body:has(main.stage-sheet) {
 }
 
 /* A door whose edge moved away: the ring says where it was left, to put back or remove. */
-/* Check: a connection not yet ready or met, dashed from the room under the hand, bold from the one selected. */
+/* Check: a connection not yet ready or met, dashed from the zone under the hand, bold from the one selected. */
 .sheet-stage .check-line {
   stroke: var(--accent);
   stroke-width: 0.06;
@@ -1541,12 +1541,12 @@ body:has(main.stage-sheet) {
   pointer-events: none;
 }
 
-.sheet-stage .room.apart-through path.edge {
+.sheet-stage .zone.apart-through path.edge {
   stroke: #c62828;
   stroke-width: 0.16;
 }
 
-/* The lines to rooms still in the program run over the program and the sheet alike. */
+/* The lines to zones still in the program run over the program and the sheet alike. */
 .sheet-stage .tray-lines {
   position: absolute;
   inset: 0;
@@ -1562,7 +1562,7 @@ body:has(main.stage-sheet) {
   outline-offset: -1px;
 }
 
-/* A room of the program scrolled out of the list: the line ends here, and a click brings it back. */
+/* A zone of the program scrolled out of the list: the line ends here, and a click brings it back. */
 .sheet-stage .tray-tag {
   position: absolute;
   z-index: 5;

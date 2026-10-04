@@ -60,53 +60,53 @@ const undo = (page: Page) => page.keyboard.press('Control+z')
 
 const storeyButton = (page: Page, k: number) => page.locator(`[data-storey="${k}"]`)
 
-/** Where a room stands on the sheet, read off the transform its group carries. */
+/** Where a zone stands on the sheet, read off the transform its group carries. */
 async function whereOnSheet(page: Page, id: string): Promise<[number, number]> {
-  return page.evaluate((room) => {
-    const g = document.querySelector(`svg.sheet g.room[data-room="${room}"]`)
+  return page.evaluate((zone) => {
+    const g = document.querySelector(`svg.sheet g.zone[data-zone="${zone}"]`)
     const t = g?.getAttribute('transform') ?? ''
     const found = /translate\(([-\d.]+) ([-\d.]+)\)/.exec(t)
-    if (!found) throw new Error(`${room} is not on the sheet`)
+    if (!found) throw new Error(`${zone} is not on the sheet`)
     return [Number(found[1]), Number(found[2])] as [number, number]
   }, id)
 }
 
-const pickInProgram = (page: Page, id: string) => page.locator(`.tray .item[data-room="${id}"]`)
+const pickInProgram = (page: Page, id: string) => page.locator(`.tray .item[data-zone="${id}"]`)
 
 test.describe('storeys', () => {
   test.beforeEach(async ({ page }) => openSheet(page))
 
   test('switches to First and shows the ground floor faint under it', async ({ page }) => {
-    await expect(page.locator('svg.sheet .room.under')).toHaveCount(0)
+    await expect(page.locator('svg.sheet .zone.under')).toHaveCount(0)
     await storeyButton(page, 1).click()
-    await expect(page.locator('svg.sheet .room.under').first()).toBeVisible()
-    expect(await page.locator('svg.sheet .room.under').count()).toBeGreaterThan(5)
-    // the stair is one room across the storeys, so it is drawn on this one, not under it
-    await expect(page.locator(`svg.sheet g.room[data-room="${STAIR}"]`)).toBeVisible()
+    await expect(page.locator('svg.sheet .zone.under').first()).toBeVisible()
+    expect(await page.locator('svg.sheet .zone.under').count()).toBeGreaterThan(5)
+    // the stair is one zone across the storeys, so it is drawn on this one, not under it
+    await expect(page.locator(`svg.sheet g.zone[data-zone="${STAIR}"]`)).toBeVisible()
   })
 
-  test('holds a room dropped upstairs inside the setback', async ({ page }) => {
+  test('holds a zone dropped upstairs inside the setback', async ({ page }) => {
     await storeyButton(page, 1).click()
-    const block = await centreOf(page, `.tray .item[data-room="${BEDROOM}"] .n`)
+    const block = await centreOf(page, `.tray .item[data-zone="${BEDROOM}"] .n`)
     await drag(page, block, await onSheet(page, 0.4, 0.4))
     const [x, y] = await whereOnSheet(page, BEDROOM)
     expect(x).toBeGreaterThanOrEqual(1.5 - 1e-6)
     expect(y).toBeGreaterThanOrEqual(1.5 - 1e-6)
     await undo(page)
-    await expect(page.locator(`svg.sheet g.room[data-room="${BEDROOM}"]`)).toHaveCount(0)
+    await expect(page.locator(`svg.sheet g.zone[data-zone="${BEDROOM}"]`)).toHaveCount(0)
   })
 
-  test('shows a ground room pulled taller than its storey as an X upstairs', async ({ page }) => {
+  test('shows a ground zone pulled taller than its storey as an X upstairs', async ({ page }) => {
     await pickInProgram(page, DIWANIYA).click()
     const knob = await centreOf(page, '[data-knob="height"]')
     await drag(page, knob, { x: knob.x, y: knob.y - 130 })
     await expect(page.locator('.mass-foot')).toContainText('taller than its storey')
     await storeyButton(page, 1).click()
-    await expect(page.locator('svg.sheet .room.below .below-label')).toHaveText('open to below')
+    await expect(page.locator('svg.sheet .zone.below .below-label')).toHaveText('open to below')
     await storeyButton(page, 0).click()
     await undo(page)
     await storeyButton(page, 1).click()
-    await expect(page.locator('svg.sheet .room.below')).toHaveCount(0)
+    await expect(page.locator('svg.sheet .zone.below')).toHaveCount(0)
   })
 
   test('adds a storey and takes the empty one away again', async ({ page }) => {
@@ -130,8 +130,8 @@ test.describe('storeys', () => {
     await expect(page.locator('.tray .item', { hasText: 'Diwaniya copy' })).toHaveCount(1)
     // pasted on another storey the copy stands in the same place, not a metre aside
     const copy = await page.evaluate(() => {
-      const rooms = [...document.querySelectorAll('svg.sheet g.room')]
-      const found = rooms.find((g) => g.textContent?.includes('Diwaniya copy'))
+      const zones = [...document.querySelectorAll('svg.sheet g.zone')]
+      const found = zones.find((g) => g.textContent?.includes('Diwaniya copy'))
       const t = found?.getAttribute('transform') ?? ''
       const at = /translate\(([-\d.]+) ([-\d.]+)\)/.exec(t)
       return at ? { x: Number(at[1]), y: Number(at[2]) } : null
@@ -142,13 +142,13 @@ test.describe('storeys', () => {
     await expect(page.locator('.tray .item', { hasText: 'Diwaniya copy' })).toHaveCount(0)
   })
 
-  test('copies a room to the storey above from its menu', async ({ page }) => {
+  test('copies a zone to the storey above from its menu', async ({ page }) => {
     await pickInProgram(page, BEDROOM).waitFor()
-    const room = await centreOf(page, `svg.sheet g.room[data-room="${DIWANIYA}"] path.body`)
-    await page.mouse.click(room.x, room.y, { button: 'right' })
+    const zone = await centreOf(page, `svg.sheet g.zone[data-zone="${DIWANIYA}"] path.body`)
+    await page.mouse.click(zone.x, zone.y, { button: 'right' })
     await page.getByRole('button', { name: /Copy to the first storey/ }).click()
     await expect(storeyButton(page, 1)).toHaveClass(/on/)
-    await expect(page.locator('svg.sheet g.room')).not.toHaveCount(0)
+    await expect(page.locator('svg.sheet g.zone')).not.toHaveCount(0)
     await expect(page.locator('.tray .item', { hasText: 'Diwaniya copy' })).toHaveCount(1)
     await undo(page)
     await expect(page.locator('.tray .item', { hasText: 'Diwaniya copy' })).toHaveCount(0)
@@ -158,9 +158,9 @@ test.describe('storeys', () => {
 test.describe('the mass', () => {
   test.beforeEach(async ({ page }) => openSheet(page))
 
-  test('moves the room on the sheet while a volume is dragged', async ({ page }) => {
+  test('moves the zone on the sheet while a volume is dragged', async ({ page }) => {
     const before = await whereOnSheet(page, DIWANIYA)
-    const face = await centreOf(page, `.mass-svg .m-face.top[data-room="${DIWANIYA}"]`)
+    const face = await centreOf(page, `.mass-svg .m-face.top[data-zone="${DIWANIYA}"]`)
     await page.mouse.move(face.x, face.y)
     await page.mouse.down()
     await page.mouse.move(face.x + 30, face.y + 10)
@@ -193,16 +193,16 @@ test.describe('the mass', () => {
   })
 
   test('shares hover and selection with the sheet', async ({ page }) => {
-    const face = await centreOf(page, `.mass-svg .m-face.top[data-room="${DIWANIYA}"]`)
+    const face = await centreOf(page, `.mass-svg .m-face.top[data-zone="${DIWANIYA}"]`)
     await page.mouse.move(face.x, face.y)
-    await expect(page.locator(`svg.sheet g.room[data-room="${DIWANIYA}"]`)).toHaveClass(/hover/)
+    await expect(page.locator(`svg.sheet g.zone[data-zone="${DIWANIYA}"]`)).toHaveClass(/hover/)
     await page.mouse.down()
     await page.mouse.up()
-    await expect(page.locator(`svg.sheet g.room[data-room="${DIWANIYA}"]`)).toHaveClass(/selected/)
+    await expect(page.locator(`svg.sheet g.zone[data-zone="${DIWANIYA}"]`)).toHaveClass(/selected/)
     await expect(page.locator('.mass-foot')).toContainText('Diwaniya')
   })
 
-  test('draws every pixel from the room a ray from the eye hits first', async ({ page }) => {
+  test('draws every pixel from the zone a ray from the eye hits first', async ({ page }) => {
     const views = ['Plan', 'Service street', 'Side street', "Neighbours' corner"]
     let sampled = 0
     let wrong: unknown[] = []
@@ -231,16 +231,16 @@ test.describe('the mass', () => {
   })
 
   test('draws a frame of the mass inside 16 ms while a volume is dragged', async ({ page }) => {
-    // the embedded ground floor copied to the first storey: thirty-odd rooms on two storeys
+    // the embedded ground floor copied to the first storey: thirty-odd zones on two storeys
     await drag(page, await onSheet(page, -1, -1), await onSheet(page, 21, 26), 4)
-    const room = await centreOf(page, `svg.sheet g.room[data-room="${DIWANIYA}"] path.body`)
-    await page.mouse.click(room.x, room.y, { button: 'right' })
+    const zone = await centreOf(page, `svg.sheet g.zone[data-zone="${DIWANIYA}"] path.body`)
+    await page.mouse.click(zone.x, zone.y, { button: 'right' })
     await page.getByRole('button', { name: /Copy to the first storey/ }).click()
     await storeyButton(page, 0).click()
-    const rooms = await page.evaluate(() => document.querySelectorAll('.tray .item.placed').length)
-    expect(rooms).toBeGreaterThanOrEqual(30)
+    const zones = await page.evaluate(() => document.querySelectorAll('.tray .item.placed').length)
+    expect(zones).toBeGreaterThanOrEqual(30)
 
-    const face = await centreOf(page, `.mass-svg .m-face.top[data-room="${DIWANIYA}"]`)
+    const face = await centreOf(page, `.mass-svg .m-face.top[data-zone="${DIWANIYA}"]`)
     await page.evaluate(() => {
       window.massFrames = []
     })
@@ -252,14 +252,14 @@ test.describe('the mass', () => {
     expect(frames.length).toBeGreaterThan(10)
     const worst = [...frames].sort((a, b) => a - b)[Math.floor(frames.length * 0.9)] ?? 0
     console.log(
-      `the mass while a volume is dragged, ${rooms} rooms on two storeys: ${worst.toFixed(1)} ms at the 90th frame, budget 16 ms`,
+      `the mass while a volume is dragged, ${zones} zones on two storeys: ${worst.toFixed(1)} ms at the 90th frame, budget 16 ms`,
     )
     expect(worst).toBeLessThan(32)
   })
 })
 
 /**
- * The mock's own check: at a grid of pixels, the room the drawing puts on top is the room a ray from
+ * The mock's own check: at a grid of pixels, the zone the drawing puts on top is the zone a ray from
  * the eye meets first. Samples on an edge, where a pixel is shared, are left out.
  */
 async function rayCast(page: Page): Promise<{ sampled: number; wrong: unknown[] }> {
@@ -272,13 +272,13 @@ async function rayCast(page: Page): Promise<{ sampled: number; wrong: unknown[] 
     const cx = 10
     const cy = 12.5
 
-    /** The room the ray through this pixel meets first, by the nearest point it stands at. */
+    /** The zone the ray through this pixel meets first, by the nearest point it stands at. */
     const hit = (X: number, Y: number): string | null => {
       const u = (X - ox) / s
       const k = (Y - oy) / s
       const base: [number, number] = [cx + u * Math.cos(th), cy + u * Math.sin(th)]
       const dir: [number, number] = [-Math.sin(th), Math.cos(th)]
-      let best: { room: string; v: number } | null = null
+      let best: { zone: string; v: number } | null = null
       for (const prism of read.prisms) {
         let lo = (prism.z0 * Math.cos(ph) + k) / Math.sin(ph)
         let hi = (prism.h * Math.cos(ph) + k) / Math.sin(ph)
@@ -305,15 +305,15 @@ async function rayCast(page: Page): Promise<{ sampled: number; wrong: unknown[] 
           if (lo > hi) inside = false
         }
         if (!inside) continue
-        if (!best || hi > best.v) best = { room: prism.room, v: hi }
+        if (!best || hi > best.v) best = { zone: prism.zone, v: hi }
       }
-      return best ? best.room : null
+      return best ? best.zone : null
     }
 
     const drawnAt = (X: number, Y: number): string | null => {
       const element = document.elementFromPoint(box.left + X, box.top + Y)
-      const face = element?.closest('[data-room]')
-      return face ? face.getAttribute('data-room') : null
+      const face = element?.closest('[data-zone]')
+      return face ? face.getAttribute('data-zone') : null
     }
 
     const wrong: unknown[] = []
@@ -325,7 +325,7 @@ async function rayCast(page: Page): Promise<{ sampled: number; wrong: unknown[] 
         const Y = (box.height * j) / steps
         const want = hit(X, Y)
         if (!want) continue
-        // a pixel on an edge belongs to two rooms; it is left out, as the mock's check leaves it out
+        // a pixel on an edge belongs to two zones; it is left out, as the mock's check leaves it out
         const round = [hit(X - 2, Y), hit(X + 2, Y), hit(X, Y - 2), hit(X, Y + 2)]
         if (round.some((other) => other !== want)) continue
         sampled++

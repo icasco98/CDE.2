@@ -8,7 +8,7 @@ import { seedPlan } from './plan'
 
 type At = { x: number; y: number }
 
-/** The ids the embedded sheet gives its rooms, so a test can name one without hunting for it. */
+/** The ids the embedded sheet gives its zones, so a test can name one without hunting for it. */
 const BEDROOM = 'nmu436pzls0vk'
 const DIWANIYA = 'r2'
 const FORMAL = 'r6'
@@ -66,12 +66,12 @@ async function placedArea(page: Page): Promise<number> {
   return Number(found[1])
 }
 
-/** What a room's block in the program reads: its area of its target. */
-const blockOf = (page: Page, id: string) => page.locator(`.tray .item[data-room="${id}"] .a`)
+/** What a zone's block in the program reads: its area of its target. */
+const blockOf = (page: Page, id: string) => page.locator(`.tray .item[data-zone="${id}"] .a`)
 
 const undo = (page: Page) => page.keyboard.press('Control+z')
 
-/* The sheet asks for the room it is drawn in: the program, the plot and the sentence all at once. */
+/* The sheet asks for the zone it is drawn in: the program, the plot and the sentence all at once. */
 test.use({ viewport: { width: 1500, height: 1100 } })
 
 test.describe('the zoning sheet', () => {
@@ -81,7 +81,7 @@ test.describe('the zoning sheet', () => {
     page,
   }) => {
     const before = await placedArea(page)
-    const block = await centreOf(page, `.tray .item[data-room="${BEDROOM}"] .n`)
+    const block = await centreOf(page, `.tray .item[data-zone="${BEDROOM}"] .n`)
     // the Bedroom is 4.25 m wide, so its right edge comes within reach of Formal Living's at x 11.39
     const beside = await onSheet(page, 9.465, 4.25)
     await page.mouse.move(block.x, block.y)
@@ -91,7 +91,7 @@ test.describe('the zoning sheet', () => {
     await expect(page.locator('svg.sheet .guide')).toHaveCount(1)
     await page.mouse.up()
 
-    await expect(page.locator(`svg.sheet g.room[data-room="${BEDROOM}"]`)).toHaveCount(1)
+    await expect(page.locator(`svg.sheet g.zone[data-zone="${BEDROOM}"]`)).toHaveCount(1)
     expect((await placedArea(page)) - before).toBeCloseTo(13.98, 0)
     await undo(page)
     expect(await placedArea(page)).toBeCloseTo(before, 1)
@@ -102,15 +102,15 @@ test.describe('the zoning sheet', () => {
   }) => {
     await expect(page.getByRole('button', { name: 'Wait' })).toHaveClass(/on/)
     await expect(blockOf(page, FORMAL)).toHaveText('39.1 of 35')
-    const block = await centreOf(page, `.tray .item[data-room="${BEDROOM}"] .n`)
+    const block = await centreOf(page, `.tray .item[data-zone="${BEDROOM}"] .n`)
     const middle = await onSheet(page, 14.945, 4.25)
     await drag(page, block, middle)
 
     await expect(sentence(page)).toContainText('1 overlap')
     await expect(page.locator('svg.sheet .overlap-poly')).not.toHaveCount(0)
-    await expect(page.locator(`svg.sheet g.room[data-room="${BEDROOM}"]`)).toHaveClass(/over/)
+    await expect(page.locator(`svg.sheet g.zone[data-zone="${BEDROOM}"]`)).toHaveClass(/over/)
 
-    await page.locator(`svg.sheet g.room[data-room="${BEDROOM}"]`).click({ button: 'right' })
+    await page.locator(`svg.sheet g.zone[data-zone="${BEDROOM}"]`).click({ button: 'right' })
     await page.getByRole('button', { name: /Carve below/ }).click()
 
     await expect(sentence(page)).not.toContainText('overlap')
@@ -120,38 +120,38 @@ test.describe('the zoning sheet', () => {
     await expect(sentence(page)).toContainText('1 overlap')
   })
 
-  test('slides Formal Living aside under Push others, and the dropped room stands clear', async ({
+  test('slides Formal Living aside under Push others, and the dropped zone stands clear', async ({
     page,
   }) => {
-    // the room lower in the program gives way, so the Bedroom is moved above Formal Living first
-    const grip = await centreOf(page, `.tray .item[data-room="${BEDROOM}"] .grip`)
-    const target = await page.locator(`.tray .item[data-room="${FORMAL}"]`).boundingBox()
+    // the zone lower in the program gives way, so the Bedroom is moved above Formal Living first
+    const grip = await centreOf(page, `.tray .item[data-zone="${BEDROOM}"] .grip`)
+    const target = await page.locator(`.tray .item[data-zone="${FORMAL}"]`).boundingBox()
     if (!target) throw new Error('Formal Living has no block')
     await drag(page, grip, { x: target.x + target.width / 2, y: target.y + 4 })
     await page.getByRole('button', { name: 'Push others' }).click()
 
     const where = await page
-      .locator(`svg.sheet g.room[data-room="${FORMAL}"]`)
+      .locator(`svg.sheet g.zone[data-zone="${FORMAL}"]`)
       .getAttribute('transform')
-    const block = await centreOf(page, `.tray .item[data-room="${BEDROOM}"] .n`)
+    const block = await centreOf(page, `.tray .item[data-zone="${BEDROOM}"] .n`)
     await drag(page, block, await onSheet(page, 14.945, 4.25))
 
-    // Formal Living slid aside and kept every metre of itself: Push never shrinks a room
-    await expect(page.locator(`svg.sheet g.room[data-room="${BEDROOM}"]`)).not.toHaveClass(/over/)
+    // Formal Living slid aside and kept every metre of itself: Push never shrinks a zone
+    await expect(page.locator(`svg.sheet g.zone[data-zone="${BEDROOM}"]`)).not.toHaveClass(/over/)
     await expect(blockOf(page, FORMAL)).toHaveText('39.1 of 35')
     expect(
-      await page.locator(`svg.sheet g.room[data-room="${FORMAL}"]`).getAttribute('transform'),
+      await page.locator(`svg.sheet g.zone[data-zone="${FORMAL}"]`).getAttribute('transform'),
     ).not.toBe(where)
     await undo(page)
     expect(
-      await page.locator(`svg.sheet g.room[data-room="${FORMAL}"]`).getAttribute('transform'),
+      await page.locator(`svg.sheet g.zone[data-zone="${FORMAL}"]`).getAttribute('transform'),
     ).toBe(where)
   })
 
   test('turns the Diwaniya a quarter on R, and its knob locks onto a neighbour’s angle', async ({
     page,
   }) => {
-    await page.locator(`svg.sheet g.room[data-room="${DIWANIYA}"] path.body`).click()
+    await page.locator(`svg.sheet g.zone[data-zone="${DIWANIYA}"] path.body`).click()
     await page.keyboard.press('r')
     await expect(page.locator('svg.sheet .turn text')).toHaveText('115°')
 
@@ -171,10 +171,10 @@ test.describe('the zoning sheet', () => {
     await expect(page.locator('svg.sheet .turn text')).toHaveText('25°')
   })
 
-  test('moves one edge of the Kitchen a metre out, and the room reads its new area', async ({
+  test('moves one edge of the Kitchen a metre out, and the zone reads its new area', async ({
     page,
   }) => {
-    await page.locator(`svg.sheet g.room[data-room="${KITCHEN}"] path.body`).click()
+    await page.locator(`svg.sheet g.zone[data-zone="${KITCHEN}"] path.body`).click()
     await expect(blockOf(page, KITCHEN)).toHaveText('15.6 of 21')
 
     await drag(page, await onSheet(page, 7.75, 18.085), await onSheet(page, 8.75, 18.085))
@@ -182,7 +182,7 @@ test.describe('the zoning sheet', () => {
     await expect(blockOf(page, KITCHEN)).toHaveText('19 of 21')
     // the edge moved alone: the frame still stands where it did
     expect(
-      await page.locator(`svg.sheet g.room[data-room="${KITCHEN}"]`).getAttribute('transform'),
+      await page.locator(`svg.sheet g.zone[data-zone="${KITCHEN}"]`).getAttribute('transform'),
     ).toContain('translate(1.5 16.37)')
     await undo(page)
     await expect(blockOf(page, KITCHEN)).toHaveText('15.6 of 21')
@@ -191,7 +191,7 @@ test.describe('the zoning sheet', () => {
   test('draws a polygon for the Bedroom, the snap note reading corner over one', async ({
     page,
   }) => {
-    await page.locator(`.tray .item[data-room="${BEDROOM}"] .ways button`).click()
+    await page.locator(`.tray .item[data-zone="${BEDROOM}"] .ways button`).click()
     await page.getByRole('button', { name: /A polygon/ }).click()
 
     const corners: [number, number][] = [
@@ -209,16 +209,16 @@ test.describe('the zoning sheet', () => {
     }
     await page.keyboard.press('Enter')
 
-    await expect(page.locator(`svg.sheet g.room[data-room="${BEDROOM}"]`)).toHaveCount(1)
+    await expect(page.locator(`svg.sheet g.zone[data-zone="${BEDROOM}"]`)).toHaveCount(1)
     await expect(blockOf(page, BEDROOM)).toHaveText('4.7 of 14')
     await undo(page)
-    await expect(page.locator(`svg.sheet g.room[data-room="${BEDROOM}"]`)).toHaveCount(0)
+    await expect(page.locator(`svg.sheet g.zone[data-zone="${BEDROOM}"]`)).toHaveCount(0)
   })
 
   test('reshapes the Diwaniya across its corner, and Esc before Enter leaves it unchanged', async ({
     page,
   }) => {
-    await page.locator(`svg.sheet g.room[data-room="${DIWANIYA}"] path.body`).click()
+    await page.locator(`svg.sheet g.zone[data-zone="${DIWANIYA}"] path.body`).click()
     await expect(blockOf(page, DIWANIYA)).toHaveText('38.5 of 60')
 
     const across = async () => {
@@ -240,7 +240,7 @@ test.describe('the zoning sheet', () => {
     await expect(blockOf(page, DIWANIYA)).toHaveText('38.5 of 60')
   })
 
-  test('offers an enclosed space to the rooms that enclose it, with the court refused and why', async ({
+  test('offers an enclosed space to the zones that enclose it, with the court refused and why', async ({
     page,
   }) => {
     await expect(blockOf(page, STAIR)).toHaveText('21.1 of 15')
@@ -261,8 +261,8 @@ test.describe('the zoning sheet', () => {
     await expect(blockOf(page, STAIR)).toHaveText('21.1 of 15')
   })
 
-  test('resizes a room from a number typed on its dimension', async ({ page }) => {
-    await page.locator(`svg.sheet g.room[data-room="${FORMAL}"] path.body`).click()
+  test('resizes a zone from a number typed on its dimension', async ({ page }) => {
+    await page.locator(`svg.sheet g.zone[data-zone="${FORMAL}"] path.body`).click()
     const width = page.locator('svg.sheet .dim text.typable').first()
     await expect(width).toHaveText('7.1')
     await width.click()
@@ -290,8 +290,8 @@ test.describe('the zoning sheet', () => {
     await expect(sentence(page)).toContainText('placed of')
   })
 
-  test('renders a frame of the sheet in under 16 ms while a room is dragged', async ({ page }) => {
-    await page.locator(`svg.sheet g.room[data-room="${FORMAL}"] path.body`).click()
+  test('renders a frame of the sheet in under 16 ms while a zone is dragged', async ({ page }) => {
+    await page.locator(`svg.sheet g.zone[data-zone="${FORMAL}"] path.body`).click()
     const from = await onSheet(page, 14.9, 4.2)
     await page.mouse.move(from.x, from.y)
     await page.mouse.down()

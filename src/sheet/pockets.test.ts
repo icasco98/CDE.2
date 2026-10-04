@@ -5,16 +5,16 @@ import {
   givePieces,
   holdsSquare,
   pocketsOf,
-  roomFromPocket,
+  zoneFromPocket,
 } from './pockets'
-import { DEFAULTS, sheetOf, type Poly, type Room } from './model'
+import { DEFAULTS, sheetOf, type Poly, type Zone } from './model'
 import { areaOf, r2 } from './geometry'
 import { fixtureSheet } from './fixture'
 
-const room = (over: Partial<Room> = {}): Room => ({
+const zone = (over: Partial<Zone> = {}): Zone => ({
   id: 'a',
   name: 'A',
-  kind: 'room',
+  kind: 'zone',
   cat: 'shared',
   target: 10,
   x: 2,
@@ -28,25 +28,25 @@ const room = (over: Partial<Room> = {}): Room => ({
   ...over,
 })
 
-/** Rooms round a 2 × 4 hole inside the setback line, the west room giving it the most edge. */
-function ringRooms(): Room[] {
+/** Zones round a 2 × 4 hole inside the setback line, the west zone giving it the most edge. */
+function ringZones(): Zone[] {
   return [
-    room({ id: 'n', name: 'N', x: 4, y: 4, w: 6, h: 2 }),
-    room({ id: 's', name: 'S', x: 4, y: 10, w: 6, h: 2 }),
-    room({ id: 'w', name: 'W', x: 4, y: 6, w: 2, h: 4 }),
-    room({ id: 'e1', name: 'E1', x: 8, y: 6, w: 2, h: 2 }),
-    room({ id: 'e2', name: 'E2', x: 8, y: 8, w: 2, h: 2 }),
+    zone({ id: 'n', name: 'N', x: 4, y: 4, w: 6, h: 2 }),
+    zone({ id: 's', name: 'S', x: 4, y: 10, w: 6, h: 2 }),
+    zone({ id: 'w', name: 'W', x: 4, y: 6, w: 2, h: 4 }),
+    zone({ id: 'e1', name: 'E1', x: 8, y: 6, w: 2, h: 2 }),
+    zone({ id: 'e2', name: 'E2', x: 8, y: 8, w: 2, h: 2 }),
   ]
 }
 
 describe('enclosed spaces', () => {
-  it('finds the space four rooms leave between them, with the edges round it', () => {
-    const sheet = sheetOf(ringRooms(), { boundary: 'off' })
+  it('finds the space four zones leave between them, with the edges round it', () => {
+    const sheet = sheetOf(ringZones(), { boundary: 'off' })
     const pockets = pocketsOf(sheet, 0)
     const hole = pockets.find((p) => r2(p.area) === 8)!
     expect(hole).toBeDefined()
     expect(hole.centre.map(r2)).toEqual([7, 8])
-    // the two rooms east of it stand on one line, so that run of edge is credited to the first
+    // the two zones east of it stand on one line, so that run of edge is credited to the first
     expect([...hole.touch.keys()].sort()).toEqual(['e1', 'n', 's', 'w'])
     expect(r2(hole.touch.get('w')!)).toBe(4)
     expect(hole.ring).not.toBeNull()
@@ -60,14 +60,14 @@ describe('enclosed spaces', () => {
   })
 
   it('holds a square of a side, or does not', () => {
-    const sheet = sheetOf(ringRooms(), { boundary: 'off' })
+    const sheet = sheetOf(ringZones(), { boundary: 'off' })
     const hole = pocketsOf(sheet, 0).find((p) => r2(p.area) === 8)!
     expect(holdsSquare(hole, 1.5)).toBe(true)
     expect(holdsSquare(hole, 2.5)).toBe(false)
   })
 
   it('says why a space is no court, in the mock’s words', () => {
-    const sheet = sheetOf(ringRooms(), { boundary: 'off' })
+    const sheet = sheetOf(ringZones(), { boundary: 'off' })
     const hole = pocketsOf(sheet, 0).find((p) => r2(p.area) === 8)!
     expect(courtWhy(hole, DEFAULTS)).toBe('8 m² is under the 9 m² a court needs.')
     expect(courtWhy(hole, { ...DEFAULTS, courtArea: 8, courtSide: 2.5 })).toBe(
@@ -76,23 +76,23 @@ describe('enclosed spaces', () => {
     expect(courtWhy(hole, { ...DEFAULTS, courtArea: 8, courtSide: 1.5 })).toBe('')
   })
 
-  it('offers the space to the room that gives it the most edge', () => {
-    const sheet = sheetOf(ringRooms(), { boundary: 'off' })
+  it('offers the space to the zone that gives it the most edge', () => {
+    const sheet = sheetOf(ringZones(), { boundary: 'off' })
     const hole = pocketsOf(sheet, 0).find((p) => r2(p.area) === 8)!
     expect(bestNeighbour(hole, sheet)!.id).toBe('w')
   })
 
-  it('hands a space to a room as more of its own floor', () => {
-    const sheet = sheetOf(ringRooms(), { boundary: 'off' })
+  it('hands a space to a zone as more of its own floor', () => {
+    const sheet = sheetOf(ringZones(), { boundary: 'off' })
     const hole = pocketsOf(sheet, 0).find((p) => r2(p.area) === 8)!
-    const north = sheet.rooms[0]!
+    const north = sheet.zones[0]!
     const before = areaOf(north)
     expect(givePieces(north, hole.pieces, sheet, 0)).toBe(north)
     expect(r2(areaOf(north))).toBe(r2(before + 8))
   })
 
-  it('squares the room off round the space when the settings ask and nothing is in the way', () => {
-    const one = room({ x: 4, y: 4, w: 4, h: 2 })
+  it('squares the zone off round the space when the settings ask and nothing is in the way', () => {
+    const one = zone({ x: 4, y: 4, w: 4, h: 2 })
     const sheet = sheetOf([one], { boundary: 'off', pocketKeeps: 'square' })
     const space: Poly[] = [
       [
@@ -107,10 +107,10 @@ describe('enclosed spaces', () => {
     expect([one.w, one.h]).toEqual([4, 4])
   })
 
-  it('makes a room out of a space, fixed as a court', () => {
-    const sheet = sheetOf(ringRooms(), { boundary: 'off' })
+  it('makes a zone out of a space, fixed as a court', () => {
+    const sheet = sheetOf(ringZones(), { boundary: 'off' })
     const hole = pocketsOf(sheet, 0).find((p) => r2(p.area) === 8)!
-    const court = roomFromPocket(hole, 'court', 'Court', 'open', true, 'x1', 9)
+    const court = zoneFromPocket(hole, 'court', 'Court', 'open', true, 'x1', 9)
     expect([court.x, court.y, court.w, court.h]).toEqual([6, 6, 2, 4])
     expect(court.pieces).toBeNull()
     expect([court.fixed, court.target]).toEqual([true, 8])

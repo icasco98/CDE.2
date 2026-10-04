@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { roomTypes } from './roomTypes'
+import { zoneTypes } from './zoneTypes'
 import { plotBandFor, typicalArea } from './sizes'
-import { byPlotBand, type RoomType } from './types'
+import { byPlotBand, type ZoneType } from './types'
 
-const markdown = readFileSync(new URL('../../rulebook/room-types.md', import.meta.url), 'utf8')
+const markdown = readFileSync(new URL('../../rulebook/zone-types.md', import.meta.url), 'utf8')
 
 function tableAfter(heading: string): readonly (readonly string[])[] {
   const start = markdown.indexOf(heading)
@@ -26,29 +26,29 @@ function tableAfter(heading: string): readonly (readonly string[])[] {
   return rows.slice(1)
 }
 
-function typicalCell(type: RoomType): string {
+function typicalCell(type: ZoneType): string {
   const typical = type.typical
   if (typical === byPlotBand) return byPlotBand
   if (typeof typical === 'number') return type.perCar ? `${typical} per car` : String(typical)
   return `${typical.min} to ${typical.max} m wide`
 }
 
-function rangeCell(type: RoomType): string {
+function rangeCell(type: ZoneType): string {
   const range = type.range
   if (typeof range === 'string') return range
   return type.perCar ? `${range.min} to ${range.max} per car` : `${range.min} to ${range.max}`
 }
 
-describe('the room-type table in code matches the one a person reads', () => {
+describe('the zone-type table in code matches the one a person reads', () => {
   const rows = tableAfter('## The table')
 
   it('holds the same kinds in the same order', () => {
-    expect(rows.map((cells) => cells[0])).toEqual(roomTypes.map((type) => type.label))
+    expect(rows.map((cells) => cells[0])).toEqual(zoneTypes.map((type) => type.label))
   })
 
   it('holds the same typical size, range and tier for every kind', () => {
     const fromMarkdown = rows.map((cells) => [cells[0], cells[3], cells[4], cells[7]])
-    const fromCode = roomTypes.map((type) => [
+    const fromCode = zoneTypes.map((type) => [
       type.label,
       typicalCell(type),
       rangeCell(type),
@@ -59,19 +59,19 @@ describe('the room-type table in code matches the one a person reads', () => {
 
   it('holds the same Arabic label and category for every kind', () => {
     const fromMarkdown = rows.map((cells) => [cells[1], cells[6]])
-    const fromCode = roomTypes.map((type) => [type.arabic, type.category])
+    const fromCode = zoneTypes.map((type) => [type.arabic, type.category])
     expect(fromCode).toEqual(fromMarkdown)
   })
 
   it('holds the same default storey and companion for every kind', () => {
     const fromMarkdown = rows.map((cells) => [cells[8], cells[9]])
-    const fromCode = roomTypes.map((type) => [type.defaultStorey, type.companion ?? '–'])
+    const fromCode = zoneTypes.map((type) => [type.defaultStorey, type.companion ?? '–'])
     expect(fromCode).toEqual(fromMarkdown)
   })
 
   it('names a kind the table holds as every companion', () => {
-    const ids = new Set(roomTypes.map((type) => type.id))
-    for (const type of roomTypes)
+    const ids = new Set(zoneTypes.map((type) => type.id))
+    for (const type of zoneTypes)
       if (type.companion !== undefined) expect(ids.has(type.companion)).toBe(true)
   })
 
@@ -110,7 +110,7 @@ describe('typical area', () => {
     expect(typicalArea('hallway', 500)).toBe(12)
   })
 
-  it('falls back to the other-room size for a kind it does not know', () => {
+  it('falls back to the other-zone size for a kind it does not know', () => {
     expect(typicalArea('gymnasium', 500)).toBe(12)
   })
 })

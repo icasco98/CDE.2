@@ -36,13 +36,19 @@ function fakeStorage(fail?: 'read' | 'write'): Storage & { items: Map<string, st
   }
 }
 
+/** A project as a version before 11 wrote it: its zones and connections under the old words. */
+function before11(project: Project): Record<string, unknown> {
+  const { zones, connections, ...rest } = project
+  return { ...rest, rooms: zones, edges: connections }
+}
+
 function furnished(): Project {
   const store = createStore(undefined, { newId: createIdGenerator(11) })
   const { actions } = store
   actions.addStorey()
-  const hall = must(actions.addRoom({ type: 'hall', targetArea: 18, name: 'Entrance' }))
-  const stair = must(actions.addRoom({ type: 'stair', targetArea: 9, storeysSpanned: 2 }))
-  const bedroom = must(actions.addRoom({ type: 'bedroom', targetArea: 20, storey: 1 }))
+  const hall = must(actions.addZone({ type: 'hall', targetArea: 18, name: 'Entrance' }))
+  const stair = must(actions.addZone({ type: 'stair', targetArea: 9, storeysSpanned: 2 }))
+  const bedroom = must(actions.addZone({ type: 'bedroom', targetArea: 20, storey: 1 }))
   actions.place(hall, {
     polygon: [
       [0, 0],
@@ -82,16 +88,16 @@ describe('the project file', () => {
     expect(back.ok && back.value).toEqual(project)
   })
 
-  it('round trips a room with a curved edge, at the version it already stood on', () => {
+  it('round trips a zone with a curved edge, at the version it already stood on', () => {
     const project = furnished()
-    const first = project.rooms[0]
-    if (!first?.footprint) throw new Error('the furnished project has no placed room')
+    const first = project.zones[0]
+    if (!first?.footprint) throw new Error('the furnished project has no placed zone')
     const curved: Project = {
       ...project,
-      rooms: project.rooms.map((room) =>
-        room.id === first.id
+      zones: project.zones.map((zone) =>
+        zone.id === first.id
           ? {
-              ...room,
+              ...zone,
               footprint: {
                 polygon: [
                   [0, 0],
@@ -102,7 +108,7 @@ describe('the project file', () => {
                 arcs: [{ from: 1, to: 2, centre: [0, 0], radius: 2, clockwise: true }],
               },
             }
-          : room,
+          : zone,
       ),
     }
     const back = deserialize(serialize(curved))
@@ -110,10 +116,10 @@ describe('the project file', () => {
     expect(JSON.parse(serialize(curved)).version).toBe(PROJECT_VERSION)
   })
 
-  it('reads a file written before rooms could curve', () => {
+  it('reads a file written before zones could curve', () => {
     const project = furnished()
     const back = deserialize(serialize(project))
-    expect(back.ok && back.value.rooms.every((room) => room.footprint?.arcs === undefined)).toBe(
+    expect(back.ok && back.value.zones.every((zone) => zone.footprint?.arcs === undefined)).toBe(
       true,
     )
   })
@@ -148,7 +154,7 @@ describe('the project file', () => {
   })
 
   it('gives a document written before households the household a project starts with', () => {
-    const document: Record<string, unknown> = { ...furnished(), version: 1 }
+    const document: Record<string, unknown> = { ...before11(furnished()), version: 1 }
     delete document.household
     const back = deserialize(JSON.stringify(document))
     expect(back.ok && back.value.household).toEqual(startingHousehold)
@@ -163,7 +169,7 @@ describe('the project file', () => {
 
   it('drops the weights and the site answers of a version 9 document and declines nothing', () => {
     const document: Record<string, unknown> = {
-      ...furnished(),
+      ...before11(furnished()),
       version: 9,
       weights: { userRequirements: 0.8 },
       site: { diwaniyaAtCorner: true, garden: 'side' },
@@ -179,7 +185,7 @@ describe('the project file', () => {
   it('migrates a version 1 document through every step', () => {
     const project = furnished()
     const document: Record<string, unknown> = {
-      ...project,
+      ...before11(project),
       version: 1,
       weights: { client: 0.6, climate: 0.1, budget: 0.9 },
     }
@@ -198,7 +204,7 @@ describe('the project file', () => {
   })
 
   it('gives a document written before heights 3.5 m for every storey', () => {
-    const document: Record<string, unknown> = { ...furnished(), storeys: 3, version: 3 }
+    const document: Record<string, unknown> = { ...before11(furnished()), storeys: 3, version: 3 }
     delete document.heights
     const back = deserialize(JSON.stringify(document))
     expect(back.ok && back.value.heights).toEqual([3.5, 3.5, 3.5])
@@ -214,7 +220,7 @@ describe('the project file', () => {
   it('gives a household written before the question a master bedroom upstairs', () => {
     const project = furnished()
     const document = {
-      ...project,
+      ...before11(project),
       version: 4,
       household: { ...startingHousehold, masterOnGround: undefined },
     }
@@ -225,19 +231,19 @@ describe('the project file', () => {
 
   it('leaves the answer of a household that already carries one', () => {
     const project = { ...furnished(), household: { ...startingHousehold, masterOnGround: true } }
-    const back = deserialize(JSON.stringify({ ...project, version: 4 }))
+    const back = deserialize(JSON.stringify({ ...before11(project), version: 4 }))
     expect(back.ok && back.value.household.masterOnGround).toBe(true)
   })
 
   it('takes a bubble that stood on the plot off it, since a place there is no nudge', () => {
     const project = furnished()
-    const rooms = project.rooms.map((room) => ({ ...room, bubble: { x: 6, y: 18, angle: 1 } }))
+    const zones = project.zones.map((zone) => ({ ...zone, bubble: { x: 6, y: 18, angle: 1 } }))
     for (const version of [5, 7]) {
-      const back = deserialize(JSON.stringify({ ...project, rooms, version }))
+      const back = deserialize(JSON.stringify({ ...before11({ ...project, zones }), version }))
       if (!back.ok) throw new Error(`the version ${version} project was refused`)
-      expect(back.value.rooms.every((room) => room.bubble === undefined)).toBe(true)
-      expect(back.value.rooms.map((room) => room.name)).toEqual(
-        project.rooms.map((room) => room.name),
+      expect(back.value.zones.every((zone) => zone.bubble === undefined)).toBe(true)
+      expect(back.value.zones.map((zone) => zone.name)).toEqual(
+        project.zones.map((zone) => zone.name),
       )
       expect(back.value.version).toBe(PROJECT_VERSION)
     }
@@ -245,35 +251,112 @@ describe('the project file', () => {
 
   it('keeps a nudge written by this version', () => {
     const project = furnished()
-    const rooms = project.rooms.map((room) => ({ ...room, bubble: { x: 12, y: -4 } }))
-    const back = deserialize(JSON.stringify({ ...project, rooms }))
-    expect(back.ok && back.value.rooms[0]?.bubble).toEqual({ x: 12, y: -4 })
+    const zones = project.zones.map((zone) => ({ ...zone, bubble: { x: 12, y: -4 } }))
+    const back = deserialize(JSON.stringify({ ...project, zones }))
+    expect(back.ok && back.value.zones[0]?.bubble).toEqual({ x: 12, y: -4 })
   })
 
   it('leaves a version 5 project with no bubbles exactly as it was', () => {
     const project = furnished()
-    const rooms = project.rooms.map((room) => {
-      const without: Record<string, unknown> = { ...room }
+    const zones = project.zones.map((zone) => {
+      const without = { ...zone }
       delete without.bubble
       return without
     })
-    const back = deserialize(JSON.stringify({ ...project, rooms, version: 5 }))
-    expect(back.ok && back.value.rooms.every((room) => room.bubble === undefined)).toBe(true)
+    const back = deserialize(JSON.stringify({ ...before11({ ...project, zones }), version: 5 }))
+    expect(back.ok && back.value.zones.every((zone) => zone.bubble === undefined)).toBe(true)
   })
 
   it('gives a project written before keep apart an empty list of pairs', () => {
-    const project: Record<string, unknown> = { ...furnished(), version: 8 }
+    const project: Record<string, unknown> = { ...before11(furnished()), version: 8 }
     delete project.apart
     const back = deserialize(JSON.stringify(project))
     expect(back.ok && back.value.apart).toEqual([])
     expect(back.ok && back.value.version).toBe(PROJECT_VERSION)
   })
 
-  it('opens a version 10 project, its connections under their old name, without loss', () => {
-    const project = furnished()
-    const { connections, ...rest } = project
-    const back = deserialize(JSON.stringify({ ...rest, edges: connections, version: 10 }))
-    expect(back.ok && back.value).toEqual({ ...project, version: PROJECT_VERSION })
+  it('opens a version 10 project file, written under the old words, without loss', () => {
+    const file = {
+      id: 'p1',
+      name: 'Villa',
+      storeys: 2,
+      heights: [3.5, 3.2],
+      plot: {
+        on: true,
+        polygon: [
+          [0, 0],
+          [20, 0],
+          [20, 25],
+          [0, 25],
+        ],
+        north: 10,
+        street: [0],
+      },
+      household: { ...startingHousehold, bedrooms: 3 },
+      rooms: [
+        {
+          id: 'room-1',
+          name: 'Entry',
+          type: 'entry-foyer',
+          storey: 0,
+          storeysSpanned: 1,
+          targetArea: 12,
+          pinned: false,
+          footprint: {
+            polygon: [
+              [0, 0],
+              [4, 0],
+              [4, 3],
+              [0, 3],
+            ],
+            rotation: 15,
+          },
+        },
+        {
+          id: 'room-2',
+          name: 'Maid Room',
+          type: 'maid-room',
+          storey: 0,
+          storeysSpanned: 1,
+          targetArea: 9,
+          pinned: true,
+          bubble: { x: 2, y: -1 },
+        },
+        {
+          id: 'room-3',
+          name: 'Studio',
+          type: 'room-other',
+          storey: 1,
+          storeysSpanned: 1,
+          targetArea: 14,
+          pinned: false,
+        },
+      ],
+      edges: [
+        {
+          id: 'edge-1',
+          a: EXTERIOR,
+          b: 'room-1',
+          kind: 'main-door',
+          storey: 0,
+          hint: { at: [2, 0] },
+        },
+        { id: 'edge-2', a: 'room-1', b: 'room-2', kind: 'door', storey: 0 },
+      ],
+      apart: [{ id: 'apart-1', a: 'room-2', b: 'room-3' }],
+      declined: [{ a: 'room-1', b: EXTERIOR }],
+      actors: [{ id: 'actor-1', name: 'Guest', role: 'guest', waypoints: ['room-1'] }],
+      version: 10,
+    }
+    const { rooms, edges, ...rest } = file
+    expect(must(deserialize(JSON.stringify(file)))).toEqual({
+      ...rest,
+      zones: rooms.map((zone) =>
+        zone.type === 'room-other' ? { ...zone, type: 'zone-other' } : zone,
+      ),
+      connections: edges,
+      version: PROJECT_VERSION,
+    })
   })
 
   it('refuses a version it cannot migrate and one from a newer tool', () => {
@@ -304,34 +387,34 @@ describe('autosave', () => {
     const storage = fakeStorage()
     const stop = attachAutosave(store, storage, 500)
 
-    store.actions.addRoom({ type: 'bedroom', targetArea: 20 })
-    store.actions.addRoom({ type: 'kitchen', targetArea: 14 })
+    store.actions.addZone({ type: 'bedroom', targetArea: 20 })
+    store.actions.addZone({ type: 'kitchen', targetArea: 14 })
     vi.advanceTimersByTime(499)
     expect(storage.items.size).toBe(0)
 
     vi.advanceTimersByTime(1)
     const saved = loadAutosaved(storage)
-    expect(saved?.rooms).toHaveLength(2)
+    expect(saved?.zones).toHaveLength(2)
 
     stop()
-    store.actions.addRoom({ type: 'majlis', targetArea: 30 })
+    store.actions.addZone({ type: 'majlis', targetArea: 30 })
     vi.advanceTimersByTime(1000)
-    expect(loadAutosaved(storage)?.rooms).toHaveLength(2)
+    expect(loadAutosaved(storage)?.zones).toHaveLength(2)
   })
 
   it('does not write while a gesture is only previewing', () => {
     const store = createStore(undefined, { newId: createIdGenerator(5) })
     const storage = fakeStorage()
     attachAutosave(store, storage, 100)
-    const room = must(store.actions.addRoom({ type: 'bedroom', targetArea: 20 }))
+    const zone = must(store.actions.addZone({ type: 'bedroom', targetArea: 20 }))
     vi.advanceTimersByTime(100)
     storage.items.delete(autosaveKey)
 
-    store.actions.setBubble(room, { x: 1, y: 1 }, 'preview')
+    store.actions.setBubble(zone, { x: 1, y: 1 }, 'preview')
     vi.advanceTimersByTime(1000)
     expect(storage.items.size).toBe(0)
 
-    store.actions.setBubble(room, { x: 1, y: 1 }, 'commit')
+    store.actions.setBubble(zone, { x: 1, y: 1 }, 'commit')
     vi.advanceTimersByTime(100)
     expect(storage.items.size).toBe(1)
   })
@@ -341,7 +424,7 @@ describe('autosave', () => {
     const problems: Violation[] = []
     attachAutosave(store, fakeStorage('write'), 10, (problem) => problems.push(problem))
 
-    store.actions.addRoom({ type: 'bedroom', targetArea: 20 })
+    store.actions.addZone({ type: 'bedroom', targetArea: 20 })
     expect(() => vi.advanceTimersByTime(10)).not.toThrow()
     expect(problems.map((problem) => problem.code)).toEqual(['storage'])
   })
@@ -360,7 +443,7 @@ describe('reading what was saved', () => {
 
   it('reports a saved document it cannot read, and forgets it when asked', () => {
     const storage = fakeStorage()
-    storage.setItem(autosaveKey, '{"rooms": 3}')
+    storage.setItem(autosaveKey, '{"zones": 3}')
     const problems: Violation[] = []
     expect(loadAutosaved(storage, (problem) => problems.push(problem))).toBeNull()
     expect(problems.length).toBeGreaterThan(0)

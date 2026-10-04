@@ -1,8 +1,8 @@
 import { EXTERIOR, type ConnectionKind, type Endpoint } from '../model'
 import { defaultConnections, type DefaultConnection } from './defaultConnections'
 
-/** A room as the table reads one: its kind and the storeys it stands on, never its bubble or footprint. */
-export type ConnectionRoom = {
+/** A zone as the table reads one: its kind and the storeys it stands on, never its bubble or footprint. */
+export type ConnectionZone = {
   readonly id: string
   readonly type: string
   readonly storey: number
@@ -26,18 +26,18 @@ export type ImpliedConnection = {
   readonly rowId: string
 }
 
-function occupiedStoreys(room: ConnectionRoom): readonly number[] {
-  const span = Math.max(1, Math.trunc(room.storeysSpanned))
-  return Array.from({ length: span }, (_, i) => room.storey + i)
+function occupiedStoreys(zone: ConnectionZone): readonly number[] {
+  const span = Math.max(1, Math.trunc(zone.storeysSpanned))
+  return Array.from({ length: span }, (_, i) => zone.storey + i)
 }
 
 /**
  * The storey the connection would land on, or nothing when the two never meet. `undefined` stands for the
- * outside, which is on every storey, so it meets a room on the lowest one that room stands on.
+ * outside, which is on every storey, so it meets a zone on the lowest one that zone stands on.
  */
 function sharedStorey(
-  a: ConnectionRoom | undefined,
-  b: ConnectionRoom | undefined,
+  a: ConnectionZone | undefined,
+  b: ConnectionZone | undefined,
 ): number | undefined {
   if (!a) return b?.storey
   if (!b) return a.storey
@@ -50,26 +50,26 @@ function pairKey(a: Endpoint, b: Endpoint, storey: number): string {
 }
 
 /**
- * Every default connection these rooms imply that the graph does not hold yet, in the table's order.
+ * Every default connection these zones imply that the graph does not hold yet, in the table's order.
  * Endpoints are checked to share a storey exactly as `connect` checks them, so a connection made
  * from this list is never refused.
  */
 export function impliedConnections(
-  rooms: readonly ConnectionRoom[],
+  zones: readonly ConnectionZone[],
   connections: readonly HeldConnection[],
 ): readonly ImpliedConnection[] {
   const held = new Set(
     connections.map((connection) => pairKey(connection.a, connection.b, connection.storey)),
   )
   let frontDoor = connections.some((connection) => connection.kind === 'main-door')
-  /** Rooms already taken as the served side of a one-to-one row; a room is served by one row only. */
+  /** Zones already taken as the served side of a one-to-one row; a zone is served by one row only. */
   const served = new Set<string>()
   const implied: ImpliedConnection[] = []
 
   const offer = (
     row: DefaultConnection,
-    from: ConnectionRoom | undefined,
-    to: ConnectionRoom | undefined,
+    from: ConnectionZone | undefined,
+    to: ConnectionZone | undefined,
   ): void => {
     const storey = sharedStorey(from, to)
     if (storey === undefined) return
@@ -85,20 +85,20 @@ export function impliedConnections(
     implied.push({ a, b, kind: row.kind, storey, rowId: row.id })
   }
 
-  const roomsOfKind = (kind: string): readonly (ConnectionRoom | undefined)[] =>
-    kind === EXTERIOR ? [undefined] : rooms.filter((room) => room.type === kind)
+  const zonesOfKind = (kind: string): readonly (ConnectionZone | undefined)[] =>
+    kind === EXTERIOR ? [undefined] : zones.filter((zone) => zone.type === kind)
 
   for (const row of defaultConnections) {
     if (row.pairing === 'each') {
-      for (const from of roomsOfKind(row.from))
-        for (const to of roomsOfKind(row.to)) offer(row, from, to)
+      for (const from of zonesOfKind(row.from))
+        for (const to of zonesOfKind(row.to)) offer(row, from, to)
       continue
     }
     const takenByRow = new Set<string>()
-    for (const to of roomsOfKind(row.to)) {
+    for (const to of zonesOfKind(row.to)) {
       if (!to || served.has(to.id)) continue
-      const before = rooms.slice(0, rooms.indexOf(to))
-      let from: ConnectionRoom | undefined
+      const before = zones.slice(0, zones.indexOf(to))
+      let from: ConnectionZone | undefined
       for (let i = before.length - 1; i >= 0; i--) {
         const candidate = before[i]
         if (candidate && candidate.type === row.from && !takenByRow.has(candidate.id)) {

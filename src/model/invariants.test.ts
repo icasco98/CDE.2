@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { checkProject } from './invariants'
 import { STARTING_HEIGHT_M, startingHousehold } from './project'
-import { EXTERIOR, PROJECT_VERSION, type Connection, type Project, type Room } from './types'
+import { EXTERIOR, PROJECT_VERSION, type Connection, type Project, type Zone } from './types'
 
-const room = (id: string, extra: Partial<Room> = {}): Room => ({
+const zone = (id: string, extra: Partial<Zone> = {}): Zone => ({
   id,
   name: id,
   type: 'bedroom',
@@ -29,7 +29,7 @@ const connection = (
 })
 
 const project = (
-  rooms: readonly Room[],
+  zones: readonly Zone[],
   connections: readonly Connection[] = [],
   storeys = 2,
 ): Project => ({
@@ -39,7 +39,7 @@ const project = (
   heights: Array.from({ length: storeys }, () => STARTING_HEIGHT_M),
   plot: { on: false, polygon: [], north: 0, street: [] },
   household: startingHousehold,
-  rooms,
+  zones,
   connections,
   apart: [],
   declined: [],
@@ -49,22 +49,22 @@ const project = (
 
 const codes = (subject: Project): readonly string[] => checkProject(subject).map((v) => v.code)
 
-describe('a connection joins rooms that share a storey', () => {
-  it('passes for two rooms on the same storey', () => {
-    expect(codes(project([room('a'), room('b')], [connection('e', 'a', 'b')]))).toEqual([])
+describe('a connection joins zones that share a storey', () => {
+  it('passes for two zones on the same storey', () => {
+    expect(codes(project([zone('a'), zone('b')], [connection('e', 'a', 'b')]))).toEqual([])
   })
 
-  it('passes for a stair and a room on a storey it spans', () => {
-    const stair = room('s', { storeysSpanned: 2 })
-    const upstairs = room('u', { storey: 1 })
+  it('passes for a stair and a zone on a storey it spans', () => {
+    const stair = zone('s', { storeysSpanned: 2 })
+    const upstairs = zone('u', { storey: 1 })
     expect(codes(project([stair, upstairs], [connection('e', 's', 'u', { storey: 1 })]))).toEqual(
       [],
     )
   })
 
-  it('fails when the two rooms stand on different storeys', () => {
-    const upstairs = room('b', { storey: 1 })
-    expect(codes(project([room('a'), upstairs], [connection('e', 'a', 'b')]))).toEqual([
+  it('fails when the two zones stand on different storeys', () => {
+    const upstairs = zone('b', { storey: 1 })
+    expect(codes(project([zone('a'), upstairs], [connection('e', 'a', 'b')]))).toEqual([
       'connection-storey',
     ])
   })
@@ -72,44 +72,44 @@ describe('a connection joins rooms that share a storey', () => {
 
 describe('one connection per unordered pair per storey', () => {
   it('passes for the same pair on two storeys they both stand on', () => {
-    const rooms = [room('a', { storeysSpanned: 2 }), room('b', { storeysSpanned: 2 })]
+    const zones = [zone('a', { storeysSpanned: 2 }), zone('b', { storeysSpanned: 2 })]
     const connections = [connection('e1', 'a', 'b'), connection('e2', 'b', 'a', { storey: 1 })]
-    expect(codes(project(rooms, connections))).toEqual([])
+    expect(codes(project(zones, connections))).toEqual([])
   })
 
   it('fails for the same pair twice on one storey, in either order', () => {
     const connections = [connection('e1', 'a', 'b'), connection('e2', 'b', 'a')]
-    expect(codes(project([room('a'), room('b')], connections))).toEqual(['connection-duplicate'])
+    expect(codes(project([zone('a'), zone('b')], connections))).toEqual(['connection-duplicate'])
   })
 })
 
 describe('connection endpoints', () => {
   it('passes when an endpoint is the outside', () => {
-    expect(codes(project([room('a')], [connection('e', EXTERIOR, 'a')]))).toEqual([])
+    expect(codes(project([zone('a')], [connection('e', EXTERIOR, 'a')]))).toEqual([])
   })
 
-  it('fails when an endpoint names no room', () => {
-    expect(codes(project([room('a')], [connection('e', 'a', 'ghost')]))).toEqual([
+  it('fails when an endpoint names no zone', () => {
+    expect(codes(project([zone('a')], [connection('e', 'a', 'ghost')]))).toEqual([
       'connection-endpoint-missing',
       'connection-storey',
     ])
   })
 })
 
-describe('the outside is never a room', () => {
-  it('passes for ordinary room ids', () => {
-    expect(codes(project([room('a')]))).toEqual([])
+describe('the outside is never a zone', () => {
+  it('passes for ordinary zone ids', () => {
+    expect(codes(project([zone('a')]))).toEqual([])
   })
 
-  it('fails when a room carries the outside as its id', () => {
-    expect(codes(project([room(EXTERIOR)]))).toEqual(['exterior-as-room'])
+  it('fails when a zone carries the outside as its id', () => {
+    expect(codes(project([zone(EXTERIOR)]))).toEqual(['exterior-as-zone'])
   })
 })
 
 describe('the main door', () => {
   it('passes for one main door from the outside', () => {
     expect(
-      codes(project([room('a')], [connection('e', EXTERIOR, 'a', { kind: 'main-door' })])),
+      codes(project([zone('a')], [connection('e', EXTERIOR, 'a', { kind: 'main-door' })])),
     ).toEqual([])
   })
 
@@ -118,19 +118,19 @@ describe('the main door', () => {
       connection('e1', EXTERIOR, 'a', { kind: 'main-door' }),
       connection('e2', EXTERIOR, 'b', { kind: 'main-door' }),
     ]
-    expect(codes(project([room('a'), room('b')], connections))).toEqual(['main-door-count'])
+    expect(codes(project([zone('a'), zone('b')], connections))).toEqual(['main-door-count'])
   })
 
-  it('fails for a main door between two rooms', () => {
+  it('fails for a main door between two zones', () => {
     expect(
-      codes(project([room('a'), room('b')], [connection('e', 'a', 'b', { kind: 'main-door' })])),
+      codes(project([zone('a'), zone('b')], [connection('e', 'a', 'b', { kind: 'main-door' })])),
     ).toEqual(['main-door-outside'])
   })
 })
 
-describe('a room is placed or unplaced, never half', () => {
+describe('a zone is placed or unplaced, never half', () => {
   it('passes for a footprint with a real polygon', () => {
-    const placed = room('a', {
+    const placed = zone('a', {
       footprint: {
         polygon: [
           [0, 0],
@@ -144,22 +144,22 @@ describe('a room is placed or unplaced, never half', () => {
   })
 
   it('fails for a footprint that is not a shape', () => {
-    const half = room('a', { footprint: { polygon: [[0, 0]], rotation: 0 } })
+    const half = zone('a', { footprint: { polygon: [[0, 0]], rotation: 0 } })
     expect(codes(project([half]))).toEqual(['footprint-half'])
   })
 })
 
-describe('a room stands within the project', () => {
+describe('a zone stands within the project', () => {
   it('passes for a stair that ends on the top storey', () => {
-    expect(codes(project([room('s', { storeysSpanned: 2 })], [], 2))).toEqual([])
+    expect(codes(project([zone('s', { storeysSpanned: 2 })], [], 2))).toEqual([])
   })
 
-  it('fails when a room spans less than one storey', () => {
-    expect(codes(project([room('a', { storeysSpanned: 0 })]))).toEqual(['storeys-spanned'])
+  it('fails when a zone spans less than one storey', () => {
+    expect(codes(project([zone('a', { storeysSpanned: 0 })]))).toEqual(['storeys-spanned'])
   })
 
-  it('fails when a room reaches past the top storey', () => {
-    expect(codes(project([room('a', { storey: 1, storeysSpanned: 2 })], [], 2))).toEqual([
+  it('fails when a zone reaches past the top storey', () => {
+    expect(codes(project([zone('a', { storey: 1, storeysSpanned: 2 })], [], 2))).toEqual([
       'storey-range',
     ])
   })
@@ -183,7 +183,7 @@ describe('a height for every storey', () => {
 
 it('says what is wrong in a sentence', () => {
   const violations = checkProject(
-    project([room('a'), room('b', { storey: 1 })], [connection('e', 'a', 'b')]),
+    project([zone('a'), zone('b', { storey: 1 })], [connection('e', 'a', 'b')]),
   )
   expect(violations[0]?.message).toContain('storey 0')
 })
@@ -197,7 +197,7 @@ describe('the arcs a footprint remembers', () => {
   ] as const
 
   it('passes an arc whose vertices lie on its circle', () => {
-    const quarter = room('a', {
+    const quarter = zone('a', {
       footprint: {
         polygon: [
           [0, 0],
@@ -212,7 +212,7 @@ describe('the arcs a footprint remembers', () => {
   })
 
   it('refuses an arc whose vertices stand off its circle', () => {
-    const wrong = room('a', {
+    const wrong = zone('a', {
       footprint: {
         polygon: square,
         rotation: 0,
@@ -223,7 +223,7 @@ describe('the arcs a footprint remembers', () => {
   })
 
   it('refuses an arc on a vertex the polygon does not have', () => {
-    const missing = room('a', {
+    const missing = zone('a', {
       footprint: {
         polygon: square,
         rotation: 0,
@@ -235,15 +235,15 @@ describe('the arcs a footprint remembers', () => {
 })
 
 describe('keep-apart pairs', () => {
-  const two = [room('diwaniya'), room('family')]
+  const two = [zone('diwaniya'), zone('family')]
 
-  it('passes for two rooms, on any storeys', () => {
-    const upstairs = [room('garage'), room('bedroom', { storey: 1 })]
+  it('passes for two zones, on any storeys', () => {
+    const upstairs = [zone('garage'), zone('bedroom', { storey: 1 })]
     const pairs = [{ id: 'k1', a: 'garage', b: 'bedroom' }]
     expect(checkProject({ ...project(upstairs), apart: pairs })).toEqual([])
   })
 
-  it('fails for a room that is not there, the outside, the same room twice, or a pair twice', () => {
+  it('fails for a zone that is not there, the outside, the same zone twice, or a pair twice', () => {
     const codes = (apart: Project['apart']) =>
       checkProject({ ...project(two), apart }).map((problem) => problem.code)
     expect(codes([{ id: 'k1', a: 'diwaniya', b: 'ghost' }])).toEqual(['apart-endpoint'])

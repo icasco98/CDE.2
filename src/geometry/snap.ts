@@ -68,7 +68,7 @@ export function snapRectangleToNeighbours(
 /**
  * The point on `outlines` a dragged corner should land on: one of their own corners within
  * `reach` if there is one, else the nearest point along an edge, else nothing. Corners win at
- * equal reach, since landing exactly on another room's corner is the more useful alignment.
+ * equal reach, since landing exactly on another zone's corner is the more useful alignment.
  * Every polygon here is read in whichever one frame the caller put them in.
  */
 export function nearestNeighbourPoint(

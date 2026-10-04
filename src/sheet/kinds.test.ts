@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DOOR, KINDS, KIND_LABEL, hasHinge, hasSwing, isStreetDoor, repair, sizeFor } from './kinds'
 import { fixtureSheet } from './fixture'
-import { DEFAULTS, isOpen, type Room } from './model'
+import { DEFAULTS, isOpen, type Zone } from './model'
 import { areaOf, r2 } from './geometry'
 
 describe('the kinds', () => {
@@ -11,7 +11,7 @@ describe('the kinds', () => {
     expect(KIND_LABEL['hallway']).toBe('Hallway')
   })
 
-  it('sizes a room from its target: the width on the quarter metre, the depth exact', () => {
+  it('sizes a zone from its target: the width on the quarter metre, the depth exact', () => {
     expect(sizeFor('diwaniya', 60, DEFAULTS)).toEqual({ w: 9.5, h: 6.32 })
     expect(r2(9.5 * 6.32)).toBe(60.04)
     expect(sizeFor('hallway', 24, DEFAULTS)).toEqual({ w: 1.8, h: 13.33 })
@@ -37,20 +37,20 @@ describe('the kinds', () => {
 })
 
 describe('the sample sheet', () => {
-  it('is the owner’s 12:38 sheet: 18 rooms, 17 of them placed', () => {
+  it('is the owner’s 12:38 sheet: 18 zones, 17 of them placed', () => {
     const sheet = fixtureSheet()
-    expect(sheet.rooms.length).toBe(18)
-    expect(sheet.rooms.filter((r) => r.placed).length).toBe(17)
+    expect(sheet.zones.length).toBe(18)
+    expect(sheet.zones.filter((r) => r.placed).length).toBe(17)
     expect(sheet.storeyCount).toBe(2)
-    expect(sheet.rooms.find((r) => r.id === 'r2')!.angle).toBe(25)
-    expect(sheet.rooms.filter((r) => isOpen(r)).length).toBe(0)
+    expect(sheet.zones.find((r) => r.id === 'r2')!.angle).toBe(25)
+    expect(sheet.zones.filter((r) => isOpen(r)).length).toBe(0)
   })
 
-  it('puts a room saved in pieces back together', () => {
-    const pieced: Room = {
+  it('puts a zone saved in pieces back together', () => {
+    const pieced: Zone = {
       id: 'a',
       name: 'A',
-      kind: 'room',
+      kind: 'zone',
       cat: 'shared',
       target: 16,
       x: 0,
@@ -78,8 +78,8 @@ describe('the sample sheet', () => {
     expect(r2(areaOf(out))).toBe(16)
   })
 
-  it('gives back a room left in so many pieces that it was no room any more', () => {
-    const shards: Room = {
+  it('gives back a zone left in so many pieces that it was no zone any more', () => {
+    const shards: Zone = {
       id: 'a',
       name: 'A',
       kind: 'bedroom',

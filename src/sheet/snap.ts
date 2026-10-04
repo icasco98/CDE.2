@@ -1,5 +1,5 @@
 /**
- * Snapping. A room looks for edges that run with its own — any edge of any room, whatever the
+ * Snapping. A zone looks for edges that run with its own — any edge of any zone, whatever the
  * carving left, the setback line and the plot boundary, and the storeys below and above. The nearest
  * pull within the snap distance wins, then the nearest again on a direction across it.
  */
@@ -18,7 +18,7 @@ import {
   storeyOf,
   type Frame,
   type Point,
-  type Room,
+  type Zone,
   type Settings,
   type Sheet,
 } from './model'
@@ -40,7 +40,7 @@ import {
   type Seg,
 } from './geometry'
 import { MAX_STOREYS } from './plot'
-import { cloneRoom } from './model'
+import { cloneZone } from './model'
 
 /** A line drawn on the sheet to show what a move lined up with. */
 export type Guide = { x1: number; y1: number; x2: number; y2: number }
@@ -50,11 +50,11 @@ export type SnapMark = { corner?: Point; edge?: Seg; line?: boolean }
 /** A guide is drawn right across the sheet, so it is longer than any plot the tool draws. */
 const ACROSS = 200
 
-/** The lines an edge may snap to besides rooms: the setback line, and the plot boundary. */
+/** The lines an edge may snap to besides zones: the setback line, and the plot boundary. */
 export const snapBoxes = (plot: PlotSpec = DEFAULT_PLOT): Box[] => [plot.build, plot.box]
 
 export function edgeCandidates(
-  others: Room[],
+  others: Zone[],
   settings: Settings,
   plot: PlotSpec = DEFAULT_PLOT,
 ): Seg[] {
@@ -74,8 +74,8 @@ export function edgeCandidates(
   return out
 }
 
-/** Where a room rests when nothing caught it: on the grid, by its corner or by its centre. */
-export function gridRest(r: Room, settings: Settings): Room {
+/** Where a zone rests when nothing caught it: on the grid, by its corner or by its centre. */
+export function gridRest(r: Zone, settings: Settings): Zone {
   if (square(r))
     return { ...r, x: r6(snapTo(r.x, settings.grid)), y: r6(snapTo(r.y, settings.grid)) }
   const [cx, cy] = centreOf(r)
@@ -87,14 +87,14 @@ export function gridRest(r: Room, settings: Settings): Room {
 }
 
 /**
- * How far an edge being dragged should go so its line runs through a nearby corner of another room,
- * or lies on another room's parallel edge: the candidate nearest the hand within the snap distance.
+ * How far an edge being dragged should go so its line runs through a nearby corner of another zone,
+ * or lies on another zone's parallel edge: the candidate nearest the hand within the snap distance.
  */
 export function alignEdge(
   frame: Frame,
   seg: Seg,
   sRaw: number,
-  others: Room[],
+  others: Zone[],
   settings: Settings,
   plot: PlotSpec = DEFAULT_PLOT,
 ): { s: number; guide?: Guide; mark?: SnapMark } {
@@ -140,7 +140,7 @@ export function alignEdge(
     }
   }
   // A neighbour's edge at any angle: the dragged edge's own corners land on its line, within its run,
-  // so a turned room still meets the edges round it.
+  // so a turned zone still meets the edges round it.
   for (const o of others)
     for (const w of worldEdges(o)) {
       const wl = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]) || 1
@@ -192,16 +192,16 @@ export function alignEdge(
   return { s: r6(found.s), guide, mark: found.mark }
 }
 
-/** A room moved: corner to corner first, then edge to edge, then the grid. */
+/** A zone moved: corner to corner first, then edge to edge, then the grid. */
 export function snapMove(
-  r: Room,
+  r: Zone,
   cands: Seg[],
   settings: Settings,
   plot: PlotSpec = DEFAULT_PLOT,
-): { rect: Room; guides: Guide[]; corner?: Point } {
+): { rect: Zone; guides: Guide[]; corner?: Point } {
   const guides: Guide[] = []
   if (!(settings.snapDist > 0) || !cands.length) return { rect: gridRest(r, settings), guides }
-  // corner to corner first: the nearest pair within reach carries the whole room
+  // corner to corner first: the nearest pair within reach carries the whole zone
   let best: { dd: number; move: Point; at: Point } | null = null
   for (const c of worldCorners(r))
     for (const w of cands)
@@ -220,7 +220,7 @@ export function snapMove(
   }
   type Hit = { d: number; move: Point; n: Point; edge: { a: Point; b: Point }; corner?: Point }
   const hits: Hit[] = []
-  // any corner within reach of the setback line or the boundary lands on it, a turned room too
+  // any corner within reach of the setback line or the boundary lands on it, a turned zone too
   if (settings.snapBuild)
     for (const B of snapBoxes(plot))
       for (const c of worldCorners(r)) {
@@ -301,18 +301,18 @@ export function snapMove(
 }
 
 /**
- * Turning locks onto an angle a room nearby already stands at, before it falls back to the fixed
- * steps; the room it agreed with is named so it can be shown.
+ * Turning locks onto an angle a zone nearby already stands at, before it falls back to the fixed
+ * steps; the zone it agreed with is named so it can be shown.
  */
 export function snapAngle(
   a: number,
-  exclude: Room[],
-  onStorey: Room[],
+  exclude: Zone[],
+  onStorey: Zone[],
   settings: Settings,
   north: number,
-): { angle: number; locked: boolean; mate: Room | null } {
+): { angle: number; locked: boolean; mate: Zone | null } {
   a = norm(a)
-  let best: { d: number; t: number; mate: Room } | null = null
+  let best: { d: number; t: number; mate: Zone } | null = null
   for (const o of onStorey) {
     if (exclude.includes(o)) continue
     for (let k = 0; k < 4; k++) {
@@ -322,7 +322,7 @@ export function snapAngle(
     }
   }
   if (best) {
-    const found: { d: number; t: number; mate: Room } = best
+    const found: { d: number; t: number; mate: Zone } = best
     return { angle: r2(found.t), locked: true, mate: found.mate }
   }
   const step = settings.rotSnap
@@ -340,7 +340,7 @@ export function snapAngle(
  */
 export function snapHeight(
   h: number,
-  r: Room,
+  r: Zone,
   sheet: Sheet,
   tol = 0.15,
 ): { h: number; why: string } {
@@ -358,7 +358,7 @@ export function snapHeight(
         h: floorZ(settings, i) - floorZ(settings, k),
         why: `the ${storeyNameOf(i - 1).toLowerCase()} storey's roof`,
       })
-  for (const o of sheet.rooms)
+  for (const o of sheet.zones)
     if (
       o !== r &&
       o.placed &&
@@ -394,10 +394,10 @@ export const guideOf = (w: { a: Point; b: Point }): Guide => {
 }
 
 /**
- * The angles the rooms nearest a point stand at, each with its quarter turns, nearest room first;
+ * The angles the zones nearest a point stand at, each with its quarter turns, nearest zone first;
  * the plot's own square comes last.
  */
-export function anglesNear(pt: Point, onStorey: Room[]): number[] {
+export function anglesNear(pt: Point, onStorey: Zone[]): number[] {
   const out: number[] = []
   const near = onStorey
     .map((r) => {
@@ -431,9 +431,9 @@ const gridPt = ([x, y]: Point, settings: Settings): Point => [
 ]
 
 /**
- * A drawn point pulled onto what is already there, and told what it caught: a corner of any room
+ * A drawn point pulled onto what is already there, and told what it caught: a corner of any zone
  * first, then where two edge lines meet, then the nearest edge (or its line carried past its end),
- * then the direction of a neighbouring room's edges from the last corner, and last the grid. Shift
+ * then the direction of a neighbouring zone's edges from the last corner, and last the grid. Shift
  * held leaves the point exactly where the pointer is.
  */
 export function snapPoint(
@@ -442,7 +442,7 @@ export function snapPoint(
   from: Point | null,
   shift: boolean,
   settings: Settings,
-  onStorey: Room[],
+  onStorey: Zone[],
 ): PointSnap {
   const grid = gridPt(pt, settings)
   const d = settings.snapDist
@@ -614,8 +614,8 @@ export function snapPoint(
 
 // ---------- gaps: an edge that nearly meets a neighbour's is pulled onto it ----------
 
-/** The facing edges of two rooms closer than the setting, with how far apart they stand. */
-export function nearEdges(a: Room, b: Room, upTo: number): { d: number; seg: Seg }[] {
+/** The facing edges of two zones closer than the setting, with how far apart they stand. */
+export function nearEdges(a: Zone, b: Zone, upTo: number): { d: number; seg: Seg }[] {
   const out: { d: number; seg: Seg }[] = []
   const wa = worldEdges(a)
   const la = outlineOf(a)
@@ -643,10 +643,10 @@ export function nearEdges(a: Room, b: Room, upTo: number): { d: number; seg: Seg
 }
 
 /**
- * Every gap under the setting closed, the room placed last giving way. The rooms given are changed
- * in place, as the actions' own copy of the sheet; the ids of the rooms it moved come back.
+ * Every gap under the setting closed, the zone placed last giving way. The zones given are changed
+ * in place, as the actions' own copy of the sheet; the ids of the zones it moved come back.
  */
-export function closeGaps(all: Room[], only: Room | null, settings: Settings): Set<string> {
+export function closeGaps(all: Zone[], only: Zone | null, settings: Settings): Set<string> {
   const upTo = settings.closeGap
   const done = new Set<string>()
   if (!(upTo > 0)) return done
@@ -661,7 +661,7 @@ export function closeGaps(all: Room[], only: Room | null, settings: Settings): S
         if (!only && (a.placedAt ?? 0) < (b.placedAt ?? 0)) continue
         const near = nearEdges(a, b, upTo)
         if (!near.length) continue
-        const was = cloneRoom(a)
+        const was = cloneZone(a)
         const g = near.sort((p, q) => q.d - p.d)[0]!
         const ok = pullEdge(a, g.seg, g.d)
         let alive = true
@@ -684,7 +684,7 @@ export function closeGaps(all: Room[], only: Room | null, settings: Settings): S
   return done
 }
 
-/** A drawn point never leaves the plot, and stays on the floor when rooms are held in. */
+/** A drawn point never leaves the plot, and stays on the floor when zones are held in. */
 export function onPlot(at: Point, box: Box): Point {
   return [
     r6(Math.min(Math.max(at[0], box.x), box.x + box.w)),
@@ -692,4 +692,4 @@ export function onPlot(at: Point, box: Box): Point {
   ]
 }
 
-export const localPoint = (r: Room, p: Point): Point => toLocal(r, p[0], p[1])
+export const localPoint = (r: Zone, p: Point): Point => toLocal(r, p[0], p[1])

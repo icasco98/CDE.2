@@ -1,51 +1,51 @@
 import { describe, expect, it } from 'vitest'
-import { pastAllowed, pastRange, type MeasuredRoom } from './sizeCheck'
+import { pastAllowed, pastRange, type MeasuredZone } from './sizeCheck'
 
 const PLOT_M2 = 500
 
-const room = (name: string, type: string, areaM2: number): MeasuredRoom => ({
+const zone = (name: string, type: string, areaM2: number): MeasuredZone => ({
   id: name,
   name,
   type,
   areaM2,
 })
 
-describe('a room measured against the range of its kind', () => {
+describe('a zone measured against the range of its kind', () => {
   it('names the top of the range for a kitchen drawn at 31 m²', () => {
-    expect(pastRange([room('Kitchen', 'kitchen', 31)], PLOT_M2)).toEqual([
+    expect(pastRange([zone('Kitchen', 'kitchen', 31)], PLOT_M2)).toEqual([
       { id: 'Kitchen', sentence: 'Kitchen is 31 m², the range ends at 28.' },
     ])
   })
 
   it('names the bottom of the range for a kitchen drawn at 9 m²', () => {
-    expect(pastRange([room('Kitchen', 'kitchen', 9)], PLOT_M2)).toEqual([
+    expect(pastRange([zone('Kitchen', 'kitchen', 9)], PLOT_M2)).toEqual([
       { id: 'Kitchen', sentence: 'Kitchen is 9 m², the range starts at 14.' },
     ])
   })
 
   it('says nothing at all about a kitchen of 20 m²', () => {
-    expect(pastRange([room('Kitchen', 'kitchen', 20)], PLOT_M2)).toEqual([])
+    expect(pastRange([zone('Kitchen', 'kitchen', 20)], PLOT_M2)).toEqual([])
   })
 
   it('says nothing at either end of the range itself', () => {
-    expect(pastRange([room('Kitchen', 'kitchen', 14), room('K2', 'kitchen', 28)], PLOT_M2)).toEqual(
+    expect(pastRange([zone('Kitchen', 'kitchen', 14), zone('K2', 'kitchen', 28)], PLOT_M2)).toEqual(
       [],
     )
   })
 
   it('reads the plot band for a kind whose size comes off the plot', () => {
-    const said = pastRange([room('Diwaniya', 'diwaniya', 70)], PLOT_M2)
+    const said = pastRange([zone('Diwaniya', 'diwaniya', 70)], PLOT_M2)
     expect(said[0]?.sentence).toBe('Diwaniya is 70 m², the range ends at 60.')
-    expect(pastRange([room('Diwaniya', 'diwaniya', 70)], 900)).toEqual([])
+    expect(pastRange([zone('Diwaniya', 'diwaniya', 70)], 900)).toEqual([])
   })
 
   it('leaves a hallway alone, which has no range to pass', () => {
-    expect(pastRange([room('Ground Hallway', 'hallway', 90)], PLOT_M2)).toEqual([])
+    expect(pastRange([zone('Ground Hallway', 'hallway', 90)], PLOT_M2)).toEqual([])
   })
 
-  it('says one sentence for each room, in the order of the program', () => {
+  it('says one sentence for each zone, in the order of the program', () => {
     const said = pastRange(
-      [room('Kitchen', 'kitchen', 31), room('Dining Room', 'dining-room', 9)],
+      [zone('Kitchen', 'kitchen', 31), zone('Dining Room', 'dining-room', 9)],
       PLOT_M2,
     )
     expect(said.map((each) => each.id)).toEqual(['Kitchen', 'Dining Room'])

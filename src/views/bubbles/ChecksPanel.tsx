@@ -3,7 +3,7 @@ import type { Check } from '../../graph/types'
 /** The graph's warnings beside the diagram, each with its rule and source one line under it. */
 export function ChecksPanel(props: {
   readonly checks: readonly Check[]
-  readonly onPick: (room: string) => void
+  readonly onPick: (zone: string) => void
 }) {
   return (
     <section className="bubbles-panel checks" aria-label="Checks">
@@ -17,8 +17,8 @@ export function ChecksPanel(props: {
               <button
                 type="button"
                 className="check-sentence"
-                disabled={check.rooms.length === 0}
-                onClick={() => check.rooms[0] && props.onPick(check.rooms[0])}
+                disabled={check.zones.length === 0}
+                onClick={() => check.zones[0] && props.onPick(check.zones[0])}
               >
                 {check.sentence}
               </button>

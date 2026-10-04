@@ -5,7 +5,7 @@ import { seedPlan } from './plan'
 import { tab } from './tabs'
 
 /*
- * The storey below is drawn faint under the one in hand. A room kept as several pieces is drawn
+ * The storey below is drawn faint under the one in hand. A zone kept as several pieces is drawn
  * there by its outer edges only, not by the seams between its pieces.
  */
 
@@ -20,10 +20,10 @@ function segmentsOf(d: string): string[] {
   })
 }
 
-test('a room of several pieces on the ground floor draws only its outline on the first floor', async ({
+test('a zone of several pieces on the ground floor draws only its outline on the first floor', async ({
   page,
 }) => {
-  const dining = fixtureSheet().rooms.find((r) => r.id === DINING)!
+  const dining = fixtureSheet().zones.find((r) => r.id === DINING)!
   expect(dining.pieces!.length).toBeGreaterThan(1)
   const outline = outlineOf(dining)
     .map((s) =>
@@ -37,7 +37,7 @@ test('a room of several pieces on the ground floor draws only its outline on the
   await page.goto('/')
   await tab(page, 'Zoning and 3D').click()
   await page.locator('.storeys button[data-storey="1"]').click()
-  const drawn = page.locator(`svg.sheet g.room.under[data-under="${DINING}"] path`)
+  const drawn = page.locator(`svg.sheet g.zone.under[data-under="${DINING}"] path`)
   await expect(drawn).toHaveCount(1)
   const d = (await drawn.getAttribute('d')) ?? ''
   expect(segmentsOf(d).sort()).toEqual(outline)

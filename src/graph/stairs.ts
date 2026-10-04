@@ -1,20 +1,20 @@
-import type { Check, CheckRoom } from './types'
+import type { Check, CheckZone } from './types'
 
 /**
  * A house of two storeys or more with no stair: nothing in the program leads from one storey to the
- * next, since a room spanning storeys is the only way a connection crosses between them.
+ * next, since a zone spanning storeys is the only way a connection crosses between them.
  */
-export function noStair(rooms: readonly CheckRoom[], storeys: number): readonly Check[] {
+export function noStair(zones: readonly CheckZone[], storeys: number): readonly Check[] {
   if (Math.trunc(storeys) < 2) return []
-  if (rooms.some((room) => Math.trunc(room.storeysSpanned) > 1)) return []
+  if (zones.some((zone) => Math.trunc(zone.storeysSpanned) > 1)) return []
   return [
     {
       code: 'no-stair',
-      rooms: [],
+      zones: [],
       sentence: 'No stair connects the storeys.',
       rule: 'A house of two storeys or more has a stair spanning them.',
       source:
-        'MODEL.md, the four stages: a room spanning storeys is the only way a connection crosses from one storey to another.',
+        'MODEL.md, the four stages: a zone spanning storeys is the only way a connection crosses from one storey to another.',
     },
   ]
 }

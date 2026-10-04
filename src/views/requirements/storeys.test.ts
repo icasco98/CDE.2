@@ -5,10 +5,10 @@ import { addStorey, removeStorey } from './storeys'
 let store: Store
 
 const spanOf = (id: string): number | undefined =>
-  store.getState().rooms.find((room) => room.id === id)?.storeysSpanned
+  store.getState().zones.find((zone) => zone.id === id)?.storeysSpanned
 
 function add(type: string, storeysSpanned = 1): string {
-  const added = store.actions.addRoom({ type, targetArea: 15, storeysSpanned })
+  const added = store.actions.addZone({ type, targetArea: 15, storeysSpanned })
   if (!added.ok) throw new Error(added.problems.map((problem) => problem.message).join('; '))
   return added.value
 }
@@ -92,7 +92,7 @@ describe('a storey more or less', () => {
     addStorey(store)
     store.actions.setStorey(stair, 1, 1)
     expect(addStorey(store).ok).toBe(true)
-    expect(store.getState().rooms.find((room) => room.id === stair)?.storey).toBe(1)
+    expect(store.getState().zones.find((zone) => zone.id === stair)?.storey).toBe(1)
     expect(spanOf(stair)).toBe(2)
   })
 
@@ -100,10 +100,10 @@ describe('a storey more or less', () => {
     const bedroom = add('bedroom')
     addStorey(store)
     expect(spanOf(bedroom)).toBe(1)
-    expect(store.getState().rooms.find((room) => room.id === bedroom)?.storey).toBe(0)
+    expect(store.getState().zones.find((zone) => zone.id === bedroom)?.storey).toBe(0)
   })
 
-  it('refuses the last storey, and a top storey another room still stands on', () => {
+  it('refuses the last storey, and a top storey another zone still stands on', () => {
     expect(removeStorey(store)).toMatchObject({ ok: false })
     add('stair')
     addStorey(store)
@@ -112,6 +112,6 @@ describe('a storey more or less', () => {
     expect(removeStorey(store)).toMatchObject({ ok: false })
     // The stair is not left short of the storey the refused step would have taken away.
     expect(store.getState().storeys).toBe(2)
-    expect(spanOf(store.getState().rooms[0]!.id)).toBe(2)
+    expect(spanOf(store.getState().zones[0]!.id)).toBe(2)
   })
 })

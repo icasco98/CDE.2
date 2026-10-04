@@ -1,6 +1,6 @@
 /**
  * The printed sheet: one A3 page per storey, drawn to scale from the zoning sheet, with the plot,
- * the setback line, the rooms and their areas, the doors as gaps, north, a scale bar and a title.
+ * the setback line, the zones and their areas, the doors as gaps, north, a scale bar and a title.
  */
 
 import { RATIO, fmt, report, storeyCountOf, storeyNameOf, type Point, type Sheet } from '../sheet'
@@ -42,7 +42,7 @@ const GAP_PT = 2.4
 const PLOT_STROKE = { width: 1 }
 const STREET_STROKE = { width: 2.4 }
 const SETBACK_STROKE = { width: 0.6, dash: [5, 3], grey: 0.45 }
-const ROOM_STROKE = { width: 0.8 }
+const ZONE_STROKE = { width: 0.8 }
 const FRAME_STROKE = { width: 1 }
 const RULE_STROKE = { width: 0.5 }
 const MARK_STROKE = { width: 0.7 }
@@ -119,7 +119,7 @@ function frameDraws(): readonly Draw[] {
 
 /**
  * The north arrow and the scale bar sit in the title block rather than on the plan: at 1:100 the
- * plot fills the drawing area to within a millimetre, so a mark on the plan would land on a room.
+ * plot fills the drawing area to within a millimetre, so a mark on the plan would land on a zone.
  */
 function northArrow(at: Point, north: number): readonly Draw[] {
   const radians = (north * Math.PI) / 180
@@ -235,13 +235,13 @@ function plotDraws(sheet: Sheet, placement: Placement): readonly Draw[] {
   ]
 }
 
-function roomDraws(standing: readonly Placed[], placement: Placement): readonly Draw[] {
+function zoneDraws(standing: readonly Placed[], placement: Placement): readonly Draw[] {
   const draws: Draw[] = []
   for (const { loops } of standing)
-    for (const loop of loops) draws.push(path(loop.map(placement.at), true, ROOM_STROKE))
-  for (const { room, labelAt, area } of standing) {
+    for (const loop of loops) draws.push(path(loop.map(placement.at), true, ZONE_STROKE))
+  for (const { zone, labelAt, area } of standing) {
     const centre = placement.at(labelAt)
-    draws.push(label([centre[0], centre[1] + mm(0.6)], room.name, LABEL_PT, 'centre'))
+    draws.push(label([centre[0], centre[1] + mm(0.6)], zone.name, LABEL_PT, 'centre'))
     draws.push(label([centre[0], centre[1] - mm(2.8)], `${fmt(area)} m²`, NUMBER_PT, 'centre'))
   }
   return draws
@@ -258,14 +258,14 @@ function storeyPage(input: {
   const standing = standingOn(sheet, storey)
   const drawing: Draw[] = [
     ...plotDraws(sheet, placement),
-    ...roomDraws(standing, placement),
+    ...zoneDraws(standing, placement),
     ...openingsOn(sheet, storey).map((opening) => doorGap(opening, placement)),
   ]
   if (standing.length === 0) {
     drawing.push(
       label(
         [(drawingArea.left + drawingArea.right) / 2, (drawingArea.bottom + drawingArea.top) / 2],
-        'No rooms placed',
+        'No zones placed',
         TITLE_PT,
         'centre',
       ),

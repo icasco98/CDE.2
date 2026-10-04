@@ -6,13 +6,13 @@ import {
   connectionBetween,
   linkedPairs,
   openVilla,
-  roomNamed,
-  selectRoom,
+  zoneNamed,
+  selectZone,
 } from './bubbles'
 
 /*
  * The bubble diagram's camera: the wheel zooms about the pointer, a drag on the background pans, a
- * click there still lets the selection go, Fit shows the whole, and every gesture on a room or a
+ * click there still lets the selection go, Fit shows the whole, and every gesture on a zone or a
  * line works the same at any zoom.
  */
 
@@ -32,13 +32,13 @@ const pixels = (page: Page) =>
     return Math.hypot(screen.a, screen.b)
   })
 
-/** A point on the diagram's background: low in the first column, under every room. */
+/** A point on the diagram's background: low in the first column, under every zone. */
 async function background(page: Page) {
   const box = (await sheet(page).boundingBox())!
   return { x: box.x + 40, y: box.y + box.height - 20 }
 }
 
-/** The wheel turned over a room until the diagram is drawn `times` closer. */
+/** The wheel turned over a zone until the diagram is drawn `times` closer. */
 async function zoomOver(page: Page, name: string, times: number) {
   const at = await centreOf(page, name)
   await page.mouse.move(at.x, at.y)
@@ -75,12 +75,12 @@ test('a click on the background lets the selection go, and a drag there keeps it
 }) => {
   await openVilla(page)
   await zoomOver(page, 'Kitchen', 1.5)
-  await selectRoom(page, 'Kitchen')
+  await selectZone(page, 'Kitchen')
   const from = await background(page)
   await drag(page, from, { x: from.x + 40, y: from.y - 20 })
-  await expect(roomNamed(page, 'Kitchen')).toHaveClass(/bubble-selected/)
+  await expect(zoneNamed(page, 'Kitchen')).toHaveClass(/bubble-selected/)
   await page.mouse.click(from.x + 40, from.y - 20)
-  await expect(roomNamed(page, 'Kitchen')).not.toHaveClass(/bubble-selected/)
+  await expect(zoneNamed(page, 'Kitchen')).not.toHaveClass(/bubble-selected/)
 })
 
 test('at three times closer a drag from the ring connects, a drag nudges, and a line selects', async ({
@@ -95,7 +95,7 @@ test('at three times closer a drag from the ring connects, a drag nudges, and a 
   await connect(page, 'Kitchen', 'Family Living')
   await expect.poll(() => linkedPairs(page)).toContain('Family Living to Kitchen')
 
-  const across = async () => Number(await roomNamed(page, 'Family Living').getAttribute('data-x'))
+  const across = async () => Number(await zoneNamed(page, 'Family Living').getAttribute('data-x'))
   const before = await across()
   const family = await centreOf(page, 'Family Living')
   await drag(page, family, { x: family.x - 30, y: family.y })

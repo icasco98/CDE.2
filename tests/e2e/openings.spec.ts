@@ -8,7 +8,7 @@ import { seedPlan } from './plan'
 
 type At = { x: number; y: number }
 
-/** The ids the embedded sheet gives its rooms, so a test can name one without hunting for it. */
+/** The ids the embedded sheet gives its zones, so a test can name one without hunting for it. */
 const FORMAL = 'r6'
 
 async function openStep(page: Page): Promise<void> {
@@ -151,7 +151,7 @@ test.describe('the Openings tab', () => {
     await arm(page, 'Open edge')
     await clickAt(page, 14.2, 7)
     await expect(sentence(page)).toContainText('Walk 17 of 17 reached from outside')
-    await expect(page.locator('.room.unreached')).toHaveCount(0)
+    await expect(page.locator('.zone.unreached')).toHaveCount(0)
     await undo(page)
     await expect(sentence(page)).toContainText('not reached: Formal Living')
     await undo(page)
@@ -185,15 +185,15 @@ test.describe('the Openings tab', () => {
     await expect(sentence(page)).not.toContainText('has no door from outside')
   })
 
-  test('greys a room the walk cannot reach and names it', async ({ page }) => {
-    await expect(page.locator('.room.unreached')).toHaveCount(0)
+  test('greys a zone the walk cannot reach and names it', async ({ page }) => {
+    await expect(page.locator('.zone.unreached')).toHaveCount(0)
     await clickAt(page, 14.2, 7)
     await page.keyboard.press('Delete')
-    await expect(page.locator(`.room.unreached[data-room="${FORMAL}"]`)).toBeVisible()
+    await expect(page.locator(`.zone.unreached[data-zone="${FORMAL}"]`)).toBeVisible()
     await expect(sentence(page)).toContainText('Walk 16 of 17 reached from outside')
     await expect(sentence(page)).toContainText('not reached: Formal Living')
     await undo(page)
-    await expect(page.locator('.room.unreached')).toHaveCount(0)
+    await expect(page.locator('.zone.unreached')).toHaveCount(0)
   })
 
   test('slides a door along its edge with the arrows', async ({ page }) => {
@@ -226,7 +226,7 @@ test.describe('the Openings tab', () => {
     expect(await doors(page).count()).toBe(before)
   })
 
-  test('draws no door while its two rooms stand apart, Show connections says not met, and it returns with them', async ({
+  test('draws no door while its two zones stand apart, Show connections says not met, and it returns with them', async ({
     page,
   }) => {
     const before = await doors(page).count()
@@ -247,12 +247,12 @@ test.describe('the Openings tab', () => {
     await expect(sentence(page)).toContainText('Connections 0 not met')
   })
 
-  test('lights a room’s edges when it is clicked in the program list', async ({ page }) => {
-    await expect(page.locator('.room.lit')).toHaveCount(0)
-    await page.locator(`.tray .item[data-room="${FORMAL}"]`).click()
-    await expect(page.locator(`.room.lit[data-room="${FORMAL}"]`)).toBeVisible()
-    await page.locator(`.tray .item[data-room="${FORMAL}"]`).click()
-    await expect(page.locator('.room.lit')).toHaveCount(0)
+  test('lights a zone’s edges when it is clicked in the program list', async ({ page }) => {
+    await expect(page.locator('.zone.lit')).toHaveCount(0)
+    await page.locator(`.tray .item[data-zone="${FORMAL}"]`).click()
+    await expect(page.locator(`.zone.lit[data-zone="${FORMAL}"]`)).toBeVisible()
+    await page.locator(`.tray .item[data-zone="${FORMAL}"]`).click()
+    await expect(page.locator('.zone.lit')).toHaveCount(0)
   })
 
   test('drags a door along its edge, and never off it onto another', async ({ page }) => {

@@ -1,13 +1,13 @@
 /**
- * Labels. The name is laid where the footprint has the most room round it, clear of every other
- * room, upright or along the room, shrinking and then falling to initials only when it must. What
- * the room cannot carry, the hover tag and the program list carry.
+ * Labels. The name is laid where the footprint has the most space round it, clear of every other
+ * zone, upright or along the zone, shrinking and then falling to initials only when it must. What
+ * the zone cannot carry, the hover tag and the program list carry.
  */
 
-import { isOpen, placedRooms, type Point, type Room, type Sheet } from './model'
+import { isOpen, placedZones, type Point, type Zone, type Sheet } from './model'
 import {
   centreOfFootprint,
-  insideRoomLocal,
+  insideZoneLocal,
   bboxOf,
   overlapRect,
   insideConvex,
@@ -20,9 +20,9 @@ import {
   type Seg,
 } from './geometry'
 
-/** How far the footprint runs through a point along a direction, both ways, in the room's frame. */
+/** How far the footprint runs through a point along a direction, both ways, in the zone's frame. */
 export function spanThrough(
-  r: Room,
+  r: Zone,
   pt: Point,
   u: Point,
   extra?: Seg[],
@@ -49,13 +49,13 @@ export const initialsOf = (name: string) =>
     .map((w) => w[0]!.toUpperCase())
     .join('')
 
-/** The edges of the rooms lying over this one, in its frame: the label must stop at them. */
+/** The edges of the zones lying over this one, in its frame: the label must stop at them. */
 export function obstaclesOf(
-  r: Room,
+  r: Zone,
   sheet: Sheet,
   storey: number,
-): { others: Room[]; segs: Seg[] } {
-  const others = placedRooms(sheet, storey).filter(
+): { others: Zone[]; segs: Seg[] } {
+  const others = placedZones(sheet, storey).filter(
     (o) => o !== r && !isOpen(o) && !o.fixed && overlapRect(bboxOf(o), bboxOf(r)),
   )
   const segs: Seg[] = []
@@ -80,12 +80,12 @@ export type LabelPlan = {
 const CH = 0.56
 
 /**
- * Where the writing fits: the label box, at full size first, is tried at every point of the room
- * that is not under another room, upright or along the room; the point with the most clear space
+ * Where the writing fits: the label box, at full size first, is tried at every point of the zone
+ * that is not under another zone, upright or along the zone; the point with the most clear space
  * round it wins. Only when nothing fits does the writing shrink, then fall to initials.
  */
 export function labelPlan(
-  r: Room,
+  r: Zone,
   texts: { area?: string },
   sheet: Sheet,
   storey: number,
@@ -97,7 +97,7 @@ export function labelPlan(
     const w = toWorld(r, pt[0], pt[1])
     return others.some((o) => worldPieces(o).some((wp) => insideConvex(wp, w[0], w[1])))
   }
-  const free = (pt: Point) => insideRoomLocal(r, pt) && !covered(pt)
+  const free = (pt: Point) => insideZoneLocal(r, pt) && !covered(pt)
   const boxFits = (pt: Point, w: number, h: number, along: boolean) => {
     const hw = (along ? h : w) / 2
     const hh = (along ? w : h) / 2

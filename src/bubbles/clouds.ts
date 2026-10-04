@@ -1,7 +1,7 @@
 /**
- * The soft outline behind each category's rooms on a storey, like the zones of a hand-drawn bubble
+ * The soft outline behind each category's zones on a storey, like the clouds of a hand-drawn bubble
  * diagram: the convex hull of the group's circles, each grown by a margin, its corners rounded.
- * Rooms of one category far apart on a column get a cloud each rather than one across the others.
+ * Zones of one category far apart on a column get a cloud each rather than one across the others.
  */
 
 import type { Spot as Circle } from './arrange'
@@ -24,7 +24,7 @@ const MARGIN = 12
 /** Two circles of a category share a cloud when their centres are this close: neighbours in a row. */
 const JOIN = 160
 
-/** Points taken round each grown circle; enough that the hull reads as round, cheap for forty rooms. */
+/** Points taken round each grown circle; enough that the hull reads as round, cheap for forty zones. */
 const ROUND = 16
 
 function cross(o: Point, a: Point, b: Point): number {

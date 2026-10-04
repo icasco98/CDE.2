@@ -4,9 +4,9 @@ import { FIXTURE_CONNECTIONS, fixtureSheet } from '../../src/sheet/fixture'
 import { SETTINGS_V, storeyOf } from '../../src/sheet/model'
 
 /**
- * A drawn plan to test the sheet on: the test plan's rooms as a project's program, standing on the
- * corner plot they were drawn for, and the same rooms saved as the sheet. The sheet draws the
- * project's rooms and no other, so a test that wants rooms on the sheet brings a project with them.
+ * A drawn plan to test the sheet on: the test plan's zones as a project's program, standing on the
+ * corner plot they were drawn for, and the same zones saved as the sheet. The sheet draws the
+ * project's zones and no other, so a test that wants zones on the sheet brings a project with them.
  */
 export function plan(input: { connections?: Connection[] } = {}) {
   const sheet = fixtureSheet()
@@ -35,10 +35,10 @@ export function plan(input: { connections?: Connection[] } = {}) {
       womensReception: false,
       masterOnGround: false,
     },
-    rooms: sheet.rooms.map((r) => ({
+    zones: sheet.zones.map((r) => ({
       id: r.id,
       name: r.name,
-      // every kind the plan draws is a room-type of the rulebook by the same name
+      // every kind the plan draws is a zone-type of the rulebook by the same name
       type: r.kind,
       storey: r.kind === 'stair' ? 0 : storeyOf(r),
       storeysSpanned: r.kind === 'stair' ? 2 : 1,
@@ -52,10 +52,10 @@ export function plan(input: { connections?: Connection[] } = {}) {
     version: PROJECT_VERSION,
   }
   const kept = {
-    rooms: sheet.rooms,
+    zones: sheet.zones,
     storeyCount: sheet.storeyCount,
     settings: { ...sheet.settings, v: SETTINGS_V },
-    format: 2,
+    format: 3,
   }
   return { project, sheet: kept }
 }

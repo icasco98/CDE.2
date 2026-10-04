@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { doorDrawing, doorNear, doorRead, newDoors } from './openings'
 import { addDoor, removeDoor } from './actions'
 import { doorSpot, drawnDoors } from './doors'
-import { sheetOf, type Door, type Room, type Sheet } from './model'
+import { sheetOf, type Door, type Zone, type Sheet } from './model'
 
-const room = (over: Partial<Room> = {}): Room => ({
+const zone = (over: Partial<Zone> = {}): Zone => ({
   id: 'k',
   name: 'Kitchen',
   kind: 'kitchen',
@@ -40,26 +40,26 @@ const door = (over: Partial<Door>): Door => ({
 function house(doors: Door[] = []): Sheet {
   return sheetOf(
     [
-      room({
+      zone({
         doors: [
           door({ id: 'street', type: 'street2', w: 1.6, at: [2, 0] }),
           door({ id: 'inner', connection: 'e2', to: 'g', along: 0.5 }),
           ...doors,
         ],
       }),
-      room({ id: 'g', name: 'Dining', kind: 'dining-room', x: 10 }),
+      zone({ id: 'g', name: 'Dining', kind: 'dining-room', x: 10 }),
     ],
     { grid: 0.25 },
   )
 }
 
-const kitchen = (sheet: Sheet) => sheet.rooms.find((r) => r.id === 'k')!
+const kitchen = (sheet: Sheet) => sheet.zones.find((r) => r.id === 'k')!
 
 /** A door drawn as the sheet draws it: where it stands, at the width it is drawn there. */
 const drawingOf = (sheet: Sheet, id: string) => {
   const drawn = drawnDoors(sheet, 0).find((each) => each.door.id === id)
   if (!drawn) throw new Error('that door is not drawn')
-  return doorDrawing(drawn.room, { ...drawn.door, w: drawn.w }, drawn.pl, sheet)
+  return doorDrawing(drawn.zone, { ...drawn.door, w: drawn.w }, drawn.pl, sheet)
 }
 
 describe('the door under the hand', () => {
@@ -69,9 +69,9 @@ describe('the door under the hand', () => {
     expect(doorNear(sheet, 0, 8, 8, 0.45)).toBeNull()
   })
 
-  it('finds no door whose rooms have moved apart, since it is not drawn', () => {
+  it('finds no door whose zones have moved apart, since it is not drawn', () => {
     const sheet = house()
-    sheet.rooms[1]!.x = 14
+    sheet.zones[1]!.x = 14
     expect(doorNear(sheet, 0, 10, 7.5, 0.45)).toBeNull()
   })
 })
@@ -88,7 +88,7 @@ describe('what a placement added', () => {
       to: 'EXTERIOR',
     })
     expect(change.result.ok).toBe(true)
-    expect(newDoors(before, change.sheet)).toEqual([{ room: 'k', id: 'd1' }])
+    expect(newDoors(before, change.sheet)).toEqual([{ zone: 'k', id: 'd1' }])
     expect(newDoors(change.sheet, before)).toEqual([])
   })
 })
@@ -143,9 +143,9 @@ describe('a door’s drawing', () => {
     expect(Math.hypot(b[0] - a[0], b[1] - a[1])).toBeCloseTo(2.9, 6)
   })
 
-  it('says the leaf cannot open when its swing leaves the room it swings into', () => {
+  it('says the leaf cannot open when its swing leaves the zone it swings into', () => {
     // a niche half a metre deep cannot take a leaf of 0.9, and the same door swung out can
-    const niche = room({ id: 'a', name: 'Niche', h: 0.5, w: 3 })
+    const niche = zone({ id: 'a', name: 'Niche', h: 0.5, w: 3 })
     const inward = door({ at: [1.5, 0] })
     niche.doors = [inward]
     const sheet = sheetOf([niche])
@@ -156,10 +156,10 @@ describe('a door’s drawing', () => {
 })
 
 describe('what the sentence says about the door in hand', () => {
-  it('names the edge, the room it leads into and the way it swings', () => {
-    expect(doorRead(house(), 0, { room: 'k', id: 'inner' })).toEqual({
+  it('names the edge, the zone it leads into and the way it swings', () => {
+    expect(doorRead(house(), 0, { zone: 'k', id: 'inner' })).toEqual({
       label: 'Door',
-      room: 'Kitchen',
+      zone: 'Kitchen',
       width: 0.9,
       across: 'Dining',
       swingsInto: 'Kitchen',
@@ -172,7 +172,7 @@ describe('what the sentence says about the door in hand', () => {
     const sheet = house([
       door({ id: 'gap', connection: 'e5', type: 'opening', w: 1.2, at: [0, 1.5] }),
     ])
-    const read = doorRead(sheet, 0, { room: 'k', id: 'gap' })
+    const read = doorRead(sheet, 0, { zone: 'k', id: 'gap' })
     expect(read?.swings).toBe(false)
     expect(read?.hinges).toBe(false)
     expect(read?.swingsInto).toBeNull()
@@ -180,9 +180,9 @@ describe('what the sentence says about the door in hand', () => {
 
   it('has nothing to say about a door that has been removed, or one not drawn', () => {
     const sheet = house()
-    const gone = removeDoor(sheet, { room: 'k', door: 'inner' })
-    expect(doorRead(gone.sheet, 0, { room: 'k', id: 'inner' })).toBeNull()
-    sheet.rooms[1]!.x = 14
-    expect(doorRead(sheet, 0, { room: 'k', id: 'inner' })).toBeNull()
+    const gone = removeDoor(sheet, { zone: 'k', door: 'inner' })
+    expect(doorRead(gone.sheet, 0, { zone: 'k', id: 'inner' })).toBeNull()
+    sheet.zones[1]!.x = 14
+    expect(doorRead(sheet, 0, { zone: 'k', id: 'inner' })).toBeNull()
   })
 })

@@ -14,15 +14,15 @@ const rebuild = (): void => {
   store.actions.addStorey()
   const project = store.getState()
   store.transaction(() => {
-    for (const room of defaultProgram(500, project.household, project.storeys))
-      store.actions.addRoom(room)
+    for (const zone of defaultProgram(500, project.household, project.storeys))
+      store.actions.addZone(zone)
     return connectDefaults(store)
   })
 }
 
-const idOf = (name: string): string => store.getState().rooms.find((r) => r.name === name)!.id
+const idOf = (name: string): string => store.getState().zones.find((r) => r.name === name)!.id
 const storeyIn = (name: string): number =>
-  store.getState().rooms.find((r) => r.name === name)!.storey
+  store.getState().zones.find((r) => r.name === name)!.storey
 const linked = (a: string, b: string): boolean =>
   store
     .getState()
@@ -32,11 +32,11 @@ const linked = (a: string, b: string): boolean =>
         (connection.a === idOf(b) && connection.b === idOf(a)),
     )
 
-/** The project's sheet with the named rooms placed on the storeys the program gives them. */
+/** The project's sheet with the named zones placed on the storeys the program gives them. */
 function sheetWith(names: readonly string[]): Sheet {
   let sheet = followProject(
     sheetOf([]),
-    programOf(store.getState().rooms),
+    programOf(store.getState().zones),
     plotOf(store.getState().plot),
     store.getState().connections,
     createAside(),
@@ -53,7 +53,7 @@ beforeEach(() => {
   rebuild()
 })
 
-describe('a room moved to another storey on the sheet', () => {
+describe('a zone moved to another storey on the sheet', () => {
   it('moves in the program too, lets go of the links it cannot hold, and finds the ones there', () => {
     const before = sheetWith(['Kitchen'])
     expect(linked('Kitchen', 'Dining Room')).toBe(true)
@@ -95,7 +95,7 @@ describe('a room moved to another storey on the sheet', () => {
     expect(storeyIn('Kitchen')).toBe(1)
   })
 
-  it('reads only what the step moved: a room the program moved on its own stays moved', () => {
+  it('reads only what the step moved: a zone the program moved on its own stays moved', () => {
     const before = sheetWith(['Kitchen'])
     sendToStorey(store, idOf('Kitchen'), 1)
     const moved = followSheetStoreys(store, before, before)
@@ -112,8 +112,8 @@ describe('a room moved to another storey on the sheet', () => {
 })
 
 it('reads a sheet step that moved no storey inside 1 ms, as every step of the hand does', () => {
-  const sheet = sheetWith(store.getState().rooms.map((room) => room.name))
-  const nudged = { ...sheet, rooms: sheet.rooms.map((r) => ({ ...r, x: r.x + 0.25 })) }
+  const sheet = sheetWith(store.getState().zones.map((zone) => zone.name))
+  const nudged = { ...sheet, zones: sheet.zones.map((r) => ({ ...r, x: r.x + 0.25 })) }
   for (let i = 0; i < 5; i++) followSheetStoreys(store, sheet, nudged)
   let best = Infinity
   for (let i = 0; i < 5; i++) {

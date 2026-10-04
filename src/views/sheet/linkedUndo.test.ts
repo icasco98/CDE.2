@@ -5,7 +5,7 @@ import { createLinks } from './linkedUndo'
 function house() {
   const store = createStore(undefined, { newId: createIdGenerator(5) })
   const add = (type: string) => {
-    const made = store.actions.addRoom({ type, targetArea: 16 })
+    const made = store.actions.addZone({ type, targetArea: 16 })
     if (!made.ok) throw new Error('refused')
     return made.value
   }
@@ -26,8 +26,8 @@ describe('a door placed with its connection, undone and redone as one step', () 
     links.connection(3, { connection: made.value, a: kitchen, b: dining, kind: 'door' })
     links.undone(3)
     expect(connections(store)).toBe(0)
-    // The project's own undo took it, so the rooms added before are untouched.
-    expect(store.getState().rooms).toHaveLength(2)
+    // The project's own undo took it, so the zones added before are untouched.
+    expect(store.getState().zones).toHaveLength(2)
     links.redone(3)
     expect(connections(store)).toBe(1)
   })
@@ -41,7 +41,7 @@ describe('a door placed with its connection, undone and redone as one step', () 
     store.actions.rename(kitchen, 'Pantry')
     links.undone(1)
     expect(connections(store)).toBe(0)
-    expect(store.getState().rooms[0]?.name).toBe('Pantry')
+    expect(store.getState().zones[0]?.name).toBe('Pantry')
   })
 
   it('forgets a step the sheet has written over', () => {
@@ -56,28 +56,28 @@ describe('a door placed with its connection, undone and redone as one step', () 
   })
 })
 
-describe('a room the sheet made, joined to the program as one step with it', () => {
+describe('a zone the sheet made, joined to the program as one step with it', () => {
   const court = { id: 'x1', type: 'courtyard', name: 'Court', targetArea: 9, storey: 0 }
 
-  it('takes the room out of the program when the sheet step goes, and back when it returns', () => {
+  it('takes the zone out of the program when the sheet step goes, and back when it returns', () => {
     const { store } = house()
     const links = createLinks(store)
-    store.actions.addRoom({ ...court })
-    links.rooms(4, [court])
+    store.actions.addZone({ ...court })
+    links.zones(4, [court])
     links.undone(4)
-    expect(store.getState().rooms.map((room) => room.id)).not.toContain('x1')
-    expect(store.getState().rooms).toHaveLength(2)
+    expect(store.getState().zones.map((zone) => zone.id)).not.toContain('x1')
+    expect(store.getState().zones).toHaveLength(2)
     links.redone(4)
-    expect(store.getState().rooms.find((room) => room.id === 'x1')?.name).toBe('Court')
+    expect(store.getState().zones.find((zone) => zone.id === 'x1')?.name).toBe('Court')
   })
 
-  it('takes out only its own room when the project has moved on since', () => {
+  it('takes out only its own zone when the project has moved on since', () => {
     const { store, kitchen } = house()
     const links = createLinks(store)
-    store.actions.addRoom({ ...court })
-    links.rooms(1, [court])
+    store.actions.addZone({ ...court })
+    links.zones(1, [court])
     store.actions.rename(kitchen, 'Pantry')
     links.undone(1)
-    expect(store.getState().rooms.map((room) => room.name)).toEqual(['Pantry', 'dining-room'])
+    expect(store.getState().zones.map((zone) => zone.name)).toEqual(['Pantry', 'dining-room'])
   })
 })

@@ -76,7 +76,7 @@ function polygonsSeparated(a: Polygon, b: Polygon): boolean {
   return false
 }
 
-/** True only where two footprints share real area: rooms brought flush edge to edge do not overlap. */
+/** True only where two footprints share real area: zones brought flush edge to edge do not overlap. */
 export function footprintsOverlap(a: Footprint, b: Footprint): boolean {
   if (obbsSeparated(obbOf(a), obbOf(b))) return false
   return !polygonsSeparated(outlineOf(a), outlineOf(b))

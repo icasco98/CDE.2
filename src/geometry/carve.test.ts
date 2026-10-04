@@ -15,7 +15,7 @@ function rectangle(
 }
 
 describe('subtracting polygons', () => {
-  it('takes a 1 x 1 bite out of a 3 x 3 room, leaving 8 m2 in one piece', () => {
+  it('takes a 1 x 1 bite out of a 3 x 3 zone, leaving 8 m2 in one piece', () => {
     const subject = rectangleToPolygon({ left: 0, top: 0, width: 3, depth: 3 })
     const bite = rectangleToPolygon({ left: 2, top: 2, width: 1, depth: 1 })
     const { polygon, split } = subtractPolygons(subject, [bite])
@@ -62,13 +62,13 @@ describe('carving one footprint out of another', () => {
   })
 
   it('leaves a footprint nothing reaches exactly as it was', () => {
-    const room = rectangle(0, 0, 3, 3)
-    expect(carveFootprint(room, [rectangle(20, 20, 3, 3)]).footprint).toBe(room)
-    expect(carveFootprint(room, []).carved).toBe(false)
+    const zone = rectangle(0, 0, 3, 3)
+    expect(carveFootprint(zone, [rectangle(20, 20, 3, 3)]).footprint).toBe(zone)
+    expect(carveFootprint(zone, []).carved).toBe(false)
   })
 
   it('keeps the turn, and puts the remainder back where the cut left it', () => {
-    // A 4 x 4 room turned a quarter turn covers the same square; a 1 x 4 strip
+    // A 4 x 4 zone turned a quarter turn covers the same square; a 1 x 4 strip
     // taken off its east side must leave exactly the 3 x 4 rectangle beside it.
     const result = carveFootprint(rectangle(0, 0, 4, 4, 90), [rectangle(3, 0, 1, 4)])
     expect(result.footprint.rotation).toBe(90)
@@ -81,7 +81,7 @@ describe('carving one footprint out of another', () => {
     expect(bounds.depth).toBeCloseTo(4, 6)
   })
 
-  it('leaves an empty polygon when the cutter covers the room outright', () => {
+  it('leaves an empty polygon when the cutter covers the zone outright', () => {
     const result = carveFootprint(rectangle(1, 1, 2, 2), [rectangle(0, 0, 6, 6)])
     expect(result.footprint.polygon).toEqual([])
     expect(result.carved).toBe(true)
@@ -94,7 +94,7 @@ describe('carving one footprint out of another', () => {
     expect(outlineOf(result.footprint).length).toBeGreaterThan(4)
   })
 
-  it('reports the room cut in two, keeping its larger half', () => {
+  it('reports the zone cut in two, keeping its larger half', () => {
     const result = carveFootprint(rectangle(0, 0, 10, 2), [rectangle(6, -1, 1, 4)])
     expect(result.split).toBe(true)
     expect(area(outlineOf(result.footprint))).toBeCloseTo(12, 9)
@@ -104,7 +104,7 @@ describe('carving one footprint out of another', () => {
 describe('does the remainder still hold a rectangle', () => {
   const square: Polygon = rectangleToPolygon({ left: 0, top: 0, width: 4, depth: 4 })
 
-  it('holds 2.7 x 3 in an untouched 4 x 4 room', () => {
+  it('holds 2.7 x 3 in an untouched 4 x 4 zone', () => {
     expect(holdsRectangle(square, 2.7, 3)).toBe(true)
   })
 

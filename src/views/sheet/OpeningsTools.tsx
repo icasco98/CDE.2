@@ -58,7 +58,7 @@ export function OpeningsTools(props: OpeningsToolsProps) {
       {door && (
         <span className="door-ctl">
           <span className="who">
-            {door.label} on {door.room}
+            {door.label} on {door.zone}
           </span>
           {door.swings && (
             <button type="button" title="F" onClick={props.onSwing}>

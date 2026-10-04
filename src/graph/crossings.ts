@@ -1,29 +1,29 @@
 import { EXTERIOR } from '../model'
 import { storeyLabel } from '../rulebook/fit'
 import { isPlanar, type Pair } from '../rulebook/planarity'
-import type { Check, CheckConnection, CheckRoom } from './types'
+import type { Check, CheckConnection, CheckZone } from './types'
 
 const rule =
   "A storey's connections can be drawn without one crossing another, or some pair can never share an edge."
 const source = "Planarity by Demoucron's test, as the brief check reads it (decision 21)."
 
-function standsOn(room: CheckRoom, storey: number): boolean {
-  const span = Math.max(1, Math.trunc(room.storeysSpanned))
-  return storey >= room.storey && storey < room.storey + span
+function standsOn(zone: CheckZone, storey: number): boolean {
+  const span = Math.max(1, Math.trunc(zone.storeysSpanned))
+  return storey >= zone.storey && storey < zone.storey + span
 }
 
 /**
  * Every storey whose connections cannot be drawn without crossing. The outside is one more node, because
- * every room with a door to it must lie on the plan's outer face.
+ * every zone with a door to it must lie on the plan's outer face.
  */
 export function crossings(
-  rooms: readonly CheckRoom[],
+  zones: readonly CheckZone[],
   connections: readonly CheckConnection[],
   storeys: number,
 ): readonly Check[] {
   const found: Check[] = []
   for (let storey = 0; storey < Math.max(1, Math.trunc(storeys)); storey++) {
-    const here = rooms.filter((room) => standsOn(room, storey)).map((room) => room.id)
+    const here = zones.filter((zone) => standsOn(zone, storey)).map((zone) => zone.id)
     const known = new Set([...here, EXTERIOR])
     const pairs: Pair[] = connections
       .filter(
@@ -34,7 +34,7 @@ export function crossings(
     if (here.length === 0 || isPlanar([...here, EXTERIOR], pairs)) continue
     found.push({
       code: 'crossing',
-      rooms: [],
+      zones: [],
       sentence: `${storeyLabel(storey)}: its connections cannot all be drawn without one crossing another.`,
       rule,
       source,

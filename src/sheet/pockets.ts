@@ -1,16 +1,16 @@
 /**
- * Pockets: empty space with rooms on every side. The buildable area less every room, as convex
- * pieces, sorted into the spaces that hang together; each one can be given to a room that encloses
+ * Pockets: empty space with zones on every side. The buildable area less every zone, as convex
+ * pieces, sorted into the spaces that hang together; each one can be given to a zone that encloses
  * it, or made a court or a corridor.
  */
 
 import {
   piecesOf,
-  placedRooms,
+  placedZones,
   type Category,
   type Point,
   type Poly,
-  type Room,
+  type Zone,
   type Settings,
   type Sheet,
 } from './model'
@@ -58,7 +58,7 @@ export function pocketsOf(sheet: Sheet, storey: number): Pocket[] {
       [A.x, A.y + A.h],
     ],
   ]
-  const placed = placedRooms(sheet, storey)
+  const placed = placedZones(sheet, storey)
   for (const r of placed) for (const wp of worldPieces(r)) free = diffPieces(free, wp)
   free = weld(free, 0.02)
     .map(facing)
@@ -68,7 +68,7 @@ export function pocketsOf(sheet: Sheet, storey: number): Pocket[] {
     const segs = outlineFrom(part).segs
     const area = partArea(part)
     if (area < 0.05) continue
-    // which rooms enclose it, by how much edge each gives it
+    // which zones enclose it, by how much edge each gives it
     const touch = new Map<string, number>()
     for (const sg of segs) {
       const mid: Point = [(sg.a[0] + sg.b[0]) / 2, (sg.a[1] + sg.b[1]) / 2]
@@ -87,7 +87,7 @@ export function pocketsOf(sheet: Sheet, storey: number): Pocket[] {
         }
       }
     }
-    if (!touch.size) continue // no room encloses it: nothing to give it to
+    if (!touch.size) continue // no zone encloses it: nothing to give it to
     let A2 = 0
     let X = 0
     let Y = 0
@@ -154,26 +154,26 @@ export const courtWhy = (pk: Pocket, settings: Settings): string =>
       : ''
 
 /**
- * A world shape handed to a room as more of its own floor, in the room's frame. With a squared-off
- * room asked for, the rectangle round it is kept where that overlaps nothing and stays on the floor.
+ * A world shape handed to a zone as more of its own floor, in the zone's frame. With a squared-off
+ * zone asked for, the rectangle round it is kept where that overlaps nothing and stays on the floor.
  */
-export function givePieces(r: Room, worldPolys: Poly[], sheet: Sheet, storey: number): Room | null {
+export function givePieces(r: Zone, worldPolys: Poly[], sheet: Sheet, storey: number): Zone | null {
   const local = worldPolys.map((p) => tidy(p.map(([x, y]) => toLocal(r, x, y))))
   r.pieces = piecesOf(r).concat(local)
   const kept = canonicalise(r)
   if (!kept) return null
   if (sheet.settings.pocketKeeps === 'square' && r.placed && r.pieces) {
-    const probe: Room = { ...r, pieces: null, fixed: false }
+    const probe: Zone = { ...r, pieces: null, fixed: false }
     const clean =
-      !placedRooms(sheet, storey).some((o) => o !== r && overlapCells(probe, o).length) &&
+      !placedZones(sheet, storey).some((o) => o !== r && overlapCells(probe, o).length) &&
       (!!sheet.settings.allowSpill || !outsideBuildable(probe, allowedBox(sheet, storey)))
     if (clean) r.pieces = null
   }
   return r
 }
 
-/** A room the sheet itself makes out of a space: a court, or a hallway where none reaches. */
-export function roomFromPocket(
+/** A zone the sheet itself makes out of a space: a court, or a hallway where none reaches. */
+export function zoneFromPocket(
   pk: Pocket,
   kind: string,
   name: string,
@@ -181,7 +181,7 @@ export function roomFromPocket(
   fixed: boolean,
   id: string,
   placedAt: number,
-): Room {
+): Zone {
   const flat = pk.pieces.flat()
   const xs = flat.map((p) => p[0])
   const ys = flat.map((p) => p[1])
@@ -189,7 +189,7 @@ export function roomFromPocket(
   const y = Math.min(...ys)
   const w = r6(Math.max(...xs) - x)
   const h = r6(Math.max(...ys) - y)
-  const r: Room = {
+  const r: Zone = {
     id,
     name,
     kind,
@@ -209,11 +209,11 @@ export function roomFromPocket(
   return r
 }
 
-/** The room that gives a space the most edge, which is the one the bar offers it to. */
-export function bestNeighbour(pk: Pocket, sheet: Sheet): Room | null {
-  let best: { r: Room; len: number } | null = null
+/** The zone that gives a space the most edge, which is the one the bar offers it to. */
+export function bestNeighbour(pk: Pocket, sheet: Sheet): Zone | null {
+  let best: { r: Zone; len: number } | null = null
   for (const [id, len] of pk.touch) {
-    const r = sheet.rooms.find((o) => o.id === id && o.placed && !o.fixed)
+    const r = sheet.zones.find((o) => o.id === id && o.placed && !o.fixed)
     if (r && (!best || len > best.len)) best = { r, len }
   }
   return best ? best.r : null

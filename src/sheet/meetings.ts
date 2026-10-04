@@ -1,13 +1,13 @@
 /**
- * How the rooms on a storey stand to each other: which pairs share a run of edge and how long it
+ * How the zones on a storey stand to each other: which pairs share a run of edge and how long it
  * is, and which pairs only meet at a corner or stand a sliver apart. This is what the architect
- * reasons with instead of coordinates, so everything here is named by room and measured in metres.
+ * reasons with instead of coordinates, so everything here is named by zone and measured in metres.
  */
 
-import { placedRooms, type Room, type Sheet } from './model'
+import { placedZones, type Zone, type Sheet } from './model'
 import { r2, worldEdges, type Seg } from './geometry'
 
-/** A gap wider than this is two rooms standing apart, not a sliver worth reporting. */
+/** A gap wider than this is two zones standing apart, not a sliver worth reporting. */
 export const NEAR_GAP = 0.5
 
 /** Edges this close are one edge: the tolerance the sheet's own welding works to. */
@@ -19,10 +19,10 @@ const SAME_CORNER = 0.05
 /** A run of shared edge shorter than this is a nick where two corners cross, not a shared edge. */
 const SHARED_LEAST = 0.05
 
-export type Sharing = { rooms: [string, string]; metres: number }
+export type Sharing = { zones: [string, string]; metres: number }
 
 /** A pair that does not share an edge but all but touches: at a corner, or across a sliver. */
-export type Apart = { rooms: [string, string]; how: 'a corner' | 'a gap'; metres: number }
+export type Apart = { zones: [string, string]; how: 'a corner' | 'a gap'; metres: number }
 
 export type Meetings = { sharing: Sharing[]; apart: Apart[] }
 
@@ -47,12 +47,12 @@ function facingRun(m: Seg, o: Seg): Run | null {
   return { along: Math.min(m1, o1) - Math.max(m0, o0), apart }
 }
 
-/** A room as this reading needs it: its name, and the edges it shows where it stands. */
+/** A zone as this reading needs it: its name, and the edges it shows where it stands. */
 type Shown = { name: string; edges: Seg[] }
 
-const shown = (r: Room): Shown => ({ name: r.name, edges: worldEdges(r) })
+const shown = (r: Zone): Shown => ({ name: r.name, edges: worldEdges(r) })
 
-/** The closest two rooms' corners come to each other. */
+/** The closest two zones' corners come to each other. */
 function cornerGap(a: Shown, b: Shown): number {
   let least = Infinity
   for (const wa of a.edges)
@@ -61,7 +61,7 @@ function cornerGap(a: Shown, b: Shown): number {
   return least
 }
 
-/** How one pair of rooms stands: the edge they share, else how they all but touch, else nothing. */
+/** How one pair of zones stands: the edge they share, else how they all but touch, else nothing. */
 function meetingBetween(a: Shown, b: Shown): Sharing | Apart | null {
   let shared = 0
   let gap = Infinity
@@ -73,28 +73,28 @@ function meetingBetween(a: Shown, b: Shown): Sharing | Apart | null {
         if (run.along > SHARED_LEAST) shared += run.along
       } else if (run.along > SHARED_LEAST && run.apart <= NEAR_GAP) gap = Math.min(gap, run.apart)
     }
-  const rooms: [string, string] = [a.name, b.name]
-  if (shared > SHARED_LEAST) return { rooms, metres: r2(shared) }
+  const zones: [string, string] = [a.name, b.name]
+  if (shared > SHARED_LEAST) return { zones, metres: r2(shared) }
   const corner = cornerGap(a, b)
-  if (corner <= SAME_CORNER) return { rooms, how: 'a corner', metres: 0 }
-  if (gap <= NEAR_GAP) return { rooms, how: 'a gap', metres: r2(gap) }
+  if (corner <= SAME_CORNER) return { zones, how: 'a corner', metres: 0 }
+  if (gap <= NEAR_GAP) return { zones, how: 'a gap', metres: r2(gap) }
   return null
 }
 
-export const meetingOf = (a: Room, b: Room): Sharing | Apart | null =>
+export const meetingOf = (a: Zone, b: Zone): Sharing | Apart | null =>
   meetingBetween(shown(a), shown(b))
 
 const isSharing = (met: Sharing | Apart): met is Sharing => !('how' in met)
 
 /** Every pair on the storey that meets, longest shared edge first, then the pairs that all but do. */
 export function meetingsOf(sheet: Sheet, storey: number): Meetings {
-  // the edges of each room are worked out once, not once for every pair it could meet
-  const rooms = placedRooms(sheet, storey).map(shown)
+  // the edges of each zone are worked out once, not once for every pair it could meet
+  const zones = placedZones(sheet, storey).map(shown)
   const sharing: Sharing[] = []
   const apart: Apart[] = []
-  for (let i = 0; i < rooms.length; i++)
-    for (let j = i + 1; j < rooms.length; j++) {
-      const met = meetingBetween(rooms[i]!, rooms[j]!)
+  for (let i = 0; i < zones.length; i++)
+    for (let j = i + 1; j < zones.length; j++) {
+      const met = meetingBetween(zones[i]!, zones[j]!)
       if (!met) continue
       if (isSharing(met)) sharing.push(met)
       else apart.push(met)

@@ -30,7 +30,7 @@ import {
 } from './actions'
 import { edgeNamed, edgeOn, type EdgeName } from './against'
 import { fmt, overlapCells, r2, worldPieces } from './geometry'
-import { roomNamed, storeyAsked, type Desk } from './desk'
+import { zoneNamed, storeyAsked, type Desk } from './desk'
 import { doorAcross, doorAt } from './doors'
 import {
   OUTSIDE,
@@ -42,7 +42,7 @@ import {
   type DoorType,
   type Point,
   type Poly,
-  type Room,
+  type Zone,
   type Sheet,
 } from './model'
 import { pocketsOf, type Pocket } from './pockets'
@@ -69,14 +69,14 @@ const refused = (verb: string, why: string) => `${verb} refused · ${why}`
 const done = (verb: string, out: { ok: boolean; said: string }) =>
   out.ok ? `${verb} · ${out.said}` : refused(verb, out.said)
 
-type Got = { r: Room } | { why: string }
+type Got = { r: Zone } | { why: string }
 
 const stuck = <T extends object>(got: T | { why: string }): got is { why: string } => 'why' in got
 
-/** A room the deed names, standing on the storey the deed works on. */
+/** A zone the deed names, standing on the storey the deed works on. */
 function onSheet(sheet: Sheet, storey: number, name: unknown): Got {
-  const r = roomNamed(sheet, name)
-  if (!r) return { why: `no room called ${named(name)}` }
+  const r = zoneNamed(sheet, name)
+  if (!r) return { why: `no zone called ${named(name)}` }
   if (!r.placed) return { why: `${r.name} is not on the sheet yet` }
   if (storeyOf(r) !== storey && !acrossStoreys(r, sheet.settings))
     return {
@@ -87,24 +87,24 @@ function onSheet(sheet: Sheet, storey: number, name: unknown): Got {
   return { r }
 }
 
-/** Every room a deed names, or the first name that will not do. */
+/** Every zone a deed names, or the first name that will not do. */
 function allOnSheet(
   sheet: Sheet,
   storey: number,
   names: unknown,
-): { rooms: Room[] } | { why: string } {
-  const rooms: Room[] = []
+): { zones: Zone[] } | { why: string } {
+  const zones: Zone[] = []
   for (const name of list(names)) {
     const got = onSheet(sheet, storey, name)
     if (stuck(got)) return got
-    rooms.push(got.r)
+    zones.push(got.r)
   }
-  return rooms.length ? { rooms } : { why: 'name the rooms' }
+  return zones.length ? { zones } : { why: 'name the zones' }
 }
 
 const enclosedBy = (pk: Pocket, sheet: Sheet) =>
   [...pk.touch.keys()]
-    .map((id) => sheet.rooms.find((r) => r.id === id)?.name)
+    .map((id) => sheet.zones.find((r) => r.id === id)?.name)
     .filter(Boolean)
     .join(', ')
 
@@ -112,7 +112,7 @@ const spacesHere = (pockets: Pocket[], sheet: Sheet) =>
   pockets.map((pk) => `${fmt(pk.area)} m² enclosed by ${enclosedBy(pk, sheet)}`).join('; ')
 
 /**
- * The enclosed space a deed means, by the rooms that enclose it; the only one on the storey needs no
+ * The enclosed space a deed means, by the zones that enclose it; the only one on the storey needs no
  * naming. A refusal says which spaces there are, so the next deed can name one.
  */
 function spaceFor(
@@ -122,10 +122,10 @@ function spaceFor(
 ): { at: number; pocket: Pocket } | { why: string } {
   const pockets = pocketsOf(sheet, storey)
   if (!pockets.length) return { why: `no enclosed space on the ${storeyNameOf(storey)} storey` }
-  const round: Room[] = []
+  const round: Zone[] = []
   for (const name of list(between)) {
-    const r = roomNamed(sheet, name)
-    if (!r) return { why: `no room called ${named(name)}` }
+    const r = zoneNamed(sheet, name)
+    if (!r) return { why: `no zone called ${named(name)}` }
     round.push(r)
   }
   if (!round.length)
@@ -134,9 +134,9 @@ function spaceFor(
       : {
           why:
             `${pockets.length} enclosed spaces here — ${spacesHere(pockets, sheet)}: ` +
-            'name the rooms round the one you mean',
+            'name the zones round the one you mean',
         }
-  // the space between the rooms named is the smallest they all enclose, not the leftover round them
+  // the space between the zones named is the smallest they all enclose, not the leftover round them
   let at = -1
   for (let i = 0; i < pockets.length; i++)
     if (
@@ -153,7 +153,7 @@ function spaceFor(
       }
 }
 
-/** The storey a deed sends a room to, refused when the plan has no such storey. */
+/** The storey a deed sends a zone to, refused when the plan has no such storey. */
 function storeyFor(sheet: Sheet, value: unknown): { to: number } | { why: string } {
   const asked = storeyAsked(value)
   if (asked === null)
@@ -196,9 +196,9 @@ const doorTypeNamed = (value: unknown): DoorType | null => {
 
 /**
  * Where a door goes: a fraction along the named edge, measured from its top-left end as `along` is
- * everywhere else, and a hand's width inside the room so the edge found is that room's own.
+ * everywhere else, and a hand's width inside the zone so the edge found is that zone's own.
  */
-function doorSpot(r: Room, edge: EdgeName, along: number): Point | null {
+function doorSpot(r: Zone, edge: EdgeName, along: number): Point | null {
   const found = edgeOn(r, edge)
   if (!found) return null
   const { seg, length } = found
@@ -226,37 +226,37 @@ function polygonOf(value: unknown): Poly | null {
 
 type Doing = (desk: Desk, storey: number, deed: Deed) => string
 
-/** One room, then the action: the shape every verb that works on a single room takes. */
+/** One zone, then the action: the shape every verb that works on a single zone takes. */
 const onOne =
   (
     verb: string,
-    act: (r: Room, sheet: Sheet, storey: number, deed: Deed) => Change | string,
+    act: (r: Zone, sheet: Sheet, storey: number, deed: Deed) => Change | string,
   ): Doing =>
   (desk, storey, deed) => {
-    const got = onSheet(desk.read(), storey, deed.room)
+    const got = onSheet(desk.read(), storey, deed.zone)
     if (stuck(got)) return refused(verb, got.why)
     const out = act(got.r, desk.read(), storey, deed)
     return typeof out === 'string' ? refused(verb, out) : done(verb, desk.write(out))
   }
 
-/** Rooms, then the action: the shape every verb that works on several rooms takes. */
+/** Zones, then the action: the shape every verb that works on several zones takes. */
 const onMany =
   (
     verb: string,
-    act: (rooms: Room[], sheet: Sheet, storey: number, deed: Deed) => Change | string,
+    act: (zones: Zone[], sheet: Sheet, storey: number, deed: Deed) => Change | string,
   ): Doing =>
   (desk, storey, deed) => {
-    const got = allOnSheet(desk.read(), storey, deed.rooms ?? deed.room)
+    const got = allOnSheet(desk.read(), storey, deed.zones ?? deed.zone)
     if (stuck(got)) return refused(verb, got.why)
-    const out = act(got.rooms, desk.read(), storey, deed)
+    const out = act(got.zones, desk.read(), storey, deed)
     return typeof out === 'string' ? refused(verb, out) : done(verb, desk.write(out))
   }
 
-const ids = (rooms: Room[]) => rooms.map((r) => r.id)
+const ids = (zones: Zone[]) => zones.map((r) => r.id)
 
 const VERBS: Record<string, Doing> = {
   turn: (desk, storey, deed) => {
-    const got = onSheet(desk.read(), storey, deed.room)
+    const got = onSheet(desk.read(), storey, deed.zone)
     if (stuck(got)) return refused('turn', got.why)
     const face = String(deed.face ?? '')
       .trim()
@@ -304,11 +304,11 @@ const VERBS: Record<string, Doing> = {
   }),
 
   carve: (desk, storey, deed) => {
-    const cutter = onSheet(desk.read(), storey, deed.room)
+    const cutter = onSheet(desk.read(), storey, deed.zone)
     if (stuck(cutter)) return refused('carve', cutter.why)
     const host = onSheet(desk.read(), storey, deed.out_of ?? deed.from)
     if (stuck(host)) return refused('carve', host.why)
-    if (host.r === cutter.r) return refused('carve', 'a room cannot be carved out of itself')
+    if (host.r === cutter.r) return refused('carve', 'a zone cannot be carved out of itself')
     if (!overlapCells(cutter.r, host.r).length)
       return refused('carve', `${cutter.r.name} does not lie over ${host.r.name}`)
     const said: string[] = []
@@ -323,19 +323,19 @@ const VERBS: Record<string, Doing> = {
   push: onOne('push', (r, sheet, storey) => pushOthers(sheet, { ids: [r.id], storey })),
 
   court: (desk, storey, deed) => {
-    const space = spaceFor(desk.read(), storey, deed.between ?? deed.rooms)
+    const space = spaceFor(desk.read(), storey, deed.between ?? deed.zones)
     if (stuck(space)) return refused('court', space.why)
     return done('court', desk.write(makeCourt(desk.read(), { pocket: space.at, storey })))
   },
 
   corridor: (desk, storey, deed) => {
-    const space = spaceFor(desk.read(), storey, deed.between ?? deed.rooms)
+    const space = spaceFor(desk.read(), storey, deed.between ?? deed.zones)
     if (stuck(space)) return refused('corridor', space.why)
     return done('corridor', desk.write(makeCorridor(desk.read(), { pocket: space.at, storey })))
   },
 
   give: (desk, storey, deed) => {
-    const space = spaceFor(desk.read(), storey, deed.between ?? deed.rooms)
+    const space = spaceFor(desk.read(), storey, deed.between ?? deed.zones)
     if (stuck(space)) return refused('give', space.why)
     const to = onSheet(desk.read(), storey, deed.to)
     if (stuck(to)) return refused('give', to.why)
@@ -343,25 +343,25 @@ const VERBS: Record<string, Doing> = {
       return refused('give', `${to.r.name} does not enclose that space`)
     return done(
       'give',
-      desk.write(givePocket(desk.read(), { pocket: space.at, room: to.r.id, storey })),
+      desk.write(givePocket(desk.read(), { pocket: space.at, zone: to.r.id, storey })),
     )
   },
 
-  combine: onMany('combine', (rooms, sheet, storey, deed) => {
-    if (rooms.length < 2) return 'name two rooms or more, and which of them survives'
-    const survivor = roomNamed(sheet, deed.into ?? deed.survivor)
-    if (!survivor || !rooms.includes(survivor))
-      return `say which of ${rooms.map((r) => r.name).join(', ')} survives, as into`
-    return combine(sheet, { ids: ids(rooms), survivor: survivor.id, storey })
+  combine: onMany('combine', (zones, sheet, storey, deed) => {
+    if (zones.length < 2) return 'name two zones or more, and which of them survives'
+    const survivor = zoneNamed(sheet, deed.into ?? deed.survivor)
+    if (!survivor || !zones.includes(survivor))
+      return `say which of ${zones.map((r) => r.name).join(', ')} survives, as into`
+    return combine(sheet, { ids: ids(zones), survivor: survivor.id, storey })
   }),
 
-  lock: onMany('lock', (rooms, sheet, storey) => lock(sheet, { ids: ids(rooms), storey })),
+  lock: onMany('lock', (zones, sheet, storey) => lock(sheet, { ids: ids(zones), storey })),
 
-  unlock: onMany('unlock', (rooms, sheet, storey) => unlock(sheet, { ids: ids(rooms), storey })),
+  unlock: onMany('unlock', (zones, sheet, storey) => unlock(sheet, { ids: ids(zones), storey })),
 
-  group: onMany('group', (rooms, sheet, storey) => group(sheet, { ids: ids(rooms), storey })),
+  group: onMany('group', (zones, sheet, storey) => group(sheet, { ids: ids(zones), storey })),
 
-  ungroup: onMany('ungroup', (rooms, sheet, storey) => ungroup(sheet, { ids: ids(rooms), storey })),
+  ungroup: onMany('ungroup', (zones, sheet, storey) => ungroup(sheet, { ids: ids(zones), storey })),
 
   height: onOne('height', (r, sheet, _storey, deed) => {
     const metres = num(deed.metres ?? deed.height)
@@ -371,24 +371,24 @@ const VERBS: Record<string, Doing> = {
     return setHeight(sheet, { id: r.id, metres })
   }),
 
-  storey: onMany('storey', (rooms, sheet, storey, deed) => {
+  storey: onMany('storey', (zones, sheet, storey, deed) => {
     const to = storeyFor(sheet, deed.to)
     if (stuck(to)) return to.why
-    return setStorey(sheet, { ids: ids(rooms), storey, to: to.to })
+    return setStorey(sheet, { ids: ids(zones), storey, to: to.to })
   }),
 
-  copy: onMany('copy', (rooms, sheet, storey, deed) => {
+  copy: onMany('copy', (zones, sheet, storey, deed) => {
     const to = deed.to === undefined ? { to: storey } : storeyFor(sheet, deed.to)
     if (stuck(to)) return to.why
-    return copyTo(sheet, { ids: ids(rooms), storey, to: to.to })
+    return copyTo(sheet, { ids: ids(zones), storey, to: to.to })
   }),
 
-  cut: onMany('cut', (rooms, sheet, storey) => cutToSetback(sheet, { ids: ids(rooms), storey })),
+  cut: onMany('cut', (zones, sheet, storey) => cutToSetback(sheet, { ids: ids(zones), storey })),
 
   restore: onOne('restore', (r, sheet, storey) => restore(sheet, { id: r.id, storey })),
 
   door: (desk, storey, deed) => {
-    const got = onSheet(desk.read(), storey, deed.room)
+    const got = onSheet(desk.read(), storey, deed.zone)
     if (stuck(got)) return refused('door', got.why)
     const r = got.r
     const sheet = desk.read()
@@ -400,14 +400,14 @@ const VERBS: Record<string, Doing> = {
     const spot = doorSpot(r, edge, along === null ? 0.5 : along)
     if (!spot) return refused('door', `${r.name} shows no ${edge} edge`)
     const width = num(deed.width)
-    // A door draws a connection the project holds; the room across is read only to name that connection.
+    // A door draws a connection the project holds; the zone across is read only to name that connection.
     const hit = doorAt(spot[0], spot[1], type === 'open' ? 0.6 : 0.9, sheet, storey, r)
     const across = hit ? (doorAcross(r, hit.pl, sheet, storey)?.id ?? OUTSIDE) : OUTSIDE
     if (type === 'open' && across === OUTSIDE)
       return refused('door', 'Only an edge shared with a neighbour can be opened.')
     const connection = desk.connectionBetween(r.id, across)
     if (!connection) {
-      const other = sheet.rooms.find((o) => o.id === across)?.name ?? 'the outside'
+      const other = sheet.zones.find((o) => o.id === across)?.name ?? 'the outside'
       return refused(
         'door',
         `${r.name} and ${other} have no connection; a door draws one, so connect them first`,
@@ -431,7 +431,7 @@ const VERBS: Record<string, Doing> = {
 
   open_edge: (desk, storey, deed) => VERBS.door!(desk, storey, { ...deed, type: 'open' }),
 
-  send_back: onMany('send back', (rooms, sheet) => sendBack(sheet, { ids: ids(rooms) })),
+  send_back: onMany('send back', (zones, sheet) => sendBack(sheet, { ids: ids(zones) })),
 }
 
 /** The verbs, in the order the page teaches them. */

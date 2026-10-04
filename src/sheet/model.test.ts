@@ -5,7 +5,7 @@ import {
   SETTINGS_V,
   acrossStoreys,
   allPlaced,
-  cloneRoom,
+  cloneZone,
   cloneSheet,
   doorsOf,
   ghostsOf,
@@ -18,24 +18,24 @@ import {
   kin,
   migrate,
   piecesOf,
-  placedRooms,
+  placedZones,
   rank,
   ruleOf,
   sheetOf,
-  snapRooms,
+  snapZones,
   stH,
   storeyCountOf,
   storeyNameOf,
   storeyOf,
-  tallRoom,
+  tallZone,
   zTop,
-  type Room,
+  type Zone,
 } from './model'
 
-const room = (over: Partial<Room> = {}): Room => ({
+const zone = (over: Partial<Zone> = {}): Zone => ({
   id: 'a',
   name: 'A',
-  kind: 'room',
+  kind: 'zone',
   cat: 'shared',
   target: 10,
   x: 4,
@@ -82,26 +82,26 @@ describe('the settings', () => {
   })
 
   it('copies a sheet without sharing anything with it', () => {
-    const sheet = sheetOf([room()])
+    const sheet = sheetOf([zone()])
     const copy = cloneSheet(sheet)
-    copy.rooms[0]!.x = 99
+    copy.zones[0]!.x = 99
     copy.settings.colors.shared = '#000000'
-    expect(sheet.rooms[0]!.x).toBe(4)
+    expect(sheet.zones[0]!.x).toBe(4)
     expect(sheet.settings.colors.shared).toBe(DEFAULTS.colors.shared)
-    expect(cloneRoom(sheet.rooms[0]!)).not.toBe(sheet.rooms[0])
+    expect(cloneZone(sheet.zones[0]!)).not.toBe(sheet.zones[0])
   })
 })
 
-describe('what a room is', () => {
+describe('what a zone is', () => {
   it('knows open ground, a stair and a court', () => {
-    expect(isOpen(room({ cat: 'open' }))).toBe(true)
-    expect(isStair(room({ kind: 'stair' }))).toBe(true)
-    expect(isCourt(room({ kind: 'court', fixed: true }))).toBe(true)
-    expect(isCourt(room({ kind: 'court' }))).toBe(false)
+    expect(isOpen(zone({ cat: 'open' }))).toBe(true)
+    expect(isStair(zone({ kind: 'stair' }))).toBe(true)
+    expect(isCourt(zone({ kind: 'court', fixed: true }))).toBe(true)
+    expect(isCourt(zone({ kind: 'court' }))).toBe(false)
   })
 
   it('is its rectangle until it has pieces', () => {
-    expect(piecesOf(room())).toEqual([
+    expect(piecesOf(zone())).toEqual([
       [
         [0, 0],
         [4, 0],
@@ -109,49 +109,49 @@ describe('what a room is', () => {
         [0, 3],
       ],
     ])
-    expect(doorsOf(room())).toEqual([])
+    expect(doorsOf(zone())).toEqual([])
   })
 
   it('reads the program order as the order of importance', () => {
-    const a = room({ id: 'a' })
-    const b = room({ id: 'b' })
+    const a = zone({ id: 'a' })
+    const b = zone({ id: 'b' })
     const sheet = sheetOf([a, b])
     expect(rank(a, sheet)).toBeLessThan(rank(b, sheet))
   })
 
   it('brings its group, or only itself', () => {
-    const a = room({ id: 'a', group: 'g1' })
-    const b = room({ id: 'b', group: 'g1' })
-    const c = room({ id: 'c' })
+    const a = zone({ id: 'a', group: 'g1' })
+    const b = zone({ id: 'b', group: 'g1' })
+    const c = zone({ id: 'c' })
     expect(kin(a, [a, b, c]).length).toBe(2)
     expect(kin(c, [a, b, c])).toEqual([c])
   })
 })
 
 describe('storeys', () => {
-  it('counts what was added and never fewer than the rooms need', () => {
+  it('counts what was added and never fewer than the zones need', () => {
     expect(storeyCountOf(sheetOf([]))).toBe(2)
-    expect(storeyCountOf(sheetOf([room({ storey: 2 })]))).toBe(3)
-    expect(storeyOf(room({ storey: 9 }))).toBe(2)
+    expect(storeyCountOf(sheetOf([zone({ storey: 2 })]))).toBe(3)
+    expect(storeyOf(zone({ storey: 9 }))).toBe(2)
     expect(storeyNameOf(1)).toBe('First')
   })
 
   it('shows one storey, and the stair on every one', () => {
-    const ground = room({ id: 'g', storey: 0 })
-    const up = room({ id: 'u', storey: 1 })
-    const stair = room({ id: 's', kind: 'stair', cat: 'circulation', storey: 0 })
+    const ground = zone({ id: 'g', storey: 0 })
+    const up = zone({ id: 'u', storey: 1 })
+    const stair = zone({ id: 's', kind: 'stair', cat: 'circulation', storey: 0 })
     const sheet = sheetOf([ground, up, stair])
-    expect(placedRooms(sheet, 1).map((r) => r.id)).toEqual(['u', 's'])
+    expect(placedZones(sheet, 1).map((r) => r.id)).toEqual(['u', 's'])
     expect(acrossStoreys(stair, sheet.settings)).toBe(true)
     expect(acrossStoreys(stair, { ...sheet.settings, stairAcross: 0 })).toBe(false)
     expect(allPlaced(sheet).length).toBe(3)
   })
 
   it('reads a zone taller than its storey as open to below on the floor above', () => {
-    const tall = room({ id: 't', storey: 0, height: 7 })
+    const tall = zone({ id: 't', storey: 0, height: 7 })
     const sheet = sheetOf([tall])
     expect(stH(sheet.settings, 0)).toBe(3.5)
-    expect(tallRoom(tall, sheet)).toBe(true)
+    expect(tallZone(tall, sheet)).toBe(true)
     expect(ghostsOf(sheet, 1).map((r) => r.id)).toEqual(['t'])
     expect(isGhost(tall, 1, sheet)).toBe(true)
     expect(isGhost(tall, 0, sheet)).toBe(false)
@@ -159,19 +159,19 @@ describe('storeys', () => {
   })
 
   it('gives a zone its storey’s height unless it has its own, and caps it', () => {
-    const plain = room()
+    const plain = zone()
     const sheet = sheetOf([plain])
     expect(heightOf(plain, sheet)).toBe(3.5)
-    expect(heightOf(room({ height: 5 }), sheet)).toBe(5)
+    expect(heightOf(zone({ height: 5 }), sheet)).toBe(5)
     expect(heightCap(plain, sheet.settings)).toBe(15)
-    expect(zTop(room({ height: 20 }), sheet)).toBe(15)
+    expect(zTop(zone({ height: 20 }), sheet)).toBe(15)
   })
 
   it('offers the storeys below and above to snap to, unless the setting says not to', () => {
-    const ground = room({ id: 'g', storey: 0 })
-    const up = room({ id: 'u', storey: 1 })
-    expect(snapRooms(sheetOf([ground, up]), 0, null).map((r) => r.id)).toEqual(['g', 'u'])
-    expect(snapRooms(sheetOf([ground, up], { snapStoreys: 0 }), 0, null).map((r) => r.id)).toEqual([
+    const ground = zone({ id: 'g', storey: 0 })
+    const up = zone({ id: 'u', storey: 1 })
+    expect(snapZones(sheetOf([ground, up]), 0, null).map((r) => r.id)).toEqual(['g', 'u'])
+    expect(snapZones(sheetOf([ground, up], { snapStoreys: 0 }), 0, null).map((r) => r.id)).toEqual([
       'g',
     ])
   })

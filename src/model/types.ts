@@ -7,7 +7,7 @@ export const PROJECT_VERSION = 11
 
 export type ConnectionKind = 'door' | 'open' | 'main-door'
 
-/** A room id, or the singleton outside. */
+/** A zone id, or the singleton outside. */
 export type Endpoint = string
 
 /** The hand's nudge of a bubble from where the diagram's arrangement puts it, in the diagram's units. */
@@ -17,7 +17,7 @@ export type Bubble = { readonly x: number; readonly y: number }
 export type EdgeHint = { readonly at: Point }
 
 export type Plot = {
-  /** Whether the boundary binds: rooms are held inside it and setbacks apply, or it is drawn for reference only. */
+  /** Whether the boundary binds: zones are held inside it and setbacks apply, or it is drawn for reference only. */
   readonly on: boolean
   readonly polygon: Polygon
   /** Degrees from up on the sheet, clockwise. */
@@ -26,7 +26,7 @@ export type Plot = {
   readonly street: readonly number[]
 }
 
-/** Who the house is for; the program screen reads the rooms it implies from it. */
+/** Who the house is for; the program screen reads the zones it implies from it. */
 export type Household = {
   readonly familySize: number
   readonly bedrooms: number
@@ -38,7 +38,7 @@ export type Household = {
   readonly masterOnGround: boolean
 }
 
-export type Room = {
+export type Zone = {
   readonly id: string
   readonly name: string
   readonly type: string
@@ -60,7 +60,7 @@ export type Connection = {
 }
 
 /**
- * Two rooms the program wants apart: no connection between them, and neither reached only through the
+ * Two zones the program wants apart: no connection between them, and neither reached only through the
  * other. It is not a connection and is never drawn as a door; it warns and refuses nothing.
  */
 export type Apart = {
@@ -70,7 +70,7 @@ export type Apart = {
 }
 
 /**
- * A connection the rulebook suggested and the person took out: the pair it joined, a room id or
+ * A connection the rulebook suggested and the person took out: the pair it joined, a zone id or
  * `EXTERIOR` at either end. It is kept so the suggestion is not made again in this project.
  */
 export type Declined = {
@@ -82,7 +82,7 @@ export type Actor = {
   readonly id: string
   readonly name: string
   readonly role: string
-  /** Room ids, in the order the actor passes through them. */
+  /** Zone ids, in the order the actor passes through them. */
   readonly waypoints: readonly string[]
 }
 
@@ -94,7 +94,7 @@ export type Project = {
   readonly heights: readonly number[]
   readonly plot: Plot
   readonly household: Household
-  readonly rooms: readonly Room[]
+  readonly zones: readonly Zone[]
   readonly connections: readonly Connection[]
   readonly apart: readonly Apart[]
   readonly declined: readonly Declined[]

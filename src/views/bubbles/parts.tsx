@@ -30,11 +30,11 @@ type BubbleProps = {
   readonly name: string
   readonly area: string
   readonly category?: string
-  /** The storeys a stair reaches, said on every one of its bubbles so two circles read as one room. */
+  /** The storeys a stair reaches, said on every one of its bubbles so two circles read as one zone. */
   readonly span?: string
   readonly selected: boolean
   readonly dimmed: boolean
-  /** The room in focus or one it is connected to or kept apart from; the rest fade while one is. */
+  /** The zone in focus or one it is connected to or kept apart from; the rest fade while one is. */
   readonly near: boolean
   readonly onHover: (id: string | null) => void
   readonly onGrab: (event: ReactPointerEvent, spot: Spot) => void
@@ -55,7 +55,7 @@ export const Bubble = memo(function Bubble(props: BubbleProps) {
   const reach = { x: spot.x + spot.r * Math.SQRT1_2, y: spot.y - spot.r * Math.SQRT1_2 }
   return (
     <g
-      data-room={spot.id}
+      data-zone={spot.id}
       data-name={name}
       data-storey={spot.storey}
       data-x={spot.x}
@@ -102,7 +102,7 @@ export const Bubble = memo(function Bubble(props: BubbleProps) {
         data-reach={spot.id}
         onPointerDown={(event) => props.onReach(event, spot)}
       >
-        <title>Drag to another room to connect them</title>
+        <title>Drag to another zone to connect them</title>
       </circle>
     </g>
   )
@@ -124,7 +124,7 @@ type LinkProps = {
   readonly storey: number
   readonly selected: boolean
   readonly dimmed: boolean
-  /** Joined to the room in focus: drawn bold while the rest fade. */
+  /** Joined to the zone in focus: drawn bold while the rest fade. */
   readonly near: boolean
   readonly title: string
   readonly onSelect: (event: ReactPointerEvent, id: string) => void
@@ -179,7 +179,7 @@ type ApartProps = {
 /** Half the reach of the cross on a keep-apart line, in the diagram's units. */
 const CROSS = 5
 
-/** Two rooms kept apart: a red dashed line with a cross at its middle, unlike any connection. */
+/** Two zones kept apart: a red dashed line with a cross at its middle, unlike any connection. */
 export const Apart = memo(function Apart(props: ApartProps) {
   const [x1, y1, x2, y2] = rimToRim(props.from, props.to)
   const mx = (x1 + x2) / 2
@@ -214,7 +214,7 @@ export function Outside(props: {
   if (props.dimmed) classes.push('bubble-dimmed')
   if (props.near) classes.push('bubble-near')
   return (
-    <g data-room="EXTERIOR" data-storey={spot.storey} className={classes.join(' ')}>
+    <g data-zone="EXTERIOR" data-storey={spot.storey} className={classes.join(' ')}>
       <rect x={spot.x - 44} y={spot.y - spot.r} width={88} height={spot.r * 2} rx={6} />
       <text x={spot.x} y={spot.y}>
         Outside

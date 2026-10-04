@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { fitSentence, storeyFits, storeyLabel, type FitRoom } from './fit'
+import { fitSentence, storeyFits, storeyLabel, type FitZone } from './fit'
 
-const room = (targetArea: number, storey = 0, storeysSpanned = 1): FitRoom => ({
+const zone = (targetArea: number, storey = 0, storeysSpanned = 1): FitZone => ({
   targetArea,
   storey,
   storeysSpanned,
@@ -18,7 +18,7 @@ describe('the fit of a storey against its buildable area', () => {
   const buildable = 365.5
 
   it('says what is to spare on a storey that fits', () => {
-    const [ground] = storeyFits([room(200), room(92)], buildable, 1)
+    const [ground] = storeyFits([zone(200), zone(92)], buildable, 1)
     expect(ground?.needed).toBe(292)
     expect(ground?.over).toBe(false)
     expect(fitSentence(ground!)).toBe(
@@ -27,24 +27,24 @@ describe('the fit of a storey against its buildable area', () => {
   })
 
   it('says by how much a storey is over', () => {
-    const [ground] = storeyFits([room(200), room(198.5)], buildable, 1)
+    const [ground] = storeyFits([zone(200), zone(198.5)], buildable, 1)
     expect(ground?.over).toBe(true)
     expect(fitSentence(ground!)).toBe('398.5 m² of targets on 365.5 m² buildable · over by 33 m²')
   })
 
   it('counts a stair on every storey it passes through', () => {
-    const fits = storeyFits([room(12, 0, 2), room(30, 1)], buildable, 2)
+    const fits = storeyFits([zone(12, 0, 2), zone(30, 1)], buildable, 2)
     expect(fits.map((fit) => fit.needed)).toEqual([12, 42])
   })
 
   it('is over on a plot the setbacks leave nothing of', () => {
-    const [ground] = storeyFits([room(40)], 0, 1)
+    const [ground] = storeyFits([zone(40)], 0, 1)
     expect(ground?.over).toBe(true)
     expect(fitSentence(ground!)).toBe('40 m² of targets on 0 m² buildable · over by 40 m²')
   })
 
-  it('gives a storey with no rooms its whole floor to spare', () => {
-    const fits = storeyFits([room(40)], buildable, 2)
+  it('gives a storey with no zones its whole floor to spare', () => {
+    const fits = storeyFits([zone(40)], buildable, 2)
     expect(fits[1]).toEqual({
       storey: 1,
       needed: 0,

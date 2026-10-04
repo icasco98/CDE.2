@@ -342,7 +342,7 @@
   align-self: flex-start;
 }
 
-/* A category's zone: a wash of its colour behind its rooms, never in the hand's way. */
+/* A category's cloud: a wash of its colour behind its zones, never in the hand's way. */
 .bubbles-sheet .clouds {
   pointer-events: none;
 }
@@ -364,7 +364,7 @@
   opacity: 0.4;
 }
 
-/* A room in focus, under the hand or selected: its connections bold, everything else faint. */
+/* A zone in focus, under the hand or selected: its connections bold, everything else faint. */
 .bubbles-sheet .bubble,
 .bubbles-sheet .outside,
 .bubbles-sheet .link-group,
@@ -390,7 +390,7 @@
   stroke-width: 3.5px;
 }
 
-/* A stair's circles on two storeys are one room; the tie between them is not a connection. */
+/* A stair's circles on two storeys are one zone; the tie between them is not a connection. */
 .bubbles-sheet .through {
   stroke: #9a958c;
   stroke-width: 1.5px;

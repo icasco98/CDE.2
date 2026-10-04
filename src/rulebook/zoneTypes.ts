@@ -1,13 +1,13 @@
-import type { LegalFloor, RoomType } from './types'
+import type { LegalFloor, ZoneType } from './types'
 
 const sizes = 'Kuwait Municipality, minimum room sizes'
-const minimumRoom: LegalFloor = { area: 10, width: 3, source: sizes }
+const minimumZone: LegalFloor = { area: 10, width: 3, source: sizes }
 const minimumKitchen: LegalFloor = { area: 7.5, width: 2, source: sizes }
 const minimumBathroom: LegalFloor = { area: 4, width: 1.75, source: sizes }
 const minimumWc: LegalFloor = { area: 1.5, width: 1.2, source: sizes }
 
-/** Transcribed row for row from rulebook/room-types.md, which stays the source a person reads. */
-export const roomTypes: readonly RoomType[] = [
+/** Transcribed row for row from rulebook/zone-types.md, which stays the source a person reads. */
+export const zoneTypes: readonly ZoneType[] = [
   {
     id: 'entry-foyer',
     label: 'Entry / Foyer',
@@ -25,7 +25,7 @@ export const roomTypes: readonly RoomType[] = [
     id: 'diwaniya',
     label: 'Diwaniya',
     arabic: 'ديوانية',
-    legalFloor: minimumRoom,
+    legalFloor: minimumZone,
     typical: 'by plot band',
     range: 'by plot band',
     proportion: { min: 1.2, max: 2 },
@@ -54,7 +54,7 @@ export const roomTypes: readonly RoomType[] = [
     id: 'formal-living',
     label: 'Formal Living',
     arabic: 'صالة رسمية',
-    legalFloor: minimumRoom,
+    legalFloor: minimumZone,
     typical: 'by plot band',
     range: 'by plot band',
     proportion: { min: 1, max: 1.6 },
@@ -68,7 +68,7 @@ export const roomTypes: readonly RoomType[] = [
     id: 'family-living',
     label: 'Family Living',
     arabic: 'صالة المعيشة',
-    legalFloor: minimumRoom,
+    legalFloor: minimumZone,
     typical: 'by plot band',
     range: 'by plot band',
     proportion: { min: 1, max: 1.6 },
@@ -82,7 +82,7 @@ export const roomTypes: readonly RoomType[] = [
     id: 'womens-reception',
     label: "Women's Reception",
     arabic: 'مجلس نساء',
-    legalFloor: minimumRoom,
+    legalFloor: minimumZone,
     typical: 30,
     range: { min: 24, max: 40 },
     proportion: { min: 1, max: 1.6 },
@@ -96,7 +96,7 @@ export const roomTypes: readonly RoomType[] = [
     id: 'dining-room',
     label: 'Dining Room',
     arabic: 'غرفة الطعام',
-    legalFloor: minimumRoom,
+    legalFloor: minimumZone,
     typical: 24,
     range: { min: 18, max: 32 },
     proportion: { min: 1.2, max: 1.8 },
@@ -138,7 +138,7 @@ export const roomTypes: readonly RoomType[] = [
     id: 'master-bedroom',
     label: 'Master Bedroom',
     arabic: 'غرفة النوم الرئيسية',
-    legalFloor: minimumRoom,
+    legalFloor: minimumZone,
     typical: 28,
     range: { min: 22, max: 36 },
     proportion: { min: 1, max: 1.5 },
@@ -153,7 +153,7 @@ export const roomTypes: readonly RoomType[] = [
     id: 'bedroom',
     label: 'Bedroom',
     arabic: 'غرفة نوم',
-    legalFloor: minimumRoom,
+    legalFloor: minimumZone,
     typical: 18,
     range: { min: 14, max: 22 },
     proportion: { min: 1, max: 1.5 },
@@ -223,7 +223,7 @@ export const roomTypes: readonly RoomType[] = [
     id: 'office-study',
     label: 'Office / Study',
     arabic: 'مكتب',
-    legalFloor: minimumRoom,
+    legalFloor: minimumZone,
     typical: 14,
     range: { min: 12, max: 18 },
     proportion: { min: 1, max: 1.5 },
@@ -335,7 +335,7 @@ export const roomTypes: readonly RoomType[] = [
     id: 'maid-room',
     label: 'Maid Room',
     arabic: 'غرفة خادمة',
-    legalFloor: minimumRoom,
+    legalFloor: minimumZone,
     typical: 12,
     range: { min: 10, max: 14 },
     proportion: { min: 1, max: 1.4 },
@@ -364,7 +364,7 @@ export const roomTypes: readonly RoomType[] = [
     id: 'driver-room',
     label: 'Driver Room',
     arabic: 'غرفة سائق',
-    legalFloor: minimumRoom,
+    legalFloor: minimumZone,
     typical: 12,
     range: { min: 10, max: 14 },
     proportion: { min: 1, max: 1.4 },
@@ -412,7 +412,7 @@ export const roomTypes: readonly RoomType[] = [
       area: 9,
       width: 1.5,
       source: 'Kuwait Municipality, light wells',
-      note: 'if it lights rooms',
+      note: 'if it lights zones',
     },
     typical: 25,
     range: { min: 16, max: 50 },
@@ -441,10 +441,10 @@ export const roomTypes: readonly RoomType[] = [
     basis: 'legal cap',
   },
   {
-    id: 'room-other',
-    label: 'Room (other)',
+    id: 'zone-other',
+    label: 'Zone (other)',
     arabic: 'غرفة',
-    legalFloor: minimumRoom,
+    legalFloor: minimumZone,
     typical: 12,
     range: { min: 10, max: 20 },
     proportion: { min: 1, max: 1.6 },

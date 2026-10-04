@@ -69,29 +69,29 @@ export const TABS: Tab[] = [
       {
         kind: 'seg',
         name: 'rule',
-        label: 'When a room lands on another',
+        label: 'When a zone lands on another',
         choices: [
           { value: 'wait', label: 'Wait' },
           { value: 'push', label: 'Push others' },
         ],
-        hint: 'Wait: the room lands where you put it, the overlap is tinted and nothing moves until you settle it. Push others: the rooms lower in the program slide aside at once, never shrinking. The same switch sits above the sheet.',
+        hint: 'Wait: the zone lands where you put it, the overlap is tinted and nothing moves until you settle it. Push others: the zones lower in the program slide aside at once, never shrinking. The same switch sits above the sheet.',
       },
       {
         kind: 'seg',
         name: 'yieldKeeps',
-        label: 'A room that gives way keeps',
+        label: 'A zone that gives way keeps',
         choices: [
-          { value: 'rect', label: 'A squared-off room' },
+          { value: 'rect', label: 'A squared-off zone' },
           { value: 'rest', label: 'Everything but the overlap' },
         ],
-        hint: 'Settling by giving way cuts the newer room back: squared off on the side that loses least, or left standing as an L with only the overlap taken out.',
+        hint: 'Settling by giving way cuts the newer zone back: squared off on the side that loses least, or left standing as an L with only the overlap taken out.',
       },
       {
         kind: 'seg',
         name: 'allowSpill',
-        label: 'Rooms may leave the buildable line',
+        label: 'Zones may leave the buildable line',
         choices: onOff('Yes, shown', 'No, held in'),
-        hint: 'Yes: a room can stand past the setback line and is flagged in the sentence. No: every move is held inside the line the ground floor may reach.',
+        hint: 'Yes: a zone can stand past the setback line and is flagged in the sentence. No: every move is held inside the line the ground floor may reach.',
       },
       {
         kind: 'range',
@@ -121,7 +121,7 @@ export const TABS: Tab[] = [
         max: 1,
         step: 0.05,
         unit: ' m',
-        hint: 'How close, in metres, a moved room or a drawn point must come to an edge or corner before it is pulled onto it. Nought turns snapping off.',
+        hint: 'How close, in metres, a moved zone or a drawn point must come to an edge or corner before it is pulled onto it. Nought turns snapping off.',
       },
       {
         kind: 'seg',
@@ -143,7 +143,7 @@ export const TABS: Tab[] = [
         max: 0.5,
         step: 0.05,
         unit: ' m',
-        hint: "After every move, an edge facing a neighbour's edge closer than this is pulled onto it, so rooms share an edge instead of leaving a sliver. Nought turns it off.",
+        hint: "After every move, an edge facing a neighbour's edge closer than this is pulled onto it, so zones share an edge instead of leaving a sliver. Nought turns it off.",
       },
       {
         kind: 'seg',
@@ -162,9 +162,9 @@ export const TABS: Tab[] = [
       {
         kind: 'seg',
         name: 'sharedEdges',
-        label: 'A shared edge drags both rooms',
+        label: 'A shared edge drags both zones',
         choices: onOff('On', 'Off'),
-        hint: 'Dragging an edge that two rooms share moves it for both. Off, only the room you took it from changes.',
+        hint: 'Dragging an edge that two zones share moves it for both. Off, only the zone you took it from changes.',
       },
       {
         kind: 'seg',
@@ -176,7 +176,7 @@ export const TABS: Tab[] = [
           { value: 15, label: '15°' },
           { value: 45, label: '45°' },
         ],
-        hint: "The knob above a selected room turns it; the turn lands on these steps. A neighbour's angle catches it whatever the step. R gives a quarter turn.",
+        hint: "The knob above a selected zone turns it; the turn lands on these steps. A neighbour's angle catches it whatever the step. R gives a quarter turn.",
       },
       {
         kind: 'seg',
@@ -186,7 +186,7 @@ export const TABS: Tab[] = [
           { value: 'sheet', label: 'The sheet' },
           { value: 'north', label: 'North' },
         ],
-        hint: 'With North, the turn steps land on north and its quarters, so a room turned by hand faces north without hunting. Right-click a room for Face north.',
+        hint: 'With North, the turn steps land on north and its quarters, so a zone turned by hand faces north without hunting. Right-click a zone for Face north.',
       },
     ],
   },
@@ -203,17 +203,17 @@ export const TABS: Tab[] = [
       {
         kind: 'seg',
         name: 'pocketKeeps',
-        label: 'A room that takes a space keeps',
+        label: 'A zone that takes a space keeps',
         choices: [
           { value: 'shape', label: "The space's shape" },
-          { value: 'square', label: 'A squared-off room' },
+          { value: 'square', label: 'A squared-off zone' },
         ],
-        hint: 'When an enclosed empty space is given to a room, the room can take the space’s exact shape, or square itself off round it where that overlaps nothing.',
+        hint: 'When an enclosed empty space is given to a zone, the zone can take the space’s exact shape, or square itself off round it where that overlaps nothing.',
       },
       {
         kind: 'note',
         label: 'Reshape',
-        hint: 'Reshape has no settings of its own: it draws with the snaps above, takes away what overlaps the room, adds a touching shape outside, and splits off the smaller part into the program when a stroke cuts the room in two.',
+        hint: 'Reshape has no settings of its own: it draws with the snaps above, takes away what overlaps the zone, adds a touching shape outside, and splits off the smaller part into the program when a stroke cuts the zone in two.',
       },
     ],
   },
@@ -233,7 +233,7 @@ export const TABS: Tab[] = [
       {
         kind: 'note',
         label: 'Rules that are not settings',
-        hint: 'An edge on the plot boundary takes no door. A door on a shared edge serves both rooms; two doors never overlap on one edge. Open edge takes out only the stretch two rooms share, never past a corner.',
+        hint: 'An edge on the plot boundary takes no door. A door on a shared edge serves both zones; two doors never overlap on one edge. Open edge takes out only the stretch two zones share, never past a corner.',
       },
     ],
   },
@@ -243,9 +243,9 @@ export const TABS: Tab[] = [
       {
         kind: 'seg',
         name: 'showArea',
-        label: 'Area written on the room',
+        label: 'Area written on the zone',
         choices: onOff('Shown', 'Only in the program'),
-        hint: "The program list always shows each room's area against its target. A room short of its target shows its shortfall on the sheet either way.",
+        hint: "The program list always shows each zone's area against its target. A zone short of its target shows its shortfall on the sheet either way.",
       },
       {
         kind: 'seg',
@@ -256,7 +256,7 @@ export const TABS: Tab[] = [
           { value: 'size', label: 'Size only' },
           { value: 'none', label: 'None' },
         ],
-        hint: 'The blue numbers round a selected room: its width and depth, and the gaps to the neighbours and the lines. Click a number to type it.',
+        hint: 'The blue numbers round a selected zone: its width and depth, and the gaps to the neighbours and the lines. Click a number to type it.',
       },
       {
         kind: 'range',
@@ -276,12 +276,12 @@ export const TABS: Tab[] = [
         max: 6,
         step: 0.5,
         unit: ' s',
-        hint: 'How long the pointer rests on a room before a tag beside it gives the full name and the area against target.',
+        hint: 'How long the pointer rests on a zone before a tag beside it gives the full name and the area against target.',
       },
       {
         kind: 'note',
         label: 'Names',
-        hint: 'A name is laid where its box fits clear of every other room, upright or along the room, shrinking and then falling to initials only when it must. Select a room and drag its name to place it by hand; right-click to put it back.',
+        hint: 'A name is laid where its box fits clear of every other zone, upright or along the zone, shrinking and then falling to initials only when it must. Select a zone and drag its name to place it by hand; right-click to put it back.',
       },
     ],
   },
@@ -304,7 +304,7 @@ export const TABS: Tab[] = [
         name: 'showPockets',
         label: 'Enclosed empty spaces',
         choices: onOff('Shown', 'Hidden'),
-        hint: 'Right-click any empty space closed by rooms and the setback line to give it to one of them, make it a court, or make it a corridor. Shown tints such spaces grey as well.',
+        hint: 'Right-click any empty space closed by zones and the setback line to give it to one of them, make it a court, or make it a corridor. Shown tints such spaces grey as well.',
       },
       {
         kind: 'range',
@@ -314,7 +314,7 @@ export const TABS: Tab[] = [
         max: 20,
         step: 1,
         unit: ' m²',
-        hint: "and room for a square of the side below. The Municipality's light well is 9 m² with a 1.5 m side.",
+        hint: "and space for a square of the side below. The Municipality's light well is 9 m² with a 1.5 m side.",
       },
       {
         kind: 'range',
@@ -338,12 +338,12 @@ export const TABS: Tab[] = [
         max: 1500,
         step: 20,
         unit: ' ms',
-        hint: 'How long a pushed room takes to slide to its new place. Nought is instant.',
+        hint: 'How long a pushed zone takes to slide to its new place. Nought is instant.',
       },
       {
         kind: 'select',
         name: 'ease',
-        label: 'How a pushed room comes to rest',
+        label: 'How a pushed zone comes to rest',
         choices: [
           { value: 'cubic-bezier(.2,.7,.2,1)', label: 'Slows into place' },
           { value: 'cubic-bezier(.34,1.4,.64,1)', label: 'Overshoots a little, then settles' },
@@ -359,7 +359,7 @@ export const TABS: Tab[] = [
         max: 5,
         step: 0.5,
         unit: '×',
-        hint: 'How far a pushed room overshoots before it settles back, and how much it squashes on the way. 1 is quiet.',
+        hint: 'How far a pushed zone overshoots before it settles back, and how much it squashes on the way. 1 is quiet.',
       },
     ],
   },
@@ -369,8 +369,8 @@ export const TABS: Tab[] = [
       {
         kind: 'colour',
         name: 'colors',
-        label: 'Room colours by category',
-        hint: "Every room of a category takes its colour, on the sheet and in the program. Right-click a room for a colour of its own; the same menu puts it back to its category's colour. Colours save with the sheet and go into the spec.",
+        label: 'Zone colours by category',
+        hint: "Every zone of a category takes its colour, on the sheet and in the program. Right-click a zone for a colour of its own; the same menu puts it back to its category's colour. Colours save with the sheet and go into the spec.",
       },
       {
         kind: 'range',
@@ -380,7 +380,7 @@ export const TABS: Tab[] = [
         max: 0.6,
         step: 0.05,
         unit: '',
-        hint: 'How strongly the part where two rooms overlap is tinted while it lasts.',
+        hint: 'How strongly the part where two zones overlap is tinted while it lasts.',
       },
     ],
   },
@@ -460,8 +460,8 @@ export const TABS: Tab[] = [
         kind: 'seg',
         name: 'stairAcross',
         label: 'The stair',
-        choices: onOff('One across storeys', 'A room per storey'),
-        hint: 'One across: the stair stands on both storeys at the same place, moved from either, and upstairs the walk test starts from it. A room per storey: it is an ordinary zone.',
+        choices: onOff('One across storeys', 'A zone per storey'),
+        hint: 'One across: the stair stands on both storeys at the same place, moved from either, and upstairs the walk test starts from it. A zone per storey: it is an ordinary zone.',
       },
       {
         kind: 'seg',
@@ -488,7 +488,7 @@ export const TABS: Tab[] = [
   },
 ]
 
-/** The category colours as the sheet's own variables, so a swatch changed paints every room. */
+/** The category colours as the sheet's own variables, so a swatch changed paints every zone. */
 const COLOUR_VAR: Record<string, string> = {
   reception: '--reception',
   shared: '--shared',

@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 
-/** What is selected: a room id, a connection id, or nothing. One selection serves every stage, so a room picked in the bubbles is the room picked in the zoning. */
+/** What is selected: a zone id, a connection id, or nothing. One selection serves every stage, so a zone picked in the bubbles is the zone picked in the zoning. */
 let selected: string | null = null
 const listeners = new Set<() => void>()
 

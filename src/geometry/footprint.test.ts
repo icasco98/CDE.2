@@ -31,7 +31,7 @@ describe('the placed outline', () => {
     expect(outlineOf(footprint)).toEqual(footprint.polygon)
   })
 
-  it('needs 7.07 m of width for a 4 x 6 m room turned 45 degrees', () => {
+  it('needs 7.07 m of width for a 4 x 6 m zone turned 45 degrees', () => {
     const bounds = boundingBox(outlineOf(rectangle(0, 0, 4, 6, 45)))
     expect(bounds.width).toBeCloseTo(10 / Math.SQRT2, 6)
     expect(bounds.depth).toBeCloseTo(10 / Math.SQRT2, 6)
@@ -44,7 +44,7 @@ describe('the placed outline', () => {
   })
 
   it('turns clockwise on the sheet, where y runs down', () => {
-    // A 4 x 2 room turned a quarter turn stands 2 wide and 4 deep about the same centre.
+    // A 4 x 2 zone turned a quarter turn stands 2 wide and 4 deep about the same centre.
     const bounds = boundingBox(outlineOf(rectangle(0, 0, 4, 2, 90)))
     expect(bounds.left).toBeCloseTo(1, 9)
     expect(bounds.top).toBeCloseTo(-1, 9)

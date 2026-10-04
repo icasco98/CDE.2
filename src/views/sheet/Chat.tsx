@@ -105,7 +105,7 @@ export function Chat(props: ChatProps) {
     }
     keep(withFeedback(held.current, text, now))
     setBusy(true)
-    const before = JSON.stringify(read().rooms)
+    const before = JSON.stringify(read().zones)
     onBegin()
     const working = add('quiet', 'Working…', true)
     let answer = 0
@@ -137,7 +137,7 @@ export function Chat(props: ChatProps) {
       if (run.note) add('quiet', run.note)
     }
     setBusy(false)
-    onEnd(JSON.stringify(read().rooms) !== before)
+    onEnd(JSON.stringify(read().zones) !== before)
   }
 
   /** Enter says it; Shift+Enter is a line of its own, so a sentence can be read back. */

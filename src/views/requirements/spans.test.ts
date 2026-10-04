@@ -25,7 +25,7 @@ describe('the two ends of a stair', () => {
     expect(spanBetween(1, 2)).toBe(2)
   })
 
-  it('reads the far end back off what the room stores', () => {
+  it('reads the far end back off what the zone stores', () => {
     expect(topOf({ storey: 0, storeysSpanned: 3 })).toBe(2)
     expect(topOf({ storey: 1, storeysSpanned: 2 })).toBe(2)
     expect(topOf({ storey: 2, storeysSpanned: 0 })).toBe(2)

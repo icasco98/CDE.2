@@ -1,18 +1,18 @@
 /**
- * A drawn plan the sheet's tests read: rooms placed by hand on two storeys, with the doors drawn on
+ * A drawn plan the sheet's tests read: zones placed by hand on two storeys, with the doors drawn on
  * them and the connections those doors draw, kept as test data only.
  */
 
-import { sheetOf, type Door, type Poly, type Room, type Settings, type Sheet } from './model'
+import { sheetOf, type Door, type Poly, type Zone, type Settings, type Sheet } from './model'
 import { repair } from './kinds'
 
-type SavedRoom = Omit<Room, 'cat' | 'angle' | 'pieces'> & {
+type SavedZone = Omit<Zone, 'cat' | 'angle' | 'pieces'> & {
   cat: string
   angle?: number
   pieces?: Poly[] | null
 }
 
-const EMBEDDED_ROOMS: SavedRoom[] = [
+const EMBEDDED_ZONES: SavedZone[] = [
   {
     angle: 0,
     cat: 'shared',
@@ -445,7 +445,7 @@ const EMBEDDED_ROOMS: SavedRoom[] = [
   },
 ]
 
-/** The doors of the plan, by the room that holds each: every one names the connection it draws. */
+/** The doors of the plan, by the zone that holds each: every one names the connection it draws. */
 const DOORS: Record<string, Door[]> = {
   r0: [
     {
@@ -823,11 +823,11 @@ export const FIXTURE_CONNECTIONS: {
   },
 ]
 
-/** The plan, ready to work on: the rooms with their defaults filled, their doors, and repaired. */
+/** The plan, ready to work on: the zones with their defaults filled, their doors, and repaired. */
 export function fixtureSheet(settings: Partial<Settings> = {}): Sheet {
   const sheet = sheetOf([], settings)
-  const rooms = EMBEDDED_ROOMS.map(
-    (r): Room =>
+  const zones = EMBEDDED_ZONES.map(
+    (r): Zone =>
       JSON.parse(
         JSON.stringify({
           angle: 0,
@@ -835,8 +835,8 @@ export function fixtureSheet(settings: Partial<Settings> = {}): Sheet {
           ...r,
           ...(DOORS[r.id] ? { doors: DOORS[r.id] } : {}),
         }),
-      ) as Room,
+      ) as Zone,
   )
-  sheet.rooms = repair(rooms, sheet.settings)
+  sheet.zones = repair(zones, sheet.settings)
   return sheet
 }

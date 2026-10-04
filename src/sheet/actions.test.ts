@@ -35,7 +35,7 @@ import {
   restOnGrid,
   restore,
   sendBack,
-  sendBackRoom,
+  sendBackZone,
   setArea,
   setColor,
   setDoorWidth,
@@ -51,7 +51,7 @@ import {
   unlock,
   HISTORY_CAP,
 } from './actions'
-import { DEFAULTS, doorsOf, sheetOf, type Poly, type Room, type Sheet } from './model'
+import { DEFAULTS, doorsOf, sheetOf, type Poly, type Zone, type Sheet } from './model'
 import { areaOf, outlineOf, r2, worldPieces } from './geometry'
 import { differencePolygons, area as clipArea } from '../geometry/polygon'
 import { fixtureSheet } from './fixture'
@@ -59,10 +59,10 @@ import { report } from './report'
 import { drawnDoors } from './doors'
 import { pocketsOf } from './pockets'
 
-const room = (over: Partial<Room> = {}): Room => ({
+const zone = (over: Partial<Zone> = {}): Zone => ({
   id: 'a',
   name: 'A',
-  kind: 'room',
+  kind: 'zone',
   cat: 'shared',
   target: 12,
   x: 6,
@@ -76,79 +76,79 @@ const room = (over: Partial<Room> = {}): Room => ({
   ...over,
 })
 
-const quiet = (rooms: Room[], settings = {}): Sheet =>
-  sheetOf(rooms, { closeGap: 0, snapDist: 0, grid: 0, ...settings })
+const quiet = (zones: Zone[], settings = {}): Sheet =>
+  sheetOf(zones, { closeGap: 0, snapDist: 0, grid: 0, ...settings })
 
-const roomOf = (sheet: Sheet, id: string) => sheet.rooms.find((r) => r.id === id)!
+const zoneOf = (sheet: Sheet, id: string) => sheet.zones.find((r) => r.id === id)!
 
 describe('placing and moving', () => {
-  it('drops a room from the program where the hand puts it', () => {
-    const sheet = quiet([room({ placed: false })])
+  it('drops a zone from the program where the hand puts it', () => {
+    const sheet = quiet([zone({ placed: false })])
     const out = place(sheet, { id: 'a', x: 8, y: 9, storey: 0 })
     expect(out.result.ok).toBe(true)
     expect(out.result.at).toEqual({ x: 8, y: 9, w: 4, h: 3 })
     expect(out.result.said).toBe('A at 8,9 4×3')
-    expect(roomOf(out.sheet, 'a').placed).toBe(true)
-    expect(sheet.rooms[0]!.placed).toBe(false)
+    expect(zoneOf(out.sheet, 'a').placed).toBe(true)
+    expect(sheet.zones[0]!.placed).toBe(false)
   })
 
-  it('refuses to place a locked room, and leaves the sheet alone', () => {
-    const sheet = quiet([room({ locked: true })])
+  it('refuses to place a locked zone, and leaves the sheet alone', () => {
+    const sheet = quiet([zone({ locked: true })])
     const out = place(sheet, { id: 'a', x: 1, y: 1, storey: 0 })
     expect(out.result).toEqual({ ok: false, said: 'A is locked' })
     expect(out.sheet).toBe(sheet)
     expect(place(sheet, { id: 'nope', x: 1, y: 1, storey: 0 }).result.said).toBe(
-      'no room called nope',
+      'no zone called nope',
     )
   })
 
-  it('holds a dropped room inside the line the ground floor may reach', () => {
-    const sheet = quiet([room({ placed: false })], { allowSpill: 0, boundary: 'off' })
+  it('holds a dropped zone inside the line the ground floor may reach', () => {
+    const sheet = quiet([zone({ placed: false })], { allowSpill: 0, boundary: 'off' })
     const out = place(sheet, { id: 'a', x: 0, y: 0, storey: 0 })
     expect([out.result.at!.x, out.result.at!.y]).toEqual([1.5, 1.5])
   })
 
-  it('moves a room and its group as one', () => {
-    const sheet = quiet([room({ group: 'g1' }), room({ id: 'b', x: 12, y: 6, group: 'g1' })])
+  it('moves a zone and its group as one', () => {
+    const sheet = quiet([zone({ group: 'g1' }), zone({ id: 'b', x: 12, y: 6, group: 'g1' })])
     const out = move(sheet, { ids: ['a', 'b'], dx: 1, dy: 2, storey: 0 })
-    expect([roomOf(out.sheet, 'a').x, roomOf(out.sheet, 'a').y]).toEqual([7, 8])
-    expect([roomOf(out.sheet, 'b').x, roomOf(out.sheet, 'b').y]).toEqual([13, 8])
+    expect([zoneOf(out.sheet, 'a').x, zoneOf(out.sheet, 'a').y]).toEqual([7, 8])
+    expect([zoneOf(out.sheet, 'b').x, zoneOf(out.sheet, 'b').y]).toEqual([13, 8])
   })
 
   it('keeps a move to one axis when asked', () => {
-    const sheet = quiet([room()])
+    const sheet = quiet([zone()])
     const out = move(sheet, { ids: ['a'], dx: 1, dy: 2, storey: 0, axisLock: true })
-    expect([roomOf(out.sheet, 'a').x, roomOf(out.sheet, 'a').y]).toEqual([6, 8])
+    expect([zoneOf(out.sheet, 'a').x, zoneOf(out.sheet, 'a').y]).toEqual([6, 8])
   })
 
-  it('refuses to move nothing, or a locked room', () => {
-    expect(move(quiet([room()]), { ids: [], dx: 1, dy: 0, storey: 0 }).result.ok).toBe(false)
+  it('refuses to move nothing, or a locked zone', () => {
+    expect(move(quiet([zone()]), { ids: [], dx: 1, dy: 0, storey: 0 }).result.ok).toBe(false)
     expect(
-      move(quiet([room({ locked: true })]), { ids: ['a'], dx: 1, dy: 0, storey: 0 }).result.said,
+      move(quiet([zone({ locked: true })]), { ids: ['a'], dx: 1, dy: 0, storey: 0 }).result.said,
     ).toBe('nothing to move')
   })
 
-  it('turns a room a quarter, to an angle, and to face north', () => {
-    const sheet = quiet([room()])
-    expect(roomOf(turn(sheet, { ids: ['a'], storey: 0, quarter: true }).sheet, 'a').w).toBe(3)
+  it('turns a zone a quarter, to an angle, and to face north', () => {
+    const sheet = quiet([zone()])
+    expect(zoneOf(turn(sheet, { ids: ['a'], storey: 0, quarter: true }).sheet, 'a').w).toBe(3)
     expect(turn(sheet, { ids: ['a'], storey: 0, angle: 37 }).result.said).toBe('A at 30°')
     expect(turn(sheet, { ids: ['a'], storey: 0, faceNorth: true }).result.said).toBe('A at 25°')
   })
 
   it('snaps a turn onto a neighbour’s angle', () => {
-    const sheet = quiet([room(), room({ id: 'b', x: 12, y: 12, angle: 25 })])
+    const sheet = quiet([zone(), zone({ id: 'b', x: 12, y: 12, angle: 25 })])
     expect(turn(sheet, { ids: ['a'], storey: 0, angle: 27 }).result.said).toBe('A at 25°')
   })
 
   it('refuses to turn nothing', () => {
-    expect(turn(quiet([room()]), { ids: [], storey: 0, quarter: true }).result.said).toBe(
+    expect(turn(quiet([zone()]), { ids: [], storey: 0, quarter: true }).result.said).toBe(
       'nothing to turn',
     )
   })
 
-  it('mirrors a room, and refuses when nothing is in hand', () => {
+  it('mirrors a zone, and refuses when nothing is in hand', () => {
     const sheet = quiet([
-      room({
+      zone({
         pieces: [
           [
             [0, 0],
@@ -160,7 +160,7 @@ describe('placing and moving', () => {
     ])
     const out = mirror(sheet, { ids: ['a'], axis: 'x', storey: 0 })
     expect(out.result.said).toBe('A mirrored left to right')
-    expect(roomOf(out.sheet, 'a').pieces![0]).toEqual([
+    expect(zoneOf(out.sheet, 'a').pieces![0]).toEqual([
       [0, 3],
       [0, 0],
       [4, 0],
@@ -170,27 +170,27 @@ describe('placing and moving', () => {
 })
 
 describe('edges, corners and sizes', () => {
-  it('pulls an edge out and the room grows', () => {
-    const sheet = quiet([room({ x: 6, y: 6, w: 4, h: 4 })])
-    const seg = outlineOf(sheet.rooms[0]!).findIndex((s) => s.n[0] === 1)
+  it('pulls an edge out and the zone grows', () => {
+    const sheet = quiet([zone({ x: 6, y: 6, w: 4, h: 4 })])
+    const seg = outlineOf(sheet.zones[0]!).findIndex((s) => s.n[0] === 1)
     const out = pullEdge(sheet, { id: 'a', edge: seg, distance: 1, storey: 0 })
     expect(out.result.ok).toBe(true)
-    expect(r2(areaOf(roomOf(out.sheet, 'a')))).toBe(20)
+    expect(r2(areaOf(zoneOf(out.sheet, 'a')))).toBe(20)
   })
 
-  it('refuses an edge that is not there, and a locked room', () => {
-    const sheet = quiet([room()])
+  it('refuses an edge that is not there, and a locked zone', () => {
+    const sheet = quiet([zone()])
     expect(pullEdge(sheet, { id: 'a', edge: 9, distance: 1, storey: 0 }).result.said).toBe(
       'A has no such edge',
     )
     expect(
-      pullEdge(quiet([room({ locked: true })]), { id: 'a', edge: 0, distance: 1, storey: 0 }).result
+      pullEdge(quiet([zone({ locked: true })]), { id: 'a', edge: 0, distance: 1, storey: 0 }).result
         .said,
     ).toBe('A is locked')
   })
 
-  it('moves one corner of a drawn room', () => {
-    const drawn = room({
+  it('moves one corner of a drawn zone', () => {
+    const drawn = zone({
       x: 6,
       y: 6,
       w: 4,
@@ -210,41 +210,41 @@ describe('edges, corners and sizes', () => {
     })
     const out = moveCorner(quiet([drawn]), { id: 'a', corner: 0, point: [7, 7], storey: 0 })
     expect(out.result.ok).toBe(true)
-    expect(areaOf(roomOf(out.sheet, 'a'))).toBeLessThan(16)
+    expect(areaOf(zoneOf(out.sheet, 'a'))).toBeLessThan(16)
   })
 
-  it('refuses a corner on a plain room and a shape that crosses itself', () => {
+  it('refuses a corner on a plain zone and a shape that crosses itself', () => {
     expect(
-      moveCorner(quiet([room()]), { id: 'a', corner: 0, point: [7, 7], storey: 0 }).result.said,
-    ).toBe('Only a carved or drawn room has corners to move.')
+      moveCorner(quiet([zone()]), { id: 'a', corner: 0, point: [7, 7], storey: 0 }).result.said,
+    ).toBe('Only a carved or drawn zone has corners to move.')
   })
 
-  it('drags a side, and a shared edge drags both rooms', () => {
+  it('drags a side, and a shared edge drags both zones', () => {
     const sheet = quiet([
-      room({ x: 6, y: 6, w: 4, h: 3 }),
-      room({ id: 'b', x: 10, y: 6, w: 4, h: 3 }),
+      zone({ x: 6, y: 6, w: 4, h: 3 }),
+      zone({ id: 'b', x: 10, y: 6, w: 4, h: 3 }),
     ])
     const out = resize(sheet, { id: 'a', side: 'right', distance: 1, shared: 'b', storey: 0 })
-    expect(roomOf(out.sheet, 'a').w).toBe(5)
-    expect([roomOf(out.sheet, 'b').x, roomOf(out.sheet, 'b').w]).toEqual([11, 3])
+    expect(zoneOf(out.sheet, 'a').w).toBe(5)
+    expect([zoneOf(out.sheet, 'b').x, zoneOf(out.sheet, 'b').w]).toEqual([11, 3])
   })
 
-  it('refuses to resize a locked room', () => {
+  it('refuses to resize a locked zone', () => {
     expect(
-      resize(quiet([room({ locked: true })]), { id: 'a', side: 'top', distance: 1, storey: 0 })
+      resize(quiet([zone({ locked: true })]), { id: 'a', side: 'top', distance: 1, storey: 0 })
         .result.said,
     ).toBe('A is locked')
   })
 
   it('takes a typed size and a typed area', () => {
-    const sheet = quiet([room()])
-    expect(roomOf(setSize(sheet, { id: 'a', w: 5, storey: 0 }).sheet, 'a').w).toBe(5)
+    const sheet = quiet([zone()])
+    expect(zoneOf(setSize(sheet, { id: 'a', w: 5, storey: 0 }).sheet, 'a').w).toBe(5)
     const areaOut = setArea(sheet, { id: 'a', area: 24, storey: 0 })
-    expect(r2(areaOf(roomOf(areaOut.sheet, 'a')))).toBeCloseTo(24, 1)
+    expect(r2(areaOf(zoneOf(areaOut.sheet, 'a')))).toBeCloseTo(24, 1)
   })
 
   it('refuses a size or an area out of its range', () => {
-    const sheet = quiet([room()])
+    const sheet = quiet([zone()])
     expect(setSize(sheet, { id: 'a', w: 90, storey: 0 }).result.said).toBe(
       'A side must be between 0.5 and 30 m.',
     )
@@ -262,20 +262,20 @@ describe('drawing and reshaping', () => {
     [6, 10],
   ]
 
-  it('draws a rectangle as the room’s footprint', () => {
-    const out = draw(quiet([room({ placed: false })]), {
+  it('draws a rectangle as the zone’s footprint', () => {
+    const out = draw(quiet([zone({ placed: false })]), {
       id: 'a',
       polygon: square,
       shape: 'rect',
       storey: 0,
     })
     expect(out.result.ok).toBe(true)
-    expect(roomOf(out.sheet, 'a').pieces).toBeNull()
-    expect(r2(areaOf(roomOf(out.sheet, 'a')))).toBe(16)
+    expect(zoneOf(out.sheet, 'a').pieces).toBeNull()
+    expect(r2(areaOf(zoneOf(out.sheet, 'a')))).toBe(16)
   })
 
   it('draws a polygon as convex pieces', () => {
-    const out = draw(quiet([room({ placed: false })]), {
+    const out = draw(quiet([zone({ placed: false })]), {
       id: 'a',
       polygon: [
         [6, 6],
@@ -285,12 +285,12 @@ describe('drawing and reshaping', () => {
       shape: 'poly',
       storey: 0,
     })
-    expect(roomOf(out.sheet, 'a').pieces!.length).toBe(1)
-    expect(r2(areaOf(roomOf(out.sheet, 'a')))).toBe(8)
+    expect(zoneOf(out.sheet, 'a').pieces!.length).toBe(1)
+    expect(r2(areaOf(zoneOf(out.sheet, 'a')))).toBe(8)
   })
 
   it('refuses a shape too small or crossing itself', () => {
-    const sheet = quiet([room({ placed: false })])
+    const sheet = quiet([zone({ placed: false })])
     expect(
       draw(sheet, {
         id: 'a',
@@ -306,7 +306,7 @@ describe('drawing and reshaping', () => {
   })
 
   it('takes away what a reshape overlaps', () => {
-    const sheet = quiet([room({ x: 6, y: 6, w: 4, h: 4 })])
+    const sheet = quiet([zone({ x: 6, y: 6, w: 4, h: 4 })])
     const out = reshape(sheet, {
       id: 'a',
       polygon: [
@@ -318,11 +318,11 @@ describe('drawing and reshaping', () => {
       storey: 0,
     })
     expect(out.result.said).toBe('4 m² taken away.')
-    expect(r2(areaOf(roomOf(out.sheet, 'a')))).toBe(12)
+    expect(r2(areaOf(zoneOf(out.sheet, 'a')))).toBe(12)
   })
 
-  it('adds a touching shape outside the room', () => {
-    const sheet = quiet([room({ x: 6, y: 6, w: 4, h: 4 })])
+  it('adds a touching shape outside the zone', () => {
+    const sheet = quiet([zone({ x: 6, y: 6, w: 4, h: 4 })])
     const out = reshape(sheet, {
       id: 'a',
       polygon: [
@@ -334,11 +334,11 @@ describe('drawing and reshaping', () => {
       storey: 0,
     })
     expect(out.result.said).toBe('8 m² added.')
-    expect(r2(areaOf(roomOf(out.sheet, 'a')))).toBe(24)
+    expect(r2(areaOf(zoneOf(out.sheet, 'a')))).toBe(24)
   })
 
   it('splits the smaller part off into the program', () => {
-    const sheet = quiet([room({ x: 6, y: 6, w: 6, h: 4 })])
+    const sheet = quiet([zone({ x: 6, y: 6, w: 6, h: 4 })])
     const out = reshape(sheet, {
       id: 'a',
       polygon: [
@@ -350,11 +350,11 @@ describe('drawing and reshaping', () => {
       storey: 0,
     })
     expect(out.result.born).toEqual(['A, cut'])
-    expect(r2(areaOf(roomOf(out.sheet, 'a')))).toBe(12)
+    expect(r2(areaOf(zoneOf(out.sheet, 'a')))).toBe(12)
   })
 
-  it('refuses a shape that does not touch, and one that would take the whole room', () => {
-    const sheet = quiet([room({ x: 6, y: 6, w: 4, h: 4 })])
+  it('refuses a shape that does not touch, and one that would take the whole zone', () => {
+    const sheet = quiet([zone({ x: 6, y: 6, w: 4, h: 4 })])
     expect(
       reshape(sheet, {
         id: 'a',
@@ -366,7 +366,7 @@ describe('drawing and reshaping', () => {
         ],
         storey: 0,
       }).result.said,
-    ).toBe('The shape does not touch the room, so nothing changed.')
+    ).toBe('The shape does not touch the zone, so nothing changed.')
     expect(
       reshape(sheet, {
         id: 'a',
@@ -378,54 +378,54 @@ describe('drawing and reshaping', () => {
         ],
         storey: 0,
       }).result.said,
-    ).toBe('That would take the whole room away.')
+    ).toBe('That would take the whole zone away.')
   })
 })
 
 describe('settling an overlap by hand', () => {
   const pair = () =>
     quiet([
-      room({ id: 'over', name: 'Over', x: 6, y: 6, w: 4, h: 4, placedAt: 2 }),
-      room({ id: 'under', name: 'Under', x: 8, y: 6, w: 4, h: 4, placedAt: 1 }),
+      zone({ id: 'over', name: 'Over', x: 6, y: 6, w: 4, h: 4, placedAt: 2 }),
+      zone({ id: 'under', name: 'Under', x: 8, y: 6, w: 4, h: 4, placedAt: 1 }),
     ])
 
   it('carves the zones below', () => {
     const out = carveBelow(pair(), { ids: ['over'], storey: 0 })
     expect(out.result.ok).toBe(true)
-    expect(r2(areaOf(roomOf(out.sheet, 'under')))).toBe(8)
+    expect(r2(areaOf(zoneOf(out.sheet, 'under')))).toBe(8)
   })
 
   it('pushes the zones below aside', () => {
     const out = pushOthers(pair(), { ids: ['over'], storey: 0 })
     expect(out.result.moved).toEqual(['under'])
-    expect(roomOf(out.sheet, 'under').x).toBe(10)
+    expect(zoneOf(out.sheet, 'under').x).toBe(10)
   })
 
   it('refuses when nothing lies under the zone', () => {
-    const sheet = quiet([room()])
+    const sheet = quiet([zone()])
     expect(carveBelow(sheet, { ids: ['a'], storey: 0 }).result.said).toBe('Nothing lies under it.')
     expect(pushOthers(sheet, { ids: [], storey: 0 }).result.said).toBe('nothing selected')
   })
 
-  it('cuts a room by the setback line, and says when nothing stands past it', () => {
-    const sheet = quiet([room({ x: 0, y: 6, w: 4, h: 3 })])
+  it('cuts a zone by the setback line, and says when nothing stands past it', () => {
+    const sheet = quiet([zone({ x: 0, y: 6, w: 4, h: 3 })])
     const out = cutToSetback(sheet, { ids: ['a'], storey: 0 })
     expect(out.result.ok).toBe(true)
-    expect(r2(areaOf(roomOf(out.sheet, 'a')))).toBe(7.5)
-    expect(cutToSetback(quiet([room()]), { ids: ['a'], storey: 0 }).result.said).toBe(
+    expect(r2(areaOf(zoneOf(out.sheet, 'a')))).toBe(7.5)
+    expect(cutToSetback(quiet([zone()]), { ids: ['a'], storey: 0 }).result.said).toBe(
       'Nothing stands past the setback line.',
     )
   })
 })
 
-describe('a turned room cut and restored', () => {
+describe('a turned zone cut and restored', () => {
   /**
-   * The mock's own diwaniya: 5.38 × 7.16 turned 25°, with a 3 × 3 room standing over one corner. The
+   * The mock's own diwaniya: 5.38 × 7.16 turned 25°, with a 3 × 3 zone standing over one corner. The
    * area it loses is the area the two really share, measured here by an independent clipper.
    */
-  it('a 5.38 × 7.16 room turned 25° loses exactly the 3 × 3 overlap, and restore gives it back', () => {
-    const diwaniya = room({ name: 'Diwaniya', x: 8, y: 8, w: 5.38, h: 7.16, angle: 25 })
-    const cutter = room({ id: 'b', name: 'Cut', x: 7, y: 7, w: 3, h: 3 })
+  it('a 5.38 × 7.16 zone turned 25° loses exactly the 3 × 3 overlap, and restore gives it back', () => {
+    const diwaniya = zone({ name: 'Diwaniya', x: 8, y: 8, w: 5.38, h: 7.16, angle: 25 })
+    const cutter = zone({ id: 'b', name: 'Cut', x: 7, y: 7, w: 3, h: 3 })
     const sheet = quiet([diwaniya, cutter])
     const whole = worldPieces(diwaniya)[0]!
     const bite = worldPieces(cutter)[0]!
@@ -436,67 +436,67 @@ describe('a turned room cut and restored', () => {
     const overlap = clipArea(whole) - left
     expect(overlap).toBeGreaterThan(1)
     const out = carveBelow(sheet, { ids: ['b'], storey: 0 })
-    const cut = roomOf(out.sheet, 'a')
+    const cut = zoneOf(out.sheet, 'a')
     expect(areaOf(diwaniya) - areaOf(cut)).toBeCloseTo(overlap, 4)
     const back = restore(out.sheet, { id: 'a', storey: 0 })
-    expect(areaOf(roomOf(back.sheet, 'a'))).toBeCloseTo(5.38 * 7.16, 4)
-    expect(roomOf(back.sheet, 'a').pieces).toBeNull()
+    expect(areaOf(zoneOf(back.sheet, 'a'))).toBeCloseTo(5.38 * 7.16, 4)
+    expect(zoneOf(back.sheet, 'a').pieces).toBeNull()
   })
 
-  it('refuses to restore a room that was never cut', () => {
-    expect(restore(quiet([room()]), { id: 'a', storey: 0 }).result.said).toBe(
+  it('refuses to restore a zone that was never cut', () => {
+    expect(restore(quiet([zone()]), { id: 'a', storey: 0 }).result.said).toBe(
       'A has nothing to restore.',
     )
   })
 })
 
 describe('combining, grouping and locking', () => {
-  it('combines two rooms that share an edge into the survivor', () => {
+  it('combines two zones that share an edge into the survivor', () => {
     const sheet = quiet([
-      room({ id: 'a', name: 'A', x: 6, y: 6, w: 4, h: 3 }),
-      room({ id: 'b', name: 'B', x: 10, y: 6, w: 4, h: 3 }),
+      zone({ id: 'a', name: 'A', x: 6, y: 6, w: 4, h: 3 }),
+      zone({ id: 'b', name: 'B', x: 10, y: 6, w: 4, h: 3 }),
     ])
     const out = combine(sheet, { ids: ['a', 'b'], survivor: 'a', storey: 0 })
     expect(out.result.said).toBe('B combined into A')
-    expect(r2(areaOf(roomOf(out.sheet, 'a')))).toBe(24)
-    expect(roomOf(out.sheet, 'b').placed).toBe(false)
+    expect(r2(areaOf(zoneOf(out.sheet, 'a')))).toBe(24)
+    expect(zoneOf(out.sheet, 'b').placed).toBe(false)
   })
 
-  it('refuses rooms that share no edge', () => {
-    const sheet = quiet([room(), room({ id: 'b', x: 14, y: 14 })])
+  it('refuses zones that share no edge', () => {
+    const sheet = quiet([zone(), zone({ id: 'b', x: 14, y: 14 })])
     expect(combine(sheet, { ids: ['a', 'b'], survivor: 'a', storey: 0 }).result.said).toBe(
-      'Those rooms do not share an edge, so they cannot be combined. Close the gap first.',
+      'Those zones do not share an edge, so they cannot be combined. Close the gap first.',
     )
     expect(combine(sheet, { ids: ['a'], survivor: 'a', storey: 0 }).result.said).toBe(
-      'Pick the room that survives.',
+      'Pick the zone that survives.',
     )
   })
 
   it('groups and ungroups', () => {
-    const sheet = quiet([room(), room({ id: 'b', x: 14, y: 14 })])
+    const sheet = quiet([zone(), zone({ id: 'b', x: 14, y: 14 })])
     const grouped = group(sheet, { ids: ['a', 'b'], storey: 0 })
-    expect(roomOf(grouped.sheet, 'a').group).toBe(roomOf(grouped.sheet, 'b').group)
+    expect(zoneOf(grouped.sheet, 'a').group).toBe(zoneOf(grouped.sheet, 'b').group)
     const out = ungroup(grouped.sheet, { ids: ['a'], storey: 0 })
-    expect(roomOf(out.sheet, 'b').group).toBeUndefined()
+    expect(zoneOf(out.sheet, 'b').group).toBeUndefined()
     expect(group(sheet, { ids: ['a'], storey: 0 }).result.said).toBe(
-      'Two rooms at least make a group.',
+      'Two zones at least make a group.',
     )
     expect(ungroup(sheet, { ids: ['a'], storey: 0 }).result.said).toBe('Nothing here is grouped.')
   })
 
   it('locks and unlocks', () => {
-    const sheet = quiet([room()])
+    const sheet = quiet([zone()])
     const locked = lock(sheet, { ids: ['a'], storey: 0 })
-    expect(roomOf(locked.sheet, 'a').locked).toBe(true)
-    expect(roomOf(unlock(locked.sheet, { ids: ['a'], storey: 0 }).sheet, 'a').locked).toBe(false)
+    expect(zoneOf(locked.sheet, 'a').locked).toBe(true)
+    expect(zoneOf(unlock(locked.sheet, { ids: ['a'], storey: 0 }).sheet, 'a').locked).toBe(false)
     expect(lock(sheet, { ids: [], storey: 0 }).result.said).toBe('nothing selected')
   })
 })
 
 describe('the program', () => {
-  it('sends a room back to the tray, shape, doors and all', () => {
+  it('sends a zone back to the tray, shape, doors and all', () => {
     const sheet = quiet([
-      room({
+      zone({
         pieces: [
           [
             [0, 0],
@@ -508,24 +508,24 @@ describe('the program', () => {
       }),
     ])
     const out = sendBack(sheet, { ids: ['a'] })
-    const back = roomOf(out.sheet, 'a')
+    const back = zoneOf(out.sheet, 'a')
     expect([back.placed, back.pieces, back.angle]).toEqual([false, null, 0])
     expect(sendBack(sheet, { ids: ['nope'] }).result.said).toBe('nothing to send back')
   })
 
-  it('sends a court back to the program like any room, no longer fixed', () => {
-    const sheet = quiet([room({ id: 'x1', fixed: true, kind: 'court', cat: 'open' })])
-    sendBackRoom(sheet, sheet.rooms[0]!)
-    expect([sheet.rooms.length, sheet.rooms[0]!.placed, sheet.rooms[0]!.fixed]).toEqual([
+  it('sends a court back to the program like any zone, no longer fixed', () => {
+    const sheet = quiet([zone({ id: 'x1', fixed: true, kind: 'court', cat: 'open' })])
+    sendBackZone(sheet, sheet.zones[0]!)
+    expect([sheet.zones.length, sheet.zones[0]!.placed, sheet.zones[0]!.fixed]).toEqual([
       1,
       false,
       undefined,
     ])
   })
 
-  it('keeps a room’s doors when it goes back, to stand again wherever it is placed', () => {
+  it('keeps a zone’s doors when it goes back, to stand again wherever it is placed', () => {
     const sheet = quiet([
-      room({
+      zone({
         doors: [
           {
             id: 'd1',
@@ -540,37 +540,37 @@ describe('the program', () => {
         ],
       }),
     ])
-    expect(doorsOf(roomOf(sendBack(sheet, { ids: ['a'] }).sheet, 'a'))).toHaveLength(1)
+    expect(doorsOf(zoneOf(sendBack(sheet, { ids: ['a'] }).sheet, 'a'))).toHaveLength(1)
   })
 })
 
 describe('storeys and heights', () => {
-  it('moves a room up a storey, held inside the setback there', () => {
-    const sheet = quiet([room()])
+  it('moves a zone up a storey, held inside the setback there', () => {
+    const sheet = quiet([zone()])
     const out = setStorey(sheet, { ids: ['a'], storey: 0, to: 1 })
     expect(out.result.said).toBe('A on the first storey')
-    expect(roomOf(out.sheet, 'a').storey).toBe(1)
+    expect(zoneOf(out.sheet, 'a').storey).toBe(1)
   })
 
   it('refuses to move the stair, which stands on every storey', () => {
-    const sheet = quiet([room({ kind: 'stair', cat: 'circulation' })])
+    const sheet = quiet([zone({ kind: 'stair', cat: 'circulation' })])
     expect(setStorey(sheet, { ids: ['a'], storey: 0, to: 1 }).result.said).toBe(
       'The stair stands on every storey already.',
     )
   })
 
-  it('copies a room to the storey above, with copy in its name', () => {
-    const sheet = quiet([room()])
+  it('copies a zone to the storey above, with copy in its name', () => {
+    const sheet = quiet([zone()])
     const out = copyTo(sheet, { ids: ['a'], storey: 0, to: 1 })
     expect(out.result.born).toEqual(['A copy'])
-    const copy = out.sheet.rooms.find((r) => r.name === 'A copy')!
+    const copy = out.sheet.zones.find((r) => r.name === 'A copy')!
     expect([copy.storey, copy.x, copy.y]).toEqual([1, 6, 6])
     expect(copyTo(sheet, { ids: [], storey: 0, to: 1 }).result.said).toBe('nothing to copy')
   })
 
-  it('copies a room beside itself on the same storey', () => {
-    const out = copyTo(quiet([room()]), { ids: ['a'], storey: 0, to: 0 })
-    const copy = out.sheet.rooms.find((r) => r.name === 'A copy')!
+  it('copies a zone beside itself on the same storey', () => {
+    const out = copyTo(quiet([zone()]), { ids: ['a'], storey: 0, to: 0 })
+    const copy = out.sheet.zones.find((r) => r.name === 'A copy')!
     expect([copy.x, copy.y]).toEqual([7, 7])
   })
 
@@ -580,21 +580,21 @@ describe('storeys and heights', () => {
     expect(addStorey(one.sheet).result.said).toBe('The rulebook allows three floors.')
     expect(dropTopStorey(one.sheet).sheet.storeyCount).toBe(2)
     expect(dropTopStorey(quiet([])).result.said).toBe('The ground and the first storey stay.')
-    const busy = addStorey(quiet([room({ storey: 2 })])).sheet
+    const busy = addStorey(quiet([zone({ storey: 2 })])).sheet
     expect(dropTopStorey(busy).result.said).toBe('The second storey is not empty.')
   })
 
   it('sets a height, snapping to the floor above, and gives it back to the storey', () => {
-    const sheet = quiet([room()])
+    const sheet = quiet([zone()])
     const out = setHeight(sheet, { id: 'a', metres: 3.6 })
     expect(out.result.said).toBe('A 3.5 m · the floor above')
-    expect(roomOf(out.sheet, 'a').height).toBe(3.5)
-    expect(clearHeight(out.sheet, { id: 'a' }).sheet.rooms[0]!.height).toBeUndefined()
+    expect(zoneOf(out.sheet, 'a').height).toBe(3.5)
+    expect(clearHeight(out.sheet, { id: 'a' }).sheet.zones[0]!.height).toBeUndefined()
     expect(clearHeight(sheet, { id: 'a' }).result.said).toBe(
-      'That room keeps its storey height already.',
+      'That zone keeps its storey height already.',
     )
     expect(setHeight(sheet, { id: 'nope', metres: 4 }).result.said).toBe(
-      'no such room on the sheet',
+      'no such zone on the sheet',
     )
   })
 })
@@ -603,21 +603,21 @@ describe('enclosed spaces', () => {
   const ring = () =>
     quiet(
       [
-        room({ id: 'n', name: 'N', x: 4, y: 4, w: 6, h: 2 }),
-        room({ id: 's', name: 'S', x: 4, y: 10, w: 6, h: 2 }),
-        room({ id: 'w', name: 'W', x: 4, y: 6, w: 2, h: 4 }),
-        room({ id: 'e', name: 'E', x: 8, y: 6, w: 2, h: 4 }),
+        zone({ id: 'n', name: 'N', x: 4, y: 4, w: 6, h: 2 }),
+        zone({ id: 's', name: 'S', x: 4, y: 10, w: 6, h: 2 }),
+        zone({ id: 'w', name: 'W', x: 4, y: 6, w: 2, h: 4 }),
+        zone({ id: 'e', name: 'E', x: 8, y: 6, w: 2, h: 4 }),
       ],
       { boundary: 'off' },
     )
 
   const holeIndex = (sheet: Sheet) => pocketsOf(sheet, 0).findIndex((p) => r2(p.area) === 8)
 
-  it('gives the space to the room that encloses it', () => {
+  it('gives the space to the zone that encloses it', () => {
     const sheet = ring()
-    const out = givePocket(sheet, { pocket: holeIndex(sheet), room: 'n', storey: 0 })
+    const out = givePocket(sheet, { pocket: holeIndex(sheet), zone: 'n', storey: 0 })
     expect(out.result.area).toBe(8)
-    expect(r2(areaOf(roomOf(out.sheet, 'n')))).toBe(20)
+    expect(r2(areaOf(zoneOf(out.sheet, 'n')))).toBe(20)
   })
 
   it('makes a court of it when it is big enough, and says why not when it is not', () => {
@@ -626,10 +626,10 @@ describe('enclosed spaces', () => {
     expect(makeCourt(sheet, { pocket: i, storey: 0 }).result.said).toBe(
       '8 m² is under the 9 m² a court needs.',
     )
-    const roomy = sheetOf(sheet.rooms, { boundary: 'off', courtArea: 8, closeGap: 0 })
+    const roomy = sheetOf(sheet.zones, { boundary: 'off', courtArea: 8, closeGap: 0 })
     const out = makeCourt(roomy, { pocket: holeIndex(roomy), storey: 0 })
     expect(out.result.born).toEqual(['Court'])
-    const court = out.sheet.rooms.find((r) => r.kind === 'court')!
+    const court = out.sheet.zones.find((r) => r.kind === 'court')!
     expect([court.fixed, court.cat, r2(areaOf(court))]).toEqual([true, 'open', 8])
   })
 
@@ -637,30 +637,30 @@ describe('enclosed spaces', () => {
     const sheet = ring()
     const out = makeCorridor(sheet, { pocket: holeIndex(sheet), storey: 0 })
     expect(out.result.born).toEqual(['Hallway'])
-    const hall = out.sheet.rooms.find((r) => r.kind === 'hallway')!
+    const hall = out.sheet.zones.find((r) => r.kind === 'hallway')!
     expect(r2(areaOf(hall))).toBe(8)
   })
 
   it('refuses when there is no space there', () => {
-    expect(givePocket(quiet([room()]), { pocket: 9, storey: 0 }).result.said).toBe(
+    expect(givePocket(quiet([zone()]), { pocket: 9, storey: 0 }).result.said).toBe(
       'No enclosed space there.',
     )
-    expect(makeCourt(quiet([room()]), { pocket: 9, storey: 0 }).result.said).toBe(
+    expect(makeCourt(quiet([zone()]), { pocket: 9, storey: 0 }).result.said).toBe(
       'No enclosed space there.',
     )
-    expect(makeCorridor(quiet([room()]), { pocket: 9, storey: 0 }).result.said).toBe(
+    expect(makeCorridor(quiet([zone()]), { pocket: 9, storey: 0 }).result.said).toBe(
       'No enclosed space there.',
     )
   })
 })
 
 describe('doors', () => {
-  const alone = () => quiet([room({ x: 6, y: 6, w: 4, h: 3 })], { grid: 0.25, snapDist: 0.4 })
+  const alone = () => quiet([zone({ x: 6, y: 6, w: 4, h: 3 })], { grid: 0.25, snapDist: 0.4 })
   const out = { connection: 'e1', to: 'EXTERIOR' }
   /** A beside B, sharing the edge x = 10 from y 6 to 9. */
   const pair = () =>
     quiet(
-      [room({ x: 6, y: 6, w: 4, h: 3 }), room({ id: 'b', name: 'B', x: 10, y: 6, w: 4, h: 3 })],
+      [zone({ x: 6, y: 6, w: 4, h: 3 }), zone({ id: 'b', name: 'B', x: 10, y: 6, w: 4, h: 3 })],
       { grid: 0.25, snapDist: 0.4 },
     )
 
@@ -668,12 +668,12 @@ describe('doors', () => {
     const placed = addDoor(alone(), { x: 8, y: 6, type: 'door', storey: 0, ...out })
     expect(placed.result.ok).toBe(true)
     expect(placed.result.said).toBe('Door on A, middle of the edge')
-    expect(doorsOf(roomOf(placed.sheet, 'a'))).toMatchObject([
+    expect(doorsOf(zoneOf(placed.sheet, 'a'))).toMatchObject([
       { connection: 'e1', to: 'EXTERIOR', at: [2, 0] },
     ])
   })
 
-  it('puts a door between two rooms on the edge they share, halfway along it', () => {
+  it('puts a door between two zones on the edge they share, halfway along it', () => {
     const placed = addDoor(pair(), {
       x: 10,
       y: 7.5,
@@ -683,7 +683,7 @@ describe('doors', () => {
       to: 'b',
     })
     expect(placed.result.ok).toBe(true)
-    expect(doorsOf(roomOf(placed.sheet, 'a'))).toMatchObject([
+    expect(doorsOf(zoneOf(placed.sheet, 'a'))).toMatchObject([
       { connection: 'e2', to: 'b', along: 0.5 },
     ])
   })
@@ -707,14 +707,14 @@ describe('doors', () => {
       to: 'b',
     })
     expect(twice.result.ok).toBe(true)
-    const doors = doorsOf(roomOf(twice.sheet, 'a')).concat(doorsOf(roomOf(twice.sheet, 'b')))
+    const doors = doorsOf(zoneOf(twice.sheet, 'a')).concat(doorsOf(zoneOf(twice.sheet, 'b')))
     expect(doors.map((d) => [d.connection, d.type])).toEqual([
       ['e2', 'door'],
       ['e2', 'sliding'],
     ])
     const first = doors[0]!
-    const host = twice.sheet.rooms.find((r) => doorsOf(r).includes(first))!
-    const left = removeDoor(twice.sheet, { room: host.id, door: first.id }).sheet
+    const host = twice.sheet.zones.find((r) => doorsOf(r).includes(first))!
+    const left = removeDoor(twice.sheet, { zone: host.id, door: first.id }).sheet
     expect(drawnDoors(left, 0).map((each) => [each.door.connection, each.door.type])).toEqual([
       ['e2', 'sliding'],
     ])
@@ -746,7 +746,7 @@ describe('doors', () => {
     expect(addDoor(alone(), { x: 1, y: 1, type: 'door', storey: 0, ...out }).result.said).toBe(
       'No edge there.',
     )
-    const onBoundary = quiet([room({ x: 0, y: 6, w: 4, h: 3 })])
+    const onBoundary = quiet([zone({ x: 0, y: 6, w: 4, h: 3 })])
     expect(addDoor(onBoundary, { x: 0, y: 7.5, type: 'door', storey: 0, ...out }).result.said).toBe(
       'An edge on the boundary takes no door.',
     )
@@ -758,50 +758,50 @@ describe('doors', () => {
 
   it('slides, widens, swings, hinges and removes a door', () => {
     const placed = addDoor(alone(), { x: 8, y: 6, type: 'door', storey: 0, ...out }).sheet
-    const id = doorsOf(roomOf(placed, 'a'))[0]!.id
-    const slid = slideDoor(placed, { room: 'a', door: id, step: 0.25, storey: 0 })
-    expect(r2(doorsOf(roomOf(slid.sheet, 'a'))[0]!.at![0])).toBe(2.25)
-    const wide = setDoorWidth(placed, { room: 'a', door: id, w: 1.2, storey: 0 })
-    expect(doorsOf(roomOf(wide.sheet, 'a'))[0]!.w).toBe(1.2)
+    const id = doorsOf(zoneOf(placed, 'a'))[0]!.id
+    const slid = slideDoor(placed, { zone: 'a', door: id, step: 0.25, storey: 0 })
+    expect(r2(doorsOf(zoneOf(slid.sheet, 'a'))[0]!.at![0])).toBe(2.25)
+    const wide = setDoorWidth(placed, { zone: 'a', door: id, w: 1.2, storey: 0 })
+    expect(doorsOf(zoneOf(wide.sheet, 'a'))[0]!.w).toBe(1.2)
     // the 4 m edge holds a 3 m door with 5 cm to spare at each end, and nothing wider
-    expect(setDoorWidth(placed, { room: 'a', door: id, w: 3, storey: 0 }).result.ok).toBe(true)
-    const narrow = quiet([room({ x: 6, y: 6, w: 2.6, h: 3 })], { grid: 0.25, snapDist: 0.4 })
+    expect(setDoorWidth(placed, { zone: 'a', door: id, w: 3, storey: 0 }).result.ok).toBe(true)
+    const narrow = quiet([zone({ x: 6, y: 6, w: 2.6, h: 3 })], { grid: 0.25, snapDist: 0.4 })
     const inNarrow = addDoor(narrow, { x: 7.3, y: 6, type: 'door', storey: 0, ...out }).sheet
-    const narrowId = doorsOf(roomOf(inNarrow, 'a'))[0]!.id
+    const narrowId = doorsOf(zoneOf(inNarrow, 'a'))[0]!.id
     expect(
-      setDoorWidth(inNarrow, { room: 'a', door: narrowId, w: 2.6, storey: 0 }).result.said,
+      setDoorWidth(inNarrow, { zone: 'a', door: narrowId, w: 2.6, storey: 0 }).result.said,
     ).toBe('That edge is too short for a door that wide.')
-    expect(doorsOf(roomOf(flipDoor(placed, { room: 'a', door: id }).sheet, 'a'))[0]!.flip).toBe(
+    expect(doorsOf(zoneOf(flipDoor(placed, { zone: 'a', door: id }).sheet, 'a'))[0]!.flip).toBe(
       true,
     )
-    expect(doorsOf(roomOf(hingeDoor(placed, { room: 'a', door: id }).sheet, 'a'))[0]!.hinge).toBe(
+    expect(doorsOf(zoneOf(hingeDoor(placed, { zone: 'a', door: id }).sheet, 'a'))[0]!.hinge).toBe(
       true,
     )
-    expect(doorsOf(roomOf(removeDoor(placed, { room: 'a', door: id }).sheet, 'a')).length).toBe(0)
+    expect(doorsOf(zoneOf(removeDoor(placed, { zone: 'a', door: id }).sheet, 'a')).length).toBe(0)
   })
 
   it('refuses to adjust a door that is not there', () => {
     const sheet = alone()
-    expect(slideDoor(sheet, { room: 'a', door: 'd9', step: 1, storey: 0 }).result.said).toBe(
+    expect(slideDoor(sheet, { zone: 'a', door: 'd9', step: 1, storey: 0 }).result.said).toBe(
       'no such door',
     )
-    expect(setDoorWidth(sheet, { room: 'a', door: 'd9', w: 1, storey: 0 }).result.said).toBe(
+    expect(setDoorWidth(sheet, { zone: 'a', door: 'd9', w: 1, storey: 0 }).result.said).toBe(
       'no such door',
     )
-    expect(removeDoor(sheet, { room: 'a', door: 'd9' }).result.said).toBe('no such door')
-    expect(moveDoor(sheet, { room: 'a', door: 'd9', x: 8, y: 6, storey: 0 }).result.said).toBe(
+    expect(removeDoor(sheet, { zone: 'a', door: 'd9' }).result.said).toBe('no such door')
+    expect(moveDoor(sheet, { zone: 'a', door: 'd9', x: 8, y: 6, storey: 0 }).result.said).toBe(
       'no such door',
     )
   })
 
   it('refuses a swing on an opening and a hinge on a double door', () => {
     const placed = addDoor(alone(), { x: 8, y: 6, type: 'opening', storey: 0, ...out }).sheet
-    const id = doorsOf(roomOf(placed, 'a'))[0]!.id
-    expect(flipDoor(placed, { room: 'a', door: id }).result.said).toBe('A opening does not swing.')
-    expect(hingeDoor(placed, { room: 'a', door: id }).result.said).toBe('A opening has no hinge.')
+    const id = doorsOf(zoneOf(placed, 'a'))[0]!.id
+    expect(flipDoor(placed, { zone: 'a', door: id }).result.said).toBe('A opening does not swing.')
+    expect(hingeDoor(placed, { zone: 'a', door: id }).result.said).toBe('A opening has no hinge.')
   })
 
-  it('slides a door along the edge its rooms share, and never onto another edge', () => {
+  it('slides a door along the edge its zones share, and never onto another edge', () => {
     const placed = addDoor(pair(), {
       x: 10,
       y: 7.5,
@@ -810,16 +810,16 @@ describe('doors', () => {
       connection: 'e2',
       to: 'b',
     })
-    const id = doorsOf(roomOf(placed.sheet, 'a'))[0]!.id
-    const slid = moveDoor(placed.sheet, { room: 'a', door: id, x: 10, y: 8.2, storey: 0 })
+    const id = doorsOf(zoneOf(placed.sheet, 'a'))[0]!.id
+    const slid = moveDoor(placed.sheet, { zone: 'a', door: id, x: 10, y: 8.2, storey: 0 })
     expect(slid.result.ok).toBe(true)
-    expect(r2(doorsOf(roomOf(slid.sheet, 'a'))[0]!.along!)).toBe(0.73)
+    expect(r2(doorsOf(zoneOf(slid.sheet, 'a'))[0]!.along!)).toBe(0.73)
     expect(
-      moveDoor(placed.sheet, { room: 'a', door: id, x: 14, y: 6, storey: 0 }).result.said,
+      moveDoor(placed.sheet, { zone: 'a', door: id, x: 14, y: 6, storey: 0 }).result.said,
     ).toBe('A door stays on the edge A and B share.')
   })
 
-  it('opens the whole edge two rooms share, and refuses one they do not', () => {
+  it('opens the whole edge two zones share, and refuses one they do not', () => {
     const opened = addDoor(pair(), {
       x: 10,
       y: 7.5,
@@ -829,7 +829,7 @@ describe('doors', () => {
       to: 'b',
     })
     expect(opened.result.said).toBe('A: edge opened')
-    expect(doorsOf(roomOf(opened.sheet, 'a'))).toMatchObject([
+    expect(doorsOf(zoneOf(opened.sheet, 'a'))).toMatchObject([
       { type: 'open', w: 2.9, along: 0.5, connection: 'e2' },
     ])
     expect(addDoor(alone(), { x: 10, y: 7.5, type: 'open', storey: 0, ...out }).result.said).toBe(
@@ -839,19 +839,19 @@ describe('doors', () => {
 
   it('keeps the connection it draws when the door slides', () => {
     const placed = addDoor(alone(), { x: 8, y: 6, type: 'door', storey: 0, ...out }).sheet
-    const door = doorsOf(roomOf(placed, 'a'))[0]!
-    const slid = slideDoor(placed, { room: 'a', door: door.id, step: 0.25, storey: 0 })
-    expect(doorsOf(roomOf(slid.sheet, 'a'))[0]!).toMatchObject({ connection: 'e1', to: 'EXTERIOR' })
+    const door = doorsOf(zoneOf(placed, 'a'))[0]!
+    const slid = slideDoor(placed, { zone: 'a', door: door.id, step: 0.25, storey: 0 })
+    expect(doorsOf(zoneOf(slid.sheet, 'a'))[0]!).toMatchObject({ connection: 'e1', to: 'EXTERIOR' })
   })
 })
 
 describe('settings', () => {
-  it('changes a setting and holds the rooms to the new line', () => {
-    const sheet = quiet([room({ x: 0, y: 0 })], { allowSpill: 1, boundary: 'all' })
+  it('changes a setting and holds the zones to the new line', () => {
+    const sheet = quiet([zone({ x: 0, y: 0 })], { allowSpill: 1, boundary: 'all' })
     const out = setSetting(sheet, { name: 'allowSpill', value: 0 })
     expect(out.result.said).toBe('allowSpill is 0')
     const held = setSetting(out.sheet, { name: 'boundary', value: 'off' })
-    expect(roomOf(held.sheet, 'a').x).toBe(1.5)
+    expect(zoneOf(held.sheet, 'a').x).toBe(1.5)
   })
 
   it('keeps every value inside its range and on its steps', () => {
@@ -883,40 +883,40 @@ describe('settings', () => {
 
   it('resizes every hallway when the hallway width changes', () => {
     const sheet = quiet([
-      room({ id: 'h', name: 'Hall', kind: 'hallway', cat: 'circulation', w: 1.8, h: 10 }),
+      zone({ id: 'h', name: 'Hall', kind: 'hallway', cat: 'circulation', w: 1.8, h: 10 }),
     ])
     const out = setSetting(sheet, { name: 'hallW', value: 1.2 })
-    expect(roomOf(out.sheet, 'h').w).toBe(1.2)
+    expect(zoneOf(out.sheet, 'h').w).toBe(1.2)
   })
 })
 
 describe('undo and redo', () => {
   it('goes back to the sheet as it was, and forward again', () => {
-    const sheet = quiet([room()])
+    const sheet = quiet([zone()])
     let history = remember(newHistory(), sheet)
     const moved = move(sheet, { ids: ['a'], dx: 2, dy: 0, storey: 0 }).sheet
     const back = undo(moved, { history })
-    expect(roomOf(back.sheet, 'a').x).toBe(6)
+    expect(zoneOf(back.sheet, 'a').x).toBe(6)
     history = back.history
     const forward = redo(back.sheet, { history })
-    expect(roomOf(forward.sheet, 'a').x).toBe(8)
+    expect(zoneOf(forward.sheet, 'a').x).toBe(8)
   })
 
   it('says when there is nothing to undo or redo', () => {
-    const sheet = quiet([room()])
+    const sheet = quiet([zone()])
     expect(undo(sheet, { history: newHistory() }).result.said).toBe('Nothing to undo.')
     expect(redo(sheet, { history: newHistory() }).result.said).toBe('Nothing to redo.')
   })
 
   it('keeps 200 sheets and no more', () => {
-    const sheet = quiet([room()])
+    const sheet = quiet([zone()])
     let history = newHistory()
     for (let i = 0; i < HISTORY_CAP + 5; i++) history = remember(history, sheet)
     expect(history.past.length).toBe(HISTORY_CAP)
   })
 
   it('drops what was undone as soon as something else is done', () => {
-    const sheet = quiet([room()])
+    const sheet = quiet([zone()])
     const history = { past: [sheet], future: [sheet] }
     expect(remember(history, sheet).future).toEqual([])
   })
@@ -931,23 +931,23 @@ describe('the sheet under the actions', () => {
     expect(report(sheet, 0).placedArea).toBe(343.96)
   })
 
-  it('keeps a drawn point on the plot and rests a room on the grid', () => {
+  it('keeps a drawn point on the plot and rests a zone on the grid', () => {
     expect(drawnPoint(sheetOf([]), 0, [-4, 40])).toEqual([0, 25])
-    expect(restOnGrid(room({ x: 6.1, y: 6.1 }), DEFAULTS).x).toBe(6)
+    expect(restOnGrid(zone({ x: 6.1, y: 6.1 }), DEFAULTS).x).toBe(6)
   })
 })
 
-describe('a room’s own colour and where its name is written', () => {
-  it('gives the selected rooms a colour and puts them back to their category’s', () => {
-    const sheet = quiet([room()])
+describe('a zone’s own colour and where its name is written', () => {
+  it('gives the selected zones a colour and puts them back to their category’s', () => {
+    const sheet = quiet([zone()])
     const out = setColor(sheet, { ids: ['a'], color: '#123456' })
     expect(out.result.ok).toBe(true)
-    expect(roomOf(out.sheet, 'a').color).toBe('#123456')
-    expect(clearColor(out.sheet, { ids: ['a'] }).sheet.rooms[0]!.color).toBeUndefined()
+    expect(zoneOf(out.sheet, 'a').color).toBe('#123456')
+    expect(clearColor(out.sheet, { ids: ['a'] }).sheet.zones[0]!.color).toBeUndefined()
   })
 
   it('refuses a colour that is not written as #rrggbb, and a reset with nothing to reset', () => {
-    const sheet = quiet([room()])
+    const sheet = quiet([zone()])
     expect(setColor(sheet, { ids: ['a'], color: 'blue' }).result).toEqual({
       ok: false,
       said: 'A colour is written as #rrggbb.',
@@ -957,21 +957,21 @@ describe('a room’s own colour and where its name is written', () => {
   })
 
   it('writes the name where the hand put it, and puts it back by itself', () => {
-    const sheet = quiet([room()])
+    const sheet = quiet([zone()])
     const out = setLabel(sheet, { id: 'a', at: [1.5, 2] })
-    expect(roomOf(out.sheet, 'a').labelAt).toEqual([1.5, 2])
-    expect(clearLabel(out.sheet, { ids: ['a'] }).sheet.rooms[0]!.labelAt).toBeUndefined()
+    expect(zoneOf(out.sheet, 'a').labelAt).toEqual([1.5, 2])
+    expect(clearLabel(out.sheet, { ids: ['a'] }).sheet.zones[0]!.labelAt).toBeUndefined()
     expect(clearLabel(sheet, { ids: ['a'] }).result).toEqual({
       ok: false,
       said: 'Those names lie where they go by themselves.',
     })
   })
 
-  it('refuses to write the name of a room that is not on the sheet', () => {
-    const sheet = quiet([room({ placed: false })])
+  it('refuses to write the name of a zone that is not on the sheet', () => {
+    const sheet = quiet([zone({ placed: false })])
     expect(setLabel(sheet, { id: 'a', at: [1, 1] }).result).toEqual({
       ok: false,
-      said: 'no such room on the sheet',
+      said: 'no such zone on the sheet',
     })
   })
 })

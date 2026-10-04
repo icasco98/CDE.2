@@ -89,7 +89,7 @@ export function anchorPointOf(footprint: Footprint, sx: Handle, sy: Handle): Poi
  * `anchor` on the sheet. Solving for the new centre from the held point, rather than carrying
  * the old one forward, is what keeps that point from drifting once the footprint is turned.
  * A stretched circle is no longer a circle, so any arcs are dropped rather than left standing
- * for a curve the room no longer has.
+ * for a curve the zone no longer has.
  */
 export function resizeFromAnchor(
   footprint: Footprint,

@@ -7,7 +7,7 @@
 import { carveBelow, move, place, pushOthers, setSize, turn } from './actions'
 import { alongNamed, standAgainst, edgeNamed, type Standing } from './against'
 import { changesBetween, type Changed } from './changes'
-import { roomNamed, storeyNamed, type Desk } from './desk'
+import { zoneNamed, storeyNamed, type Desk } from './desk'
 import { doDeed, type Deed } from './verbs'
 import { areaOf, r2 } from './geometry'
 import { meetingsOf, type Apart, type Sharing } from './meetings'
@@ -20,7 +20,7 @@ import {
   storeyNameOf,
   storeyOf,
   type LandingRule,
-  type Room,
+  type Zone,
   type Sheet,
 } from './model'
 import { report, type Report } from './report'
@@ -116,7 +116,7 @@ const corners = (box: { x: number; y: number; w: number; h: number }) => ({
   y1: r2(box.y + box.h),
 })
 
-/** One storey read: its rooms' frames, how they stand to each other, and its report. */
+/** One storey read: its zones' frames, how they stand to each other, and its report. */
 export function storeyRead(sheet: Sheet, storey: number): StoreyRead {
   const meetings = meetingsOf(sheet, storey)
   return {
@@ -147,8 +147,8 @@ export function storeyRead(sheet: Sheet, storey: number): StoreyRead {
 }
 
 /**
- * The whole house in plain data: the plot and its lines, every storey with its rooms and how they
- * stand to each other, the rooms still waiting, and the floor areas storey by storey and in total.
+ * The whole house in plain data: the plot and its lines, every storey with its zones and how they
+ * stand to each other, the zones still waiting, and the floor areas storey by storey and in total.
  */
 export function sheetRead(sheet: Sheet, onScreen: number): SheetRead {
   const { plot } = sheet
@@ -175,9 +175,9 @@ export function sheetRead(sheet: Sheet, onScreen: number): SheetRead {
     setbackLine: corners(plot.build),
     onScreen: storeyNameOf(onScreen),
     landingRule: sheet.settings.rule,
-    importanceOrder: sheet.rooms.map((r) => r.name),
+    importanceOrder: sheet.zones.map((r) => r.name),
     storeys,
-    waiting: sheet.rooms
+    waiting: sheet.zones
       .filter((r) => !r.placed)
       .map((r) => ({ name: r.name, kind: r.kind, target: r.target, w: r.w, h: r.h })),
     totals: {
@@ -192,11 +192,11 @@ export function sheetRead(sheet: Sheet, onScreen: number): SheetRead {
 const sized = (w: number, h: number) => w > 0.5 && h > 0.5 && w < 30 && h < 30
 
 /**
- * One room put where it is asked for: a waiting room is dropped, a placed one is resized, turned and
+ * One zone put where it is asked for: a waiting zone is dropped, a placed one is resized, turned and
  * dragged, each through the hand's own action, so it snaps, is held inside the line, and lands by
  * the rule.
  */
-function putRoom(desk: Desk, storey: number, r: Room, wanted: Partial<Standing>): string {
+function putZone(desk: Desk, storey: number, r: Zone, wanted: Partial<Standing>): string {
   const x = Number(wanted.x)
   const y = Number(wanted.y)
   if (!Number.isFinite(x) || !Number.isFinite(y)) return `${r.name}: x and y are needed`
@@ -222,16 +222,16 @@ function putRoom(desk: Desk, storey: number, r: Room, wanted: Partial<Standing>)
     const turned = desk.write(turn(desk.read(), { ids: [r.id], storey, angle }))
     if (!turned.ok) return turned.said
   }
-  const now = desk.read().rooms.find((o) => o.id === r.id)
+  const now = desk.read().zones.find((o) => o.id === r.id)
   if (!now) return `${r.name} is no longer on the sheet`
   return desk.write(move(desk.read(), { ids: [r.id], dx: x - now.x, dy: y - now.y, storey })).said
 }
 
-/** One room asked for by name and coordinates, as `place_rooms` takes them. */
+/** One zone asked for by name and coordinates, as `place_zones` takes them. */
 function oneMove(desk: Desk, storey: number, wanted: Record<string, unknown>): string {
-  const r = roomNamed(desk.read(), wanted.name)
-  if (!r) return `no room called ${String(wanted.name ?? '')}`
-  return putRoom(desk, storey, r, {
+  const r = zoneNamed(desk.read(), wanted.name)
+  if (!r) return `no zone called ${String(wanted.name ?? '')}`
+  return putZone(desk, storey, r, {
     x: Number(wanted.x),
     y: Number(wanted.y),
     w: Number(wanted.w),
@@ -240,13 +240,13 @@ function oneMove(desk: Desk, storey: number, wanted: Record<string, unknown>): s
   })
 }
 
-/** One room put against a named edge of another, the tool working out where that is. */
+/** One zone put against a named edge of another, the tool working out where that is. */
 function onePlacing(desk: Desk, storey: number, asked: Record<string, unknown>): string {
   const sheet = desk.read()
-  const r = roomNamed(sheet, asked.room)
-  if (!r) return `no room called ${String(asked.room ?? '')}`
-  const target = roomNamed(sheet, asked.against)
-  if (!target) return `no room called ${String(asked.against ?? '')}`
+  const r = zoneNamed(sheet, asked.zone)
+  if (!r) return `no zone called ${String(asked.zone ?? '')}`
+  const target = zoneNamed(sheet, asked.against)
+  if (!target) return `no zone called ${String(asked.against ?? '')}`
   if (!target.placed) return `${target.name} is not on the sheet yet`
   if (storeyOf(target) !== storey)
     return `${target.name} stands on the ${storeyNameOf(storeyOf(target))} storey, not the ${storeyNameOf(storey)}`
@@ -264,14 +264,14 @@ function onePlacing(desk: Desk, storey: number, asked: Record<string, unknown>):
     offset,
   )
   if (!standing.ok) return standing.why
-  const said = putRoom(desk, storey, r, standing.standing)
+  const said = putZone(desk, storey, r, standing.standing)
   return `${said} · against ${target.name}'s ${edge} edge`
 }
 
 const placedCount = (sheet: Sheet, storey: number) =>
   allPlaced(sheet).filter((o) => storeyOf(o) === storey).length
 
-const askedCount = (sheet: Sheet) => sheet.rooms.length
+const askedCount = (sheet: Sheet) => sheet.zones.length
 
 /** How a batch is reported back: the house as it now stands, and what this call changed in it. */
 type Done = { landed: string[]; changed: Changed; house: SheetRead }
@@ -299,26 +299,26 @@ export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
     {
       name: 'read_sheet',
       description:
-        'The whole house as it stands: the plot, the setback line, and every storey with each room ' +
+        'The whole house as it stands: the plot, the setback line, and every storey with each zone ' +
         'on it (frame x,y the top-left corner in metres, w, h, angle, area, target, height, doors), ' +
-        'how the rooms stand to each other — every pair that shares a run of edge and how long it ' +
-        'is, and every pair that only meets at a corner or stands a sliver apart — the rooms still ' +
+        'how the zones stand to each other — every pair that shares a run of edge and how long it ' +
+        'is, and every pair that only meets at a corner or stands a sliver apart — the zones still ' +
         'waiting, the report per storey and the floor areas in total. Call it after a batch.',
       inputSchema: { type: 'object', properties: {} },
       execute: () => {
         const read = sheetRead(desk.read(), onScreen)
-        desk.say(short(`read the house · ${askedCount(desk.read())} rooms asked for`))
+        desk.say(short(`read the house · ${askedCount(desk.read())} zones asked for`))
         return read
       },
     },
     {
       name: 'place_against',
       description:
-        'Put rooms against a named edge of another room, touching it and lying along it: each ' +
-        '{room, against, edge: north|south|east|west of that room, along: start|end|centre, ' +
+        'Put zones against a named edge of another zone, touching it and lying along it: each ' +
+        '{zone, against, edge: north|south|east|west of that zone, along: start|end|centre, ' +
         'offset: metres from the near end instead, w, h to resize}. The tool works out the ' +
         'coordinates, the sheet snaps and holds it inside the line, and an edge too short to take the ' +
-        'room is refused with the reason. Several placements in one call, in importance order. ' +
+        'zone is refused with the reason. Several placements in one call, in importance order. ' +
         'storey: the storey by name, the one on screen by default.',
       inputSchema: {
         type: 'object',
@@ -328,7 +328,7 @@ export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
             items: {
               type: 'object',
               properties: {
-                room: { type: 'string' },
+                zone: { type: 'string' },
                 against: { type: 'string' },
                 edge: { type: 'string' },
                 along: { type: 'string' },
@@ -336,7 +336,7 @@ export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
                 w: { type: 'number' },
                 h: { type: 'number' },
               },
-              required: ['room', 'against', 'edge'],
+              required: ['zone', 'against', 'edge'],
             },
           },
           storey: { type: 'string' },
@@ -357,14 +357,14 @@ export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
       },
     },
     {
-      name: 'place_rooms',
+      name: 'place_zones',
       description:
-        'Place or move rooms by coordinate, several at once, in importance order. Each: name; x,y ' +
+        'Place or move zones by coordinate, several at once, in importance order. Each: name; x,y ' +
         'the top-left corner of its frame in plot metres (x east, y south); optional angle in ' +
-        'degrees clockwise; optional w,h to resize. Each room snaps to the neighbours and the lines, ' +
+        'degrees clockwise; optional w,h to resize. Each zone snaps to the neighbours and the lines, ' +
         'is held inside the line the ground floor may reach, and the landing rule settles what it ' +
         'overlaps. At most 40 a call. storey: the storey by name, the one on screen by default. ' +
-        'Prefer place_against wherever a room belongs beside another.',
+        'Prefer place_against wherever a zone belongs beside another.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -403,20 +403,20 @@ export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
     {
       name: 'settle',
       description:
-        'Settle an overlap, as the right-click menu does: {room, with: the other room, how: carve|' +
-        'push}. The room higher in the order of importance keeps its shape and the lower one gives ' +
-        'way — carved to the shape of the higher one, or slid aside. Every overlap the higher room ' +
+        'Settle an overlap, as the right-click menu does: {zone, with: the other zone, how: carve|' +
+        'push}. The zone higher in the order of importance keeps its shape and the lower one gives ' +
+        'way — carved to the shape of the higher one, or slid aside. Every overlap the higher zone ' +
         'is in is settled, not only this pair. storey: the storey by name, the one on screen by ' +
         'default.',
       inputSchema: {
         type: 'object',
         properties: {
-          room: { type: 'string' },
+          zone: { type: 'string' },
           with: { type: 'string' },
           how: { type: 'string' },
           storey: { type: 'string' },
         },
-        required: ['room', 'how'],
+        required: ['zone', 'how'],
       },
       execute: (input) => {
         const storey = storeyNamed(input.storey, onScreen)
@@ -426,16 +426,16 @@ export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
           () => `settled by ${how}`,
           () => {
             const sheet = desk.read()
-            const one = roomNamed(sheet, input.room)
-            if (!one) return [`no room called ${String(input.room ?? '')}`]
-            const other = input.with === undefined ? null : roomNamed(sheet, input.with)
+            const one = zoneNamed(sheet, input.zone)
+            if (!one) return [`no zone called ${String(input.zone ?? '')}`]
+            const other = input.with === undefined ? null : zoneNamed(sheet, input.with)
             if (input.with !== undefined && !other)
-              return [`no room called ${String(input.with ?? '')}`]
+              return [`no zone called ${String(input.with ?? '')}`]
             const overlap = overlapsOf(sheet, storey).find(
               (o) => (o.a === one || o.b === one) && (!other || o.a === other || o.b === other),
             )
             if (!overlap) return [`nothing lies under ${one.name}`]
-            // the room higher in the order of importance keeps its shape; the lower one gives way
+            // the zone higher in the order of importance keeps its shape; the lower one gives way
             const keeps = rank(overlap.a, sheet) <= rank(overlap.b, sheet) ? overlap.a : overlap.b
             const settling = { ids: [keeps.id], storey }
             const done = desk.write(
@@ -500,16 +500,16 @@ export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
       name: 'do',
       description:
         'Every other verb of the tool, in a list applied in order: deeds:[{verb, …}]. ' +
-        "turn{room, degrees|quarter:true|face:'north'}; mirror{room, axis:x|y}; " +
-        'resize{room, w, h | area}; reshape{room, polygon:[[x,y]…] in plot metres}; ' +
-        'carve{room, out_of: the room it is taken out of}; push{room: what lies under it slides ' +
-        'aside}; court{between:[the rooms round the enclosed space]}; corridor{between}; ' +
-        'give{between, to}; combine{rooms:[names], into: the one that survives}; lock{rooms}; ' +
-        'unlock{rooms}; group{rooms}; ungroup{rooms}; height{room, metres}; ' +
-        'storey{rooms, to: a storey by name}; copy{room, to}; cut{room: past the setback}; ' +
-        'restore{room}; door{room, edge:north|south|east|west, type:door|double|sliding|opening|' +
-        'street|street2, along: 0–1 of the way along that edge}; open_edge{room, edge, along}; ' +
-        'send_back{rooms}. Each deed says what it did, or refuses with the reason and changes ' +
+        "turn{zone, degrees|quarter:true|face:'north'}; mirror{zone, axis:x|y}; " +
+        'resize{zone, w, h | area}; reshape{zone, polygon:[[x,y]…] in plot metres}; ' +
+        'carve{zone, out_of: the zone it is taken out of}; push{zone: what lies under it slides ' +
+        'aside}; court{between:[the zones round the enclosed space]}; corridor{between}; ' +
+        'give{between, to}; combine{zones:[names], into: the one that survives}; lock{zones}; ' +
+        'unlock{zones}; group{zones}; ungroup{zones}; height{zone, metres}; ' +
+        'storey{zones, to: a storey by name}; copy{zone, to}; cut{zone: past the setback}; ' +
+        'restore{zone}; door{zone, edge:north|south|east|west, type:door|double|sliding|opening|' +
+        'street|street2, along: 0–1 of the way along that edge}; open_edge{zone, edge, along}; ' +
+        'send_back{zones}. Each deed says what it did, or refuses with the reason and changes ' +
         'nothing while the rest of the list still runs. storey: by name, the one on screen by default.',
       inputSchema: {
         type: 'object',
@@ -520,8 +520,8 @@ export function layoutTools(desk: Desk, onScreen: number): AgentTool[] {
               type: 'object',
               properties: {
                 verb: { type: 'string' },
-                room: { type: 'string' },
-                rooms: { type: 'array', items: { type: 'string' } },
+                zone: { type: 'string' },
+                zones: { type: 'array', items: { type: 'string' } },
               },
               required: ['verb'],
             },

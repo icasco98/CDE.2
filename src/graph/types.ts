@@ -1,7 +1,7 @@
 import type { ConnectionKind, Endpoint } from '../model'
 
-/** A room as the checks read one: who it is, which storeys it stands on, and its privacy tier. */
-export type CheckRoom = {
+/** A zone as the checks read one: who it is, which storeys it stands on, and its privacy tier. */
+export type CheckZone = {
   readonly id: string
   readonly name: string
   readonly storey: number
@@ -22,8 +22,8 @@ export type CheckPair = { readonly a: string; readonly b: string }
 export type Check = {
   readonly code:
     'no-stair' | 'unreached' | 'tier-skip' | 'crossing' | 'apart-joined' | 'apart-through'
-  /** The rooms it is about, so a view can point at them. */
-  readonly rooms: readonly string[]
+  /** The zones it is about, so a view can point at them. */
+  readonly zones: readonly string[]
   readonly sentence: string
   readonly rule: string
   readonly source: string

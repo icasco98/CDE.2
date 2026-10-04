@@ -111,7 +111,7 @@ describe('the viewBox', () => {
 })
 
 describe('metres to a pixel', () => {
-  it('takes the side with less room, so the whole sheet is inside its box', () => {
+  it('takes the side with less space, so the whole sheet is inside its box', () => {
     expect(metresPerPixel(extent, fitCamera, { width: 1000, height: 300 })).toBeCloseTo(
       30 / 300,
       12,

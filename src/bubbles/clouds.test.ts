@@ -13,7 +13,7 @@ function extentOf(path: string) {
 }
 
 describe('a cloud behind each category on a storey', () => {
-  it('rounds a room alone with a cloud 12 wider than its circle', () => {
+  it('rounds a zone alone with a cloud 12 wider than its circle', () => {
     const [cloud] = cloudsOf([spot('wc', 200)], () => 'service')
     // A radius of 20 grown by the margin of 12: the top of the cloud at 100 − 32, its name there.
     expect(cloud?.label).toEqual({ x: 200, y: 68 })
@@ -22,7 +22,7 @@ describe('a cloud behind each category on a storey', () => {
     expect(extent.right).toBeCloseTo(232, 0)
   })
 
-  it('draws one cloud round neighbours in a row and a cloud each for rooms far apart', () => {
+  it('draws one cloud round neighbours in a row and a cloud each for zones far apart', () => {
     const near = cloudsOf([spot('a', 100), spot('b', 220)], () => 'private')
     expect(near).toHaveLength(1)
     expect(extentOf(near[0]!.path).left).toBeCloseTo(68, 0)
@@ -30,7 +30,7 @@ describe('a cloud behind each category on a storey', () => {
     expect(cloudsOf([spot('a', 100), spot('b', 400)], () => 'private')).toHaveLength(2)
   })
 
-  it('keeps categories and storeys apart, and leaves a room of no category out', () => {
+  it('keeps categories and storeys apart, and leaves a zone of no category out', () => {
     const circles = [spot('bed', 100), spot('kitchen', 200), spot('up', 100, 100, 20, 1)]
     const category = (id: string) => ({ bed: 'private', kitchen: 'service' })[id]
     const upstairs = (id: string) => category(id) ?? 'private'

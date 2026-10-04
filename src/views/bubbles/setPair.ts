@@ -10,7 +10,7 @@ const between = (a: string, b: string) => (pair: { a: string; b: string }) =>
   (pair.a === a && pair.b === b) || (pair.a === b && pair.b === a)
 
 /**
- * One pair of rooms set from the matrix, as one undo step. A door or an opening makes or turns the
+ * One pair of zones set from the matrix, as one undo step. A door or an opening makes or turns the
  * connection and leaves a keep-apart pair standing, to be warned of; Keep apart toggles the pair and
  * leaves the connection; Nothing takes both out, and a suggestion taken out is kept as declined.
  */

@@ -3,7 +3,7 @@ import { seedPlan } from './plan'
 import { tab } from './tabs'
 
 /*
- * The plan in two tabs: Zoning and 3D edits the rooms and shows their connections on demand, and
+ * The plan in two tabs: Zoning and 3D edits the zones and shows their connections on demand, and
  * Openings edits the doors of the same sheet, which a change of tab neither loses nor forgets.
  */
 
@@ -53,7 +53,7 @@ test('the four tabs read Requirements, Bubbles, Zoning and 3D, Openings', async 
   await expect(page.locator('.sheet-stage.openings')).toBeVisible()
 })
 
-test('Show connections toggles the lines from a room to the rooms it should connect to', async ({
+test('Show connections toggles the lines from a zone to the zones it should connect to', async ({
   page,
 }) => {
   await tab(page, 'Zoning and 3D').click()

@@ -6,7 +6,7 @@ const kinds: readonly { readonly kind: ConnectionKind; readonly label: string }[
   { kind: 'open', label: 'Open' },
 ]
 
-/** The connection in hand: the two rooms it joins, where it came from, its kind, and the way out. */
+/** The connection in hand: the two zones it joins, where it came from, its kind, and the way out. */
 export function ConnectionPanel(props: {
   readonly connection: BubbleLink
   readonly nameOf: (id: string) => string

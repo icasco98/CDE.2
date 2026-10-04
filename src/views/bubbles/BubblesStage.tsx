@@ -6,7 +6,7 @@ import { session } from '../../app/session'
 import { useProject } from '../../app/useProject'
 import { graphChecks } from '../../graph/checks'
 import { EXTERIOR, type Bubble, type Commit, type ConnectionKind, type Result } from '../../model'
-import { circulationPerStorey, connectionSource, roomTypeById } from '../../rulebook'
+import { circulationPerStorey, connectionSource, zoneTypeById } from '../../rulebook'
 import { addHallway } from './addHallway'
 import { setPair, type PairChoice } from './setPair'
 import { BubblesView } from './BubblesView'
@@ -16,42 +16,42 @@ export function BubblesStage() {
   const project = useProject()
   const selected = useSelection()
 
-  const rooms = useMemo(
+  const zones = useMemo(
     () =>
-      project.rooms.map((room) => {
-        const kind = roomTypeById(room.type)
-        return { ...room, category: kind?.category, tier: kind?.tier }
+      project.zones.map((zone) => {
+        const kind = zoneTypeById(zone.type)
+        return { ...zone, category: kind?.category, tier: kind?.tier }
       }),
-    [project.rooms],
+    [project.zones],
   )
 
   /** A connection the rulebook wants says which row and why; any other was added by hand. */
   const connections = useMemo(() => {
     const kindOf = (id: string): string =>
-      id === EXTERIOR ? EXTERIOR : (project.rooms.find((room) => room.id === id)?.type ?? '')
+      id === EXTERIOR ? EXTERIOR : (project.zones.find((zone) => zone.id === id)?.type ?? '')
     return project.connections.map((connection) => {
       const row = connectionSource(kindOf(connection.a), kindOf(connection.b))
       return row ? { ...connection, source: `Rulebook ${row.id}: ${row.source}` } : connection
     })
-  }, [project.connections, project.rooms])
+  }, [project.connections, project.zones])
 
   const checks = useMemo(
     () =>
       graphChecks({
-        rooms,
+        zones,
         connections: project.connections,
         apart: project.apart,
         storeys: project.storeys,
       }),
-    [rooms, project.connections, project.apart, project.storeys],
+    [zones, project.connections, project.apart, project.storeys],
   )
 
   const hallwayWanted = useMemo(
     () =>
-      circulationPerStorey(project.rooms, project.storeys).flatMap((entry) =>
+      circulationPerStorey(project.zones, project.storeys).flatMap((entry) =>
         entry.wanted === undefined ? [] : [{ storey: entry.storey, sentence: entry.wanted }],
       ),
-    [project.rooms, project.storeys],
+    [project.zones, project.storeys],
   )
 
   const report = (result: Result<unknown>): boolean => {
@@ -59,21 +59,21 @@ export function BubblesStage() {
     return result.ok
   }
 
-  /** A room takes its connections with it, so a selection that named either of them is let go with them. */
+  /** A zone takes its connections with it, so a selection that named either of them is let go with them. */
   const remove = (id: string): void => {
-    if (!report(session.actions.removeRoom(id))) return
+    if (!report(session.actions.removeZone(id))) return
     const left = session.getState()
     const held = selection.get()
     if (
       held &&
-      !left.rooms.some((room) => room.id === held) &&
+      !left.zones.some((zone) => zone.id === held) &&
       !left.connections.some((connection) => connection.id === held)
     )
       selection.select(null)
   }
 
   const nameOf = (id: string): string =>
-    project.rooms.find((room) => room.id === id)?.name ?? 'the outside'
+    project.zones.find((zone) => zone.id === id)?.name ?? 'the outside'
   const keptApart = (a: string, b: string): boolean =>
     project.apart.some((pair) => (pair.a === a && pair.b === b) || (pair.a === b && pair.b === a))
   const joined = (a: string, b: string): boolean =>
@@ -122,7 +122,7 @@ export function BubblesStage() {
 
   return (
     <BubblesView
-      rooms={rooms}
+      zones={zones}
       connections={connections}
       apart={project.apart}
       declined={project.declined}
@@ -147,19 +147,19 @@ export function BubblesStage() {
       onSetConnectionKind={(connectionId: string, kind: ConnectionKind) =>
         report(session.actions.setConnectionKind(connectionId, kind))
       }
-      onRemoveRoom={remove}
+      onRemoveZone={remove}
       onAddHallway={(storey: number) =>
         report(
           session.transaction(() => {
-            const added = addHallway(session, project.rooms, storey, project.storeys)
+            const added = addHallway(session, project.zones, storey, project.storeys)
             if (!added.ok) return added
-            // The corridor arrives linked to what it serves, as every other room does.
+            // The corridor arrives linked to what it serves, as every other zone does.
             return connectDefaults(session)
           }),
         )
       }
-      onRestore={(room?: string) =>
-        report(session.transaction(() => restoreSuggested(session, room)))
+      onRestore={(zone?: string) =>
+        report(session.transaction(() => restoreSuggested(session, zone)))
       }
       onSelect={selection.select}
       onRefuse={session.say}

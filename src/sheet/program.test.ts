@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { followProgram, roomFromProgram, type ProgramRoom } from './program'
-import { DEFAULTS, sheetOf, type Door, type Room } from './model'
+import { followProgram, zoneFromProgram, type ProgramZone } from './program'
+import { DEFAULTS, sheetOf, type Door, type Zone } from './model'
 import { fixtureSheet } from './fixture'
 import { areaOf } from './geometry'
 import { report } from './report'
 
-const entry = (over: Partial<ProgramRoom> & { id: string }): ProgramRoom => ({
+const entry = (over: Partial<ProgramZone> & { id: string }): ProgramZone => ({
   name: 'Bedroom',
   kind: 'bedroom',
   cat: 'private',
@@ -16,101 +16,101 @@ const entry = (over: Partial<ProgramRoom> & { id: string }): ProgramRoom => ({
 
 const none: ReadonlySet<string> = new Set()
 
-const brief: readonly ProgramRoom[] = [
+const brief: readonly ProgramZone[] = [
   entry({ id: 'p1', name: 'Diwaniya', kind: 'diwaniya', cat: 'reception', target: 52.5 }),
   entry({ id: 'p2', name: 'Kitchen', kind: 'kitchen', cat: 'shared', target: 21 }),
   entry({ id: 'p3', name: 'Master Bedroom', kind: 'master-bedroom', target: 29, storey: 1 }),
 ]
 
 describe('the program the sheet draws', () => {
-  it('sizes a room of the brief from its target and leaves it waiting', () => {
-    const room = roomFromProgram(brief[1]!, DEFAULTS)
-    expect([room.id, room.name, room.kind, room.cat]).toEqual([
+  it('sizes a zone of the brief from its target and leaves it waiting', () => {
+    const zone = zoneFromProgram(brief[1]!, DEFAULTS)
+    expect([zone.id, zone.name, zone.kind, zone.cat]).toEqual([
       'p2',
       'Kitchen',
       'kitchen',
       'shared',
     ])
-    expect(room.placed).toBe(false)
+    expect(zone.placed).toBe(false)
     // 21 m² at the kitchen's proportion of 1.4: 5.5 m on the quarter-metre grid by 3.82 m.
-    expect([room.w, room.h]).toEqual([5.5, 3.82])
-    expect(room.w * room.h).toBeCloseTo(21, 1)
+    expect([zone.w, zone.h]).toEqual([5.5, 3.82])
+    expect(zone.w * zone.h).toBeCloseTo(21, 1)
   })
 
-  it('is the brief’s rooms in the brief’s order, whatever order the sheet held them in', () => {
+  it('is the brief’s zones in the brief’s order, whatever order the sheet held them in', () => {
     const held = sheetOf([
-      roomFromProgram(brief[2]!, DEFAULTS),
-      roomFromProgram(brief[0]!, DEFAULTS),
+      zoneFromProgram(brief[2]!, DEFAULTS),
+      zoneFromProgram(brief[0]!, DEFAULTS),
     ])
     const { sheet, setDown } = followProgram(held, brief, none)
-    expect(sheet.rooms.map((r) => r.name)).toEqual(['Diwaniya', 'Kitchen', 'Master Bedroom'])
-    expect(sheet.rooms.map((r) => r.target)).toEqual([52.5, 21, 29])
-    expect(setDown).toEqual({ rooms: [], doors: [] })
+    expect(sheet.zones.map((r) => r.name)).toEqual(['Diwaniya', 'Kitchen', 'Master Bedroom'])
+    expect(sheet.zones.map((r) => r.target)).toEqual([52.5, 21, 29])
+    expect(setDown).toEqual({ zones: [], doors: [] })
     // the brief puts the master bedroom upstairs, so the sheet has a storey for it
     expect(sheet.storeyCount).toBeGreaterThanOrEqual(2)
   })
 
-  it('leaves a room already drawn where it stands when its target changes', () => {
-    const placed: Room = { ...roomFromProgram(brief[0]!, DEFAULTS), x: 3, y: 4, placed: true }
+  it('leaves a zone already drawn where it stands when its target changes', () => {
+    const placed: Zone = { ...zoneFromProgram(brief[0]!, DEFAULTS), x: 3, y: 4, placed: true }
     const held = sheetOf([placed])
     const before = areaOf(placed)
     const { sheet } = followProgram(held, [{ ...brief[0]!, target: 70 }], none)
-    const now = sheet.rooms[0]!
+    const now = sheet.zones[0]!
     expect([now.x, now.y]).toEqual([3, 4])
     expect(areaOf(now)).toBe(before)
     expect(now.target).toBe(70)
-    // the sentence reads the new target against the area the room has
+    // the sentence reads the new target against the area the zone has
     expect(report(sheet, 0).shortfalls).toEqual([
       { name: 'Diwaniya', area: areaOf(now), target: 70 },
     ])
   })
 
-  it('stands a room already drawn on the storey the brief gives it, where it stood', () => {
-    const placed: Room = { ...roomFromProgram(brief[1]!, DEFAULTS), x: 3, y: 4, placed: true }
+  it('stands a zone already drawn on the storey the brief gives it, where it stood', () => {
+    const placed: Zone = { ...zoneFromProgram(brief[1]!, DEFAULTS), x: 3, y: 4, placed: true }
     const { sheet } = followProgram(sheetOf([placed]), [{ ...brief[1]!, storey: 1 }], none)
-    const now = sheet.rooms[0]!
+    const now = sheet.zones[0]!
     expect([now.storey, now.x, now.y, now.placed]).toEqual([1, 3, 4, true])
   })
 
   it('keeps a drawn stair on every storey whatever storey the brief starts it on', () => {
     const stair = entry({ id: 's', name: 'Stair', kind: 'stair', cat: 'circulation', storey: 1 })
-    const placed: Room = { ...roomFromProgram(stair, DEFAULTS), storey: 0, placed: true }
+    const placed: Zone = { ...zoneFromProgram(stair, DEFAULTS), storey: 0, placed: true }
     const { sheet } = followProgram(sheetOf([placed]), [stair], none)
-    expect(sheet.rooms[0]!.storey).toBe(0)
+    expect(sheet.zones[0]!.storey).toBe(0)
   })
 
-  it('takes the brief’s words for a room it already holds and resizes one still waiting', () => {
-    const held = sheetOf([roomFromProgram(brief[1]!, DEFAULTS)])
+  it('takes the brief’s words for a zone it already holds and resizes one still waiting', () => {
+    const held = sheetOf([zoneFromProgram(brief[1]!, DEFAULTS)])
     const { sheet } = followProgram(held, [{ ...brief[1]!, name: 'Cooking', target: 28 }], none)
-    expect(sheet.rooms[0]!.name).toBe('Cooking')
-    expect(sheet.rooms[0]!.w * sheet.rooms[0]!.h).toBeCloseTo(28, 1)
+    expect(sheet.zones[0]!.name).toBe('Cooking')
+    expect(sheet.zones[0]!.w * sheet.zones[0]!.h).toBeCloseTo(28, 1)
   })
 
-  it('takes a room of the same kind and name but another id for another room', () => {
-    const held = sheetOf([{ ...roomFromProgram(brief[0]!, DEFAULTS), id: 'r2', placed: true }])
+  it('takes a zone of the same kind and name but another id for another zone', () => {
+    const held = sheetOf([{ ...zoneFromProgram(brief[0]!, DEFAULTS), id: 'r2', placed: true }])
     const { sheet, setDown } = followProgram(held, [brief[0]!], none)
-    expect(sheet.rooms).toMatchObject([{ id: 'p1', placed: false }])
-    expect(setDown.rooms.map((r) => r.id)).toEqual(['r2'])
+    expect(sheet.zones).toMatchObject([{ id: 'p1', placed: false }])
+    expect(setDown.zones.map((r) => r.id)).toEqual(['r2'])
   })
 
-  it('draws only the brief’s rooms: what the brief does not name leaves the sheet', () => {
+  it('draws only the brief’s zones: what the brief does not name leaves the sheet', () => {
     const { sheet, setDown } = followProgram(fixtureSheet(), brief, none)
-    expect(sheet.rooms.map((r) => r.name)).toEqual(['Diwaniya', 'Kitchen', 'Master Bedroom'])
-    expect(setDown.rooms.map((r) => r.name)).toContain('Stair')
+    expect(sheet.zones.map((r) => r.name)).toEqual(['Diwaniya', 'Kitchen', 'Master Bedroom'])
+    expect(setDown.zones.map((r) => r.name)).toContain('Stair')
     expect(report(sheet, 0).askedArea).toBe(52.5 + 21 + 29)
   })
 
-  it('draws nothing when the brief names no rooms at all', () => {
+  it('draws nothing when the brief names no zones at all', () => {
     const { sheet } = followProgram(fixtureSheet(), [], none)
-    expect(sheet.rooms).toEqual([])
+    expect(sheet.zones).toEqual([])
   })
 
-  it('puts back a room set down when the brief names it again, where it stood', () => {
-    const placed: Room = { ...roomFromProgram(brief[1]!, DEFAULTS), x: 3, y: 4, placed: true }
+  it('puts back a zone set down when the brief names it again, where it stood', () => {
+    const placed: Zone = { ...zoneFromProgram(brief[1]!, DEFAULTS), x: 3, y: 4, placed: true }
     const gone = followProgram(sheetOf([placed]), [], none)
-    expect(gone.sheet.rooms).toEqual([])
+    expect(gone.sheet.zones).toEqual([])
     const back = followProgram(gone.sheet, [brief[1]!], none, gone.setDown)
-    expect(back.sheet.rooms).toMatchObject([{ id: 'p2', x: 3, y: 4, placed: true }])
+    expect(back.sheet.zones).toMatchObject([{ id: 'p2', x: 3, y: 4, placed: true }])
   })
 
   it('takes a door off with its connection, and puts it back when the connection returns', () => {
@@ -124,12 +124,12 @@ describe('the program the sheet draws', () => {
       flip: false,
       hinge: false,
     }
-    const held = sheetOf([{ ...roomFromProgram(brief[1]!, DEFAULTS), doors: [door] }])
+    const held = sheetOf([{ ...zoneFromProgram(brief[1]!, DEFAULTS), doors: [door] }])
     const cut = followProgram(held, [brief[1]!], none)
-    expect(cut.sheet.rooms[0]!.doors).toBeUndefined()
+    expect(cut.sheet.zones[0]!.doors).toBeUndefined()
     expect(cut.setDown.doors).toEqual([{ host: 'p2', door }])
     const back = followProgram(cut.sheet, [brief[1]!], new Set(['e1']), cut.setDown)
-    expect(back.sheet.rooms[0]!.doors).toEqual([door])
+    expect(back.sheet.zones[0]!.doors).toEqual([door])
   })
 
   it('takes every door of a connection off with it, and puts them all back when it returns', () => {
@@ -144,12 +144,12 @@ describe('the program the sheet draws', () => {
       hinge: false,
     })
     const both = [door('d1', 0.2), door('d2', 0.8)]
-    const held = sheetOf([{ ...roomFromProgram(brief[1]!, DEFAULTS), doors: both }])
+    const held = sheetOf([{ ...zoneFromProgram(brief[1]!, DEFAULTS), doors: both }])
     const cut = followProgram(held, [brief[1]!], none)
-    expect(cut.sheet.rooms[0]!.doors).toBeUndefined()
+    expect(cut.sheet.zones[0]!.doors).toBeUndefined()
     expect(cut.setDown.doors.map((each) => each.door.id)).toEqual(['d1', 'd2'])
     const back = followProgram(cut.sheet, [brief[1]!], new Set(['e1']), cut.setDown)
-    expect(back.sheet.rooms[0]!.doors).toEqual(both)
+    expect(back.sheet.zones[0]!.doors).toEqual(both)
   })
 
   it('hands back the sheet it was given when the two already agree', () => {

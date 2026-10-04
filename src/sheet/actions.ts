@@ -9,13 +9,13 @@ import {
   DEFAULTS,
   acrossStoreys,
   centreOf,
-  cloneRoom,
+  cloneZone,
   cloneSheet,
   doorsOf,
   isOpen,
   kin,
   piecesOf,
-  placedRooms,
+  placedZones,
   ruleOf,
   storeyCountOf,
   storeyNameOf,
@@ -24,7 +24,7 @@ import {
   type DoorType,
   type Point,
   type Poly,
-  type Room,
+  type Zone,
   type Settings,
   type Sheet,
 } from './model'
@@ -37,7 +37,7 @@ import {
   facing,
   fmt,
   loopsOf,
-  mirrorRoom,
+  mirrorZone,
   norm,
   outlineFrom,
   outlineOf,
@@ -73,14 +73,14 @@ import {
   snapMove,
   edgeCandidates,
 } from './snap'
-import { snapRooms } from './model'
+import { snapZones } from './model'
 import { allowedBox, hold, overlapsOf, resolve, settle, type Give } from './settle'
 import {
   bestNeighbour,
   courtWhy,
   givePieces,
   pocketsOf,
-  roomFromPocket,
+  zoneFromPocket,
   type Pocket,
 } from './pockets'
 import {
@@ -90,7 +90,7 @@ import {
   doorSlid,
   doorSpot,
   doorStanding,
-  roomForDoor,
+  zoneForDoor,
   type Drawn,
 } from './doors'
 import { DOOR, hasHinge, hasSwing, sizeFor } from './kinds'
@@ -107,15 +107,15 @@ export type Result = {
 
 export type Change = { sheet: Sheet; result: Result }
 
-const where = (r: Room): Box => {
+const where = (r: Zone): Box => {
   const b = bboxOf(r)
   return { x: r2(b.x), y: r2(b.y), w: r2(b.w), h: r2(b.h) }
 }
 
-const landed = (r: Room) =>
+const landed = (r: Zone) =>
   `${r.name} at ${fmt(bboxOf(r).x)},${fmt(bboxOf(r).y)} ${fmt(bboxOf(r).w)}×${fmt(bboxOf(r).h)}`
 
-const nextClock = (sheet: Sheet) => Math.max(0, ...sheet.rooms.map((r) => r.placedAt ?? 0)) + 1
+const nextClock = (sheet: Sheet) => Math.max(0, ...sheet.zones.map((r) => r.placedAt ?? 0)) + 1
 
 /** An id nothing on the sheet has yet, made the same way twice. */
 function freshId(prefix: string, taken: Set<string>): string {
@@ -124,20 +124,20 @@ function freshId(prefix: string, taken: Set<string>): string {
   return prefix + i
 }
 
-const roomIds = (sheet: Sheet) => new Set(sheet.rooms.map((r) => r.id))
-const doorIds = (sheet: Sheet) => new Set(sheet.rooms.flatMap((r) => doorsOf(r).map((d) => d.id)))
+const zoneIds = (sheet: Sheet) => new Set(sheet.zones.map((r) => r.id))
+const doorIds = (sheet: Sheet) => new Set(sheet.zones.flatMap((r) => doorsOf(r).map((d) => d.id)))
 
-const found = (sheet: Sheet, id: string) => sheet.rooms.find((r) => r.id === id) ?? null
+const found = (sheet: Sheet, id: string) => sheet.zones.find((r) => r.id === id) ?? null
 
-/** The rooms a gesture has in hand, on the storey it is on. */
-const takeRooms = (sheet: Sheet, ids: string[], storey: number) =>
-  placedRooms(sheet, storey).filter((r) => ids.includes(r.id))
+/** The zones a gesture has in hand, on the storey it is on. */
+const takeZones = (sheet: Sheet, ids: string[], storey: number) =>
+  placedZones(sheet, storey).filter((r) => ids.includes(r.id))
 
 /**
- * A room put back in the program: its shape and its turn go, its target size returns. Its doors
- * stay, drawn again wherever it is placed beside the rooms they lead into.
+ * A zone put back in the program: its shape and its turn go, its target size returns. Its doors
+ * stay, drawn again wherever it is placed beside the zones they lead into.
  */
-export function sendBackRoom(sheet: Sheet, r: Room): void {
+export function sendBackZone(sheet: Sheet, r: Zone): void {
   r.placed = false
   r.pieces = null
   r.angle = 0
@@ -151,27 +151,27 @@ export function sendBackRoom(sheet: Sheet, r: Room): void {
   r.h = s.h
 }
 
-/** Rooms a cut left with nothing go back to the program at their target size. */
+/** Zones a cut left with nothing go back to the program at their target size. */
 function tidyTray(sheet: Sheet): string[] {
   const gone: string[] = []
-  for (const r of [...sheet.rooms])
+  for (const r of [...sheet.zones])
     if (!r.placed && (r.pieces || r.angle || r.fixed)) {
       gone.push(r.name)
-      sendBackRoom(sheet, r)
+      sendBackZone(sheet, r)
     }
   return gone
 }
 
 /**
- * After a room moves: the landing rule settles what it now overlaps, every room it moved is held on
+ * After a zone moves: the landing rule settles what it now overlaps, every zone it moved is held on
  * the plot, and the gaps it left are closed.
  */
-function afterChange(sheet: Sheet, storey: number, r: Room): string[] {
+function afterChange(sheet: Sheet, storey: number, r: Zone): string[] {
   const moved = settle(r, sheet.settings.rule, sheet, storey)
   if (moved.size)
-    for (const o of placedRooms(sheet, storey))
+    for (const o of placedZones(sheet, storey))
       if (moved.has(o.id)) Object.assign(o, hold(o, sheet, storey))
-  if (r.placed && !r.fixed) closeGaps(placedRooms(sheet, storey), r, sheet.settings)
+  if (r.placed && !r.fixed) closeGaps(placedZones(sheet, storey), r, sheet.settings)
   tidyTray(sheet)
   return [...moved.keys()]
 }
@@ -198,7 +198,7 @@ export type PlaceInput = {
 export function place(sheet: Sheet, input: PlaceInput): Change {
   return edit(sheet, (next) => {
     const r = found(next, input.id)
-    if (!r) return { ok: false, said: `no room called ${input.id}` }
+    if (!r) return { ok: false, said: `no zone called ${input.id}` }
     if (r.locked || r.fixed) return { ok: false, said: `${r.name} is locked` }
     if (!Number.isFinite(input.x) || !Number.isFinite(input.y))
       return { ok: false, said: `${r.name}: x and y are needed` }
@@ -221,7 +221,7 @@ export function place(sheet: Sheet, input: PlaceInput): Change {
     r.y = r6(input.y)
     const sm = snapMove(
       r,
-      edgeCandidates(snapRooms(next, input.storey, r), next.settings, next.plot),
+      edgeCandidates(snapZones(next, input.storey, r), next.settings, next.plot),
       next.settings,
       next.plot,
     )
@@ -245,14 +245,14 @@ export type MoveInput = {
 /** Dragged: the same snaps and hold, and a group moves as one. */
 export function move(sheet: Sheet, input: MoveInput): Change {
   return edit(sheet, (next) => {
-    const group = takeRooms(next, input.ids, input.storey).filter((r) => !r.fixed && !r.locked)
+    const group = takeZones(next, input.ids, input.storey).filter((r) => !r.fixed && !r.locked)
     const lead = group[0]
     if (!lead) return { ok: false, said: 'nothing to move' }
     const from = group.map((r) => ({ r, x: r.x, y: r.y }))
     const dx = input.axisLock && Math.abs(input.dy) > Math.abs(input.dx) ? 0 : input.dx
     const dy = input.axisLock && Math.abs(input.dx) >= Math.abs(input.dy) ? 0 : input.dy
     const cands = edgeCandidates(
-      snapRooms(next, input.storey, null).filter((o) => !input.ids.includes(o.id)),
+      snapZones(next, input.storey, null).filter((o) => !input.ids.includes(o.id)),
       next.settings,
       next.plot,
     )
@@ -289,10 +289,10 @@ export type TurnInput = {
 /** The knob, R, or Face north: it snaps to a neighbour's angle within 4°, else to the step. */
 export function turn(sheet: Sheet, input: TurnInput): Change {
   return edit(sheet, (next) => {
-    const sel = takeRooms(next, input.ids, input.storey).filter((r) => !r.fixed && !r.locked)
+    const sel = takeZones(next, input.ids, input.storey).filter((r) => !r.fixed && !r.locked)
     const lead = sel[0]
     if (!lead) return { ok: false, said: 'nothing to turn' }
-    const onStorey = placedRooms(next, input.storey)
+    const onStorey = placedZones(next, input.storey)
     if (input.faceNorth) {
       const off = norm((lead.angle || 0) - next.plot.north)
       const k = Math.round(off / 90) % 4
@@ -335,7 +335,7 @@ export function turn(sheet: Sheet, input: TurnInput): Change {
   })
 }
 
-const middleOf = (sel: Room[]): Point => {
+const middleOf = (sel: Zone[]): Point => {
   const b = sel.length === 1 ? bboxOf(sel[0]!) : unionBox(sel)
   return [b.x + b.w / 2, b.y + b.h / 2]
 }
@@ -345,11 +345,11 @@ export function mirror(
   input: { ids: string[]; axis: 'x' | 'y'; storey: number },
 ): Change {
   return edit(sheet, (next) => {
-    const sel = takeRooms(next, input.ids, input.storey).filter((r) => !r.fixed && !r.locked)
+    const sel = takeZones(next, input.ids, input.storey).filter((r) => !r.fixed && !r.locked)
     if (!sel.length) return { ok: false, said: 'nothing to mirror' }
     const clock = nextClock(next)
     for (const r of sel) {
-      mirrorRoom(r, input.axis)
+      mirrorZone(r, input.axis)
       r.placedAt = clock
     }
     const moved: string[] = []
@@ -370,19 +370,19 @@ export type EdgeInput = { id: string; edge: number; distance: number; storey: nu
 export function pullEdge(sheet: Sheet, input: EdgeInput): Change {
   return edit(sheet, (next) => {
     const r = found(next, input.id)
-    if (!r || !r.placed) return { ok: false, said: 'no such room on the sheet' }
+    if (!r || !r.placed) return { ok: false, said: 'no such zone on the sheet' }
     if (r.locked || r.fixed) return { ok: false, said: `${r.name} is locked` }
     const seg = outlineOf(r)[input.edge]
     if (!seg) return { ok: false, said: `${r.name} has no such edge` }
     const frame = { x: r.x, y: r.y, w: r.w, h: r.h, angle: r.angle || 0 }
-    const before = cloneRoom(r)
-    const others = snapRooms(next, input.storey, r)
+    const before = cloneZone(r)
+    const others = snapZones(next, input.storey, r)
     const al = alignEdge(frame, seg, input.distance, others, next.settings, next.plot)
     const g = next.settings.grid || 0.05
     let s = al.guide ? al.s : r2(snapTo(input.distance, g))
     const step = s >= 0 ? g : -g
     for (let guard = 0; guard < 400; guard++) {
-      Object.assign(r, cloneRoom(before))
+      Object.assign(r, cloneZone(before))
       if (Math.abs(s) < 1e-6) break
       if (pullEdgeShape(r, seg, s)) {
         if (canonicalise(r)) break
@@ -408,10 +408,10 @@ export function moveCorner(
 ): Change {
   return edit(sheet, (next) => {
     const r = found(next, input.id)
-    if (!r || !r.placed) return { ok: false, said: 'no such room on the sheet' }
+    if (!r || !r.placed) return { ok: false, said: 'no such zone on the sheet' }
     const loops = r.pieces && r.pieces.length ? loopsOf(r) : null
     if (!loops || loops.length !== 1)
-      return { ok: false, said: 'Only a carved or drawn room has corners to move.' }
+      return { ok: false, said: 'Only a carved or drawn zone has corners to move.' }
     const loop = loops[0]!.map((e) => e.a)
     if (!loop[input.corner]) return { ok: false, said: `${r.name} has no such corner` }
     const lp = toLocal(r, input.point[0], input.point[1])
@@ -420,7 +420,7 @@ export function moveCorner(
       return { ok: false, said: 'That shape is too small or crosses itself.' }
     r.pieces = triangulate(poly)
     if (!canonicalise(r)) {
-      sendBackRoom(next, r)
+      sendBackZone(next, r)
       return { ok: true, said: `${r.name} went back to the program`, retired: [r.name] }
     }
     r.placedAt = nextClock(next)
@@ -431,14 +431,14 @@ export function moveCorner(
 
 export type Side4 = 'left' | 'right' | 'top' | 'bottom'
 
-/** A plain room's side; with `shared`, the neighbour it shares that edge with follows. */
+/** A plain zone's side; with `shared`, the neighbour it shares that edge with follows. */
 export function resize(
   sheet: Sheet,
   input: { id: string; side: Side4; distance: number; shared?: string; storey: number },
 ): Change {
   return edit(sheet, (next) => {
     const r = found(next, input.id)
-    if (!r || !r.placed) return { ok: false, said: 'no such room on the sheet' }
+    if (!r || !r.placed) return { ok: false, said: 'no such zone on the sheet' }
     if (r.locked || r.fixed) return { ok: false, said: `${r.name} is locked` }
     const f = { x: r.x, y: r.y, w: r.w, h: r.h, angle: r.angle || 0 }
     const shared = input.shared ? found(next, input.shared) : null
@@ -453,7 +453,7 @@ export function resize(
       f,
       sides[input.side],
       input.distance,
-      placedRooms(next, input.storey).filter((o) => o !== r && o !== shared),
+      placedZones(next, input.storey).filter((o) => o !== r && o !== shared),
       next.settings,
       next.plot,
     )
@@ -474,7 +474,7 @@ export function resize(
       lh = r2(f.h - ly)
     }
     if (!setFrame(r, lx, ly, lw, lh)) {
-      sendBackRoom(next, r)
+      sendBackZone(next, r)
       return { ok: true, said: `${r.name} went back to the program`, retired: [r.name] }
     }
     if (shared && sf) {
@@ -502,7 +502,7 @@ export function setSize(
 ): Change {
   return edit(sheet, (next) => {
     const r = found(next, input.id)
-    if (!r || !r.placed) return { ok: false, said: 'no such room on the sheet' }
+    if (!r || !r.placed) return { ok: false, said: 'no such zone on the sheet' }
     const g = next.settings.grid || 0.05
     const w = input.w === undefined ? r.w : r2(snapTo(input.w, g))
     const h = input.h === undefined ? r.h : r2(snapTo(input.h, g))
@@ -519,7 +519,7 @@ export function setSize(
 export function setArea(sheet: Sheet, input: { id: string; area: number; storey: number }): Change {
   return edit(sheet, (next) => {
     const r = found(next, input.id)
-    if (!r || !r.placed) return { ok: false, said: 'no such room on the sheet' }
+    if (!r || !r.placed) return { ok: false, said: 'no such zone on the sheet' }
     if (!(input.area >= 1 && input.area <= 400))
       return { ok: false, said: 'An area must be between 1 and 400 m².' }
     const k = Math.sqrt(input.area / areaOf(r))
@@ -550,11 +550,11 @@ export type DrawInput = {
   storey: number
 }
 
-/** A rectangle, a circle or a polygon drawn as the room's footprint. */
+/** A rectangle, a circle or a polygon drawn as the zone's footprint. */
 export function draw(sheet: Sheet, input: DrawInput): Change {
   return edit(sheet, (next) => {
     const r = found(next, input.id)
-    if (!r) return { ok: false, said: `no room called ${input.id}` }
+    if (!r) return { ok: false, said: `no zone called ${input.id}` }
     const outline = tidy(facing(input.polygon))
     if (outline.length < 3 || polyArea(outline) < 1 || !simplePoly(outline))
       return { ok: false, said: 'That shape is too small or crosses itself; nothing was placed.' }
@@ -582,8 +582,8 @@ export function draw(sheet: Sheet, input: DrawInput): Change {
 }
 
 /**
- * A boundary drawn on the room: what overlaps is taken away, a touching shape outside is added, and
- * a stroke that cuts the room in two leaves the larger part and splits the smaller into the program.
+ * A boundary drawn on the zone: what overlaps is taken away, a touching shape outside is added, and
+ * a stroke that cuts the zone in two leaves the larger part and splits the smaller into the program.
  */
 export function reshape(
   sheet: Sheet,
@@ -592,7 +592,7 @@ export function reshape(
   return edit(sheet, (next) => {
     const r = found(next, input.id)
     if (!r || !r.placed || r.fixed || r.locked || isOpen(r))
-      return { ok: false, said: 'That room cannot be reshaped.' }
+      return { ok: false, said: 'That zone cannot be reshaped.' }
     const outline = tidy(facing(input.polygon))
     if (outline.length < 3 || polyArea(outline) < 0.05 || !simplePoly(outline))
       return { ok: false, said: 'That shape is too small or crosses itself.' }
@@ -606,17 +606,17 @@ export function reshape(
     const after = kept.reduce((sum, p) => sum + polyArea(p), 0)
     const overlap = before - after
     if (overlap >= 0.05) {
-      if (after < 0.5) return { ok: false, said: 'That would take the whole room away.' }
+      if (after < 0.5) return { ok: false, said: 'That would take the whole zone away.' }
       const parts = partsOf(weld(kept, 0.02).map(facing)).sort((a, b) => partArea(b) - partArea(a))
       r.pieces = parts[0]!.map((p) => tidy(p.slice()))
-      const born: Room[] = []
-      const taken = roomIds(next)
+      const born: Zone[] = []
+      const taken = zoneIds(next)
       let clock = nextClock(next)
       for (const part of parts.slice(1)) {
-        if (partArea(part) < 0.5) continue // a sliver is not a room
+        if (partArea(part) < 0.5) continue // a sliver is not a zone
         const id = freshId('n', taken)
         taken.add(id)
-        const nr: Room = {
+        const nr: Zone = {
           id,
           name: `${r.name}, cut`,
           kind: r.kind,
@@ -635,11 +635,11 @@ export function reshape(
         born.push(nr)
       }
       if (!canonicalise(r)) {
-        sendBackRoom(next, r)
+        sendBackZone(next, r)
         return { ok: true, said: `${r.name} went back to the program`, retired: [r.name] }
       }
       const alive = born.filter((nr) => canonicalise(nr))
-      next.rooms.splice(next.rooms.indexOf(r) + 1, 0, ...alive)
+      next.zones.splice(next.zones.indexOf(r) + 1, 0, ...alive)
       r.placedAt = nextClock(next)
       const movedIds = afterChange(next, input.storey, r)
       return {
@@ -651,21 +651,21 @@ export function reshape(
         at: where(r),
       }
     }
-    // outside: what the shape adds is the shape less the room, welded on only where it touches
+    // outside: what the shape adds is the shape less the zone, welded on only where it touches
     let add = tris
     for (const rp of piecesOf(r)) add = diffPieces(add, rp)
     add = add.filter((p) => p.length >= 3 && polyArea(p) > 1e-4)
     const addArea = add.reduce((sum, p) => sum + polyArea(p), 0)
     if (addArea < 0.05)
-      return { ok: false, said: 'The shape does not touch the room, so nothing changed.' }
+      return { ok: false, said: 'The shape does not touch the zone, so nothing changed.' }
     const all = weld([...piecesOf(r), ...add], 0.03)
       .map(facing)
       .filter((p) => p.length >= 3 && polyArea(p) > 1e-4)
     if (partsOf(all).length > 1)
-      return { ok: false, said: 'The shape does not touch the room, so nothing changed.' }
+      return { ok: false, said: 'The shape does not touch the zone, so nothing changed.' }
     r.pieces = all
     if (!canonicalise(r)) {
-      sendBackRoom(next, r)
+      sendBackZone(next, r)
       return { ok: true, said: `${r.name} went back to the program`, retired: [r.name] }
     }
     r.placedAt = nextClock(next)
@@ -678,7 +678,7 @@ export function reshape(
 
 function settleByHand(sheet: Sheet, ids: string[], storey: number, how: Give): Change {
   return edit(sheet, (next) => {
-    const sel = takeRooms(next, ids, storey)
+    const sel = takeZones(next, ids, storey)
     if (!sel.length) return { ok: false, said: 'nothing selected' }
     const moved = new Map<string, true>()
     let any = false
@@ -696,7 +696,7 @@ function settleByHand(sheet: Sheet, ids: string[], storey: number, how: Give): C
         }
       }
     if (!any) return { ok: false, said: 'Nothing lies under it.' }
-    for (const o of placedRooms(next, storey))
+    for (const o of placedZones(next, storey))
       if (moved.has(o.id)) Object.assign(o, hold(o, next, storey))
     const retired = tidyTray(next)
     return {
@@ -717,16 +717,16 @@ export const pushOthers = (sheet: Sheet, input: { ids: string[]; storey: number 
 /** What lies past the setback line goes. */
 export function cutToSetback(sheet: Sheet, input: { ids: string[]; storey: number }): Change {
   return edit(sheet, (next) => {
-    const sel = takeRooms(next, input.ids, input.storey).filter((r) => !r.fixed)
+    const sel = takeZones(next, input.ids, input.storey).filter((r) => !r.fixed)
     if (!sel.length) return { ok: false, said: 'nothing selected' }
     const names: string[] = []
     const retired: string[] = []
     for (const r of sel) {
       const out = cutShapeToSetback(r, next.plot)
       if (!out.cut) continue
-      if (!out.room) {
+      if (!out.zone) {
         retired.push(r.name)
-        sendBackRoom(next, r)
+        sendBackZone(next, r)
         continue
       }
       names.push(r.name)
@@ -743,11 +743,11 @@ export function cutToSetback(sheet: Sheet, input: { ids: string[]; storey: numbe
   })
 }
 
-/** The room's shape and the size a cut took, given back. */
+/** The zone's shape and the size a cut took, given back. */
 export function restore(sheet: Sheet, input: { id: string; storey: number }): Change {
   return edit(sheet, (next) => {
     const r = found(next, input.id)
-    if (!r || !r.placed || r.fixed) return { ok: false, said: 'no such room on the sheet' }
+    if (!r || !r.placed || r.fixed) return { ok: false, said: 'no such zone on the sheet' }
     const can =
       !!(r.pieces && r.pieces.length) || !!(r.lost && (r.lost.w > 1e-6 || r.lost.h > 1e-6))
     if (!can) return { ok: false, said: `${r.name} has nothing to restore.` }
@@ -771,7 +771,7 @@ export function restore(sheet: Sheet, input: { id: string; storey: number }): Ch
 }
 
 /**
- * The selected rooms welded into one: the survivor keeps its name, kind, target and doors, takes the
+ * The selected zones welded into one: the survivor keeps its name, kind, target and doors, takes the
  * others' footprints and doors, and the others go back to the program. They must share an edge.
  */
 export function combine(
@@ -779,9 +779,9 @@ export function combine(
   input: { ids: string[]; survivor: string; storey: number },
 ): Change {
   return edit(sheet, (next) => {
-    const sel = takeRooms(next, input.ids, input.storey).filter((r) => !r.fixed)
+    const sel = takeZones(next, input.ids, input.storey).filter((r) => !r.fixed)
     const S = sel.find((r) => r.id === input.survivor)
-    if (!S || sel.length < 2) return { ok: false, said: 'Pick the room that survives.' }
+    if (!S || sel.length < 2) return { ok: false, said: 'Pick the zone that survives.' }
     const others = sel.filter((o) => o !== S)
     const mine = piecesOf(S).map((p) => p.slice())
     let theirs: Poly[] = []
@@ -795,12 +795,12 @@ export function combine(
     if (partsOf(welded).length > 1)
       return {
         ok: false,
-        said: 'Those rooms do not share an edge, so they cannot be combined. Close the gap first.',
+        said: 'Those zones do not share an edge, so they cannot be combined. Close the gap first.',
       }
-    for (const O of others) sendBackRoom(next, O)
+    for (const O of others) sendBackZone(next, O)
     S.pieces = welded
     if (!canonicalise(S)) {
-      sendBackRoom(next, S)
+      sendBackZone(next, S)
       return { ok: true, said: `${S.name} went back to the program`, retired: [S.name] }
     }
     S.placedAt = nextClock(next)
@@ -840,28 +840,28 @@ function weldToLines(pieces: Poly[], segs: Seg[], tol: number): Poly[] {
 
 export function group(sheet: Sheet, input: { ids: string[]; storey: number }): Change {
   return edit(sheet, (next) => {
-    const sel = takeRooms(next, input.ids, input.storey).filter((r) => !r.fixed)
-    if (sel.length < 2) return { ok: false, said: 'Two rooms at least make a group.' }
-    const g = freshId('g', new Set(next.rooms.map((r) => r.group ?? '')))
-    const onStorey = placedRooms(next, input.storey)
+    const sel = takeZones(next, input.ids, input.storey).filter((r) => !r.fixed)
+    if (sel.length < 2) return { ok: false, said: 'Two zones at least make a group.' }
+    const g = freshId('g', new Set(next.zones.map((r) => r.group ?? '')))
+    const onStorey = placedZones(next, input.storey)
     for (const o of sel) for (const m of kin(o, onStorey)) m.group = g
-    return { ok: true, said: `${sel.length} rooms grouped` }
+    return { ok: true, said: `${sel.length} zones grouped` }
   })
 }
 
 export function ungroup(sheet: Sheet, input: { ids: string[]; storey: number }): Change {
   return edit(sheet, (next) => {
-    const sel = takeRooms(next, input.ids, input.storey)
+    const sel = takeZones(next, input.ids, input.storey)
     const gs = new Set(sel.map((o) => o.group).filter(Boolean))
     if (!gs.size) return { ok: false, said: 'Nothing here is grouped.' }
-    for (const o of next.rooms) if (o.group && gs.has(o.group)) delete o.group
+    for (const o of next.zones) if (o.group && gs.has(o.group)) delete o.group
     return { ok: true, said: 'ungrouped' }
   })
 }
 
 const setLock = (sheet: Sheet, ids: string[], storey: number, on: boolean): Change =>
   edit(sheet, (next) => {
-    const sel = takeRooms(next, ids, storey).filter((r) => !r.fixed)
+    const sel = takeZones(next, ids, storey).filter((r) => !r.fixed)
     if (!sel.length) return { ok: false, said: 'nothing selected' }
     for (const o of sel) o.locked = on
     return {
@@ -879,10 +879,10 @@ export const unlock = (sheet: Sheet, input: { ids: string[]; storey: number }) =
 /** Off the sheet, back to the program. */
 export function sendBack(sheet: Sheet, input: { ids: string[] }): Change {
   return edit(sheet, (next) => {
-    const sel = next.rooms.filter((r) => input.ids.includes(r.id) && r.placed && !r.locked)
+    const sel = next.zones.filter((r) => input.ids.includes(r.id) && r.placed && !r.locked)
     if (!sel.length) return { ok: false, said: 'nothing to send back' }
     const names = sel.map((r) => r.name)
-    for (const r of sel) sendBackRoom(next, r)
+    for (const r of sel) sendBackZone(next, r)
     return { ok: true, said: `sent back: ${names.join(', ')}`, retired: names }
   })
 }
@@ -895,7 +895,7 @@ export function setStorey(
 ): Change {
   return edit(sheet, (next) => {
     const to = Math.max(0, Math.min(storeyCountOf(next) - 1, Math.floor(input.to)))
-    const sel = takeRooms(next, input.ids, input.storey).filter(
+    const sel = takeZones(next, input.ids, input.storey).filter(
       (r) => !acrossStoreys(r, next.settings) && !r.fixed,
     )
     if (!sel.length) return { ok: false, said: 'The stair stands on every storey already.' }
@@ -922,16 +922,16 @@ export function copyTo(
 ): Change {
   return edit(sheet, (next) => {
     const to = Math.max(0, Math.min(MAX_STOREYS - 1, Math.floor(input.to)))
-    const sel = takeRooms(next, input.ids, input.storey).filter(
+    const sel = takeZones(next, input.ids, input.storey).filter(
       (r) => !r.fixed && !acrossStoreys(r, next.settings),
     )
     if (!sel.length) return { ok: false, said: 'nothing to copy' }
     const shift = input.shift ?? (to === input.storey ? 1 : 0)
-    const taken = roomIds(next)
-    const made: Room[] = []
+    const taken = zoneIds(next)
+    const made: Zone[] = []
     let clock = nextClock(next)
     for (const src of sel) {
-      const r = cloneRoom(src)
+      const r = cloneZone(src)
       r.id = freshId('p', taken)
       taken.add(r.id)
       r.name = /\bcopy\b/.test(r.name) ? r.name : r.name + ' copy'
@@ -944,7 +944,7 @@ export function copyTo(
       r.x = r6(r.x + shift)
       r.y = r6(r.y + shift)
       r.placedAt = clock++
-      next.rooms.push(r)
+      next.zones.push(r)
       made.push(r)
     }
     const moved: string[] = []
@@ -974,7 +974,7 @@ export function dropTopStorey(sheet: Sheet): Change {
   return edit(sheet, (next) => {
     const n = storeyCountOf(next)
     if (n <= 2) return { ok: false, said: 'The ground and the first storey stay.' }
-    if (next.rooms.some((r) => r.placed && storeyOf(r) === n - 1))
+    if (next.zones.some((r) => r.placed && storeyOf(r) === n - 1))
       return { ok: false, said: `The ${storeyNameOf(n - 1).toLowerCase()} storey is not empty.` }
     next.storeyCount = n - 1
     return { ok: true, said: `${storeyNameOf(n - 1)} storey taken away` }
@@ -985,7 +985,7 @@ export function dropTopStorey(sheet: Sheet): Change {
 export function setHeight(sheet: Sheet, input: { id: string; metres: number }): Change {
   return edit(sheet, (next) => {
     const r = found(next, input.id)
-    if (!r || !r.placed) return { ok: false, said: 'no such room on the sheet' }
+    if (!r || !r.placed) return { ok: false, said: 'no such zone on the sheet' }
     const sn = snapHeight(input.metres, r, next)
     r.height = sn.h
     return { ok: true, said: `${r.name} ${fmt(sn.h)} m${sn.why ? ' · ' + sn.why : ''}` }
@@ -995,19 +995,19 @@ export function setHeight(sheet: Sheet, input: { id: string; metres: number }): 
 export function clearHeight(sheet: Sheet, input: { id: string }): Change {
   return edit(sheet, (next) => {
     const r = found(next, input.id)
-    if (!r || !r.height) return { ok: false, said: 'That room keeps its storey height already.' }
+    if (!r || !r.height) return { ok: false, said: 'That zone keeps its storey height already.' }
     delete r.height
     return { ok: true, said: `${r.name} back to the storey height` }
   })
 }
 
-// ---------- a room's own colour, and where its name is written ----------
+// ---------- a zone's own colour, and where its name is written ----------
 
 export function setColor(sheet: Sheet, input: { ids: string[]; color: string }): Change {
   return edit(sheet, (next) => {
     if (!/^#[0-9a-fA-F]{6}$/.test(input.color))
       return { ok: false, said: 'A colour is written as #rrggbb.' }
-    const sel = next.rooms.filter((r) => input.ids.includes(r.id) && !r.fixed)
+    const sel = next.zones.filter((r) => input.ids.includes(r.id) && !r.fixed)
     if (!sel.length) return { ok: false, said: 'nothing selected' }
     for (const r of sel) r.color = input.color
     return { ok: true, said: `${sel.map((r) => r.name).join(', ')} in ${input.color}` }
@@ -1016,18 +1016,18 @@ export function setColor(sheet: Sheet, input: { ids: string[]; color: string }):
 
 export function clearColor(sheet: Sheet, input: { ids: string[] }): Change {
   return edit(sheet, (next) => {
-    const sel = next.rooms.filter((r) => input.ids.includes(r.id) && r.color)
-    if (!sel.length) return { ok: false, said: 'Those rooms keep their category colour already.' }
+    const sel = next.zones.filter((r) => input.ids.includes(r.id) && r.color)
+    if (!sel.length) return { ok: false, said: 'Those zones keep their category colour already.' }
     for (const r of sel) delete r.color
     return { ok: true, said: `${sel.map((r) => r.name).join(', ')} back to the category colour` }
   })
 }
 
-/** The name written where the hand put it, as a point in the room's frame. */
+/** The name written where the hand put it, as a point in the zone's frame. */
 export function setLabel(sheet: Sheet, input: { id: string; at: Point }): Change {
   return edit(sheet, (next) => {
     const r = found(next, input.id)
-    if (!r || !r.placed) return { ok: false, said: 'no such room on the sheet' }
+    if (!r || !r.placed) return { ok: false, said: 'no such zone on the sheet' }
     r.labelAt = [r6(input.at[0]), r6(input.at[1])]
     return { ok: true, said: `${r.name}: the name moved` }
   })
@@ -1035,7 +1035,7 @@ export function setLabel(sheet: Sheet, input: { id: string; at: Point }): Change
 
 export function clearLabel(sheet: Sheet, input: { ids: string[] }): Change {
   return edit(sheet, (next) => {
-    const sel = next.rooms.filter((r) => input.ids.includes(r.id) && r.labelAt)
+    const sel = next.zones.filter((r) => input.ids.includes(r.id) && r.labelAt)
     if (!sel.length) return { ok: false, said: 'Those names lie where they go by themselves.' }
     for (const r of sel) delete r.labelAt
     return { ok: true, said: `${sel.map((r) => r.name).join(', ')}: the name goes back` }
@@ -1049,23 +1049,23 @@ const pocketAt = (sheet: Sheet, storey: number, index: number): Pocket | null =>
 
 export function givePocket(
   sheet: Sheet,
-  input: { pocket: number; room?: string; storey: number },
+  input: { pocket: number; zone?: string; storey: number },
 ): Change {
   return edit(sheet, (next) => {
     const pk = pocketAt(next, input.storey, input.pocket)
     if (!pk) return { ok: false, said: 'No enclosed space there.' }
-    const room = input.room ? found(next, input.room) : bestNeighbour(pk, next)
-    if (!room || room.fixed) return { ok: false, said: 'No room to give it to.' }
-    if (!givePieces(room, pk.pieces, next, input.storey)) {
-      sendBackRoom(next, room)
-      return { ok: true, said: `${room.name} went back to the program`, retired: [room.name] }
+    const zone = input.zone ? found(next, input.zone) : bestNeighbour(pk, next)
+    if (!zone || zone.fixed) return { ok: false, said: 'No zone to give it to.' }
+    if (!givePieces(zone, pk.pieces, next, input.storey)) {
+      sendBackZone(next, zone)
+      return { ok: true, said: `${zone.name} went back to the program`, retired: [zone.name] }
     }
-    room.placedAt = nextClock(next)
+    zone.placedAt = nextClock(next)
     return {
       ok: true,
-      said: `${fmt(pk.area)} m² given to ${room.name}`,
+      said: `${fmt(pk.area)} m² given to ${zone.name}`,
       area: r2(pk.area),
-      at: where(room),
+      at: where(zone),
     }
   })
 }
@@ -1076,17 +1076,17 @@ export function makeCourt(sheet: Sheet, input: { pocket: number; storey: number 
     if (!pk) return { ok: false, said: 'No enclosed space there.' }
     const why = courtWhy(pk, next.settings)
     if (why) return { ok: false, said: why }
-    const r = roomFromPocket(
+    const r = zoneFromPocket(
       pk,
       'court',
       'Court',
       'open',
       true,
-      freshId('x', roomIds(next)),
+      freshId('x', zoneIds(next)),
       nextClock(next),
     )
     r.storey = input.storey
-    next.rooms.push(r)
+    next.zones.push(r)
     return { ok: true, said: `court ${fmt(pk.area)} m²`, area: r2(pk.area), born: [r.name] }
   })
 }
@@ -1095,27 +1095,27 @@ export function makeCorridor(sheet: Sheet, input: { pocket: number; storey: numb
   return edit(sheet, (next) => {
     const pk = pocketAt(next, input.storey, input.pocket)
     if (!pk) return { ok: false, said: 'No enclosed space there.' }
-    const hall = next.rooms.find((r) => r.kind === 'hallway' && r.placed && pk.touch.has(r.id))
+    const hall = next.zones.find((r) => r.kind === 'hallway' && r.placed && pk.touch.has(r.id))
     if (hall) {
       if (!givePieces(hall, pk.pieces, next, input.storey)) {
-        sendBackRoom(next, hall)
+        sendBackZone(next, hall)
         return { ok: true, said: `${hall.name} went back to the program`, retired: [hall.name] }
       }
       hall.placedAt = nextClock(next)
       return { ok: true, said: `${fmt(pk.area)} m² given to ${hall.name}`, area: r2(pk.area) }
     }
-    const n = next.rooms.filter((r) => r.kind === 'hallway' && r.placed).length + 1
-    const r = roomFromPocket(
+    const n = next.zones.filter((r) => r.kind === 'hallway' && r.placed).length + 1
+    const r = zoneFromPocket(
       pk,
       'hallway',
       n > 1 ? `Hallway ${n}` : 'Hallway',
       'circulation',
       false,
-      freshId('x', roomIds(next)),
+      freshId('x', zoneIds(next)),
       nextClock(next),
     )
     r.storey = input.storey
-    next.rooms.push(r)
+    next.zones.push(r)
     return { ok: true, said: `${r.name} ${fmt(pk.area)} m²`, area: r2(pk.area), born: [r.name] }
   })
 }
@@ -1123,8 +1123,8 @@ export function makeCorridor(sheet: Sheet, input: { pocket: number; storey: numb
 // ---------- doors ----------
 
 /**
- * A door put on the edge under the hand, drawing the connection named: between its room and `to`, the
- * room across or the outside. A connection may have several doors, but two never overlap on one edge.
+ * A door put on the edge under the hand, drawing the connection named: between its zone and `to`, the
+ * zone across or the outside. A connection may have several doors, but two never overlap on one edge.
  */
 export function addDoor(
   sheet: Sheet,
@@ -1142,10 +1142,10 @@ export function addDoor(
     const w = input.width ?? DOOR[input.type].w
     const hit = doorAt(input.x, input.y, input.type === 'open' ? 0.6 : w, next, input.storey)
     if (!hit) return { ok: false, said: 'No edge there.' }
-    if (hit.room.id === input.to) return { ok: false, said: 'A door leads out of its room.' }
+    if (hit.zone.id === input.to) return { ok: false, said: 'A door leads out of its zone.' }
     const stands = doorStanding(next, input.storey, hit, { type: input.type, w, to: input.to })
     if ('why' in stands) return { ok: false, said: stands.why }
-    const inTheWay = doorInTheWay(next, input.storey, hit.room, stands.pl, stands.w)
+    const inTheWay = doorInTheWay(next, input.storey, hit.zone, stands.pl, stands.w)
     if (inTheWay) return { ok: false, said: overlapSaid(inTheWay) }
     const d: Door = {
       id: freshId('d', doorIds(next)),
@@ -1157,23 +1157,23 @@ export function addDoor(
       hinge: false,
       ...stands.standing,
     }
-    hit.room.doors = [...doorsOf(hit.room), d]
+    hit.zone.doors = [...doorsOf(hit.zone), d]
     const snapped = stands.pl.snapped
     if (input.type === 'open')
-      return { ok: true, said: `${hit.room.name}: edge opened`, at: where(hit.room) }
+      return { ok: true, said: `${hit.zone.name}: edge opened`, at: where(hit.zone) }
     return {
       ok: true,
-      said: `${DOOR[input.type].label} on ${hit.room.name}${snapped === 'middle' ? ', middle of the edge' : snapped === 'jamb' ? ', a jamb from the corner' : ''}`,
-      at: where(hit.room),
+      said: `${DOOR[input.type].label} on ${hit.zone.name}${snapped === 'middle' ? ', middle of the edge' : snapped === 'jamb' ? ', a jamb from the corner' : ''}`,
+      at: where(hit.zone),
     }
   })
 }
 
 const overlapSaid = (other: Drawn) =>
-  `That would overlap the ${DOOR[other.door.type].label.toLowerCase()} already on ${other.room.name}'s edge.`
+  `That would overlap the ${DOOR[other.door.type].label.toLowerCase()} already on ${other.zone.name}'s edge.`
 
-const findDoor = (sheet: Sheet, roomId: string, doorId: string) => {
-  const r = sheet.rooms.find((o) => o.id === roomId && o.placed) ?? null
+const findDoor = (sheet: Sheet, zoneId: string, doorId: string) => {
+  const r = sheet.zones.find((o) => o.id === zoneId && o.placed) ?? null
   const d = r ? (doorsOf(r).find((o) => o.id === doorId) ?? null) : null
   return { r, d }
 }
@@ -1181,10 +1181,10 @@ const findDoor = (sheet: Sheet, roomId: string, doorId: string) => {
 /** A door slid along the edge it stands on to the point nearest the hand; it never leaves it. */
 export function moveDoor(
   sheet: Sheet,
-  input: { room: string; door: string; x: number; y: number; storey: number },
+  input: { zone: string; door: string; x: number; y: number; storey: number },
 ): Change {
   return edit(sheet, (next) => {
-    const { r, d } = findDoor(next, input.room, input.door)
+    const { r, d } = findDoor(next, input.zone, input.door)
     if (!r || !d) return { ok: false, said: 'no such door' }
     const slid = doorSlid(next, input.storey, r, d, input.x, input.y)
     if (!slid) return { ok: false, said: `${DOOR[d.type].label} on ${r.name} is not drawn here.` }
@@ -1202,10 +1202,10 @@ export function moveDoor(
 /** A grid step along the edge, kept a jamb from the corners. */
 export function slideDoor(
   sheet: Sheet,
-  input: { room: string; door: string; step: number; storey: number },
+  input: { zone: string; door: string; step: number; storey: number },
 ): Change {
   return edit(sheet, (next) => {
-    const { r, d } = findDoor(next, input.room, input.door)
+    const { r, d } = findDoor(next, input.zone, input.door)
     if (!r || !d) return { ok: false, said: 'no such door' }
     const pl = doorSpot(next, input.storey, r, d)
     if (!pl) return { ok: false, said: `${DOOR[d.type].label} on ${r.name} is not drawn here.` }
@@ -1225,15 +1225,15 @@ export function slideDoor(
 
 export function setDoorWidth(
   sheet: Sheet,
-  input: { room: string; door: string; w: number; storey: number },
+  input: { zone: string; door: string; w: number; storey: number },
 ): Change {
   return edit(sheet, (next) => {
-    const { r, d } = findDoor(next, input.room, input.door)
+    const { r, d } = findDoor(next, input.zone, input.door)
     if (!r || !d) return { ok: false, said: 'no such door' }
     if (d.type === 'open') return { ok: false, said: 'An opened edge is as wide as the edge.' }
     const width = r2(Math.min(3, Math.max(0.6, input.w)))
-    const room = roomForDoor(next, input.storey, r, d)
-    if (room === null || width > room + 1e-6)
+    const zone = zoneForDoor(next, input.storey, r, d)
+    if (zone === null || width > zone + 1e-6)
       return { ok: false, said: 'That edge is too short for a door that wide.' }
     d.w = width
     const clash = doorClash(next, input.storey, r, d)
@@ -1242,9 +1242,9 @@ export function setDoorWidth(
   })
 }
 
-export function flipDoor(sheet: Sheet, input: { room: string; door: string }): Change {
+export function flipDoor(sheet: Sheet, input: { zone: string; door: string }): Change {
   return edit(sheet, (next) => {
-    const { r, d } = findDoor(next, input.room, input.door)
+    const { r, d } = findDoor(next, input.zone, input.door)
     if (!r || !d) return { ok: false, said: 'no such door' }
     if (!hasSwing(d))
       return { ok: false, said: `A ${DOOR[d.type].label.toLowerCase()} does not swing.` }
@@ -1253,9 +1253,9 @@ export function flipDoor(sheet: Sheet, input: { room: string; door: string }): C
   })
 }
 
-export function hingeDoor(sheet: Sheet, input: { room: string; door: string }): Change {
+export function hingeDoor(sheet: Sheet, input: { zone: string; door: string }): Change {
   return edit(sheet, (next) => {
-    const { r, d } = findDoor(next, input.room, input.door)
+    const { r, d } = findDoor(next, input.zone, input.door)
     if (!r || !d) return { ok: false, said: 'no such door' }
     if (!hasHinge(d))
       return { ok: false, said: `A ${DOOR[d.type].label.toLowerCase()} has no hinge.` }
@@ -1265,9 +1265,9 @@ export function hingeDoor(sheet: Sheet, input: { room: string; door: string }): 
 }
 
 /** A door taken off: the connection it drew stays, not met until a door draws it again. */
-export function removeDoor(sheet: Sheet, input: { room: string; door: string }): Change {
+export function removeDoor(sheet: Sheet, input: { zone: string; door: string }): Change {
   return edit(sheet, (next) => {
-    const { r, d } = findDoor(next, input.room, input.door)
+    const { r, d } = findDoor(next, input.zone, input.door)
     if (!r || !d) return { ok: false, said: 'no such door' }
     r.doors = doorsOf(r).filter((o) => o !== d)
     if (!r.doors.length) delete r.doors
@@ -1339,7 +1339,7 @@ export function setSetting(sheet: Sheet, input: { name: string; value: unknown }
       )
     if (name === 'hallW') {
       const width = v as number
-      for (const r of next.rooms)
+      for (const r of next.zones)
         if (r.kind === 'hallway') {
           if (!r.placed) {
             const s = sizeFor(r.kind, r.target, { ...next.settings, hallW: width })
@@ -1351,7 +1351,7 @@ export function setSetting(sheet: Sheet, input: { name: string; value: unknown }
     ;(next.settings as unknown as Record<string, unknown>)[name] = v
     if (['boundary', 'allowSpill', 'hardSetback', 'openBelow', 'stairAcross'].includes(name))
       for (let k = 0; k < MAX_STOREYS; k++)
-        for (const r of placedRooms(next, k)) Object.assign(r, hold(r, next, k))
+        for (const r of placedZones(next, k)) Object.assign(r, hold(r, next, k))
     return { ok: true, said: `${name} is ${String(v)}` }
   })
 }
@@ -1401,5 +1401,5 @@ export function drawnPoint(sheet: Sheet, storey: number, at: Point): Point {
   return onPlot(at, box)
 }
 
-/** Where a room would rest with nothing to catch it, for a test or a preview. */
-export const restOnGrid = (r: Room, settings: Settings) => gridRest(r, settings)
+/** Where a zone would rest with nothing to catch it, for a test or a preview. */
+export const restOnGrid = (r: Zone, settings: Settings) => gridRest(r, settings)

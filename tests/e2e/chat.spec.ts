@@ -10,7 +10,7 @@ const DIWANIYA = 'r2'
 const BEDROOM = 'nmu436pzls0vk'
 
 /**
- * The fake `window.claude`: `use('sample')` gives a function that places one room, waits for the
+ * The fake `window.claude`: `use('sample')` gives a function that places one zone, waits for the
  * test to let it go, places a second, streams a line and resolves.
  */
 async function fakeRuntime(page: Page): Promise<void> {
@@ -29,9 +29,9 @@ async function fakeRuntime(page: Page): Promise<void> {
         if (!tool) throw new Error(`no tool called ${name}`)
         return tool.execute(input)
       }
-      call('place_rooms', { moves: [{ name: 'Bedroom', x: 11.2, y: 1.5 }] })
+      call('place_zones', { moves: [{ name: 'Bedroom', x: 11.2, y: 1.5 }] })
       await held
-      call('place_rooms', { moves: [{ name: 'Diwaniya', x: 14, y: 18, angle: 0 }] })
+      call('place_zones', { moves: [{ name: 'Diwaniya', x: 14, y: 18, angle: 0 }] })
       call('remember', { note: 'the diwaniya sits square to the street' })
       const text = 'Bedroom beside Formal Living, diwaniya square on the street corner.'
       options?.onText?.({ text, delta: text })
@@ -45,7 +45,7 @@ async function fakeRuntime(page: Page): Promise<void> {
   })
 }
 
-const room = (page: Page, id: string) => page.locator(`svg.sheet g.room[data-room="${id}"]`)
+const zone = (page: Page, id: string) => page.locator(`svg.sheet g.zone[data-zone="${id}"]`)
 
 const median = (numbers: number[]): number => {
   const sorted = [...numbers].sort((a, b) => a - b)
@@ -53,8 +53,8 @@ const median = (numbers: number[]): number => {
   return sorted[Math.floor(sorted.length / 2)]!
 }
 
-/** Where a room's frame stands, read from the sheet's own report through the program block. */
-const areaOf = (page: Page, id: string) => page.locator(`.tray .item[data-room="${id}"] .a`)
+/** Where a zone's frame stands, read from the sheet's own report through the program block. */
+const areaOf = (page: Page, id: string) => page.locator(`.tray .item[data-zone="${id}"] .a`)
 
 test.use({ viewport: { width: 1600, height: 1100 } })
 
@@ -74,10 +74,10 @@ test.describe('the assistant on the sheet', () => {
   })
 
   test('shows the first batch on the sheet before the second is asked for', async ({ page }) => {
-    await expect(room(page, BEDROOM)).toHaveCount(0)
+    await expect(zone(page, BEDROOM)).toHaveCount(0)
     await say(page, 'lay out the ground floor')
     // the first call has landed and been drawn while the assistant is still waiting
-    await expect(room(page, BEDROOM)).toHaveCount(1)
+    await expect(zone(page, BEDROOM)).toHaveCount(1)
     await expect(log(page).getByText(/placed 18 of 18/)).toBeVisible()
     await expect(log(page).getByText(/Diwaniya at/)).toHaveCount(0)
     await page.evaluate(() => window.releaseAgent())
@@ -92,10 +92,10 @@ test.describe('the assistant on the sheet', () => {
     await say(page, 'lay out the ground floor')
     await page.evaluate(() => window.releaseAgent())
     await expect(log(page).getByText(/Diwaniya at/)).toBeVisible()
-    await expect(room(page, BEDROOM)).toHaveCount(1)
+    await expect(zone(page, BEDROOM)).toHaveCount(1)
     await page.locator('svg.sheet').click({ position: { x: 5, y: 5 } })
     await page.keyboard.press('Control+z')
-    await expect(room(page, BEDROOM)).toHaveCount(0)
+    await expect(zone(page, BEDROOM)).toHaveCount(0)
     await expect(areaOf(page, DIWANIYA)).toHaveText(before ?? '')
   })
 
@@ -111,7 +111,7 @@ test.describe('the assistant on the sheet', () => {
     expect(await page.evaluate(() => window.localStorage.getItem('cde.sheet'))).toContain('Bedroom')
 
     await openSheet(page)
-    await expect(room(page, BEDROOM)).toHaveCount(1)
+    await expect(zone(page, BEDROOM)).toHaveCount(1)
     const memory = await page.evaluate(() => window.settled())
     expect(memory.plans).toHaveLength(1)
     expect(memory.feedback).toHaveLength(1)
@@ -141,7 +141,7 @@ test.describe('the assistant on the sheet', () => {
   }) => {
     // The budget is the hand's own committed change on this machine: the assistant may not cost more
     // than twice what a nudge costs, measured the same way in the same run.
-    await page.locator('svg.sheet g.room[data-room="r6"] path.body').click()
+    await page.locator('svg.sheet g.zone[data-zone="r6"] path.body').click()
     await page.evaluate(() => {
       window.sheetFrames = []
     })
@@ -152,7 +152,7 @@ test.describe('the assistant on the sheet', () => {
       window.sheetFrames = []
     })
     await say(page, 'lay out the ground floor')
-    await expect(room(page, BEDROOM)).toHaveCount(1)
+    await expect(zone(page, BEDROOM)).toHaveCount(1)
     await page.evaluate(() => window.releaseAgent())
     await expect(log(page).getByText(/Diwaniya at/)).toBeVisible()
     const frames: number[] = await page.evaluate(() => window.sheetFrames ?? [])
