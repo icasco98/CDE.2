@@ -1,5 +1,5 @@
-import type { Result, Zone, Store } from '../../model'
-import { spansAllStoreys } from '../../rulebook'
+import { EXTERIOR, type Endpoint, type Result, type Zone, type Store } from '../../model'
+import { spansAllStoreys, storeyLabel } from '../../rulebook'
 
 /** What changing the storey count needs of the session, so a test can hand it a plain store. */
 type Changing = Pick<Store, 'getState' | 'transaction' | 'actions'>
@@ -34,8 +34,32 @@ export function addStorey(store: Changing): Result {
   })
 }
 
-/** A storey fewer. The stairs come down first, or the storey they reach would read as in use. */
+/** The connections on the top storey, said with the names the person gave the zones. */
+function connectionsOnTop(store: Changing): readonly string[] {
+  const { zones, connections, storeys } = store.getState()
+  const top = storeys - 1
+  const nameOf = (end: Endpoint): string =>
+    end === EXTERIOR ? 'the outside' : (zones.find((zone) => zone.id === end)?.name ?? 'a zone')
+  return connections
+    .filter((connection) => connection.storey === top && top > 0)
+    .map(
+      (connection) =>
+        `The ${storeyLabel(top)} storey still holds the connection between ${nameOf(connection.a)} and ${nameOf(connection.b)}.`,
+    )
+}
+
+/**
+ * A storey fewer. A connection on the top storey refuses it first, by name, since shortening a
+ * stair under it would otherwise be refused in the model's own ids. The stairs come down next, or
+ * the storey they reach would read as in use.
+ */
 export function removeStorey(store: Changing): Result {
+  const held = connectionsOnTop(store)
+  if (held.length > 0)
+    return {
+      ok: false,
+      problems: held.map((message) => ({ code: 'storey-holds-connection', message })),
+    }
   const storeys = Math.max(1, store.getState().storeys - 1)
   const shorten = reachingTheTop(store).filter((zone) => zone.storey < storeys)
   if (shorten.length === 0) return store.actions.removeStorey()

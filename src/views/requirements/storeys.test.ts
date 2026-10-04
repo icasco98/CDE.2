@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createIdGenerator, createStore, type Store } from '../../model'
+import { refusalOf } from './refusals'
 import { addStorey, removeStorey } from './storeys'
 
 let store: Store
@@ -7,8 +8,8 @@ let store: Store
 const spanOf = (id: string): number | undefined =>
   store.getState().zones.find((zone) => zone.id === id)?.storeysSpanned
 
-function add(type: string, storeysSpanned = 1): string {
-  const added = store.actions.addZone({ type, targetArea: 15, storeysSpanned })
+function add(type: string, storeysSpanned = 1, name?: string): string {
+  const added = store.actions.addZone({ type, targetArea: 15, storeysSpanned, name })
   if (!added.ok) throw new Error(added.problems.map((problem) => problem.message).join('; '))
   return added.value
 }
@@ -113,5 +114,17 @@ describe('a storey more or less', () => {
     // The stair is not left short of the storey the refused step would have taken away.
     expect(store.getState().storeys).toBe(2)
     expect(spanOf(store.getState().zones[0]!.id)).toBe(2)
+  })
+
+  it('names the zones and the storey of a connection that keeps the top storey', () => {
+    const stair = add('stair', 1, 'Stair')
+    addStorey(store)
+    const hallway = add('hallway', 1, 'Hallway')
+    store.actions.setStorey(hallway, 1)
+    store.actions.connect({ a: hallway, b: stair, kind: 'open', storey: 1 })
+    expect(refusalOf(removeStorey(store))).toBe(
+      'The First storey still holds the connection between Hallway and Stair.',
+    )
+    expect(store.getState().storeys).toBe(2)
   })
 })
